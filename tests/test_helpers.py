@@ -323,20 +323,83 @@ def test_add_vpn_requires_entered_psk_before_commands(tmp_path):
     assert not list(tmp_path.iterdir())
 
 
-def test_meraki_psk_is_serialized_as_data(tmp_path):
-    import json, os, subprocess
-    source = (HELPERS.parents[1]/'pos/pos').read_text()
-    function = source[source.index('update_meraki() {'):source.index('\nlist_vpns() {')]
+def run_meraki(tmp_path,existing,*,get_failure=False,put_failure=False):
+    import json,os,subprocess
+    source=(HELPERS.parents[1]/'pos/pos').read_text()
+    function=source[source.index('update_meraki() {'):source.index('\nlist_vpns() {')]
     secret = '''quotes"slashes\\and'$(touch injected)'''
-    script = function + '\ncurl() { cat > request.json; }; update_meraki\n'
-    result = subprocess.run(['bash', '-c', script], cwd=tmp_path, text=True, capture_output=True,
-        env={**os.environ, 'MYKOS_PYTHON': sys.executable, 'VPN_PSK': secret, 'MERAKI_API_KEY': 'test', 'MERAKI_ORG_ID': '123',
-             'REMOTE_NAME': 'peer', 'PUBLIC': '203.0.113.20','VPN_LOCAL_CIDR':'192.168.22.134/32'})
-    assert result.returncode == 0, result.stderr
-    assert json.loads((tmp_path/'request.json').read_text())['peers'][0]['secret'] == secret
-    assert secret not in result.stdout
+    script=function+'''
+curl() {
+  local method output payload
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --request) method="$2"; shift ;;
+      --output) output="$2"; shift ;;
+      --data-binary) payload="${2#@}"; shift ;;
+    esac
+    shift
+  done
+  echo "$method" >> calls
+  if [ "$method" = GET ]; then
+    [ "$GET_FAILURE" = 1 ] && return 22
+    printf '%s' "$EXISTING_PEERS" > "$output"
+  else
+    cp "$payload" request.json
+    [ "$PUT_FAILURE" = 1 ] && return 22
+    printf '{}' > "$output"
+  fi
+}
+update_meraki
+'''
+    result=subprocess.run(['bash','-c',script],cwd=tmp_path,text=True,capture_output=True,
+        env={**os.environ,'MYKOS_PYTHON':sys.executable,'VPN_PSK':secret,'MERAKI_API_KEY':'test','MERAKI_ORG_ID':'123',
+             'REMOTE_NAME':'peer','PUBLIC':'203.0.113.20','VPN_LOCAL_CIDR':'192.168.22.134/32','TMPDIR':str(tmp_path),
+             'EXISTING_PEERS':existing,'GET_FAILURE':str(int(get_failure)),'PUT_FAILURE':str(int(put_failure))})
+    assert not list(tmp_path.glob('mykos-meraki.*')), 'Private API configuration must be cleaned up'
+    assert secret not in result.stdout+result.stderr
     assert not (tmp_path/'injected').exists()
-    assert not (tmp_path/'update_meraki_peers').exists()
+    return result
+
+
+def test_meraki_psk_is_serialized_as_data_and_existing_peers_preserved(tmp_path):
+    import json
+    existing={'peerId':'existing-id','name':'other-site','secret':'other-secret','privateSubnets':['10.4.0.0/16'],
+              'ipsecPoliciesPreset':'secure','networkTags':['branch'],'slaPolicy':{'id':'custom'},'extra':{'future':True}}
+    result=run_meraki(tmp_path,json.dumps({'peers':[existing]}))
+    assert result.returncode==0,result.stderr
+    peers=json.loads((tmp_path/'request.json').read_text())['peers']
+    assert peers[0]==existing and len(peers)==2
+    assert peers[1]['secret']=='''quotes"slashes\\and'$(touch injected)'''
+    assert 'peerId' not in peers[1]
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','PUT']
+
+
+@pytest.mark.parametrize('existing,get_failure',[('bad-json',False),('{}',False),('{"peers":null}',False),('{"peers":[null]}',False),('{"peers":[]}',True)])
+def test_meraki_never_puts_when_existing_config_cannot_be_downloaded(tmp_path,existing,get_failure):
+    result=run_meraki(tmp_path,existing,get_failure=get_failure)
+    assert result.returncode!=0
+    assert (tmp_path/'calls').read_text().splitlines()==['GET']
+    assert not (tmp_path/'request.json').exists()
+
+
+def test_meraki_identical_peer_is_noop_and_conflicting_name_is_not_overwritten(tmp_path):
+    import json
+    first=run_meraki(tmp_path,'{"peers":[]}');assert first.returncode==0
+    existing=(tmp_path/'request.json').read_text();(tmp_path/'calls').unlink();(tmp_path/'request.json').unlink()
+    same=run_meraki(tmp_path,existing);assert same.returncode==0
+    assert (tmp_path/'calls').read_text().splitlines()==['GET']
+    assert not (tmp_path/'request.json').exists()
+    value=json.loads(existing);value['peers'][0]['publicIp']='203.0.113.99';(tmp_path/'calls').unlink()
+    conflict=run_meraki(tmp_path,json.dumps(value));assert conflict.returncode!=0
+    assert (tmp_path/'calls').read_text().splitlines()==['GET']
+    assert not (tmp_path/'request.json').exists()
+
+
+def test_meraki_failed_put_is_reported_and_private_config_cleaned(tmp_path):
+    result=run_meraki(tmp_path,'{"peers":[]}',put_failure=True)
+    assert result.returncode!=0
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','PUT']
+    assert 'Done' not in result.stdout
 
 
 def test_network_device_detected_from_route_and_override(monkeypatch):

@@ -232,14 +232,30 @@ prune-docker() {
 }
 
 update_meraki() {
-[ -n "$MERAKI_API_KEY" ] && [ -n "$MERAKI_ORG_ID" ] && [ -n "${VPN_PSK:-}" ] || { echo "Configure Meraki credentials in /etc/mykos/pos.env and enter the VPN PSK during setup"; return 1; }
-echo "Creating site-to-site peer on meraki...."
-# Serialize the entered secret as data; never put it in a generated shell script.
-local payload
-payload=$(VPN_PSK="$VPN_PSK" REMOTE_NAME="$REMOTE_NAME" VPN_LOCAL_CIDR="$VPN_LOCAL_CIDR" PUBLIC="$PUBLIC" "$MYKOS_PYTHON" - <<'JSON_PY'
-import json, os
+(
+[ -n "$MERAKI_API_KEY" ] && [ -n "$MERAKI_ORG_ID" ] && [ -n "${VPN_PSK:-}" ] || { echo "Configure Meraki credentials in /etc/mykos/pos.env and enter the VPN PSK during setup"; exit 1; }
+[[ "$MERAKI_ORG_ID" =~ ^[0-9]+$ ]] || { echo "Invalid Meraki organization ID"; exit 1; }
+[[ ! "$MERAKI_API_KEY" =~ [[:cntrl:]] ]] || { echo "Invalid Meraki API key"; exit 1; }
+local work endpoint
+umask 077
+work=$(mktemp -d "${TMPDIR:-/tmp}/mykos-meraki.XXXXXXXX") || exit 1
+trap 'rm -rf -- "$work"' EXIT
+printf 'Authorization: Bearer %s\nAccept: application/json\n' "$MERAKI_API_KEY" > "$work/headers" || exit 1
+endpoint="https://api.meraki.com/api/v1/organizations/$MERAKI_ORG_ID/appliance/vpn/thirdPartyVPNPeers"
+echo "Downloading existing Meraki site-to-site peers...."
+curl --fail --silent --show-error --connect-timeout 15 --max-time 60 \
+  --request GET --url "$endpoint" --header "@$work/headers" --output "$work/existing.json" || exit 1
+# Preserve the complete downloaded peer list. Never PUT an empty fallback on GET/JSON failure.
+VPN_PSK="$VPN_PSK" REMOTE_NAME="$REMOTE_NAME" VPN_LOCAL_CIDR="$VPN_LOCAL_CIDR" PUBLIC="$PUBLIC" "$MYKOS_PYTHON" - "$work/existing.json" "$work/payload.json" <<'JSON_PY'
+import json, os, sys
+try:
+    with open(sys.argv[1]) as handle: current=json.load(handle)
+    if not isinstance(current,dict) or not isinstance(current.get('peers'),list) or not all(isinstance(p,dict) for p in current['peers']):
+        raise ValueError()
+except (ValueError,OSError):
+    raise SystemExit('Cannot read existing Meraki peers; configuration was not changed')
 peer = {
-    "peerId": "657525545596112136", "name": os.environ["REMOTE_NAME"],
+    "name": os.environ["REMOTE_NAME"],
     "ikeVersion": "2", "secret": os.environ["VPN_PSK"],
     "privateSubnets": [os.environ["VPN_LOCAL_CIDR"]],
     "ipsecPolicies": {"ikeCipherAlgo": ["aes128"], "ikeAuthAlgo": ["sha1"],
@@ -250,15 +266,23 @@ peer = {
     "isRouteBased": False, "priorityInGroup": 1, "publicIp": os.environ["PUBLIC"],
     "network": {"names": [], "ids": []},
     "group": {"number": 1, "failover": {"directToInternet": False}, "activeActiveTunnel": False}}
-print(json.dumps({"peers": [peer]}))
+matches=[p for p in current['peers'] if p.get('name')==peer['name']]
+if matches:
+    if len(matches)==1 and all(matches[0].get(k)==v for k,v in peer.items()):
+        raise SystemExit(3)
+    raise SystemExit('A Meraki peer already uses this name with different settings; configuration was not changed')
+with open(sys.argv[2],'w') as handle:
+    json.dump({'peers':current['peers']+[peer]},handle)
 JSON_PY
-) || return 1
-printf '%s' "$payload" | curl --fail --silent --show-error -L --request PUT \
-  --url "https://api.meraki.com/api/v1/organizations/$MERAKI_ORG_ID/appliance/vpn/thirdPartyVPNPeers" \
-  --header "Authorization: Bearer $MERAKI_API_KEY" \
-  --header 'Content-Type: application/json' --header 'Accept: application/json' \
-  --data-binary @- >/dev/null || return 1
-echo "Done...."
+local merge_status=$?
+if [ "$merge_status" = 3 ]; then echo "Meraki peer already configured; no changes needed."; exit 0; fi
+[ "$merge_status" = 0 ] || exit "$merge_status"
+echo "Appending site-to-site peer on Meraki...."
+curl --fail --silent --show-error --connect-timeout 15 --max-time 60 --request PUT \
+  --url "$endpoint" --header "@$work/headers" \
+  --header 'Content-Type: application/json' --data-binary "@$work/payload.json" --output "$work/result.json" || exit 1
+echo "Done.... Existing peers retained."
+)
 }
 
 list_vpns() {

@@ -30,3 +30,15 @@ The macOS login icon opens SSH through the VM's private Podman bridge address, p
 ## Native OS minor versions
 
 Native image builds store full VERSION_ID (for example 8.10 or 9.8) in the `io.mykos.os.version` image label. For older images without that label, the collector reads os-release from a host-mounted immutable image once and stores a root-owned cache keyed by its image digest under `/var/cache/mykos/image-os`. Future polls use the cache, never guest execution. New image content gets a new cache key; an unavailable version is retried after one hour. Purge removes this cache. The API and container Version column use the same full image version.
+
+
+### Meraki peer updates
+
+The optional Meraki upload first downloads the organization's complete third-party
+VPN peer list, then appends the new peer and sends the combined list. Existing
+peer objects and their settings are preserved. Failed downloads or invalid JSON
+stop the update. An identical named peer is a no-op; a same-name peer with different
+settings is rejected rather than overwritten. New peers do not reuse a fixed peer
+ID. API headers and downloaded configuration use private temporary files which
+are removed when the operation ends. Avoid simultaneous changes in Dashboard or
+other API clients during an update: this endpoint replaces the complete peer list.
