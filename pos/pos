@@ -124,7 +124,19 @@ stage_image() {
 }
 
 create-image() {
-  echo -n "OS (rh7-rh10, rocky8/9/10, alma8/9/10, oracle8/9/10, centos8/9/10, fedora43/44, win11/win10/win8e/win7u/winxp/winme/win2k/win98, wns2025/2022/2019/2016, mac15/mac14/mac13/mac12, ubuntu20.04/22.04/24.04, mssql2025/mssql2022: " && read -r OS || return 1
+  printf '%s\n' \
+    'OS choices:' \
+    '  RedHat          rh7 rh8 rh9 rh10' \
+    '  Rocky Linux     rocky8 rocky9 rocky10' \
+    '  AlmaLinux       alma8 alma9 alma10' \
+    '  Oracle Linux    oracle8 oracle9 oracle10' \
+    '  CentOS Stream   centos8 centos9 centos10' \
+    '  Fedora          fedora43 fedora44' \
+    '  Windows         win11 win10 win8e win7u winxp winme win2k win98' \
+    '  Windows Server  wns2025 wns2022 wns2019 wns2016' \
+    '  macOS           mac15 mac14 mac13 mac12' \
+    '  Ubuntu          ubuntu20.04 ubuntu22.04 ubuntu24.04' \
+    '  SQL Server      mssql2025 mssql2022' && printf 'OS: ' && read -r OS || return 1
   case "$OS" in win*|wns*|mac*|ubuntu*) "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;; esac
   case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
   check_image_builder || return 1
@@ -154,7 +166,19 @@ set_working_shopcode() {
   [ -f .$SHOPCODE.imagetype ] && OS=$(cat .$SHOPCODE.imagetype)
   [ -f .$SHOPCODE.postype ] && POSTYPE=$(cat .$SHOPCODE.postype) && return
   [[ "$SHOPCODE" =~ ^[0-9]{8}$ ]] || { echo "ID must be eight digits"; return 1; }
-  echo -n "OS (rh7-rh10, rocky8/9/10, alma8/9/10, oracle8/9/10, centos8/9/10, fedora43/44, win*, wns*, mac*, ubuntu20.04/22.04/24.04): " && read -r OS || return 1
+  printf '%s\n' \
+    'OS choices:' \
+    '  RedHat          rh7 rh8 rh9 rh10' \
+    '  Rocky Linux     rocky8 rocky9 rocky10' \
+    '  AlmaLinux       alma8 alma9 alma10' \
+    '  Oracle Linux    oracle8 oracle9 oracle10' \
+    '  CentOS Stream   centos8 centos9 centos10' \
+    '  Fedora          fedora43 fedora44' \
+    '  Windows         win11 win10 win8e win7u winxp winme win2k win98' \
+    '  Windows Server  wns2025 wns2022 wns2019 wns2016' \
+    '  macOS           mac15 mac14 mac13 mac12' \
+    '  Ubuntu          ubuntu20.04 ubuntu22.04 ubuntu24.04' \
+    '  SQL Server      mssql2025 mssql2022' && printf 'OS: ' && read -r OS || return 1
   case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
   printf '%s\n' "$OS" >".$SHOPCODE.imagetype"
   POSTYPE="$OS"; printf '%s\n' "$POSTYPE" >".$SHOPCODE.postype"
