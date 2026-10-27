@@ -91,7 +91,7 @@ LABEL org.label-schema.schema-version="1.0" \
 MAINTAINER “Mike Green" <mgreen@teleflora.com>
 ENV container $OS-docker
 $update_step
-CMD ["/sbin/init"]
+CMD ["/usr/bin/bash"]
 EOF
 }
 
