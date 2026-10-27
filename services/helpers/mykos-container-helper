@@ -58,9 +58,9 @@ def _dispatch(args):
         from mykos_refresh import best_effort
         return best_effort(code,result,run=run)
     if action in ('image-remove','image-remove-status'):
-        from mykos_image_admin import queue,job
+        from mykos_image_admin import queue,job as image_job
         if action=='image-remove' and len(args)==3:return queue(args[1],args[2])
-        if action=='image-remove-status' and len(args)==2:return job(args[1])
+        if action=='image-remove-status' and len(args)==2:return image_job(args[1])
         raise ValueError('Invalid image removal arguments')
     if action == 'stage-images':
         if len(args) != 1: raise ValueError('Unexpected arguments')

@@ -509,3 +509,19 @@ def test_stage_prefers_readable_image_name_without_guest_calls(monkeypatch):
     monkeypatch.setattr(mykos_runtime,'run',run)
     assert mykos_runtime.stage_images()==[{'os':'rh8','image':'localhost/rh8:latest'}]
     assert calls==[[mykos_runtime.PODMAN,'ps','-a','--format','json']]
+
+
+def test_container_status_does_not_use_image_removal_job(monkeypatch):
+    module=load('mykos-container-helper')
+    calls=[]
+    monkeypatch.setattr(module,'job',lambda shop:calls.append(shop) or {'shop':shop,'state':'complete','operation':'delete'})
+    assert module.dispatch(['stage-status','01234567'])['state']=='complete'
+    assert calls==['01234567']
+
+
+def test_image_removal_status_uses_its_own_job_lookup(monkeypatch):
+    module=load('mykos-container-helper')
+    import mykos_image_admin
+    monkeypatch.setattr(module,'job',lambda *a:pytest.fail('Image status must not read a container job'))
+    monkeypatch.setattr(mykos_image_admin,'job',lambda os:{'os':os,'state':'deleted'})
+    assert module.dispatch(['image-remove-status','rocky9'])=={'os':'rocky9','state':'deleted'}
