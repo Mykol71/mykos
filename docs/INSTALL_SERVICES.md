@@ -370,3 +370,5 @@ Podman storage cleanup. If only the generic base restart fails, the committed
 image remains ready. Rerun the same Build command to retry that base restart;
 installation and memory capture are not repeated. An unusable builder requiring
 manual cleanup is reported explicitly, without deleting its disks or image.
+
+The performance chart draws running container and VPN connection counts as faded filled areas behind the resource lines. Both count series rise from zero; 15 running containers or active VPN connections equals 100%. Historical counts use the same scale, and missing or stale readings leave gaps. The history slider uses a grey accent.

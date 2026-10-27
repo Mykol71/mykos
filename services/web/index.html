@@ -329,7 +329,7 @@ body, button, input, select, textarea {
 .mykos-host-metric[data-level="high"] strong { color: #fcd34d; }
 .mykos-host-metric[data-level="critical"] strong { color: #fda4af; }
 .mykos-chart-history { display:flex; align-items:center; gap:8px; margin:3px 0 0; color:#94a3b8; font-size:10px; }
-.mykos-chart-history input { flex:1; min-width:70px; height:12px; padding:0; accent-color:#38bdf8; transform:scaleY(.5); }
+.mykos-chart-history input { flex:1; min-width:70px; height:12px; padding:0; accent-color:#94a3b8; transform:scaleY(.5); }
 .mykos-chart-history button { border:0; background:none; padding:0 2px; font:inherit; color:#38bdf8; cursor:pointer; }
 .mykos-chart-plot { position: relative; }
 #mykos-host-chart { width: 100%; height: 104px; display: block; outline-offset: -2px; }
@@ -1906,8 +1906,8 @@ function mykosChartDisplayPercent(metric, point, now) {
     return previous.percent + (point.percent - previous.percent) * eased;
 }
 
-function mykosInvertedCountPercent(count, total) {
-    return total > 0 ? 100 - Math.max(0, Math.min(1, count / total)) * 50 : null;
+function mykosCountPercent(count) {
+    return Number.isFinite(count) ? Math.max(0, count) / 15 * 100 : null;
 }
 
 function mykosChartLevel(metric, percent) {
@@ -1971,10 +1971,10 @@ function mykosDrawHostChart() {
         legend.setAttribute('aria-pressed', String(metric.visible));
         el('mykos-host-' + metric.key + '-value').textContent = fresh ? latest.value : '—';
         legend.title = metric.label + ': ' + (fresh ? latest.value + '. ' + latest.detail : 'Unavailable') +
-            (metric.bar ? '. Downward line: all running/up reaches 50%; none reaches 100%' : '') +
+            (metric.bar ? '. Filled background: 15 running/up equals 100%' : '') +
             (level ? '. ' + (level === 'critical' ? 'Critical' : 'High') + ' resource usage' : '') +
             (metric.key === 'load' && fresh && latest.percent !== null ? '. ' + latest.percent.toFixed(1) + '% of CPU capacity' : '') +
-            '. Select to ' + (metric.visible ? 'hide' : 'show') + ' this line.';
+            '. Select to ' + (metric.visible ? 'hide' : 'show') + (metric.bar ? ' this area.' : ' this line.');
         if (level) alerts.push({text:metric.label + ' ' + level + ' (' + latest.percent.toFixed(1) + '%)', level});
         if (metric.visible) for (const point of metric.points) if (point.t >= start && point.t <= end && point.percent !== null) peak = Math.max(peak, point.percent);
     }
@@ -1994,17 +1994,29 @@ function mykosDrawHostChart() {
         drawing.push(mykosChartSvg('text', {x:x(time), y:height - 5, fill:'#94a3b8', 'font-size':9, 'text-anchor':tick === 0 ? 'start' : tick === 4 ? 'end' : 'middle'}, tickLabels[tick]));
     }
     let any = false;
-    for (const metric of mykosChartMetrics) {
+    // Count areas are always painted beneath the resource traces.
+    for (const metric of [...mykosChartMetrics.filter(item => item.bar), ...mykosChartMetrics.filter(item => !item.bar)]) {
         if (!metric.visible) continue;
         const freshness = metric.freshness || mykosChartFreshness;
-        let path = '', previous = null;
+        let path = '', previous = null, area = '', areaStart = null;
+        const closeArea = () => {
+            if (areaStart !== null && previous) area += 'L' + x(previous.t).toFixed(2) + ' ' + bottom + 'L' + areaStart + ' ' + bottom + 'Z ';
+            areaStart = null;
+        };
         const candidates = metric.points.filter(point => point.t <= end);
         const before = candidates.filter(point => point.t < start).at(-1);
         const visible = candidates.filter(point => point.t >= start);
         if (before && visible.length && visible[0].t - before.t <= freshness) visible.unshift(before);
         for (const point of visible) {
-            if (point.percent === null) { previous = null; continue; }
+            if (point.percent === null) { closeArea(); previous = null; continue; }
             any = true;
+            if (metric.bar) {
+                if (!previous || point.t - previous.t > freshness) {
+                    closeArea();
+                    areaStart = x(point.t).toFixed(2);
+                    area += 'M' + areaStart + ' ' + bottom + 'L' + areaStart + ' ' + y(point.percent).toFixed(2) + ' ';
+                } else area += 'H' + x(point.t).toFixed(2) + 'V' + y(point.percent).toFixed(2) + ' ';
+            }
             path += (previous && point.t - previous.t <= freshness ? 'L' : 'M') + x(point.t).toFixed(2) + ' ' + y(mykosChartDisplayPercent(metric, point, now)).toFixed(2) + ' ';
             // Emphasize high resource segments without changing each metric's color.
             const level = mykosChartLevel(metric, point.percent);
@@ -2014,9 +2026,10 @@ function mykosDrawHostChart() {
             }));
             previous = point;
         }
-        drawing.push(mykosChartSvg('path', {d:path, fill:'none', stroke:metric.color, 'stroke-width':1.8, 'stroke-linejoin':'round', 'stroke-linecap':'round', 'data-series':metric.key}));
+        closeArea();
+        drawing.push(mykosChartSvg('path', {d:metric.bar ? area : path, fill:metric.bar ? metric.color : 'none', 'fill-opacity':metric.bar ? .16 : 1, stroke:metric.color, 'stroke-opacity':metric.bar ? .35 : 1, 'stroke-width':metric.bar ? .7 : 1.8, 'stroke-linejoin':'round', 'stroke-linecap':'round', 'data-series':metric.key}));
         const latest = visible.at(-1);
-        if (latest && latest.percent !== null && readingTime - latest.t <= freshness) {
+        if (!metric.bar && latest && latest.percent !== null && readingTime - latest.t <= freshness) {
             drawing.push(mykosChartSvg('circle', {cx:x(latest.t), cy:y(mykosChartDisplayPercent(metric, latest, now)), r:2.4, fill:metric.color}));
             const level = mykosChartLevel(metric, latest.percent);
             if (level) drawing.push(mykosChartSvg('circle', {cx:x(latest.t), cy:y(mykosChartDisplayPercent(metric, latest, now)), r:5, fill:'none', stroke:level === 'critical' ? '#fb7185' : '#fbbf24', 'stroke-width':1.4}));
@@ -2112,7 +2125,7 @@ function mykosHistoryValue(data, key) {
     }
     if (key === 'load') return {percent:data.load_average && data.cpu_count ? data.load_average[0] / data.cpu_count * 100 : null, value:data.load_average ? data.load_average[0].toFixed(2) : 'Unknown', detail:'1 min average'};
     const count = data.graph_counts?.[key], total = data.graph_totals?.[key];
-    return {percent:Number.isFinite(count) && Number.isFinite(total) ? mykosInvertedCountPercent(count, total) : null, value:count == null ? 'Unknown' : String(count), detail:(count ?? '?') + (key === 'vpns' ? ' up / ' : ' running / ') + (total ?? '?')};
+    return {percent:mykosCountPercent(count), value:count == null ? 'Unknown' : String(count), detail:(count ?? '?') + (key === 'vpns' ? ' up / ' : ' running / ') + (total ?? '?')};
 }
 
 function mykosMergeHostHistory(samples) {
@@ -2180,7 +2193,7 @@ function mykosLoadCountMetrics() {
         const unknown = eligible.filter(node => !node[field] || node[field] === 'unknown').length;
         el('mykos-host-' + key + '-value').textContent = count;
         el('mykos-host-' + key + '-detail').textContent = caption + ' / ' + (total ?? '—');
-        mykosSetHostMetric(key, mykosInvertedCountPercent(count, total), String(count),
+        mykosSetHostMetric(key, mykosCountPercent(count), String(count),
             count + ' ' + caption + ' / ' + (total ?? 'unknown') + (key === 'vpns' ? ' configured connections' : ' configured containers') +
             (unknown ? '; ' + unknown + ' unknown' : ''));
     }
