@@ -427,8 +427,9 @@ body { isolation: isolate; }
 .mykos-dialog { width: min(600px, 90vw); max-height: 85vh; overflow: auto; padding: 24px; color: #e2e8f0; background: #121d30; border: 1px solid #334155; border-radius: 10px; }
 .mykos-terminal-dialog { width:min(940px,94vw); max-width:94vw; padding:16px; overflow:hidden; }
 .mykos-terminal-titlebar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
-.mykos-terminal-titlebar strong { font-size:14px; overflow-wrap:anywhere; }
+.mykos-terminal-titlebar strong { flex:1; font-size:14px; overflow-wrap:anywhere; }
 .mykos-terminal-titlebar button { color:#38bdf8; }
+.mykos-terminal-titlebar .mykos-notes-button { color:#fff; }
 .mykos-terminal-surface { height:min(60vh,400px); max-width:100%; overflow:auto; background:#050a12; padding:8px; border:1px solid #334155; border-radius:8px; }
 .mykos-dialog::backdrop { background: #0009; }
 .mykos-dialog label { display: block; margin: 16px 0; font-size: 13px; }
@@ -2647,7 +2648,8 @@ function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
     close.title = 'Close terminal'; close.setAttribute('aria-label', 'Close terminal');
     close.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
     close.addEventListener('click', mykosCloseTerminal);
-    title.append(label, close);
+    const notes = mykosNotesButton('terminal', 'Terminal');
+    title.append(label, notes, close);
     const surface = document.createElement('div');
     surface.className = 'mykos-terminal-surface';
     dialog.append(title, surface);

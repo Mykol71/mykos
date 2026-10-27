@@ -612,6 +612,9 @@ Repository responses include `latest_rpm`, the filename (without directories), p
 
 `DELETE /api/v2/images/{os_name}/build` removes only a failed, unfinished image builder and its private disks. Send `{"confirmation":"ubuntu22.04"}` with the matching OS; administrator authorization is required. Published images and intentional snapshots are retained. The host terminal also accepts `?action=remove-vpn`, with interactive selection and confirmation of a MYKOS host connection.
 
+The terminal title bar uses pane name `terminal` for its notes. Opening or closing
+the notes dialog leaves the active terminal connection running.
+
 Pane notes are disposable change requests and are cleared by each installation/update. User accounts, password hashes and API key digests are preserved.
 
 Pane notes are private to the `mgreen` browser account. Both web and v2 notes endpoints require its authenticated session cookie; scope-only API keys cannot read or write these notes. PUT also requires the configured Origin header.

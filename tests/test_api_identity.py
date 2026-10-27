@@ -146,9 +146,10 @@ def test_key_scopes_revocation_and_browser_separation(environment):
         c.execute('UPDATE api_keys SET revoked_at=?',(int(time.time()),))
     assert client.get('/api/v2/nodes',headers=h).status_code==401
 
-def test_pane_notes_private_to_mgreen_and_conflicts(environment):
+@pytest.mark.parametrize('pane', ['repos','terminal'])
+def test_pane_notes_private_to_mgreen_and_conflicts(environment,pane):
     anonymous=TestClient(app.app,base_url='https://testserver')
-    for path in ('/api/web/notes/repos','/api/v2/notes/repos'):
+    for path in (f'/api/web/notes/{pane}',f'/api/v2/notes/{pane}'):
         assert anonymous.get(path).status_code==401
         for name in ('reader','operator'):
             client=login(name,name+'-password-123')
@@ -160,15 +161,15 @@ def test_pane_notes_private_to_mgreen_and_conflicts(environment):
     mykos_users.set_password('mgreen','mgreen-test-password-123',role='admin',create=True)
     owner=login('mgreen','mgreen-test-password-123')
     payload={'text':'Private change request <script>plain text</script>','revision':0}
-    for path in ('/api/web/notes/repos','/api/v2/notes/repos'):
+    for path in (f'/api/web/notes/{pane}',f'/api/v2/notes/{pane}'):
         assert owner.get(path).json()['revision']==0
         assert owner.put(path,json=payload).status_code==403
-    assert owner.put('/api/web/notes/repos',headers={'Origin':'https://testserver'},json=payload).status_code==200
-    assert owner.get('/api/v2/notes/repos').json()['text']==payload['text']
-    assert owner.put('/api/v2/notes/repos',headers={'Origin':'https://testserver'},json=payload).status_code==409
-    assert owner.put('/api/v2/notes/repos',headers={'Origin':'https://testserver'},json={'text':'','revision':1}).status_code==200
-    assert owner.get('/api/web/notes/repos').json()['text']==''
-    assert owner.put('/api/web/notes/repos',headers={'Origin':'https://testserver'},json={'text':'x'*20001,'revision':2}).status_code==422
+    assert owner.put(f'/api/web/notes/{pane}',headers={'Origin':'https://testserver'},json=payload).status_code==200
+    assert owner.get(f'/api/v2/notes/{pane}').json()['text']==payload['text']
+    assert owner.put(f'/api/v2/notes/{pane}',headers={'Origin':'https://testserver'},json=payload).status_code==409
+    assert owner.put(f'/api/v2/notes/{pane}',headers={'Origin':'https://testserver'},json={'text':'','revision':1}).status_code==200
+    assert owner.get(f'/api/web/notes/{pane}').json()['text']==''
+    assert owner.put(f'/api/web/notes/{pane}',headers={'Origin':'https://testserver'},json={'text':'x'*20001,'revision':2}).status_code==422
 
 
 def test_role_and_password_changes_invalidate_sessions(environment):
