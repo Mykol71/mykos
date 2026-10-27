@@ -1086,6 +1086,22 @@ function mykosVpnStatus(node,ext,family) {
 }
 function mykosVpnGraph(selectedShop = null, showPeers = false) {
     const vertices=new Map(),edges=[];
+    const osIcon=(vertex,connected)=>{
+        if(vertex.kind==='site' || typeof document==='undefined') return '';
+        const shop=vertex.key.startsWith('guest:')?vertex.key.slice(6):null;
+        const family=shop && shop!=='host'?mykosNodeFamily(nodes.find(node=>String(node.id)===shop) || {id:shop}):'linux';
+        const logo=document.getElementById(mykosOsId(family,'mykos-containers-pane'))?.querySelector('.mykos-pane-logo');
+        if(!logo) return '';
+        const muted=connected?'':'filter:grayscale(1);opacity:.7;';
+        if(logo.tagName.toLowerCase()==='img') {
+            const source=logo.getAttribute('src') || '';
+            return source.startsWith('data:image/')?'<image x="-6" y="-8" width="12" height="12" href="'+escape(source)+'" style="'+muted+'"/>':'';
+        }
+        if(logo.tagName.toLowerCase()!=='svg') return '';
+        const color=connected?getComputedStyle(logo).color:'#94a3b8';
+        return '<svg x="-6" y="-8" width="12" height="12" viewBox="'+escape(logo.getAttribute('viewBox') || '0 0 24 24')+'" fill="'+escape(logo.getAttribute('fill') || 'currentColor')+'" stroke="none" style="color:'+escape(color)+';'+muted+'">'+logo.innerHTML+'</svg>';
+    };
+
     const add=(key,label,kind)=>{if(!vertices.has(key))vertices.set(key,{key,label,kind});else if(kind==='gateway')vertices.get(key).kind=kind;};
     const relevant = new Set(selectedShop ? [String(selectedShop)] : nodes.map(node=>String(node.id)));
     if(selectedShop) for(const link of mykosListMemory[selectedShop]?.vpn_topology?.via_gateways || []) relevant.add(String(link.gateway));
@@ -1105,7 +1121,7 @@ function mykosVpnGraph(selectedShop = null, showPeers = false) {
             add(own,String(node.id),link.mode==='gateway'?'gateway':selectedShop && String(node.id)!==String(selectedShop)?'peer':'guest');add(peer,link.peer,'site');
             const reported=mykosListMemory[node.id]?.vpn?.established_connections;
             const active=Array.isArray(reported) && (reported.includes(link.name)||reported.includes('mykos-'+link.name));
-            edges.push({from:own,to:peer,label:link.remote,active});
+            edges.push({from:own,to:peer,label:link.remote,caption:link.name,active});
         }
         for(const link of data.via_gateways || []) {
             add('guest:'+node.id,String(node.id),selectedShop && String(node.id)!==String(selectedShop)?'peer':'guest');add('guest:'+link.gateway,link.gateway==='host'?'MYKOS host + internet':link.gateway,'gateway');
@@ -1114,7 +1130,7 @@ function mykosVpnGraph(selectedShop = null, showPeers = false) {
             if(link.peer) {
                 add('site:'+link.peer,link.peer,'site');
                 if(!edges.some(edge=>edge.from==='guest:'+link.gateway && edge.to==='site:'+link.peer))
-                    edges.push({from:'guest:'+link.gateway,to:'site:'+link.peer,label:'Shared full-tunnel SA; '+(link.site_remote || ''),active:link.full_tunnel_sa===true});
+                    edges.push({from:'guest:'+link.gateway,to:'site:'+link.peer,label:'Shared full-tunnel SA; '+(link.site_remote || ''),caption:link.name,active:link.full_tunnel_sa===true});
             }
             if(link.mode!=='host') {
                 add('host:internet','Host internet','guest');
@@ -1153,15 +1169,15 @@ function mykosVpnGraph(selectedShop = null, showPeers = false) {
     });
     const peers=[...vertices.values()].filter(v=>v.kind==='peer');
     if(peers.length) {
-        const perRow=Math.max(1,Math.floor(width/140)),top=height+40;
+        const perRow=Math.max(1,Math.floor(width/110)),top=height+30;
         peers.forEach((v,i)=>{
             const row=Math.floor(i/perRow),count=Math.min(perRow,peers.length-row*perRow);
-            Object.assign(v,{x:width*(i%perRow+1)/(count+1),y:top+row*80});
+            Object.assign(v,{x:width*(i%perRow+1)/(count+1),y:top+row*60});
         });
-        height=top+Math.ceil(peers.length/perRow)*80;
+        height=top+Math.ceil(peers.length/perRow)*60;
     }
-    const lines=edges.map(edge=>{const a=vertices.get(edge.from),b=vertices.get(edge.to);return '<g><title>'+escape(edge.label)+'</title><path d="M'+(a.x+20)+' '+a.y+' L'+(b.x-20)+' '+b.y+'" fill="none" stroke="'+(edge.active?'#4ade80':'#94a3b8')+'" stroke-width="2"'+(edge.active?'':' stroke-dasharray="4 4"')+'/></g>';}).join('');
-    const icons=[...vertices.values()].map(v=>'<g transform="translate('+v.x+' '+v.y+')"><title>'+escape(v.label)+'</title>'+(v.kind==='site'?'<path d="M-7-18v7M7-18v7"/><rect x="-14" y="-10" width="28" height="17" rx="3"/>':'<rect x="-14" y="-12" width="28" height="22" rx="3"/><path d="M-8 15h16M0 10v5"/>')+'<text y="-25" text-anchor="middle" fill="currentColor" stroke="none" font-size="10">'+(v.kind==='site'?'Remote site':v.kind==='gateway'?'VPN gateway':v.kind==='peer'?'Network guest':v.key==='host:internet'?'Host':'Selected ID')+'</text><text y="29" text-anchor="middle" fill="currentColor" stroke="none" font-size="12">'+escape(v.label.length>26?v.label.slice(0,23)+'…':v.label)+'</text></g>').join('');
+    const lines=edges.map(edge=>{const a=vertices.get(edge.from),b=vertices.get(edge.to);return '<g><title>'+escape(edge.label)+'</title><path d="M'+(a.x+(a.kind==='peer'?15:20))+' '+a.y+' L'+(b.x-(b.kind==='peer'?15:20))+' '+b.y+'" fill="none" stroke="'+(edge.active?'#4ade80':'#94a3b8')+'" stroke-width="2"'+(edge.active?'':' stroke-dasharray="4 4"')+'/>'+(edge.caption?'<text x="'+((a.x+b.x)/2)+'" y="'+((a.y+b.y)/2-8)+'" text-anchor="middle" fill="'+(edge.active?'#4ade80':'#94a3b8')+'" stroke="none" font-size="11">'+escape(edge.caption)+'</text>':'')+'</g>';}).join('');
+    const icons=[...vertices.values()].map(v=>{const connected=edges.some(edge=>edge.active && (edge.from===v.key || edge.to===v.key));const color=connected?'#38bdf8':'#94a3b8';return '<g style="color:'+color+'" stroke="currentColor" transform="translate('+v.x+' '+v.y+')'+(v.kind==='peer'?' scale(0.75)':'')+'"><title>'+escape(v.label)+'</title>'+(v.kind==='site'?'<path d="M-7-18v7M7-18v7"/><rect x="-14" y="-10" width="28" height="17" rx="3"/>':'<rect x="-14" y="-12" width="28" height="22" rx="3"/><path d="M-8 15h16M0 10v5"/>')+osIcon(v,connected)+'<text y="-25" text-anchor="middle" fill="currentColor" stroke="none" font-size="10">'+(v.kind==='gateway'?'VPN gateway':v.key==='host:internet'?'Host':'')+'</text><text y="29" text-anchor="middle" fill="'+(v.kind==='site' || /^guest:[0-9]{8}$/.test(v.key)?'#facc15':'currentColor')+'" stroke="none" font-size="12">'+escape(v.label.length>26?v.label.slice(0,23)+'…':v.label)+'</text></g>';}).join('');
     return '<p class="mykos-network-mode">'+escape(mode)+'</p><svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Guests, VPN gateways and remote sites" style="width:100%;min-width:480px;color:#38bdf8;fill:none;stroke:currentColor;stroke-width:1.7">'+lines+icons+'</svg>';
 }
 
