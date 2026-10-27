@@ -1,0 +1,14 @@
+[Unit]
+Description=MYKOS mykos-terminal privileged socket
+
+[Socket]
+ListenStream=/run/mykos-terminal.sock
+SocketUser=root
+SocketGroup=mykosweb
+SocketMode=0660
+Accept=yes
+MaxConnections=16
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target

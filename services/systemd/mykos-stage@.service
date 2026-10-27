@@ -1,0 +1,11 @@
+[Unit]
+Description=Stage MYKOS POS shop %i
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-container-helper --stage-worker %i
+UMask=0077
+TimeoutStartSec=31min
+KillMode=control-group

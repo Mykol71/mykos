@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh MYKOS mykos-extended data
+
+[Timer]
+OnBootSec=20s
+OnUnitInactiveSec=30s
+AccuracySec=1s
+Unit=mykos-extended.service
+
+[Install]
+WantedBy=timers.target

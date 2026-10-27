@@ -1,0 +1,13 @@
+[Unit]
+Description=MYKOS mykos-details monitoring snapshot
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=mykosweb
+WorkingDirectory=/opt/mykos-web
+EnvironmentFile=/etc/mykos/web.env
+ExecStart=@PYTHON@ /opt/mykos-web/collect-details.py
+UMask=0027
+TimeoutStartSec=30min

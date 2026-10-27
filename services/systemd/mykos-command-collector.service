@@ -1,0 +1,9 @@
+[Unit]
+Description=Dispatch due MYKOS scheduled commands
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-command collect
+UMask=0077
+TimeoutStartSec=60s

@@ -1,0 +1,9 @@
+#!/bin/bash
+
+#DESC Enable/disable repos.
+
+#need to disable only os repos and leave ostools-1.17, 1.16, and support available.
+[ "`systemctl status httpd | grep Active | cut -d" " -f6 | grep running`" != "" ] && echo Stopping repos..... && systemctl stop httpd && exit 0
+echo "Starting repos..." && systemctl start httpd
+
+exit $?

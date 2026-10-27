@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""Initialize the configured native Linux LAN network and host DHCP proxy."""
+from mykos_network import ensure
+from mykos_runtime import config
+if __name__ == '__main__':
+    settings = config()
+    selected, backend = ensure(settings)
+    mode = 'private bridge NAT' if settings.get('native_network_driver', 'bridge') == 'bridge' else 'macvlan LAN DHCP'
+    print(selected + ': ' + mode + ', eth0 (' + backend + ')')

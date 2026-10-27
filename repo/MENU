@@ -1,0 +1,78 @@
+#!/bin/bash
+
+VERSION="1.1"
+
+# verify root
+ID=$(/usr/bin/id -u)
+[ $ID -ne 0 ] && echo "You must be root to run $0." && exit 1
+
+trap '' 2
+while :; do
+	clear
+
+   LGGRN='\033[1;32m'
+    BLUE='\033[1;34m'
+    TEAL='\033[38;5;31m'
+    GREY='\033[0;37m'
+    NC='\033[0m'
+    clear
+    echo -e "${GREY}$(date +'%x %l:%M %p')${NC}"
+    printf '\u250f''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\n'
+    echo -e "\u2503${BLUE} @ ${NC}`[ -f ../.envtype ] && cat ../.envtype || echo -e Not Installed`${NC}"
+    printf '\u2503'${LGGRN}' )~ repo  '${GREY}${VERSION}${NC}'\n'
+    printf '\u2503''\u2501''\n'
+    printf '\u2503'${GREY}${TEAL}"  $(hostname)"${NC}'\n'
+    printf '\u2503'${GREY}" Space    : $(df -h /var/www/html | tail -1 | awk '{print $4}')"${NC}'\n'
+    printf '\u2503'${GREY}" Status   : $(systemctl status httpd | grep Active | cut -d" " -f6 2>/dev/null)"${NC}'\n'
+    printf '\u2503''\n'
+printf '\u2503''\033[1m'"-\033[0mRepos"'\n'
+printf '\u2503''\033[1m'" 1.\033[0m List"'\n'
+#printf '\u2503''\033[1m'" 2.\033[0m Create"'\n'
+printf '\u2503''\033[1m'" 3.\033[0m Delete"'\n'
+printf '\u2503''\033[1m'" 4.\033[0m Enable/Disable"'\n'
+printf '\u2503''\033[1m'" 5.\033[0m Sync Repos"'\n'
+printf '\u2503''\n'
+printf '\u2503''\033[1m'"-\033[0mSystem"'\n'
+#printf '\u2503''\033[1m'" i.\033[0m Install"'\n'
+printf '\u2503''\033[1m'" r.\033[0m Readme"'\n'
+printf '\u2503''\033[1m'" x.\033[0m Exit"'\n'
+printf '\u2517''\u2501''\n'
+	echo -ne "${CYAN}Select:${NC} "
+	read selection
+	case $selection in
+	1)
+		./bin/list_repos
+		echo -ne "${CYAN}Press enter to continue..${NC}"
+		read
+		;;
+	2)
+		./bin/create_repos
+		echo -ne "${CYAN}Press enter to continue..${NC}"
+		read
+		;;
+	3)
+		./bin/delete_repos
+		echo -ne "${CYAN}Press enter to continue..${NC}"
+		read
+		;;
+	4)
+		./bin/disable_repos
+		echo -ne "${CYAN}Press enter to continue..${NC}"
+		read
+		;;
+	5)
+		./bin/sync_repos
+		echo -ne "${CYAN}Press enter to continue..${NC}"
+		read
+		;;
+	r)
+		cat ./README.md
+		echo -ne "${CYAN}Press enter to continue..${NC}"
+		read
+		;;
+	x)
+		exit
+		;;
+	*) ;;
+	esac
+done

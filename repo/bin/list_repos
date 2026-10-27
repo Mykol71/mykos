@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#DESC Lists repos.
+
+for dir in `ls /var/www/html | grep -v lost+found | grep -v GPG`
+ do
+   echo "https://$(hostname)/$dir/"
+ done
+
+exit $?

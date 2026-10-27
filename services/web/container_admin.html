@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MYKOS Container Management</title>
+<style>
+:root{color-scheme:dark;font-family:monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#0b1120;color:#e2e8f0}
+header{background:#111c30;border-bottom:1px solid #334155;
+padding:20px 28px;display:flex;gap:16px;align-items:center;
+justify-content:space-between;flex-wrap:wrap}
+h1{font-size:23px;color:#4ade80;margin:0}
+main{max-width:1400px;margin:25px auto;padding:0 20px}
+.panel{background:#121d30;border:1px solid #29384d;
+border-radius:10px;padding:20px}
+a,button{font:inherit;color:#e2e8f0;background:#1e293b;
+border:1px solid #334155;border-radius:6px;
+padding:9px 12px;text-decoration:none;cursor:pointer}
+button:hover,a:hover{border-color:#38bdf8}
+button:disabled{opacity:.4;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;text-align:left}
+th,td{padding:12px;border-bottom:1px solid #29384d}
+th{color:#94a3b8}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.up{color:#4ade80}.down{color:#fb7185}
+pre{background:#080f1e;border:1px solid #334155;
+padding:15px;max-height:450px;overflow:auto;white-space:pre-wrap}
+#notice{color:#94a3b8;min-height:20px}
+</style>
+</head>
+<body>
+<header>
+<h1>Administration / Containers</h1>
+<a href="/">← Infrastructure</a>
+</header>
+<main>
+<div class="panel">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<h2>POS Container Management</h2>
+<button id="refresh">Refresh</button>
+</div>
+<p id="notice">Loading containers...</p>
+<div style="overflow-x:auto">
+<table>
+<thead>
+<tr><th>ID</th><th>Container</th><th>Status</th>
+<th>Image</th><th>Actions</th></tr>
+</thead>
+<tbody id="rows"></tbody>
+</table>
+</div>
+<h3>Container Logs</h3>
+<pre id="logs">Select Logs to view recent output.</pre>
+</div>
+</main>
+<script>
+const rows=document.getElementById('rows');
+const notice=document.getElementById('notice');
+const logs=document.getElementById('logs');
+
+async function request(url, options={}){
+  const response=await fetch(url,{cache:'no-store',...options});
+  const text=await response.text();
+  let data;
+  try{data=JSON.parse(text)}catch{data={detail:text}}
+  if(!response.ok)throw new Error(data.detail || 'Request failed');
+  return data;
+}
+
+function button(label, action, disabled=false){
+  const b=document.createElement('button');
+  b.textContent=label;
+  b.disabled=disabled;
+  b.addEventListener('click',action);
+  return b;
+}
+
+async function load(){
+  notice.textContent='Loading containers...';
+  try{
+    const data=await request('/api/admin/containers');
+    rows.replaceChildren();
+    for(const c of data.containers){
+      const tr=document.createElement('tr');
+      const running=c.state.toLowerCase()==='running';
+
+      for(const value of [c.shop,c.name,c.status,c.image]){
+        const td=document.createElement('td');
+        td.textContent=value;
+        tr.append(td);
+      }
+
+      tr.cells[2].className=running?'up':'down';
+
+      const actions=document.createElement('td');
+      actions.className='actions';
+
+      actions.append(
+        button('Start',()=>operate(c.shop,'start'),running),
+        button('Stop',()=>operate(c.shop,'stop'),!running),
+        button('Restart',()=>operate(c.shop,'restart'),!running),
+        button('Logs',()=>showLogs(c.shop))
+      );
+
+      tr.append(actions);
+      rows.append(tr);
+    }
+    notice.textContent=data.containers.length+
+      ' managed POS container(s). Other containers are excluded.';
+  }catch(error){
+    notice.textContent='Error: '+error.message;
+  }
+}
+
+async function operate(shop,action){
+  const message=`${action.toUpperCase()} POS container ${shop}?`;
+  if(!confirm(message))return;
+
+  notice.textContent=`${action} requested for ${shop}...`;
+  try{
+    await request(
+      `/api/admin/containers/${encodeURIComponent(shop)}/${action}`,
+      {method:'POST'}
+    );
+    await load();
+    notice.textContent=`${action} completed for ${shop}.`;
+  }catch(error){
+    notice.textContent='Error: '+error.message;
+  }
+}
+
+async function showLogs(shop){
+  logs.textContent='Loading logs for '+shop+'...';
+  try{
+    const data=await request(
+      `/api/admin/containers/${encodeURIComponent(shop)}/logs`
+    );
+    logs.textContent=data.output || 'No recent logs.';
+  }catch(error){
+    logs.textContent='Error: '+error.message;
+  }
+}
+
+document.getElementById('refresh').addEventListener('click',load);
+load();
+</script>
+</body>
+</html>

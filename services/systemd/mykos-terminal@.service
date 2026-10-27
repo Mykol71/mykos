@@ -1,0 +1,14 @@
+[Unit]
+Description=MYKOS mykos-terminal connection
+
+[Service]
+Type=simple
+User=root
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-terminal-helper
+StandardInput=socket
+StandardOutput=journal
+StandardError=journal
+UMask=0077
+TimeoutStopSec=5s
+RuntimeMaxSec=8h
+KillMode=control-group

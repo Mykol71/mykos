@@ -1,0 +1,12 @@
+[Unit]
+Description=MYKOS unattended image build for %i
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+User=root
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-image-build %i --worker
+UMask=0077
+TimeoutStartSec=4h
+TimeoutStopSec=20s
+KillMode=control-group

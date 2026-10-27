@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ $(id -u) == 0 ]]; then
+  exec runuser -u mykosweb -- /opt/mykos-web/.venv/bin/python /opt/mykos-web/manage.py keys "$@"
+fi
+[[ $(id -un) == mykosweb ]] || { echo 'Run using sudo or as mykosweb' >&2; exit 1; }
+exec /opt/mykos-web/.venv/bin/python /opt/mykos-web/manage.py keys "$@"

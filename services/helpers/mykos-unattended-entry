@@ -1,0 +1,49 @@
+#!/bin/bash
+set -euo pipefail
+state=/storage/.mykos-installstate
+if [[ ${MYKOS_UNATTENDED:-} == ubuntu ]]; then
+    if [[ ! -f "$state/boot-installed" ]]; then
+        /run/mykos-ubuntu-iso
+        export BOOT=none
+        # This installation-only share is removed by the host before capture.
+        export ARGUMENTS="${ARGUMENTS:-} -fsdev local,id=mykosinstallfs,path=$state,security_model=none -device virtio-9p-pci,fsdev=mykosinstallfs,mount_tag=mykosinstall"
+        /run/entry.sh
+        [[ -f "$state/disk-installed" ]] || { echo 'Ubuntu installer did not complete; disk retained' >&2; exit 1; }
+        touch "$state/boot-installed"
+        rm -f /storage/custom.iso
+    fi
+    # The same Podman container boots the newly installed disk after poweroff.
+    export BOOT=none
+    unset ARGUMENTS
+    exec /run/entry.sh
+fi
+if [[ ${MYKOS_UNATTENDED:-} == macos ]]; then
+    # Published vendor images default to an interactive OpenCore picker. A
+    # bounded automatic boot is required for every unattended installer reboot.
+    python3 - <<'PLIST'
+import plistlib
+from pathlib import Path
+path=Path('/assets/config.plist')
+value=plistlib.loads(path.read_bytes())
+value['Misc']['Boot'].update(Timeout=2,ShowPicker=False)
+path.write_bytes(plistlib.dumps(value))
+PLIST
+    # Source install.sh first to download the normal Apple recovery image. Hook
+    # only the new builder; regular instances never format or enter recovery.
+    if ! grep -q '^ . /run/mykos-macos-install-hook$' /run/entry.sh; then
+        rewrite=$(mktemp /run/.mykos-mac-entry.XXXXXX)
+        awk '/^\. install.sh/ { print; print " . /run/mykos-macos-install-hook"; next } { print }' /run/entry.sh > "$rewrite"
+        cat "$rewrite" > /run/entry.sh;rm -f "$rewrite"
+    fi
+    cat > /run/mykos-macos-install-hook <<'HOOK'
+state=/storage/.mykos-installstate
+if [[ ! -f "$state/recovery-patched" ]]; then
+    [[ -s ${BASE_IMG:-} ]] || { echo 'Apple recovery image unavailable' >&2; exit 1; }
+    python3 /run/mykos-recovery-patch.py "$BASE_IMG"
+    touch "$state/recovery-patched"
+fi
+DISK_OPTS+=" -fsdev local,id=installstatefs,path=$state,security_model=none -device virtio-9p-pci,id=installstate9p,fsdev=installstatefs,mount_tag=installstate,bus=pcie.0,addr=0x7"
+HOOK
+    exec /run/entry.sh
+fi
+exit 1

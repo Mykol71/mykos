@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Noninteractive rootful staging equivalent, with explicit host configuration."""
+from pathlib import Path
+import mykos_profiles as profile
+import mykos_network as network
+import mykos_vm as vm
+import re
+import socket
+import sys
+from mykos_runtime import PODMAN, config, containers, run, shopcode, network_device
+
+def stage(shop, restore, image=None):
+    with vm.locked():
+        return _stage(shop, restore, image)
+
+
+def _stage(shop, restore, image=None):
+    shopcode(shop)
+    if restore not in ('yes','no'): raise ValueError('Expected yes/no restore flag')
+    cfg=config()
+    image=image if image is not None else cfg.get('stage_image')
+    if not isinstance(image,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9./_:@-]*',image):
+        raise ValueError('Configure stage_image to a locally prepared OS image')
+    network_args=network.arguments(cfg,shop+'.'+socket.gethostname())
+    if any(x['shop']==shop for x in containers()): raise ValueError('Container already exists')
+    run([PODMAN,'image','exists',image])
+    vpn=Path('/usr/local/share/mykos/pos/.'+shop)
+    if vpn.is_symlink(): raise ValueError('VPN directory must not be a symlink')
+    vpn.mkdir(mode=0o700,parents=True,exist_ok=True)
+    name=shop+'.'+socket.gethostname()
+    args=[PODMAN,'run','-d','--name',name,'--hostname',name,'--privileged','--memory=2g','--pull=never','--restart=unless-stopped',
+          '--label','io.mykos.persistent=true',
+          '-v',str(vpn)+':/etc/ipsec.d:rw']
+    if restore=='yes':
+        args.extend(profile.mounts(shop))
+    args.extend(network_args)
+    args.extend([image,'/sbin/init'])
+    cid=run(args)
+    try:
+        if any(vpn.glob('*.conn.conf')):
+            run([PODMAN,'exec',cid,'systemctl','restart','ipsec'])
+        if restore=='yes':
+            for service in profile.services():
+                run([PODMAN,'exec',cid,'systemctl','restart',service])
+        Path('/usr/local/share/mykos/pos/.'+shop+'.container').write_text(cid+'\n')
+        return 'Container '+name+' ready; verify OS and configured VPN health'
+    except Exception:
+        # Only remove the container created by this attempt; retain customer backup/VPN data.
+        run([PODMAN,'rm','--force',cid]);raise
+
+if __name__=='__main__':
+    if len(sys.argv) not in (3,4): raise SystemExit('Usage: mykos-stage-pos SHOP yes|no [IMAGE]')
+    try: print(stage(sys.argv[1],sys.argv[2],sys.argv[3] if len(sys.argv)==4 else None))
+    except Exception as e: raise SystemExit(str(e))

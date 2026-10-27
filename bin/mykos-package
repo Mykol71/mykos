@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Build a source-only installer bundle from the installer's managed toolkit."""
+import argparse
+import hashlib
+import importlib.machinery
+import importlib.util
+import io
+from pathlib import Path
+import tarfile
+from types import SimpleNamespace
+
+source = Path(__file__).resolve().parents[1]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', required=True, help='New .tar.gz archive (never overwrites)')
+    args = parser.parse_args()
+    output = Path(args.output).absolute()
+    if not output.name.endswith('.tar.gz'): parser.error('Output must end in .tar.gz')
+    if output.exists() or Path(str(output)+'.sha256').exists(): parser.error('Output already exists')
+    loader = importlib.machinery.SourceFileLoader('mykos_installer', str(source/'bin/mykos-install'))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    installer = importlib.util.module_from_spec(spec); loader.exec_module(installer)
+    instance = installer.Installer(SimpleNamespace(root='/', python='/usr/bin/python3.11', public_origin='https://mykos.example.com'))
+    prefix = '/usr/local/share/mykos/'
+    files = {name[len(prefix):]: (entry['data'], entry['mode']) for name,entry in instance.entries().items() if name.startswith(prefix)}
+    files['AGENTS.md'] = ((source/'AGENTS.md').read_bytes(), 0o644)
+    files['INSTALL-RHEL9.md'] = ((source/'INSTALL-RHEL9.md').read_bytes(), 0o644)
+    for path in sorted((source/'packaging/rpm').glob('*')):
+        if path.is_file() and path.suffix in ('.py','.spec','.md'):
+            files[str(path.relative_to(source))] = (path.read_bytes(),0o644)
+    for name in files:
+        if name.startswith('/') or '..' in Path(name).parts or any(part.startswith('.') for part in Path(name).parts):
+            raise ValueError('Unsafe bundle name')
+    checksums = ''.join(hashlib.sha256(data).hexdigest() + '  ' + name + '\n' for name,(data,mode) in sorted(files.items()))
+    files['SHA256SUMS'] = (checksums.encode(),0o644)
+    top = output.name[:-7]
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open('xb') as raw, tarfile.open(fileobj=raw,mode='w:gz') as archive:
+        for name,(data,mode) in sorted(files.items()):
+            entry=tarfile.TarInfo(top+'/'+name);entry.size=len(data);entry.mode=mode
+            archive.addfile(entry,io.BytesIO(data))
+    digest=hashlib.sha256(output.read_bytes()).hexdigest()
+    Path(str(output)+'.sha256').write_text(digest+'  '+output.name+'\n')
+    print('Built',output,'with',len(files),'source files; no runtime disks, credentials or identity stores.')
+    print('SHA256:',digest)
+
+
+if __name__ == '__main__': main()

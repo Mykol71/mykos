@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""Check that this host can create a KVM VM without starting a guest."""
+import fcntl
+import os
+import platform
+import stat
+import sys
+
+
+def check_kvm(device='/dev/kvm'):
+    if platform.machine() not in ('x86_64', 'amd64'):
+        raise RuntimeError('Windows/macOS desktop VMs require an x86_64 host')
+    try:
+        if not stat.S_ISCHR(os.stat(device).st_mode):
+            raise RuntimeError(device + ' is not a KVM character device')
+        descriptor = os.open(device, os.O_RDWR | os.O_CLOEXEC)
+        try:
+            if fcntl.ioctl(descriptor, 0xAE00, 0) != 12:  # KVM_GET_API_VERSION
+                raise RuntimeError('Unsupported KVM API version')
+            guest = fcntl.ioctl(descriptor, 0xAE01, 0)  # KVM_CREATE_VM
+            os.close(guest)
+        finally:
+            os.close(descriptor)
+    except OSError as error:
+        raise RuntimeError('Cannot use ' + device + ': ' + str(error)) from error
+    return 'KVM support: available (VM creation verified)'
+
+
+def main():
+    try:
+        print(check_kvm())
+        return 0
+    except RuntimeError as error:
+        print('WARNING: KVM support unavailable: ' + str(error), file=sys.stderr)
+        print('Desktop VMs cannot start. Enable Intel VT-x/AMD-V in firmware (or nested virtualization on a VM host), load kvm_intel/kvm_amd, then rerun sudo /usr/local/sbin/mykos-kvm-check. RedHat containers and the dashboard remain available.', file=sys.stderr)
+        return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

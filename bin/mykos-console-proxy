@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""Install console WebSocket routing inside existing MYKOS Apache TLS vhosts."""
+import argparse
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import tempfile
+import time
+
+MARKER = '# MYKOS authenticated HTTPS console WebSockets'
+BLOCK = '''    # MYKOS authenticated HTTPS console WebSockets
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} =websocket [NC]
+    RewriteCond %{REQUEST_URI} ^/mykos/(api/v2/)?console/
+    RewriteRule ^/mykos/(.*)$ ws://127.0.0.1:8000/$1 [P,L]
+'''
+PROXY = re.compile(r'^\s*ProxyPass\s+["\']?/mykos/["\']?\s+["\']?http://127\.0\.0\.1:8000/', re.M | re.I)
+
+
+def transform(text):
+    def vhost(match):
+        value = match[0]
+        if not re.search(r'<VirtualHost\s+[^>]*:443\b', value, re.I) or MARKER in value:
+            return value
+        proxy = PROXY.search(value)
+        if proxy is None: return value
+        start = value.rfind('\n', 0, proxy.start()) + 1
+        return value[:start] + BLOCK + value[start:]
+    return re.sub(r'<VirtualHost\b[^>]*>.*?</VirtualHost\s*>', vhost, text, flags=re.I | re.S)
+
+
+def apply(directory=Path('/etc/httpd/conf.d'), execute=False):
+    changes=[]
+    for path in sorted(directory.glob('*.conf')):
+        if path.is_symlink(): raise ValueError('Apache configuration symlink rejected: '+str(path))
+        before=path.read_text();after=transform(before)
+        if before!=after:changes.append((path,before,after))
+    if not execute:
+        print('Would update: '+', '.join(str(p) for p,_,_ in changes) if changes else 'Console proxy routing already present, or no MYKOS TLS vhost found.')
+        return
+    if not changes: return
+    if os.geteuid()!=0:raise ValueError('Root required')
+    subprocess.run(['apachectl','configtest'],check=True)
+    backup=Path('/var/backups/mykos-installer')/('apache-consoles-'+time.strftime('%Y%m%d-%H%M%S'))
+    backup.mkdir(mode=0o700,parents=True,exist_ok=False)
+    for path,_,_ in changes:
+        if path.stat().st_uid!=0 or path.stat().st_mode & 0o022:raise ValueError('Unsafe Apache configuration owner/mode: '+str(path))
+        shutil.copy2(path,backup/path.name)
+    try:
+        for path,_,after in changes:
+            fd,name=tempfile.mkstemp(dir=path.parent,prefix='.mykos-console-')
+            try:
+                with os.fdopen(fd,'w') as f:f.write(after)
+                shutil.copystat(path,name);os.chown(name,0,path.stat().st_gid);os.replace(name,path)
+            finally:
+                if os.path.exists(name):os.unlink(name)
+        subprocess.run(['apachectl','configtest'],check=True)
+        active=subprocess.run(['systemctl','is-active','--quiet','httpd']).returncode==0
+        if active:subprocess.run(['systemctl','reload','httpd'],check=True)
+    except BaseException:
+        for path,_,_ in changes:shutil.copy2(backup/path.name,path)
+        raise
+    print('HTTPS console WebSocket routes installed; Apache config backup: '+str(backup))
+
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--apply',action='store_true')
+    args=parser.parse_args()
+    try:apply(execute=args.apply)
+    except (OSError,ValueError,subprocess.SubprocessError) as e:raise SystemExit(str(e))

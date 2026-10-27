@@ -1,0 +1,35 @@
+#!/bin/bash
+# Use each release's own repository tools, with one worker invocation per release.
+set -euo pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+exec 9>/run/lock/mykos-repo-sync.lock
+flock -n 9 || { echo 'A repository synchronization is already running' >&2; exit 1; }
+for release in 7 8 9 10; do
+    case "$release" in
+        7) image=registry.access.redhat.com/ubi7/ubi:7.9-1445 ;;
+        8) image=registry.access.redhat.com/ubi8/ubi:8.10-1786322297 ;;
+        9) image=registry.access.redhat.com/ubi9/ubi:9.8-1786631889 ;;
+        10) image=registry.access.redhat.com/ubi10/ubi:1791894362 ;;
+    esac
+    # No --replace: a conflicting worker must never be removed behind its owner.
+    podman run --rm -i --name "mykos-repo-sync-rhel${release}" \
+        --security-opt label=disable -v /var/www/html:/var/www/html:rw \
+        -w /var/www/html "$image" /bin/bash -s -- "$release" <<'WORKER'
+set -euo pipefail
+release=$1
+if [ "$release" = 7 ]; then
+    yum -y install yum-utils createrepo
+    for repo in rhel-7-server-rpms rhel-7-server-optional-rpms rhel-7-server-extras-rpms; do
+        reposync -p /var/www/html --download-metadata --repo="$repo"
+        createrepo --update "/var/www/html/$repo"
+    done
+else
+    dnf -y install dnf-plugins-core createrepo_c
+    for component in baseos appstream; do
+        dnf reposync -p /var/www/html --download-metadata \
+            --repo="rhel-${release}-for-x86_64-${component}-rpms"
+    done
+fi
+WORKER
+done
+echo 'Repository synchronization complete.'

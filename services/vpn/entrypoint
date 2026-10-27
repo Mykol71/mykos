@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+check_runtime() {
+    if ! ip xfrm state list >/dev/null 2>&1; then
+        echo 'Kernel XFRM access unavailable. Use a runtime exposing IPsec and CAP_NET_ADMIN; this container cannot enable those host capabilities itself.' >&2
+        exit 1
+    fi
+    command -v dhclient >/dev/null
+    ipsec --version
+    dhclient --version
+}
+if [ "${1:-}" = check ]; then
+    check_runtime
+    exit 0
+fi
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+check_runtime
+mkdir -p /var/lib/ipsec/nss /run/pluto
+ipsec checknss --nssdir /var/lib/ipsec/nss
+exec ipsec pluto --nofork --stderrlog --nssdir /var/lib/ipsec/nss --config /etc/ipsec.conf

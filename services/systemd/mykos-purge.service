@@ -1,0 +1,10 @@
+[Unit]
+Description=Explicitly confirmed MYKOS container-state purge
+
+[Service]
+Type=oneshot
+User=root
+ExecStartPre=/usr/bin/sleep 2
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-prune --worker
+TimeoutStartSec=45min
+UMask=0077

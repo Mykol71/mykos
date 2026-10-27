@@ -1,0 +1,10 @@
+[Unit]
+Description=Execute MYKOS scheduled command %i
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-command run %i
+UMask=0077
+TimeoutStartSec=3700s
+KillMode=control-group

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "" >/tmp/tsr_batch.log
+for cust in `ls /backups/ | grep tfrsync | cut -d- -f2`
+  do
+    [ -d /backups/tfrsync-$cust/usr2/tsr/tsr ] && rm -rf /var/www/html/$cust && mkdir /var/www/html/$cust 2>>/dev/null && cp -rp /backups/tfrsync-$cust/usr2/tsr/tsr/* /var/www/html/$cust/. && chmod -R 777 /var/www/html/$cust && echo copied $cust....>>/tmp/tsr_batch.log
+    [ -d /backups/tfrsync-$cust/usr2/tsr/tsr ] && [ ! -f /var/www/html/$cust/viewer.html ] && cp -f `find /var/www/html -name viewer.html | tail -1` /var/www/html/$cust/viewer.html && echo "$cust had no viewer, used another...." >>/tmp/tsr_batch.log 
+  done

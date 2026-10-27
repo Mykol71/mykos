@@ -1,0 +1,378 @@
+#!/usr/bin/env python3
+"""Noninteractive RHEL 8/9 HTTPS-first RPM bootstrap (Python 3.6 compatible)."""
+import argparse
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import urllib.request
+
+STATE = '/var/lib/mykos-installer/bootstrap.json'
+KEY_HASHES = {
+    '8': 'cd1db21a863185127f2e3b264c97fb1c6c44c316385707999041ea475c110d1c',
+    '9': 'fcf0eab4f05a1c0de6363ac4b707600a27a9d774e9b491059e59e6921b255a84',
+    'mykos': '8efb66fd6c7900cc8d232a25c3318be2bc1b402a7d1cdd2c0d99a0f4a90694a9',
+}
+
+def domain_name(hostname):
+    name = hostname.rstrip('.').lower()
+    labels = name.split('.')
+    if len(labels) < 2 or any(not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', v) for v in labels):
+        raise ValueError('Set a valid fully qualified hostname before bootstrapping')
+    if len(name) > 253 or not re.search(r'[a-z]', labels[-1]) or labels[-1] in ('localhost', 'local', 'invalid'):
+        raise ValueError('A public DNS hostname is required')
+    return '.'.join(labels[-2:])
+
+
+def run(args, check=True):
+    print('+ ' + ' '.join(args), flush=True)
+    return subprocess.run(args, check=check, stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT, universal_newlines=True)
+
+
+class Bootstrap:
+    def __init__(self, domain, root=Path('/'), runner=run):
+        self.domain = domain_name(domain)
+        self.root = Path(root)
+        self.run = runner
+        self.state_path = self.path(STATE)
+        self.state = json.loads(self.state_path.read_text()) if self.state_path.exists() else {
+            'version': 1, 'domain': self.domain, 'files': {}, 'firewall': [], 'complete': False,
+        }
+        if self.state.get('domain') != self.domain:
+            raise ValueError('Existing bootstrap uses another domain; remove it before changing domains')
+        self.state.setdefault('files', {})
+        self.state.setdefault('firewall', [])
+
+    def path(self, name):
+        if not name.startswith('/') or '..' in Path(name).parts:
+            raise ValueError('Unsafe path')
+        dest = self.root / name.lstrip('/')
+        if dest.is_symlink() or any(p.is_symlink() for p in dest.parents):
+            raise ValueError('Refusing managed symlink: ' + str(dest))
+        return dest
+
+    def save(self):
+        self.state_path.parent.mkdir(parents=True, exist_ok=True)
+        self.atomic(self.state_path, (json.dumps(self.state, indent=2) + '\n').encode(), 0o600)
+
+    @staticmethod
+    def atomic(path, data, mode):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, name = tempfile.mkstemp(prefix='.mykos-', dir=str(path.parent))
+        try:
+            with os.fdopen(fd, 'wb') as f:
+                f.write(data); f.flush(); os.fsync(f.fileno())
+            os.chmod(name, mode)
+            os.replace(name, str(path))
+        finally:
+            if os.path.exists(name): os.unlink(name)
+
+    def managed(self, name, content):
+        data = content.encode() if isinstance(content, str) else content
+        digest = hashlib.sha256(data).hexdigest()
+        dest = self.path(name)
+        if dest.exists():
+            if dest.read_bytes() == data:
+                return False
+            previous = self.state['files'].get(name)
+            if previous != hashlib.sha256(dest.read_bytes()).hexdigest():
+                raise ValueError('Preserving existing/edited file: ' + name)
+        # Save intent first; interruption can never turn a preexisting file into an owned file.
+        self.state['files'][name] = digest
+        self.save()
+        self.atomic(dest, data, 0o644)
+        return True
+
+    def configs(self):
+        conf = self.path('/etc/httpd')
+        return [p for p in conf.rglob('*.conf') if p.is_file()] if conf.exists() else []
+
+    def cert_path(self):
+        # Certbot public certificate files are intentional symlinks to its archive.
+        return self.root / ('etc/letsencrypt/live/' + self.domain + '/fullchain.pem')
+
+    def tls_ready(self):
+        if not self.cert_path().is_file(): return False
+        result = self.run(['curl', '--silent', '--show-error', '--noproxy', '*',
+                           '--connect-timeout', '5', '--max-time', '10', '--output', '/dev/null',
+                           '--resolve', self.domain + ':443:127.0.0.1', 'https://' + self.domain + '/'], check=False)
+        return result.returncode == 0
+
+    def completed(self):
+        if not self.state.get('complete'): return False
+        for name, digest in self.state['files'].items():
+            p = self.path(name)
+            if not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest() != digest:
+                return False
+        return (self.run(['rpm', '-q', 'mykos'], check=False).returncode == 0
+                and self.run(['systemctl', 'is-active', '--quiet', 'mykos-web.service'], check=False).returncode == 0
+                and self.tls_ready())
+
+    def release(self):
+        text = self.path('/etc/os-release').read_text()
+        match = re.search(r'^VERSION_ID=["\']?([89])(?:[.\"\']|$)', text, re.M)
+        if not match or not re.search(r'^ID(?:_LIKE)?=.*(?:rhel|rocky|almalinux|centos)', text, re.M):
+            raise ValueError('This bootstrap supports RHEL-compatible 8 and 9')
+        return match.group(1)
+
+    def key(self, name, url):
+        target = '/etc/pki/rpm-gpg/RPM-GPG-KEY-' + ('MYKOS' if name == 'mykos' else 'MYKOS-EPEL-' + name)
+        p = self.path(target)
+        if p.exists() and hashlib.sha256(p.read_bytes()).hexdigest() == KEY_HASHES[name]:
+            return target
+        with urllib.request.urlopen(url, timeout=30) as response:
+            data = response.read(65537)
+        if len(data) > 65536 or hashlib.sha256(data).hexdigest() != KEY_HASHES[name]:
+            raise ValueError('Signing key does not match pinned trust: ' + url)
+        self.managed(target, data)
+        return target
+
+    def prerequisites(self, el):
+        self.run(['dnf', '-y', 'install', 'httpd', 'mod_ssl', 'curl'])
+        if shutil.which('certbot'): return
+        key = self.key(el, 'https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-' + el)
+        self.managed('/etc/yum.repos.d/mykos-bootstrap-epel.repo',
+                     '[mykos-bootstrap-epel]\nname=EPEL for MYKOS HTTPS bootstrap\n'
+                     'baseurl=https://dl.fedoraproject.org/pub/epel/' + el + '/Everything/$basearch/\n'
+                     'enabled=0\ngpgcheck=1\ngpgkey=file://' + key + '\n')
+        self.run(['dnf', '-y', '--enablerepo=mykos-bootstrap-epel', 'install', 'certbot', 'policycoreutils'])
+
+    def firewall(self):
+        if not shutil.which('firewall-cmd'): return
+        if self.run(['firewall-cmd', '--state'], check=False).returncode: return
+        for service in ('http', 'https'):
+            for permanent in (False, True):
+                flags = ['--permanent'] if permanent else []
+                query = ['firewall-cmd'] + flags + ['--query-service=' + service]
+                if self.run(query, check=False).returncode == 0: continue
+                item = {'service': service, 'permanent': permanent}
+                if item not in self.state['firewall']:
+                    self.state['firewall'].append(item); self.save()
+                self.run(['firewall-cmd'] + flags + ['--add-service=' + service])
+
+    def apache_write(self, name, text):
+        p = self.path(name)
+        old = p.read_bytes() if p.exists() else None
+        previous = dict(self.state['files'])
+        changed = self.managed(name, text)
+        if not changed: return
+        try:
+            self.run(['httpd', '-t'])
+        except Exception:
+            if old is None: p.unlink()
+            else: self.atomic(p, old, 0o644)
+            self.state['files'] = previous; self.save()
+            raise
+        self.run(['systemctl', 'reload', 'httpd'])
+
+    def https(self, email):
+        if self.tls_ready():
+            print('Existing trusted Apache HTTPS certificate is ready; skipping issuance.', flush=True)
+            return
+        config_name = '/etc/httpd/conf.d/00-mykos-https.conf'
+        ours = self.path(config_name)
+        for p in self.configs():
+            if p == ours: continue
+            if re.search(r'^\s*Server(?:Name|Alias)\s+[^\n]*\b' + re.escape(self.domain) + r'(?=\s|:|$)', p.read_text(), re.M | re.I):
+                raise ValueError('Existing Apache site needs HTTPS repair before bootstrap: ' + str(p))
+        webroot = '/var/www/html'
+        self.path(webroot + '/.well-known/acme-challenge').mkdir(parents=True, exist_ok=True)
+        http = ('# Managed by mykos-bootstrap\n<VirtualHost *:80>\n'
+                '  ServerName ' + self.domain + '\n  DocumentRoot ' + webroot + '\n'
+                '  <Directory "' + webroot + '">\n    Require all granted\n  </Directory>\n</VirtualHost>\n')
+        self.apache_write(config_name, http)
+        renewal = self.root / ('etc/letsencrypt/renewal/' + self.domain + '.conf')
+        new_lineage = not renewal.exists() and not self.cert_path().exists()
+        args = ['certbot', 'certonly', '--webroot', '--webroot-path', webroot,
+                '--non-interactive', '--agree-tos', '--keep-until-expiring',
+                '--cert-name', self.domain, '-d', self.domain]
+        args += ['--email', email] if email else ['--register-unsafely-without-email']
+        result = self.run(args)
+        if new_lineage:
+            self.state['certificate_created'] = True; self.save()
+        if result.stdout: print(result.stdout, flush=True)
+        https = ('# Managed by mykos-bootstrap\n<VirtualHost *:80>\n  ServerName ' + self.domain + '\n'
+                 '  DocumentRoot ' + webroot + '\n  RewriteEngine On\n'
+                 '  RewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/\n'
+                 '  RewriteRule ^ https://' + self.domain + '%{REQUEST_URI} [R=301,L]\n</VirtualHost>\n'
+                 '<VirtualHost *:443>\n  ServerName ' + self.domain + '\n  DocumentRoot ' + webroot + '\n'
+                 '  SSLEngine on\n  SSLProtocol -all +TLSv1.2 +TLSv1.3\n'
+                 '  SSLCertificateFile /etc/letsencrypt/live/' + self.domain + '/fullchain.pem\n'
+                 '  SSLCertificateKeyFile /etc/letsencrypt/live/' + self.domain + '/privkey.pem\n'
+                 '  IncludeOptional /etc/httpd/mykos-proxy.inc\n</VirtualHost>\n')
+        self.apache_write(config_name, https)
+        if not self.tls_ready(): raise ValueError('Trusted HTTPS probe failed; MYKOS RPM was not installed')
+
+    def renewal(self):
+        # Enable renewal only for the lineage created by this bootstrap. Existing sites keep their renewal mechanism.
+        if not self.state.get('certificate_created'): return
+        self.managed('/etc/systemd/system/mykos-certificate-renew.service',
+                     '[Unit]\nDescription=Renew MYKOS HTTPS certificate\nAfter=network-online.target\n'
+                     '[Service]\nType=oneshot\nExecStart=/usr/bin/certbot renew --non-interactive --cert-name ' + self.domain +
+                     ' --deploy-hook "/usr/bin/systemctl reload httpd"\n')
+        self.managed('/etc/systemd/system/mykos-certificate-renew.timer',
+                     '[Unit]\nDescription=Check MYKOS certificate renewal twice daily\n[Timer]\n'
+                     'OnCalendar=*-*-* 00,12:00:00\nRandomizedDelaySec=3600\nPersistent=true\n'
+                     '[Install]\nWantedBy=timers.target\n')
+        self.run(['systemctl', 'daemon-reload'])
+        self.run(['systemctl', 'enable', '--now', 'mykos-certificate-renew.timer'])
+
+    def repository(self, el):
+        origin = 'https://mykol.com/el-' + el + '-for-x86_64-mykos-1.5'
+        key = self.key('mykos', origin + '/RPM-GPG-KEY-MYKOS')
+        self.managed('/etc/yum.repos.d/mykos-bootstrap.repo',
+                     '[mykos-bootstrap]\nname=MYKOS signed RPMs\nbaseurl=' + origin +
+                     '\nenabled=1\ngpgcheck=1\ngpgkey=file://' + key + '\n')
+
+    def proxy(self):
+        if '/etc/httpd/conf.d/00-mykos-https.conf' not in self.state['files']:
+            # Existing vhosts are never rewritten implicitly. They must already proxy MYKOS.
+            text = '\n'.join(p.read_text() for p in self.configs())
+            if not re.search(r'ProxyPass\s+/mykos/\s+http://127\.0\.0\.1:8000/', text):
+                raise ValueError('Existing HTTPS site has no MYKOS proxy; add services/apache-mykos.conf.example to its HTTPS vhost')
+            return
+        include = ('# Managed by mykos-bootstrap\nProxyPreserveHost On\n'
+                   'RequestHeader set X-Forwarded-Proto "https"\n'
+                   'ProxyPass /mykos/api/terminal/ ws://127.0.0.1:8000/api/terminal/\n'
+                   'ProxyPassReverse /mykos/api/terminal/ ws://127.0.0.1:8000/api/terminal/\n'
+                   'ProxyPass /mykos/api/v2/terminal/ ws://127.0.0.1:8000/api/v2/terminal/\n'
+                   'ProxyPassReverse /mykos/api/v2/terminal/ ws://127.0.0.1:8000/api/v2/terminal/\n'
+                   'RewriteEngine On\nRewriteCond %{HTTP:Upgrade} =websocket [NC]\n'
+                   'RewriteCond %{REQUEST_URI} ^/mykos/(api/v2/)?console/\n'
+                   'RewriteRule ^/mykos/(.*)$ ws://127.0.0.1:8000/$1 [P,L]\n'
+                   'ProxyPass /mykos/ http://127.0.0.1:8000/\n'
+                   'ProxyPassReverse /mykos/ http://127.0.0.1:8000/\nRedirectMatch ^/mykos$ /mykos/\n')
+        self.apache_write('/etc/httpd/mykos-proxy.inc', include)
+        if shutil.which('getenforce') and self.run(['getenforce']).stdout.strip() != 'Disabled':
+            self.run(['setsebool', '-P', 'httpd_can_network_connect', 'on'])
+
+    def install(self, email=None, installed_rpm=False):
+        if self.completed():
+            print('MYKOS HTTPS and RPM setup already complete; no changes made.', flush=True)
+            return
+        el = self.release()
+        self.prerequisites(el)
+        self.firewall()
+        self.run(['httpd', '-t'])
+        self.run(['systemctl', 'enable', '--now', 'httpd'])
+        self.https(email)
+        self.renewal()
+        self.proxy()
+        if not installed_rpm: self.repository(el)
+        if self.run(['rpm', '-q', 'mykos'], check=False).returncode:
+            if installed_rpm: raise ValueError('Automatic setup requires the installed MYKOS RPM')
+            self.run(['dnf', '-y', '--setopt=gpgcheck=1', 'install', 'mykos'])
+        installed = self.run(['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}', 'mykos']).stdout.strip()
+        if self.state.get('setup_rpm') != installed or self.run(['systemctl', 'is-active', '--quiet', 'mykos-web.service'], check=False).returncode != 0:
+            self.run(['/usr/sbin/mykos-setup', '--public-origin', 'https://' + self.domain, '--enable'])
+            self.state['setup_rpm'] = installed; self.save()
+        self.run(['httpd', '-t'])
+        self.run(['systemctl', 'reload', 'httpd'])
+        if not self.tls_ready(): raise ValueError('Final HTTPS check failed')
+        self.state['complete'] = True; self.save()
+        print('Ready: https://' + self.domain + '/mykos/', flush=True)
+
+    def cleanup(self):
+        if not self.state_path.exists(): return
+        cert_ref = '/etc/letsencrypt/live/' + self.domain + '/'
+        shared = False
+        for directory in ('/etc/httpd', '/etc/nginx', '/etc/haproxy'):
+            folder = self.path(directory)
+            if not folder.exists(): continue
+            for p in folder.rglob('*'):
+                if not p.is_file(): continue
+                rel = '/' + str(p.relative_to(self.root))
+                try:
+                    data = p.read_bytes()
+                    if self.state['files'].get(rel) == hashlib.sha256(data).hexdigest(): continue
+                    shared = shared or cert_ref in data.decode()
+                except (UnicodeError, OSError): pass
+        renewal_names = {'/etc/systemd/system/mykos-certificate-renew.timer',
+                         '/etc/systemd/system/mykos-certificate-renew.service'}
+        timer = '/etc/systemd/system/mykos-certificate-renew.timer'
+        if timer in self.state['files'] and not shared:
+            self.run(['systemctl', 'disable', '--now', 'mykos-certificate-renew.timer'], check=False)
+        # Remove exactly recorded files, and preserve any administrator edits.
+        removed = {}
+        previous_files = dict(self.state['files'])
+        for name, digest in list(self.state['files'].items()):
+            if shared and name in renewal_names: continue
+            p = self.path(name)
+            if not p.exists():
+                del self.state['files'][name]; continue
+            if hashlib.sha256(p.read_bytes()).hexdigest() != digest:
+                print('Preserving edited file: ' + name, flush=True); continue
+            removed[name] = p.read_bytes()
+            p.unlink(); del self.state['files'][name]
+        try:
+            self.run(['httpd', '-t'])
+        except Exception:
+            for name, data in removed.items(): self.atomic(self.path(name), data, 0o644)
+            self.state['files'] = previous_files; self.save()
+            raise
+        self.save()
+        self.run(['systemctl', 'reload', 'httpd'], check=False)
+        if self.state.get('certificate_created') and not shared:
+            renewal = self.root / ('etc/letsencrypt/renewal/' + self.domain + '.conf')
+            if self.cert_path().exists() or renewal.exists():
+                self.run(['certbot', 'delete', '--non-interactive', '--cert-name', self.domain])
+            self.state['certificate_created'] = False
+        remaining_sites = any(re.search(r'<VirtualHost\s', p.read_text(), re.I) for p in self.configs())
+        if shutil.which('firewall-cmd') and not remaining_sites:
+            for item in self.state['firewall']:
+                flags = ['--permanent'] if item['permanent'] else []
+                self.run(['firewall-cmd'] + flags + ['--remove-service=' + item['service']], check=False)
+        self.state['firewall'] = []
+        self.run(['systemctl', 'daemon-reload'])
+        self.state['complete'] = False
+        self.save()
+        if not self.state['files'] and not self.state.get('certificate_created'):
+            self.state_path.unlink()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--installed-rpm', action='store_true', help='Configure an installed RPM; used by the automatic setup service')
+    parser.add_argument('--email', help='Optional Certbot account email; otherwise register without email')
+    parser.add_argument('--uninstall', action='store_true', help='Remove only bootstrap-owned settings/certificate; called on final RPM removal')
+    parser.add_argument('--plan', action='store_true', help='Print derived domain and sequence without changing anything')
+    args = parser.parse_args()
+    if args.installed_rpm and Path('/var/lib/mykos-installer/installed.json').is_file():
+        print('Existing MYKOS setup preserved; automatic configuration skipped.')
+        return
+    if args.uninstall:
+        state = Path(STATE)
+        if not state.exists(): return
+        domain = json.loads(state.read_text())['domain']
+    else:
+        domain = domain_name(socket.getfqdn())
+    if args.plan:
+        print('Domain: ' + domain + '\nApache HTTP -> Certbot HTTPS -> signed MYKOS RPM -> mykos-setup --public-origin https://' + domain + ' --enable')
+        return
+    if os.geteuid() != 0: parser.error('Run as root')
+    Path('/run/lock').mkdir(parents=True, exist_ok=True)
+    fd = os.open('/run/lock/mykos-bootstrap.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, 'a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        app = Bootstrap(domain)
+        if args.installed_rpm and Path('/var/lib/mykos-installer/installed.json').is_file():
+            print('MYKOS setup completed by another installer; no changes needed.')
+        elif args.uninstall: app.cleanup()
+        else: app.install(args.email, installed_rpm=args.installed_rpm)
+
+
+if __name__ == '__main__':
+    try: main()
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        print('ERROR: ' + str(error), file=sys.stderr)
+        if isinstance(error, subprocess.CalledProcessError) and error.stdout:
+            print(error.stdout, file=sys.stderr)
+        sys.exit(1)

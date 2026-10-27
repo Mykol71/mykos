@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#DESC 
+
+systemctl status httpd | grep Active | cut -d" " -f6
+
+exit $?

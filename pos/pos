@@ -1,0 +1,419 @@
+#!/usr/bin/bash
+
+#DESC
+
+###
+#ENV
+###
+
+VERSION="1.7"
+OSB=rh
+MAJOR=8
+OS=$OSB$MAJOR
+HOSTNAME=$(hostname)
+# Use the RPM runtime on RHEL 8 instead of its older system python3.
+if [ -x /usr/bin/python3.9 ]; then MYKOS_PYTHON=/usr/bin/python3.9; else MYKOS_PYTHON=python3; fi
+[ -f /etc/mykos/pos.env ] && . /etc/mykos/pos.env
+REPOSERVER=${REPOSERVER:-mykol.com}
+NETDEV=$(ip route get 8.8.8.8 | awk -- '{printf $5}')
+MERAKI_API_KEY=${MERAKI_API_KEY:-}
+MERAKI_ORG_ID=${MERAKI_ORG_ID:-}
+# Only the fixed host entry point selects host VPN setup.
+MYKOS_VPN_HOST=0
+BUILDDATE=$(date +%Y%m%d)
+BUILDROOT=/var/tmp/containers/$BUILDDATE/$KSNAME
+mkdir -p $BUILDROOT/docker
+HOST_USER=`whoami`
+#[ "$HOST_USER" != "root" ] && echo "You must be root or in sudoers to run $0." && exit 1
+export ROOTDIR="$(pwd)"
+[ -f .shopcode ] && SHOPCODE="`cat .shopcode`"
+[ -f .$SHOPCODE.container ] && CONTAINER=`cat .$SHOPCODE.container`
+[ -f .container ] && CONTAINER=`cat .container`
+LGGRN='\033[1;32m'
+BLUE='\033[1;34m'
+TEAL='\033[38;5;31m'
+GREY='\033[0;37m'
+NC='\033[0m'
+
+
+###
+#FUNCS
+###
+
+check_image_builder() {
+  if [ "$OS" = rh10 ]; then
+    local build_major
+    build_major=$(rpm -E '%{rhel}' 2>/dev/null) || return 1
+    if [ "$build_major" != 10 ]; then
+      echo 'rh10 requires a RHEL 10 build host or VM with RHEL 10 Anaconda/Lorax.' >&2
+      echo 'This --no-virt workflow uses the local installer; changing repository URLs does not upgrade it.' >&2
+      return 1
+    fi
+    command -v ksvalidator >/dev/null 2>&1 || {
+      echo 'Install pykickstart on the RHEL 10 builder to validate rh10.ks.' >&2
+      return 1
+    }
+    ksvalidator -v RHEL10 "ks/$OS.ks" || return 1
+  fi
+}
+
+create_ks() {
+"$MYKOS_PYTHON" ./prepare_ks.py "ks/$OS.ks" "/var/tmp/$OS.ks"
+}
+
+create_dockerfile() {
+local os_version
+os_version=$("$MYKOS_PYTHON" "$ROOTDIR/image_version.py" "$OS-docker.tar.xz") || return 1
+cat << EOF > Dockerfile
+FROM scratch
+ADD $OS-docker.tar.xz /
+LABEL io.mykos.os="$OS"
+LABEL io.mykos.os.version="$os_version"
+LABEL org.label-schema.schema-version="1.0" \
+    org.label-schema.name="$OS Base Image" \
+    org.label-schema.vendor="RHEL" \
+    org.label-schema.license="GPLv2" \
+    org.label-schema.build-date="20261003"
+MAINTAINER “Mike Green" <mgreen@teleflora.com>
+ENV container $OS-docker
+RUN curl --fail --show-error --location --retry 2 --connect-timeout 15 --max-time 120 https://$REPOSERVER/updateos/updateos -o /usr/bin/updateos && test -s /usr/bin/updateos && bash -n /usr/bin/updateos && chmod 0755 /usr/bin/updateos
+CMD ["/sbin/init"]
+EOF
+}
+
+stop_container() {
+  if "$MYKOS_PYTHON" ./vm info "$SHOPCODE" >/dev/null 2>&1; then
+    "$MYKOS_PYTHON" ./vm stop "$SHOPCODE"
+    return $?
+  fi
+  /usr/local/sbin/mykos-linux stop "$SHOPCODE"
+
+}
+
+stage_image() {
+  SHOPCODE=$(cat .shopcode) && POSTYPE=$(cat .$SHOPCODE.postype) && OS=$(cat .$SHOPCODE.imagetype)
+  case "$OS" in win*|wns*|mac*|ubuntu*) "$MYKOS_PYTHON" ./vm start "$SHOPCODE" "$OS"; return $? ;; esac
+  if podman container exists "$SHOPCODE.$(hostname)"; then
+    /usr/local/sbin/mykos-linux start "$SHOPCODE"
+    return $?
+  fi
+  restore=no
+  if [ "$("$MYKOS_PYTHON" -c 'import sys; sys.path.insert(0,"/usr/local/sbin"); import mykos_profiles; print(mykos_profiles.has_backup(sys.argv[1]))' "$SHOPCODE")" = True ]; then
+    read -r -p 'Use the configured application backup? (y/n): ' ans
+    [ "$ans" = y ] && restore=yes
+  fi
+  /usr/local/sbin/mykos-stage-pos "$SHOPCODE" "$restore" "$OS" || return $?
+  CONTAINER=$(cat ".$SHOPCODE.container")
+  IP=$(/usr/local/sbin/mykos-linux ip "$SHOPCODE")
+
+}
+
+create-image() {
+  echo -n "OS (rh7-rh10, win11/win10/win8e/win7u/winxp/winme/win2k/win98, wns2025/2022/2019/2016, mac15/mac14/mac13/mac12, ubuntu20.04/22.04/24.04, mssql2025/mssql2022: " && read -r OS || return 1
+  case "$OS" in win*|wns*|mac*|ubuntu*) "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;; esac
+  case "$OS" in rh7|rh8|rh9|rh10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
+  check_image_builder || return 1
+  if podman image exists "$OS"; then echo "Image already built."; return 0; fi
+  rm -f "/var/tmp/$OS-docker.tar.xz" || return 1
+  create_ks || return 1
+  if ! livemedia-creator --no-virt --make-tar --ks="/var/tmp/$OS.ks" --image-name="$OS-docker.tar.xz" --logfile="/tmp/build-$OS-container.error.log"; then
+    echo "Image creation failed; see /tmp/build-$OS-container.error.log. Podman build was not started." >&2
+    return 1
+  fi
+  [ -s "/var/tmp/$OS-docker.tar.xz" ] || { echo 'Image creator did not produce a rootfs archive' >&2; return 1; }
+  mkdir -p "$BUILDROOT/docker" || return 1
+  mv "/var/tmp/$OS-docker.tar.xz" "$BUILDROOT/docker" || return 1
+  (
+    cd "$BUILDROOT/docker" || exit 1
+    create_dockerfile && podman build --tag "$OS" .
+  ) || return 1
+  CONTAINER=$(/usr/local/sbin/mykos-native-image-start "$OS") || return 1
+  podman exec "$CONTAINER" /bin/sh -c 'if [ -f /etc/yum/pluginconf.d/subscription-manager.conf ]; then sed -i "s/enabled=1/enabled=0/g" /etc/yum/pluginconf.d/subscription-manager.conf; fi' || return 1
+  podman exec "$CONTAINER" systemctl restart sshd || return 1
+  podman commit "$CONTAINER" "$OS:latest"
+}
+
+set_working_shopcode() {
+  echo -n "ID: " && read SHOPCODE && [ "$SHOPCODE" != "" ] && echo $SHOPCODE >.shopcode && CONTAINER=""
+  [ -f .$SHOPCODE.container ] && CONTAINER=$(cat .$SHOPCODE.container)
+  [ -f .$SHOPCODE.imagetype ] && OS=$(cat .$SHOPCODE.imagetype)
+  [ -f .$SHOPCODE.postype ] && POSTYPE=$(cat .$SHOPCODE.postype) && return
+  [[ "$SHOPCODE" =~ ^[0-9]{8}$ ]] || { echo "ID must be eight digits"; return 1; }
+  echo -n "OS (rh7-rh10, win*, wns*, mac*, ubuntu20.04/22.04/24.04): " && read -r OS || return 1
+  case "$OS" in rh7|rh8|rh9|rh10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
+  printf '%s\n' "$OS" >".$SHOPCODE.imagetype"
+  POSTYPE="$OS"; printf '%s\n' "$POSTYPE" >".$SHOPCODE.postype"
+}
+
+install() {
+  [ ! -f ../.envtype ] && echo -n "Env Name: " && read ENVTYPE && echo "$ENVTYPE" >../.envtype
+  echo -n "Create base image? y/n: " && read answer
+  [ "$answer" != "y" ] && return
+  create-image || return 1
+  echo "Done!"
+}
+
+prune-docker() {
+  /usr/local/sbin/mykos-prune purge || return $?
+  unset SHOPCODE CONTAINER POSTYPE
+
+}
+
+update_meraki() {
+[ -n "$MERAKI_API_KEY" ] && [ -n "$MERAKI_ORG_ID" ] && [ -n "${VPN_PSK:-}" ] || { echo "Configure Meraki credentials in /etc/mykos/pos.env and enter the VPN PSK during setup"; return 1; }
+echo "Creating site-to-site peer on meraki...."
+# Serialize the entered secret as data; never put it in a generated shell script.
+local payload
+payload=$(VPN_PSK="$VPN_PSK" REMOTE_NAME="$REMOTE_NAME" PUBLIC="$PUBLIC" "$MYKOS_PYTHON" - <<'JSON_PY'
+import json, os
+peer = {
+    "peerId": "657525545596112136", "name": os.environ["REMOTE_NAME"],
+    "ikeVersion": "2", "secret": os.environ["VPN_PSK"],
+    "privateSubnets": ["192.168.222.0/24"],
+    "ipsecPolicies": {"ikeCipherAlgo": ["aes128"], "ikeAuthAlgo": ["sha1"],
+        "ikePrfAlgo": ["prfsha1"], "ikeDiffieHellmanGroup": ["group21"], "ikeLifetime": 28800,
+        "childCipherAlgo": ["aes128", "aes192", "aes256", "tripledes"],
+        "childAuthAlgo": ["sha256", "sha1", "md5"], "childPfsGroup": ["disabled"], "childLifetime": 28800},
+    "networkTags": ["all"], "localId": "192.168.222.0", "remoteId": "192.168.222.0",
+    "isRouteBased": False, "priorityInGroup": 1, "publicIp": os.environ["PUBLIC"],
+    "network": {"names": [], "ids": []},
+    "group": {"number": 1, "failover": {"directToInternet": False}, "activeActiveTunnel": False}}
+print(json.dumps({"peers": [peer]}))
+JSON_PY
+) || return 1
+printf '%s' "$payload" | curl --fail --silent --show-error -L --request PUT \
+  --url "https://api.meraki.com/api/v1/organizations/$MERAKI_ORG_ID/appliance/vpn/thirdPartyVPNPeers" \
+  --header "Authorization: Bearer $MERAKI_API_KEY" \
+  --header 'Content-Type: application/json' --header 'Accept: application/json' \
+  --data-binary @- >/dev/null || return 1
+echo "Done...."
+}
+
+list_vpns() {
+  if [ "$CONTAINER" != "" ]; then
+    /usr/local/sbin/mykos-linux vpn "$SHOPCODE"
+  fi
+}
+
+add_vpn() {
+local VPN_PSK vpn_psk_escaped host_connection
+if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
+[[ "${SHOPCODE:-}" =~ ^[0-9]{8}$ ]] || { echo "Invalid ID"; return 1; }
+[ -z "${CONTAINER:-}" ] && { echo "No running container......"; return 1; }
+fi
+# gather user input
+INPUTS="REMOTE_NAME REMOTE_PUBLIC REMOTE_NET"
+for var in $INPUTS; do
+  echo -n "Enter $var: "
+  read -r REPLY
+  export "$var=$REPLY"
+done
+# Names become filenames and connection names; reject traversal and config injection.
+[[ "$REMOTE_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] || { echo "Invalid remote name"; return 1; }
+[[ "$REMOTE_PUBLIC" =~ ^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$ ]] || { echo "Invalid remote public IP or hostname"; return 1; }
+[[ "$REMOTE_NET" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Enter the remote IPv4 network without /24"; return 1; }
+IFS=. read -r -a vpn_octets <<< "$REMOTE_NET"
+for vpn_octet in "${vpn_octets[@]}"; do
+  (( 10#$vpn_octet <= 255 )) || { echo "Invalid remote IPv4 network"; return 1; }
+done
+read -r -s -p "Enter VPN shared secret (PSK): " VPN_PSK || { echo; return 1; }
+echo
+[ -n "$VPN_PSK" ] || { echo "VPN shared secret cannot be empty"; return 1; }
+[[ ! "$VPN_PSK" =~ [[:cntrl:]] ]] || { echo "VPN shared secret must be a single line"; return 1; }
+# Escape quotes/backslashes for the quoted ipsec.secrets value.
+vpn_psk_escaped=$(printf '%s' "$VPN_PSK" | sed 's/[\\"]/\\&/g')
+#set public ip
+PUBLIC=`curl -s ifconfig.me`
+[ "${MYKOS_VPN_HOST:-0}" = 1 ] || IP=$(/usr/local/sbin/mykos-linux ip "$SHOPCODE")
+#setup vpn-data vol
+if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then
+  [ -e "/etc/ipsec.d/mykos-$REMOTE_NAME.conn.conf" ] && { echo "VPN connection already exists."; return 1; }
+else
+[[ ! -L ".$SHOPCODE" ]] || { echo "VPN directory must not be a symlink"; return 1; }
+mkdir -p -- ".$SHOPCODE" || return 1
+[[ ! -L ".$SHOPCODE/ipsec.secrets" ]] || { echo "VPN secrets must not be a symlink"; return 1; }
+# check if vpn exist
+[ -f ".$SHOPCODE/$REMOTE_NAME.conn.conf" ] && { echo "VPN connection already exists."; return 1; }
+fi
+# verify input
+if [ "$INPUTS" != "" ]; then
+  echo "ipsec VPN Connection about to be created:"
+  echo "--------------------"
+  echo "Continue y/n?"
+  read -r -p "" || return 1
+  if [[ "$REPLY" != "y" && "$REPLY" != "Y" ]]; then
+    return
+  else
+    echo "Creating VPN Connection......"
+# make connection ipsec config file
+if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then
+  host_connection=$(printf '%s\0' "$REMOTE_NAME" "$REMOTE_PUBLIC" "$REMOTE_NET" "$VPN_PSK" | "$MYKOS_PYTHON" ./host-vpn --save) || return 1
+else
+cat > .$SHOPCODE/$REMOTE_NAME.conn.conf << EOF
+conn $REMOTE_NAME
+  ikev2=insist
+  authby=secret
+  left=%defaultroute
+  leftid=192.168.222.0
+  leftsubnet="192.168.222.0/24"
+  right=$REMOTE_PUBLIC
+  rightid=192.168.222.0
+  rightsubnet="$REMOTE_NET/24"
+  ike=aes128-sha1-dh21
+  esp=aes128-sha1
+  auto=start
+  encapsulation=yes
+
+# rightid=$(/usr/local/sbin/mykos-linux ip "$SHOPCODE")
+EOF
+
+(umask 077; printf '192.168.222.0 192.168.222.0 : PSK "%s"\n' "$vpn_psk_escaped" > ".$SHOPCODE/ipsec.secrets") || return 1
+    chmod 600 ".$SHOPCODE/ipsec.secrets"
+fi
+    echo -n "Push peer config to meraki? y/n " && read ans
+      [ "$ans" == "y" ] && update_meraki
+    if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then
+      /usr/sbin/ipsec auto --rereadsecrets || return 1
+      /usr/sbin/ipsec auto --add "$host_connection" || return 1
+      /usr/sbin/ipsec auto --up "$host_connection" || return 1
+    else
+      podman exec $CONTAINER ipsec restart 2>/dev/null
+    fi
+    echo "VPN Connection info..." && echo
+    echo "Remote-side VPN Info:"
+    echo "Cisco/Meraki Dash --> Security --> Site-to-site VPN --> IPsec VPN Peers --> Add a peer" && echo
+    echo "Name: $REMOTE_NAME"
+    echo "IKE Version: IKEv2"
+    echo "Public IP or Hostname: $PUBLIC"
+    echo "Local ID: 192.168.222.0"
+    echo "Remote ID: 192.168.222.0"
+    echo "Shared Secret: (entered during setup)"
+    echo "Static Routing"
+    echo "Private Subnets: 192.168.222.0/24"
+    echo "Availability: All Networks"
+    echo "IPsec Policy: Custom"
+    echo "Phase 1 Encryption: AES128"
+    echo "Authentication: SHA1"
+    echo "Psuedo-random function: SHA1"
+    echo "Diffie-Hellman group: 21"
+    echo "Lifetime: 28800"
+    echo "Phase 2 Encryption: AES128"
+    echo "Authenticaion: SHA1"
+    echo "PFS group: Off"
+    echo "Lifetime: 28800" 
+  fi
+else
+  echo "Nothing to do."
+fi
+}
+
+rm_vpn() {
+[ ! -f .$SHOPCODE.container ] && echo "No running container......" && return 
+[ "`ls -a .$SHOPCODE | grep conn`" == "" ] && echo "No connections." && return
+echo "Connection?"
+echo `ls -a .$SHOPCODE | grep .conn | sed -e "s/.$SHOPCODE.//" | sed -e "s/.conn.conf//"`
+read CONN
+rm -f .$SHOPCODE/$CONN.conn.conf
+podman exec $CONTAINER ipsec restart
+}
+
+clear_vpns() {
+[ -f .$SHOPCODE.container ] && echo "Running container. Stop it first....." && return 
+[ ! -d .$SHOPCDE ] && echo "No VPNs configured......" && return
+echo "About to wipe all connections for $SHOPCODE."
+echo "Continue y/n?" && read -p ""
+[ "$REPLY" == "y" ] && [ "$REPLY" != "" ] && rm -rf .$SHOPCODE
+}
+
+
+
+###
+#MAIN
+###
+
+# Fixed entry point for the authenticated web terminal; never evaluate shell input.
+if [ "${1:-}" = "--add-host-vpn" ]; then
+  [ "$#" -eq 1 ] || { echo "Invalid host VPN selection"; exit 1; }
+  MYKOS_VPN_HOST=1
+  add_vpn
+  exit $?
+fi
+if [ "${1:-}" = "--add-vpn" ]; then
+  [[ "$#" -eq 3 && "$2" =~ ^[0-9]{8}$ && "$3" =~ ^[0-9]{8}(\.[A-Za-z0-9_.-]+)?$ && "${3:0:8}" = "$2" ]] || { echo "Invalid container selection"; exit 1; }
+  SHOPCODE="$2"
+  CONTAINER="$3"
+  add_vpn
+  exit $?
+fi
+
+trap '' 2
+while :; do
+    clear
+    echo -e "${GREY}$(date +'%x %l:%M %p') ${NC}"
+    printf '\u250f''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\n'
+    echo -e "\u2503${BLUE} @ ${NC}`[ -f ../.envtype ] && cat ../.envtype || echo -e Not Installed`${NC}"
+    printf '\u2503'${LGGRN}' )~ pos    '${GREY}v$VERSION${NC}'\n'
+    printf '\u2503''\u2501''\n'
+    printf '\u2503'${GREY}"  "${TEAL}"$(hostname)"${NC}'\n'
+    printf '\u2503'${GREY}" Space    : $(df -h /backups | tail -1 | awk '{print $4}')"${NC}'\n'
+    echo -e "\u2503${NC}"
+    echo -e "\u2503${GREY} ID : `[ -f .shopcode ] && cat .shopcode`${NC}"
+    echo -e "\u2503${GREY} Type : `[ -f .$SHOPCODE.postype ] && cat .$SHOPCODE.postype`${NC}"
+    echo -e "\u2503${GREY} Stat : `podman container inspect $SHOPCODE.$(hostname) --format '{{.State.Status}}' 2>/dev/null`${NC}"
+    printf '\u2503''\n'
+    echo -e "\u2503${GREY}  $([ -f .$SHOPCODE.container ] && /usr/local/sbin/mykos-linux ip "$SHOPCODE" 2>/dev/null) ${NC}"
+    echo -e "\u2503${GREY} $([ -f .$SHOPCODE.container ] && /usr/local/sbin/mykos-linux vpn "$SHOPCODE" 2>/dev/null) ${NC}"
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'"-\033[0mContainers"'\n'
+    printf '\u2503''\033[1m'" 1.\033[0m Status"'\n'
+    printf '\u2503''\033[1m'" 2.\033[0m Start/Stop"'\n'
+    printf '\u2503''\033[1m'" 3.\033[0m Connect"'\n'
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'"-\033[0mVPNs"'\n'
+    printf '\u2503''\033[1m'" 4.\033[0m Status"'\n'
+    printf '\u2503''\033[1m'" 5.\033[0m Add"'\n'
+    printf '\u2503''\033[1m'" 6.\033[0m Remove"'\n'
+    printf '\u2503''\033[1m'" 7.\033[0m Clear"'\n'
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'"-\033[0mSystem"'\n'
+    printf '\u2503''\033[1m'" s.\033[0m ID"'\n'
+    printf '\u2503''\033[1m'" m.\033[0m Images"'\n'
+    printf '\u2503''\033[1m'" c.\033[0m Build image"'\n'
+    printf '\u2503''\033[1m'" f.\033[0m Capture image"'\n'
+    printf '\u2503''\033[1m'" g.\033[0m Enable checkpoints"'\n'
+    printf '\u2503''\033[1m'" v.\033[0m Images / consoles"'\n'
+    printf '\u2503''\033[1m'" t.\033[0m Start/stop image"'\n'
+    printf '\u2503''\033[1m'" b.\033[0m Guest memory"'\n'
+    printf '\u2503''\033[1m'" i.\033[0m Install"'\n'
+    printf '\u2503''\033[1m'" p.\033[0m Purge"'\n'
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'" r.\033[0m Readme"'\n'
+    printf '\u2503''\033[1m'" x.\033[0m Exit"'\n'
+    printf '\u2517''\u2501''\n'
+        echo -ne "-> ${NC}"
+        read selection
+        case $selection in
+          1) podman container ls ;;
+	  2) case "$OS" in win*|wns*|mac*|ubuntu*) if "$MYKOS_PYTHON" ./vm info "$SHOPCODE" >/dev/null 2>&1; then "$MYKOS_PYTHON" ./vm toggle "$SHOPCODE"; else stage_image; fi ;; *) if podman container exists "$SHOPCODE.$(hostname)"; then /usr/local/sbin/mykos-linux toggle "$SHOPCODE"; else stage_image; fi ;; esac ;;
+          3) case "$OS" in win*|wns*|mac*|ubuntu*) "$MYKOS_PYTHON" ./vm info "$SHOPCODE" ;; *) [ -f .$SHOPCODE.container ] && CONTAINER=$(cat .$SHOPCODE.container) && podman exec -it $CONTAINER su - root || echo "No running container.." ;; esac ;;
+          4) list_vpns ;;
+  	  5) add_vpn ;;
+          6) rm_vpn ;;
+          7) clear_vpns ;;
+          s) set_working_shopcode ;;
+          i) time install ;;
+          p) prune-docker ;;
+          m) podman image ls ;;
+          c) create-image ;;
+          f) read -r -p 'Image OS: ' VMOS; "$MYKOS_PYTHON" ./vm prepare "$VMOS" ;;
+          g) read -r -p 'Image OS: ' VMOS; "$MYKOS_PYTHON" ./vm checkpoint-enable "$VMOS" ;;
+          v) "$MYKOS_PYTHON" ./vm list ;;
+          b) read -r -p 'Guest ID or image OS: ' VMKEY; read -r -p 'Target MiB (blank for status): ' VMMEM; if [ -z "$VMMEM" ]; then "$MYKOS_PYTHON" ./vm memory "$VMKEY"; else "$MYKOS_PYTHON" ./vm memory "$VMKEY" --target-mib "$VMMEM"; fi ;;
+          t) read -r -p 'Image OS: ' VMOS; read -r -p 'resume or stop: ' VMACTION; case "$VMACTION" in resume|stop) "$MYKOS_PYTHON" ./vm "$VMACTION" "$VMOS" ;; *) echo 'Choose resume or stop' ;; esac ;;
+          r) cat README.md | more ;;
+          x) exit ;;
+          *) ;;
+        esac
+       echo -ne "${CYAN}Press enter to continue..${NC}"
+       read
+done

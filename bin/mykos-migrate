@@ -1,0 +1,286 @@
+#!/usr/bin/env python3
+"""Migrate an installed predecessor to mykos using its installation manifest.
+
+The previous installation stays disabled as a recovery source. No customer backup
+storage, containers, VPN secrets, or repository contents are renamed or removed.
+"""
+import argparse
+import datetime
+import grp
+import hashlib
+import json
+import os
+from pathlib import Path
+from urllib.parse import urlsplit
+import pwd
+import re
+import shutil
+import sqlite3
+import stat
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+SOURCE = Path(__file__).resolve().parents[1]
+
+def run(*args):
+    subprocess.run([str(a) for a in args], check=True)
+
+def safe(path):
+    path = Path(path)
+    if not path.is_absolute() or '..' in path.parts or path.is_symlink() or any(p.is_symlink() for p in path.parents):
+        raise ValueError('Unsafe migration path: ' + str(path))
+    return path
+
+def discover(root):
+    candidates = [p for p in (root/'var/lib').glob('*-installer/installed.json')
+                  if p.parent.name != 'mykos-installer']
+    if len(candidates) != 1:
+        raise ValueError('Supply --from-manifest with the previous installed.json path; found %d candidates' % len(candidates))
+    return candidates[0]
+
+def plan(root, manifest):
+    metadata = json.loads(safe(manifest).read_text())
+    if metadata.get('format') != 1 or not isinstance(metadata.get('files'), list):
+        raise ValueError('Unsupported previous installation manifest')
+    paths = [e['path'] for e in metadata['files']]
+    for name in paths:
+        p = Path(name)
+        if not p.is_absolute() or '..' in p.parts or str(p) != name:
+            raise ValueError('Unsafe manifest path')
+        if not any(name.startswith(prefix) for prefix in ('/opt/', '/usr/local/', '/etc/systemd/system/', '/etc/')):
+            raise ValueError('Unexpected previous installation path')
+        safe(root / name.lstrip('/'))
+    def unique(values):
+        values = set(values)
+        if len(values) != 1: raise ValueError('Ambiguous previous installation layout')
+        return values.pop()
+    app = unique(str(Path(p).parent) for p in paths if p.startswith('/opt/') and p.endswith('/app.py'))
+    settings = unique(str(Path(p).parent) for p in paths if p.startswith('/etc/') and p.endswith('/config.json'))
+    toolkit = unique(str(Path(p).parent) for p in paths if p.startswith('/usr/local/share/') and p.count('/') == 5 and p.endswith('/MENU'))
+    units = [Path(p).name for p in paths if p.startswith('/etc/systemd/system/')]
+    web = unique(u for u in units if u.endswith('-web.service'))
+    family = web[:-len('-web.service')]
+    toolkit_name = Path(toolkit).name
+    if family == 'mykos' or toolkit_name == 'mykos': raise ValueError('Use mykos-install install for an existing mykos installation')
+    app_source = root/app.lstrip('/')/'app.py'
+    match = re.search(r'root_path\s*=\s*[\"\x27]([^\"\x27]+)', app_source.read_text())
+    if not match: raise ValueError('Cannot determine previous public URL prefix')
+    prefix = match[1]
+    if not re.fullmatch(r'/[a-zA-Z0-9_-]+', prefix): raise ValueError('Unsafe previous URL prefix')
+    unit_source = root/'etc/systemd/system'/web
+    user = re.search(r'^User=([a-z_][a-z0-9_-]*)$', unit_source.read_text(), re.M)
+    if not user or user[1] == 'root': raise ValueError('Cannot determine previous web account')
+    replacements = {app:'/opt/mykos-web', settings:'/etc/mykos', toolkit:'/usr/local/share/mykos',
+                    '/run/'+family+'-':'/run/mykos-', '/var/lib/'+family+'/':'/var/lib/mykos/',
+                    '/usr/local/sbin/'+family+'-':'/usr/local/sbin/mykos-', prefix+'/':'/mykos/'}
+    return dict(metadata=metadata, app=app, settings=settings, toolkit=toolkit,
+                units=units, family=family, toolkit_name=toolkit_name, prefix=prefix,
+                user=user[1], replacements=replacements)
+
+def rewrite(text, info, environment=False):
+    for before, after in sorted(info['replacements'].items(), key=lambda e:-len(e[0])):
+        text = text.replace(before, after)
+    if environment:
+        for before in {info['family'].upper(), info['toolkit_name'].upper()}:
+            text = re.sub(r'(?<![A-Za-z0-9_])'+re.escape(before)+r'_', 'MYKOS_', text)
+    return text
+
+def copy_file(source, dest):
+    safe(source); safe(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if source.suffix in ('.db','.sqlite','.sqlite3'):
+        with sqlite3.connect('file:'+str(source)+'?mode=ro', uri=True) as src, sqlite3.connect(dest) as dst:
+            src.backup(dst)
+        os.chmod(dest, 0o600)
+    else:
+        shutil.copy2(source, dest)
+
+def recovery_archive(path, root, manifest, info):
+    """Bind a resume to the unchanged predecessor and its original identity."""
+    path = safe(path.absolute())
+    if not path.is_relative_to(root): raise ValueError('Recovery snapshot must be inside --root')
+    st = path.stat()
+    if not stat.S_ISREG(st.st_mode) or stat.S_IMODE(st.st_mode) & 0o077:
+        raise ValueError('Recovery snapshot must be a private regular file (0600)')
+    if root == Path('/') and st.st_uid != 0: raise ValueError('Recovery snapshot must be root-owned')
+    with tarfile.open(path, 'r:gz') as archive:
+        names = [m.name for m in archive.getmembers()]
+        if len(names) != len(set(names)): raise ValueError('Duplicate recovery archive members')
+        for file in (manifest, root/'etc/systemd/system'/(info['family']+'-web.service')):
+            member = archive.getmember(str(file.relative_to(root)))
+            if not member.isfile() or member.size > 10*1024**2 or archive.extractfile(member).read() != file.read_bytes():
+                raise ValueError('Recovery snapshot does not match the previous installation')
+        owners = {archive.getmember(info['app'].lstrip('/')+'/data/'+name).uid
+                  for name in ('auth.db','api_keys.db')}
+        if len(owners) != 1: raise ValueError('Recovery identity ownership is inconsistent')
+        return owners.pop()
+
+def migration_identity(info, resume_uid=None):
+    try: old = pwd.getpwnam(info['user'])
+    except KeyError: old = None
+    try: new = pwd.getpwnam('mykosweb')
+    except KeyError: new = None
+    if new is not None:
+        if resume_uid is None or old is not None or new.pw_uid != resume_uid:
+            raise ValueError('mykosweb already exists; a matching --resume-from recovery snapshot is required')
+        user = new
+    elif old is not None:
+        if resume_uid is not None and old.pw_uid != resume_uid:
+            raise ValueError('Recovery snapshot does not match the previous web account UID')
+        user = old
+    else:
+        raise ValueError('Neither previous nor new web account exists')
+    if grp.getgrgid(user.pw_gid).gr_name not in (info['user'], 'mykosweb'):
+        raise ValueError('Previous web account uses a shared group; review group migration first')
+    return user
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--from-manifest', type=Path)
+    p.add_argument('--root', type=Path, default=Path('/'), help='Isolated staging filesystem; no host commands')
+    p.add_argument('--public-origin', required=True)
+    p.add_argument('--python', default=sys.executable)
+    p.add_argument('--resume-from', type=Path, help='Resume using the original private before-migration snapshot')
+    p.add_argument('--dry-run', action='store_true')
+    args = p.parse_args()
+    root = safe(args.root.absolute())
+    live = root == Path('/')
+    manifest = safe(args.from_manifest or discover(root))
+    if not manifest.is_relative_to(root): raise ValueError('Manifest must be inside --root')
+    info = plan(root, manifest)
+    destination = root/'var/lib/mykos-installer/installed.json'
+    if destination.exists() and not args.resume_from: raise ValueError('A mykos installation already exists; migration refuses to overwrite it')
+    origin = urlsplit(args.public_origin)
+    if origin.scheme != 'https' or not origin.hostname or origin.path not in ('','/') or origin.query or origin.fragment or origin.username or any(c.isspace() for c in args.public_origin):
+        raise ValueError('--public-origin must be an HTTPS origin')
+    resume_uid = recovery_archive(args.resume_from,root,manifest,info) if args.resume_from else None
+    if live:
+        olduser = migration_identity(info,resume_uid)
+        run(args.python,'-c','import sys,hashlib; assert sys.version_info >= (3,9), "Python 3.9+ required"; assert hasattr(hashlib,"scrypt"), "Python needs hashlib.scrypt/OpenSSL"')
+    print('Migration:', info['app'], '-> /opt/mykos-web;', info['prefix'], '-> /mykos')
+    print('Preserves browser users, password hashes, API key digests, inventory, settings and POS metadata.')
+    if args.dry_run: return
+    if live and os.geteuid() != 0: raise ValueError('Live migration requires root')
+    # Inventory and validate all inputs before stopping production.
+    data = root/info['app'].lstrip('/')/'data'
+    settings = root/info['settings'].lstrip('/')
+    toolkit = root/info['toolkit'].lstrip('/')
+    runtime = [f for directory in (data, settings) for f in directory.rglob('*') if f.is_file()]
+    runtime += [f for f in (toolkit/'pos').glob('.*') if f.is_file()]
+    if (toolkit/'.envtype').is_file(): runtime.append(toolkit/'.envtype')
+    inventory = root/info['app'].lstrip('/')/'inventory.json'
+    if inventory.is_file(): runtime.append(inventory)
+    dropins = root/'etc/systemd/system'/(info['family']+'-web.service.d')
+    runtime += [f for f in dropins.glob('*.conf') if f.is_file()]
+    apache = [f for folder in ('etc/httpd/conf.d','etc/apache2/sites-available','etc/apache2/conf-available')
+              for f in (root/folder).glob('*.conf') if info['prefix'] in f.read_text() or info['app'] in f.read_text()]
+    if args.resume_from:
+        # A previous attempt may already have rewritten the proxy text.
+        with tarfile.open(args.resume_from,'r:gz') as archive:
+            for member in archive.getmembers():
+                if member.isfile() and member.name.endswith('.conf') and str(Path(member.name).parent) in (
+                        'etc/httpd/conf.d','etc/apache2/sites-available','etc/apache2/conf-available'):
+                    file=safe(root/member.name)
+                    if file.is_file() and file not in apache:apache.append(file)
+    originals = {safe(root/e['path'].lstrip('/')) for e in info['metadata']['files']}
+    originals.update(safe(f) for f in runtime + apache + [manifest])
+    if live:
+        active = subprocess.check_output(['systemctl','list-units','--state=active,activating','--plain','--no-legend',
+                info['family']+'-stage@*.service',info['family']+'-terminal@*.service',info['family']+'-container-admin@*.service'],text=True)
+        if active.strip(): raise ValueError('Finish privileged connections and staging jobs before migrating')
+        # Keep an existing custom service identity; only its name/home changes.
+        run('systemctl','stop',*[u for u in info['units'] if '@' not in u])
+        if destination.exists():
+            run('systemctl','stop','mykos-web.service','mykos-container-admin.socket','mykos-terminal.socket',
+                'mykos-collector.timer','mykos-details.timer','mykos-extended.timer',
+                'mykos-collector.service','mykos-details.service','mykos-extended.service')
+    backup = args.resume_from or root/'var/backups/mykos-installer'/('before-migration-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f')+'.tar.gz')
+    backup.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # Backup after writers stop. Preserve original paths/bytes for recovery.
+    if not args.resume_from:
+        with backup.open('xb') as raw:
+            os.chmod(backup,0o600)
+            with tarfile.open(fileobj=raw, mode='w:gz') as archive:
+                for file in sorted(originals):
+                    if file.is_file(): archive.add(file, arcname=str(file.relative_to(root)), recursive=False)
+    print('Recovery snapshot:', backup, flush=True)
+    if live:
+        if olduser.pw_name != 'mykosweb':
+            run('usermod','--login','mykosweb','--home','/opt/mykos-web',info['user'])
+        oldgroup = grp.getgrgid(olduser.pw_gid).gr_name
+        if oldgroup != 'mykosweb': run('groupmod','--new-name','mykosweb',oldgroup)
+    # Seed mutable settings before the installer selects files to preserve.
+    for file in runtime:
+        if file.name.endswith(('-wal','-shm')): continue
+        relative = '/'+str(file.relative_to(root))
+        target = rewrite(relative,info)
+        if relative.startswith('/etc/systemd/system/'):
+            target = relative.replace('/'+info['family']+'-web.service.d/','/mykos-web.service.d/')
+        dest = safe(root/target.lstrip('/'))
+        if args.resume_from and dest.exists(): continue
+        copy_file(file,dest)
+        if relative.startswith(info['settings']+'/'):
+            if file.suffix == '.json':
+                def paths(value):
+                    if isinstance(value,dict):return {k:paths(v) for k,v in value.items()}
+                    if isinstance(value,list):return [paths(v) for v in value]
+                    if isinstance(value,str) and value.startswith('/'):return rewrite(value,info)
+                    return value
+                dest.write_text(json.dumps(paths(json.loads(file.read_text())),indent=2)+'\n')
+            elif file.suffix == '.env':
+                # Rename variable names and known path values; leave secret values intact.
+                lines=[]
+                for line in file.read_text().splitlines():
+                    key,sep,value=line.partition('=')
+                    key=rewrite(key+'=',info,True)[:-1] if sep else key
+                    if value.startswith('/'):value=rewrite(value,info)
+                    lines.append(key+sep+value)
+                dest.write_text('\n'.join(lines)+'\n')
+        elif relative.startswith('/etc/systemd/system/'):
+            text=rewrite(file.read_text(),info,True).replace('User='+info['user'],'User=mykosweb').replace('Group='+info['user'],'Group=mykosweb')
+            dest.write_text(text)
+    if live:
+        # Copying as root does not preserve UID; identity initialization runs as the web account.
+        for file in (root/'opt/mykos-web/data').rglob('*'):
+            if file.is_file():os.chown(file,olduser.pw_uid,olduser.pw_gid);os.chmod(file,0o600)
+    cmd=[args.python,str(SOURCE/'bin/mykos-install'),'install','--root',str(root),'--public-origin',args.public_origin,'--python',args.python]
+    if live:cmd.append('--python-deps')
+    run(*cmd)
+    if live:
+        user=pwd.getpwnam('mykosweb')
+        for file in (root/'opt/mykos-web/data').rglob('*'):
+            if file.is_file():os.chown(file,user.pw_uid,user.pw_gid);os.chmod(file,0o600)
+    installed = json.loads(destination.read_text())
+    for entry in installed['files']:
+        if entry['mutable']:
+            file = safe(root/entry['path'].lstrip('/'))
+            os.chmod(file,entry['mode'])
+            if live:os.chown(file,0,user.pw_gid if entry.get('owner')=='web-read' else 0)
+    # Rewrite proxy paths without changing the public hostname or certificate settings.
+    for file in apache:
+        text = rewrite(file.read_text(),info).replace(info['prefix']+'$', '/mykos$')
+        file.write_text(text)
+    if live and apache:
+        run('apachectl','configtest')
+    run(args.python,SOURCE/'bin/mykos-install','verify','--root',root)
+    if live:
+        run('systemctl','disable',*[u for u in info['units'] if '@' not in u])
+        run('systemctl','daemon-reload')
+        run('systemctl','enable','mykos-web.service','mykos-container-admin.socket','mykos-terminal.socket',
+            'mykos-collector.timer','mykos-details.timer','mykos-extended.timer')
+        run('systemctl','start','mykos-container-admin.socket','mykos-terminal.socket')
+        run('systemctl','--no-block','start','mykos-web.service')
+        run('systemctl','start','mykos-collector.timer','mykos-details.timer','mykos-extended.timer')
+        if apache:run('apachectl','graceful')
+    print('Migration complete. Open '+args.public_origin.rstrip('/')+'/mykos/ and sign in again.')
+    print('API clients: use /mykos/api/v2 and X-MYKOS-API-Key. Existing key values remain valid.')
+    print('Previous files remain disabled for recovery; snapshot above contains their original paths.')
+
+if __name__=='__main__':
+    try:main()
+    except (OSError,ValueError,KeyError,tarfile.TarError,subprocess.SubprocessError) as exc:
+        print('ERROR:',exc,file=sys.stderr)
+        print('Migration stopped. Preserve the recovery snapshot and inspect the reported error before starting services.',file=sys.stderr)
+        sys.exit(1)

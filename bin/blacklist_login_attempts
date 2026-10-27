@@ -1,0 +1,15 @@
+#!/bin/bash
+
+#DESC Script designed to watch the /var/log/secure file and blacklist ips that have invalid user login attempts.
+#DESC Yes you can lock yourself out if you typeo your login name. Dont miss :)
+#DESC Run this script in the background indefinately. i.e. $./blacklist_login_attempts &
+#DESC Adds the offending ip to /etc/ipset-blacklist.conf if its not already there.
+#DESC ipset-blacklist.conf is provided by using blacklist.sh which is also included.
+#DESC blacklist.sh adds iptables rules to block known offending ips from other providers, as well as /etc/ipset-blacklist.conf
+
+tail -fn0 "/var/log/secure" \
+| grep -F --line-buffered ' for invalid user ' \
+| grep -Eo --line-buffered "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" \
+| while read ip; do
+      [ "`grep $ip /etc/ipset-blacklist.conf`" == "" ] && echo $ip >> /etc/ipset-blacklist.conf
+  done

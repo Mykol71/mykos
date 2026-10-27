@@ -1,0 +1,67 @@
+#!/bin/bash
+set -euo pipefail
+checkpoint=/storage/.mykos-checkpoint
+# Customize the vendor answer asset while retaining its media-specific XML
+# generation, drivers, QGA and SetupComplete/first-logon scripts.
+if [[ ${MYKOS_UNATTENDED:-} == windows ]]; then
+    [[ ${MYKOS_WINDOWS_ASSET:-} =~ ^win[0-9a-z-]+$ ]] || exit 1
+    asset=/run/assets/$MYKOS_WINDOWS_ASSET.xml
+    [[ -f "$asset" && -s /run/mykos-autounattend.xml ]] || exit 1
+    [[ -f /run/.mykos-original-answer.xml ]] || cp "$asset" /run/.mykos-original-answer.xml
+    cp /run/mykos-autounattend.xml "$asset"
+fi
+# A staged Windows disk must never re-enter Dockur's installation cleanup.
+# Keep captured setup media too: RAM restore needs the same QEMU devices.
+if [[ ${MYKOS_PRESERVE_WINDOWS_DISK:-N} == Y ]]; then
+    [[ -s /storage/data.img || -s /storage/data.qcow2 ]] || { echo 'Missing staged Windows disk; refusing installation' >&2; exit 1; }
+    [[ -f /run/install.sh ]] || { echo 'Unsupported Windows startup script' >&2; exit 1; }
+    for function in needsInstall cleanupTemp cleanupSource; do
+        grep -q "^${function}() {" /run/install.sh || { echo "Unsupported Windows startup: $function" >&2; exit 1; }
+    done
+    rewrite=$(mktemp /run/.mykos-install.XXXXXX)
+    awk '
+        $0 ~ /^  \[\[ \$\{MYKOS_PRESERVE_WINDOWS_DISK:-N\} == Y \]\] \&\& return [01]$/ { next }
+        { print }
+        /^needsInstall\(\) \{/ { print "  [[ ${MYKOS_PRESERVE_WINDOWS_DISK:-N} == Y ]] && return 1" }
+        /^cleanupTemp\(\) \{|^cleanupSource\(\) \{/ { print "  [[ ${MYKOS_PRESERVE_WINDOWS_DISK:-N} == Y ]] && return 0" }
+    ' /run/install.sh > "$rewrite"
+    cat "$rewrite" > /run/install.sh
+    rm -f "$rewrite"
+fi
+# Runtime entry.sh edits live in the wrapper's persistent writable layer.
+# Clear our previous one-shot hook before deciding whether this boot restores RAM.
+if [[ -f /run/entry.sh ]]; then
+    rewrite=$(mktemp /run/.mykos-entry.XXXXXX)
+    awk '$0 != " . /run/mykos-checkpoint-restore" {gsub(/Restoring checkpoint for /,"Booting "); print}' /run/entry.sh > "$rewrite"
+    cat "$rewrite" > /run/entry.sh
+    rm -f "$rewrite"
+fi
+if [[ -f "$checkpoint/restore.request" ]]; then
+    [[ -f "$checkpoint/memory.gz" && ! -L "$checkpoint/memory.gz" ]] || { echo 'Missing VM memory checkpoint' >&2; exit 1; }
+    grep -q '^\. finish.sh' /run/entry.sh || { echo 'Unsupported VM entry script' >&2; exit 1; }
+    cat > /run/mykos-checkpoint-load <<'LOAD'
+#!/bin/bash
+set -euo pipefail
+exec gzip -dc /storage/.mykos-checkpoint/memory.gz
+LOAD
+    chmod 0700 /run/mykos-checkpoint-load
+    cat > /run/mykos-checkpoint-restore <<'RESTORE'
+# Loaded after the image has constructed its complete QEMU arguments.
+ARGS+=" -incoming exec:/run/mykos-checkpoint-load -S"
+waitForBoot() { return 0; }
+RESTORE
+    rewrite=$(mktemp /run/.mykos-entry.XXXXXX)
+    awk '/^\. finish.sh/ {print; print " . /run/mykos-checkpoint-restore"; next} {gsub(/Booting /,"Restoring checkpoint for "); print}' /run/entry.sh > "$rewrite"
+    cat "$rewrite" > /run/entry.sh
+    rm -f "$rewrite"
+    # One-shot restore: later container starts boot its current disks normally.
+    mv "$checkpoint/restore.request" "$checkpoint/restore.consumed"
+fi
+# QEMU and its vCPU/I/O threads inherit the image builder's CPU priority.
+if [[ ${MYKOS_BUILD_NICE:-0} == -5 ]]; then
+    renice -n -5 -p "$$" >/dev/null || echo 'Warning: Windows build CPU priority could not be raised' >&2
+fi
+if [[ ${MYKOS_UNATTENDED:-} == ubuntu || ${MYKOS_UNATTENDED:-} == macos ]]; then
+    exec /run/mykos-unattended-entry
+fi
+exec /run/entry.sh

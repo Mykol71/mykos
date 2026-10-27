@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[[ -f /etc/mykos/pos.env ]] && . /etc/mykos/pos.env
+: "${MERAKI_API_KEY:?Set MERAKI_API_KEY in /etc/mykos/pos.env}"
+: "${MERAKI_ORG_ID:?Set MERAKI_ORG_ID in /etc/mykos/pos.env}"
+curl --fail --silent --show-error --location \
+  "https://api.meraki.com/api/v1/organizations/$MERAKI_ORG_ID/appliance/vpn/thirdPartyVPNPeers" \
+  --header "Authorization: Bearer $MERAKI_API_KEY" --header 'Accept: application/json' | jq '.peers'

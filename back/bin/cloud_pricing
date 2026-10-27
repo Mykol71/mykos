@@ -1,0 +1,67 @@
+#!/usr/bin/bash
+
+#DESC This script is ran once per month to do the following:
+#
+# 1. Collect space taken by each backup user.
+# 2. Compare to previous execution (if exists).
+# 3. If the difference between the size of the backups folder for a customer is large enough to change pricing tiers, write the customer info to a file.
+# 4. Email the resulting file to Valerie M., Mike Green, JJ Blankenship, and Shannon Jackson.
+# 5. Replace last execs data with current data.
+#
+# Pricing Tiers:
+# 1. <20G   = 19.95
+# 2. 20-49G = 29.95
+# 3. 50-99G = 49.95
+# 4. >100G  = 99.95
+
+rm -f /usr/local/bin/cloud_pricing_changed
+
+#Init previous file if not there
+if [ ! -f /usr/local/bin/cloud_pricing_previous ]
+then
+for USER in `ls /backups | grep tfrsync-`
+do
+if [ -f /backups/$USER/paying_customer ]
+then
+TIER="0"
+SHOPCODE="`echo $USER | cut -d- -f2`"
+cd /backups/$USER
+SPACE="`du -sm | sed 's/.$//' | awk '{$1=$1};1'`"
+SPACE_GB="$(expr $SPACE / 1024)"
+[ "$SPACE_GB" -ge "1" ] && TIER="19.95"
+[ "$SPACE_GB" -ge "20" ] && TIER="29.95"
+[ "$SPACE_GB" -ge "50" ] && TIER="49.95"
+[ "$SPACE_GB" -ge "100" ] && TIER="99.95"
+[ "$SPACE_GB" != "0" ] && echo "- $SHOPCODE $SPACE_GB $TIER" >> /usr/local/bin/cloud_pricing_previous
+fi
+done
+exit 1
+fi
+
+#Compare current with previous 
+echo "ID  PreviousGB              CurrentGB       Tier                    Changed" >> /usr/local/bin/cloud_pricing_changed
+for USER in `ls /backups | grep tfrsync-`
+do
+if [ -f /backups/$USER/paying_customer ]
+then
+CURRENT_TIER="0"
+SHOPCODE="`echo $USER | cut -d- -f2`"
+cd /backups/$USER
+CURRENT_SPACE="`du -sm | sed 's/.$//' | awk '{$1=$1};1'`"
+CURRENT_SPACE_GB="$(expr $CURRENT_SPACE / 1024)"
+[ "$CURRENT_SPACE_GB" -ge "0" ] && CURRENT_TIER="19.95"
+[ "$CURRENT_SPACE_GB" -ge "20" ] && CURRENT_TIER="29.95"
+[ "$CURRENT_SPACE_GB" -ge "50" ] && CURRENT_TIER="49.95" 
+[ "$CURRENT_SPACE_GB" -ge "100" ] && CURRENT_TIER="99.95" 
+PREVIOUS_SPACE="`grep $SHOPCODE /usr/local/bin/cloud_pricing_previous | cut -d" " -f3`"
+PREVIOUS_TIER="`grep $SHOPCODE /usr/local/bin/cloud_pricing_previous | cut -d" " -f4`"
+[ "$CURRENT_SPACE_GB" != "0" ] && echo "- $SHOPCODE $CURRENT_SPACE_GB $CURRENT_TIER" >> /usr/local/bin/cloud_pricing_new
+[ "$PREVIOUS_TIER" != "$CURRENT_TIER" ] && TIER_CHANGED="Yes" || TIER_CHANGED=""
+#Write customers that have changed to change file
+echo "$SHOPCODE $PREVIOUS_SPACE                 $CURRENT_SPACE_GB               $CURRENT_TIER           $TIER_CHANGED" >> /usr/local/bin/cloud_pricing_changed
+fi
+done
+mv -f /usr/local/bin/cloud_pricing_new /usr/local/bin/cloud_pricing_previous
+
+#email results
+mail -s "Cloud Billing Report" mgreen@teleflora.com,jblankenship@teleflora.com,sjackson@teleflora.com,vmarkum@teleflora.com < /usr/local/bin/cloud_pricing_changed

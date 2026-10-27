@@ -1,0 +1,69 @@
+#!/bin/bash
+
+VERSION="1.6"
+
+# verify root
+ID=$(/usr/bin/id -u)
+[ $ID -ne 0 ] && echo "You must be root to run $0." && exit 1
+
+ROOTDIR="$(pwd)"
+export ROOTDIR > /dev/null
+[ ! -d /backups ] && mkdir /backups
+
+trap '' 2
+while :; do
+   LGGRN='\033[1;32m'
+   BLUE='\033[1;34m'
+   TEAL='\033[38;5;31m'
+   GREY='\033[0;37m'
+   NC='\033[0m'
+   clear
+    HOSTNAME=`hostname`
+    echo -e "${GREY}$(date +'%x %l:%M %p')${NC}"
+    printf '\u250f''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\n'
+    echo -e "\u2503${BLUE} @ ${NC}`[ -f ../.envtype ] && cat ../.envtype || echo -e Not Installed`${NC}"
+    printf '\u2503'${LGGRN}' )~ data  '${GREY}${VERSION}${NC}'\n'
+    printf '\u2503''\u2501''\n'
+    printf '\u2503'${GREY}${TEAL}"  $(hostname)"${NC}'\n'
+    printf '\u2503'${GREY}" Space    : $(df -h /backups | tail -1 | awk '{print $4}')"${NC}'\n'
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'"-\033[0mBackups"'\n'
+    printf '\u2503''\033[1m'" 1.\033[0m Summary"'\n'
+    printf '\u2503''\033[1m'" 2.\033[0m Detail"'\n'
+    printf '\u2503''\033[1m'" 3.\033[0m Pricing"'\n'
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'"-\033[0mInsights"'\n'
+    printf '\u2503''\033[1m'" 4.\033[0m Compliance"'\n'
+    printf '\u2503''\033[1m'" 5.\033[0m Advisory"'\n'
+    printf '\u2503''\033[1m'" 6.\033[0m Malware"'\n'
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'"-\033[0mHardware"'\n'
+    printf '\u2503''\033[1m'" 7.\033[0m Dell TSR"'\n'
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'"-\033[0mSystem"'\n'
+    printf '\u2503''\033[1m'" x.\033[0m Exit"'\n'
+    printf '\u2517''\u2501''\n'
+	echo -ne "Select: "
+	read selection
+	case $selection in
+	1)
+		cd $ROOTDIR/bin
+		./tfcloudaccountstats.sh 
+		tr '|' '\t' < /tmp/TU_STATS_LINUX_Cloud_Backups.txt
+                echo -ne "${CYAN}Press enter to continue..${NC}"
+                read
+                cd -
+                ;;
+	2)
+		cd $ROOTDIR/bin
+		./tfcloudaccountdetail.sh
+		tr '|' '\t' < /tmp/TU_STATS_LINUX_Cloud_Backup_Detail.txt
+                echo -ne "${CYAN}Press enter to continue..${NC}"
+		read
+		cd -
+		;;
+	x)	exit
+		;;
+	*) ;;
+	esac
+done

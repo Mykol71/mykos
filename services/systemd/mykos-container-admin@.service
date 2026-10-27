@@ -1,0 +1,14 @@
+[Unit]
+Description=MYKOS mykos-container-admin connection
+
+[Service]
+Type=simple
+User=root
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-container-helper
+StandardInput=socket
+StandardOutput=journal
+StandardError=journal
+UMask=0077
+TimeoutStopSec=5s
+RuntimeMaxSec=180s
+KillMode=control-group

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# The global installer is canonical. Keep explicit old bundle operations available.
+set -euo pipefail
+here=$(cd -- "$(dirname -- "$0")" && pwd)
+for arg in "$@"; do
+  case "$arg" in
+    --bundle|--bundle=*|--snapshot|--snapshot=*|package) exec python3 "$here/install-bundle" "$@" ;;
+  esac
+done
+exec python3 "$here/mykos-install" "$@"

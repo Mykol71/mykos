@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+export PATH
+MYDIR="${0%/*}"
+. "$MYDIR/config"
+[ "${3:-/}" = / ] || { echo 'Account provisioning requires the installed system' >&2; exit 1; }
+[ -x /usr/bin/expect ] && [ -x /usr/sbin/sysadminctl ] || exit 1
+record="/Users/$USERNAME"
+if ! /usr/bin/dscl . -read "$record" UniqueID >/dev/null 2>&1; then
+  /usr/bin/expect "$MYDIR/account-create.exp" "$MYDIR/account-password" "$USERNAME"
+fi
+# Verify creation: sysadminctl may return zero even when an operation fails.
+uid=$(/usr/bin/dscl . -read "$record" UniqueID)
+[ "$uid" = 'UniqueID: 501' ] || exit 1
+/usr/bin/dsmemberutil checkmembership -U "$USERNAME" -G admin | /usr/bin/grep -q 'is a member' || exit 1
+/usr/sbin/createhomedir -c -u "$USERNAME" >/dev/null
+[ -d "/Users/$USERNAME" ] || exit 1
+/bin/rm -f "$MYDIR/account-password"
+echo 'Native administrator account and home initialized'

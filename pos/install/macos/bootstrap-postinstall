@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+export PATH
+MYDIR="${0%/*}"
+TARGET="${3:-/}"
+case "$TARGET" in /*) ;; *) exit 1 ;; esac
+PREFIX="${TARGET%/}"
+SUPPORT="$PREFIX/Library/Application Support/macos-unattended"
+DAEMONS="$PREFIX/Library/LaunchDaemons"
+# Runs as Apple's final installation package, after the Data volume exists.
+# Never run a nested installer while the OS installation owns its package lock.
+/bin/bash "$MYDIR/setup-postinstall" "$@"
+/bin/mkdir -p "$SUPPORT" "$DAEMONS"
+/bin/chmod 0700 "$SUPPORT"
+/bin/cp "$MYDIR/admin.pkg" "$SUPPORT/admin.pkg"
+/bin/cp "$MYDIR/firstboot.sh" "$SUPPORT/firstboot.sh"
+/bin/cp "$MYDIR/firstboot.plist" "$DAEMONS/com.dockur.macos.firstboot.plist"
+/usr/sbin/chown 0:0 "$SUPPORT" "$SUPPORT/admin.pkg" "$SUPPORT/firstboot.sh" "$DAEMONS/com.dockur.macos.firstboot.plist"
+/bin/chmod 0600 "$SUPPORT/admin.pkg"
+/bin/chmod 0700 "$SUPPORT/firstboot.sh"
+/bin/chmod 0644 "$DAEMONS/com.dockur.macos.firstboot.plist"
+/usr/bin/plutil -lint "$DAEMONS/com.dockur.macos.firstboot.plist" >/dev/null

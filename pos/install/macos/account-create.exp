@@ -1,0 +1,15 @@
+#!/usr/bin/expect -f
+set timeout 90
+log_user 0
+set f [open [lindex $argv 0] r]
+set password [string trimright [read $f] "\n"]
+close $f
+set username [lindex $argv 1]
+spawn /usr/sbin/sysadminctl -addUser $username -fullName $username -UID 501 -GID 20 -shell /bin/bash -home /Users/$username -password - -admin
+expect {
+  -nocase -re {password[^:]*:} { send -- "$password\r"; exp_continue }
+  eof {}
+  timeout { exit 124 }
+}
+set result [wait]
+exit [lindex $result 3]

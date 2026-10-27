@@ -1,0 +1,8 @@
+{
+  "stage_image": null,
+  "network_device": null,
+  "terminal_enabled": false,
+  "native_network": "mykos-lan",
+  "native_network_driver": "bridge",
+  "native_network_subnet": "192.168.22.0/24"
+}

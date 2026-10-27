@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+base="$(cd -- "$(dirname -- "$0")" && pwd)"
+bootstrap_python="$(command -v python3 || true)"
+if [ -z "$bootstrap_python" ] && [ -x /usr/libexec/platform-python ]; then
+  bootstrap_python=/usr/libexec/platform-python
+fi
+case "${1:-bootstrap}" in
+  bootstrap) if [ "$#" -gt 0 ]; then shift; fi; exec "${bootstrap_python:-python3}" "$base/mykos-bootstrap" "$@" ;;
+  --email|--plan) exec "${bootstrap_python:-python3}" "$base/mykos-bootstrap" "$@" ;;
+  *) exec python3 "$base/mykos-install" "$@" ;;
+esac

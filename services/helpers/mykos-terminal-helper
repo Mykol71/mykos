@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""Socket-activated PTY bridge to one validated managed container."""
+import os
+import pty
+import selectors
+import signal
+import sys
+from mykos_runtime import PODMAN, config, connection, request, target, containers
+
+def main():
+    conn=connection()
+    if not config().get('terminal_enabled',False): raise ValueError('Terminal disabled in configuration')
+    data=request(conn)
+    if set(data) not in ({'shop'}, {'shop', 'action'}): raise ValueError('Expected shop and optional action')
+    action = data.get('action', 'shell')
+    if action not in ('shell', 'add-vpn', 'remove-vpn'): raise ValueError('Unsupported terminal action')
+    host = data['shop'] == 'host'
+    if action == 'remove-vpn' and not host: raise ValueError('Host VPN removal only')
+    name=None if host else target(data['shop'])
+    if not host:
+        from mykos_vm import record_path
+        if record_path(data['shop']).is_file():
+            from mykos_vm import read
+            vm_os=read(data['shop']).get('os','')
+            if not vm_os.startswith(('ubuntu','win','wns','mac')) or (action != 'shell' and not vm_os.startswith('ubuntu')):
+                raise ValueError('Use the desktop browser console or RDP/VNC login for this VM')
+    if not host and action == 'add-vpn' and not any(item['name'] == name and item['state'].lower() == 'running' for item in containers()):
+        raise ValueError('Start the container before adding a VPN')
+    pid,master=pty.fork()
+    if pid==0:
+        if host and action == 'remove-vpn':
+            os.execv('/usr/bin/python3', ['/usr/bin/python3', '/usr/local/share/mykos/pos/host-vpn', '--remove'])
+        elif host and action == 'add-vpn':
+            os.execv('/usr/bin/python3', ['/usr/bin/python3', '/usr/local/share/mykos/pos/host-vpn'])
+        elif host:
+            os.execv('/bin/su', ['/bin/su', '-', 'root'])
+        elif action == 'add-vpn':
+            from mykos_vm import record_path,read
+            if record_path(data['shop']).is_file() and read(data['shop']).get('os','').startswith('ubuntu'):
+                os.execv(sys.executable,[sys.executable,'/usr/local/sbin/mykos-ubuntu-vpn',data['shop']])
+            os.chdir('/usr/local/share/mykos/pos')
+            os.execv('/usr/bin/bash', ['/usr/bin/bash', './pos', '--add-vpn', data['shop'], name])
+        else:
+            from mykos_vm import record_path
+            if record_path(data['shop']).is_file():
+                from mykos_vm import read
+                if read(data['shop'])['os'].startswith('ubuntu'):
+                    from mykos_serial import open_terminal
+                elif read(data['shop'])['os'].startswith('mac'):
+                    from mykos_ssh import open_terminal
+                else:
+                    from mykos_powershell import open_terminal
+                open_terminal(data['shop'])
+                raise SystemExit(0)
+            os.execv(PODMAN,[PODMAN,'exec','-it',name,'/bin/su','-','root'])
+    try:
+        conn.sendall(b'MYKOS_TERMINAL_READY\n');conn.settimeout(None)
+        with selectors.DefaultSelector() as selector:
+            selector.register(conn,selectors.EVENT_READ)
+            selector.register(master,selectors.EVENT_READ)
+            while True:
+                for key,_ in selector.select():
+                    if key.fileobj==conn:
+                        data=conn.recv(4096)
+                        if not data:return
+                        view=memoryview(data)
+                        while view:
+                            written=os.write(master,view);view=view[written:]
+                    else:
+                        try:data=os.read(master,4096)
+                        except OSError:return
+                        if not data:return
+                        conn.sendall(data)
+    finally:
+        os.close(master);conn.close()
+        try:os.kill(pid,signal.SIGTERM)
+        except ProcessLookupError:pass
+        try:os.waitpid(pid,0)
+        except ChildProcessError:pass
+
+if __name__=='__main__':
+    try:main()
+    except Exception as e:raise SystemExit(str(e))

@@ -1,0 +1,22 @@
+[Unit]
+Description=MYKOS rolling 30-minute host performance history
+After=network-online.target
+ConditionPathIsDirectory=/opt/mykos-web/data
+
+[Service]
+Type=simple
+User=mykosweb
+Group=mykosweb
+WorkingDirectory=/opt/mykos-web
+EnvironmentFile=/etc/mykos/web.env
+ExecStart=@PYTHON@ /opt/mykos-web/host_history.py
+RuntimeDirectory=mykos-host-metrics
+RuntimeDirectoryMode=0700
+Restart=on-failure
+RestartSec=3s
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

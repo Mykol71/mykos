@@ -1,0 +1,290 @@
+#!/usr/bin/env python3
+"""Socket-activated root operations, or an isolated staging worker."""
+import fcntl
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import time
+import socket
+import mykos_profiles as profile
+from mykos_runtime import (JOBS, PODMAN, config, connection, containers, job, request,
+                         run, save_job, shopcode, stage_images, target, network_device)
+
+def active(shop):
+    p = subprocess.run(['/usr/bin/systemctl','is-active','mykos-stage@'+shop+'.service'],
+                       capture_output=True, text=True, timeout=10)
+    return p.stdout.strip() in ('active','activating','reloading','deactivating')
+
+def stage_check(shop):
+    cfg = config()
+    device = network_device(cfg)
+    from mykos_vm import record_path
+    return {'shop':shop, 'exists':any(x['shop']==shop for x in containers()), 'desktop': record_path(shop).is_file(),
+            'active':active(shop), 'backup':profile.has_backup(shop, cfg),
+            'configured':True, 'network_device':device}
+
+def dispatch(args):
+    if not isinstance(args, list) or not args or not all(isinstance(x,str) for x in args):
+        raise ValueError('args must be a nonempty array of strings')
+    action = args[0]
+    if action in ('command-put','command-get','command-list','command-cancel'):
+        from mykos_commands import dispatch as command_dispatch
+        return command_dispatch(args)
+    if action in ('host-logs', 'host-top', 'host-ipsec', 'host-reboot'):
+        if action == 'host-reboot':
+            if len(args) != 2 or args[1] != socket.gethostname():
+                raise ValueError('Confirm the exact hostname before rebooting')
+            output = run(['/usr/bin/systemd-run', '--unit=mykos-host-reboot', '--on-active=5s',
+                          '/usr/bin/systemctl', 'reboot'], timeout=10)
+            return {'host': socket.gethostname(), 'state': 'reboot-scheduled', 'output': output}
+        if len(args) != 1: raise ValueError('Unexpected arguments')
+        commands = {
+            'host-logs': ['/usr/bin/journalctl', '-n', '200', '--no-pager', '-o', 'short-iso'],
+            'host-top': ['/usr/bin/ps', '-eo', 'pid,user,pcpu,pmem,etime,comm', '--sort=-pcpu'],
+            'host-ipsec': ['/usr/sbin/ipsec', 'status'],
+        }
+        return {'host': socket.gethostname(), 'output': run(commands[action], timeout=15)}
+    if action in ('backup-list', 'repo-list', 'backup-action', 'repo-action'):
+        from mykos_admin import dispatch as mykos_dispatch
+        return mykos_dispatch(args)
+    if action == 'ubuntu-vpn-add':
+        if len(args)!=3: raise ValueError('Expected ID and VPN settings')
+        from mykos_ubuntu_vpn import add
+        settings=json.loads(args[2])
+        if not isinstance(settings,dict) or set(settings)-{'name','peer','remote','secret','local'}:raise ValueError('Invalid VPN settings')
+        return add(shopcode(args[1]),**settings)
+    if action == 'stage-images':
+        if len(args) != 1: raise ValueError('Unexpected arguments')
+        from mykos_vm import installing_images
+        return {'images': stage_images(), 'builds': installing_images()}
+    if action == 'memory-configure':
+        if len(args) != 4 or args[1] != args[3]: raise ValueError('Confirm the exact instance ID for cold restart')
+        code = shopcode(args[1])
+        if not args[2].isascii() or not args[2].isdigit() or int(args[2]) != 2048:
+            raise ValueError('Invalid memory allocation')
+        unit = 'mykos-memory-' + code + '-' + str(time.time_ns())
+        run(['/usr/bin/systemd-run','--unit='+unit,'--property=RuntimeMaxSec=600',
+             '/usr/local/share/mykos/pos/vm','memory-configure',code,'--target-mib',args[2],'--confirm',code], timeout=15)
+        return {'shop':code,'state':'queued','target_mib':int(args[2]),'unit':unit}
+    if action in ('memory-info', 'memory-set'):
+        if len(args) != (2 if action == 'memory-info' else 3): raise ValueError('Unexpected arguments')
+        from mykos_vm import memory
+        code = shopcode(args[1])
+        if action == 'memory-info': return memory(code)
+        if not args[2].isascii() or not args[2].isdigit(): raise ValueError('Invalid memory target')
+        return memory(code, int(args[2]))
+    if action == 'list-snapshots':
+        if len(args) not in (1,2):raise ValueError('Unexpected arguments')
+        from mykos_snapshots import list_snapshots
+        return {'snapshots':list_snapshots(shopcode(args[1]) if len(args)==2 else None)}
+    if action in ('purge-plan', 'purge-start', 'purge-status'):
+        from mykos_prune import plan, queue, status
+        if action == 'purge-start':
+            if len(args) != 2: raise ValueError('Expected exact host purge confirmation')
+            return queue(args[1])
+        if len(args) != 1: raise ValueError('Unexpected arguments')
+        return plan() if action == 'purge-plan' else status()
+    if action == 'delete-pos':
+        if len(args) != 3: raise ValueError('Expected ID and exact deletion confirmation')
+        from mykos_containers import selection
+        shop = shopcode(args[1])
+        JOBS.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with (JOBS / (shop + '.lock')).open('a') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            if active(shop): raise ValueError('Container job already active')
+            selected = selection(shop, args[2])
+            value = {'shop': shop, 'state': 'queued', 'operation': 'delete',
+                     'confirmation': args[2], 'container_id': selected['container_id'],
+                     'output': '', 'updated_at': int(time.time())}
+            save_job(shop, value)
+            try: run(['/usr/bin/systemctl', 'start', '--no-block', 'mykos-stage@' + shop + '.service'])
+            except Exception:
+                value.update(state='failed', output='Could not start worker'); save_job(shop, value); raise
+            return value
+    if action in ('image-build-queue','image-build-status','image-build-complete','image-build-delete'):
+        from mykos_image_build import queue, status, callback, selection, discard_failed
+        if len(args) not in (2,3):raise ValueError('Invalid image build arguments')
+        os_name=selection(args[1])
+        if action=='image-build-delete' and len(args)==3:return discard_failed(os_name,args[2])
+        if action=='image-build-status' and len(args)==2:return status(os_name)
+        if action=='image-build-complete' and len(args)==3:return callback(os_name,args[2])
+        if action=='image-build-queue' and len(args)==3:
+            data=json.loads(args[2])
+            if not isinstance(data,dict) or set(data)-{'username','password','replace'}:raise ValueError('Invalid image build request')
+            return queue(os_name,**data)
+        raise ValueError('Invalid image build operation')
+    if action == 'console-target':
+        if len(args) != 2: raise ValueError('Expected console selection')
+        from mykos_vm import console_target
+        return console_target(args[1])
+    if action == 'desktop-info':
+        if len(args) != 2: raise ValueError('Expected ID')
+        from mykos_vm import info
+        return info(shopcode(args[1]))
+    if action in ('list','diskfree'):
+        if len(args)!=1: raise ValueError('Unexpected arguments')
+        if action=='list': return containers()
+        usage = shutil.disk_usage('/backups')
+        return {'free': '%.1f GiB' % (usage.free/1024**3), 'free_bytes':usage.free,
+                'used_bytes':usage.used, 'total_bytes':usage.total}
+    if action not in ('logs','top','ipsec','checkit','stage-check','stage-status','stage-start','start-pos','snapshot-pos','restore-snapshot','delete-snapshot','stop-pos'):
+        raise ValueError('Unsupported action')
+    if action in ('restore-snapshot','delete-snapshot'):
+        from mykos_snapshots import read_snapshot
+        if len(args)!=3:raise ValueError('Expected ID and snapshot')
+        read_snapshot(shopcode(args[1]),args[2])
+    if (action == 'stage-start' and len(args) not in (3, 4)) or (action not in ('stage-start','restore-snapshot','delete-snapshot') and len(args) != 2):
+        raise ValueError('Wrong argument count')
+    shop = shopcode(args[1])
+    if action=='stage-check': return stage_check(shop)
+    if action=='stage-status':
+        value = job(shop)
+        if value['state'] in ('queued','running') and not active(shop):
+            value.update(state='failed',output='Worker is no longer active; inspect journalctl -u mykos-stage@'+shop)
+        return value
+    if action in ('stage-start','start-pos','snapshot-pos','restore-snapshot','delete-snapshot','stop-pos'):
+        JOBS.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with (JOBS / (shop+'.lock')).open('a') as lock:
+            fcntl.flock(lock,fcntl.LOCK_EX)
+            if active(shop): raise ValueError('Staging job already active')
+            if action=='delete-snapshot':
+                value={'shop':shop,'state':'queued','operation':'delete-snapshot','snapshot':args[2],
+                       'output':'','updated_at':int(time.time())}
+                save_job(shop,value)
+                try:run(['/usr/bin/systemctl','start','--no-block','mykos-stage@'+shop+'.service'])
+                except Exception:
+                    value.update(state='failed',output='Could not start worker');save_job(shop,value);raise
+                return value
+            if action in ('start-pos','snapshot-pos','restore-snapshot','delete-snapshot','stop-pos'):
+                from mykos_vm import read, record_path, VERSIONS, inspect as vm_inspect
+                name=target(shop)
+                desktop_os=None
+                if record_path(shop).is_file():
+                    existing=read(shop)
+                    if existing.get('role')!='instance' or not existing.get('ready') or existing.get('os') not in VERSIONS:
+                        raise ValueError('Select an existing persistent container')
+                    if name!=existing['name']:raise ValueError('Container identity mismatch')
+                    desktop_os=existing['os']
+                    state=vm_inspect(name)
+                else:
+                    import mykos_linux
+                    _,state=mykos_linux.inspect(shop)
+                    if action!='snapshot-pos':mykos_linux.require_persistent(state)
+                if action=='snapshot-pos' and not state.get('State',{}).get('Running'):
+                    raise ValueError('Start the container before taking a snapshot')
+                value={'shop':shop,'state':'queued','operation':'restore' if action=='restore-snapshot' else action.removesuffix('-pos'),
+                       'snapshot':args[2] if action=='restore-snapshot' else None,
+                       'desktop_os':desktop_os,'restore':False,'output':'','updated_at':int(time.time())}
+                save_job(shop,value)
+                try:run(['/usr/bin/systemctl','start','--no-block','mykos-stage@'+shop+'.service'])
+                except Exception:
+                    value.update(state='failed',output='Could not start worker');save_job(shop,value);raise
+                return value
+            if args[2] not in ('yes','no'): raise ValueError('Restore must be yes or no')
+            check=stage_check(shop)
+            if check['exists'] and not check['desktop']: raise ValueError('Container already exists')
+            selected_os = args[3] if len(args) == 4 else None
+            image = config().get('stage_image')
+            if selected_os is not None:
+                matches = [item for item in stage_images() if item['os'] == selected_os]
+                if len(matches) != 1: raise ValueError('Select an OS from the available supported images')
+                image = matches[0]['image']
+            if not image: raise ValueError('Select an OS from the available supported images')
+            from mykos_vm import VERSIONS, read
+            desktop_os = selected_os if selected_os in VERSIONS else None
+            if check['desktop'] and not desktop_os: raise ValueError('Select the existing desktop OS to resume')
+            if desktop_os:
+                if args[2] == 'yes': raise ValueError('Application restore is only supported for native Linux containers')
+                if not read(desktop_os)['ready']: raise ValueError('Finish and capture this OS image in the text admin menu first')
+            if args[2]=='yes' and not check['backup']: raise ValueError('Configured application backup missing')
+            value={'shop':shop,'state':'queued','restore':args[2]=='yes','os':selected_os,'desktop_os':desktop_os,'image':image,'output':'','updated_at':int(time.time())}
+            save_job(shop,value)
+            try: run(['/usr/bin/systemctl','start','--no-block','mykos-stage@'+shop+'.service'])
+            except Exception:
+                value.update(state='failed',output='Could not start staging worker');save_job(shop,value);raise
+            return value
+    name=target(shop)
+    if action=='ipsec':
+        from mykos_vm import record_path,read
+        if record_path(shop).is_file() and read(shop).get('os','').startswith('ubuntu'):
+            from mykos_ubuntu_vpn import execute
+            return {'shop':shop,'container':name,'output':execute(read(shop),'/usr/bin/timeout',('10','/usr/sbin/ipsec','status'),timeout=12)}
+    if action=='logs':
+        from pathlib import Path
+        state=json.loads(run([PODMAN,'container','inspect',name]))[0]
+        roots=[]
+        pid=state.get('State',{}).get('Pid',0)
+        if isinstance(pid,int) and pid>0 and state.get('State',{}).get('Running'):
+            roots.append(Path('/proc')/str(pid)/'root')
+        merged=state.get('GraphDriver',{}).get('Data',{}).get('MergedDir')
+        if merged: roots.append(Path(merged))
+        for root in roots:
+            for suffix in ('var/log/journal','run/log/journal'):
+                journal=root/suffix
+                if not journal.is_dir(): continue
+                output=run(['/usr/bin/journalctl','--directory='+str(journal),'-n','200','--no-pager','-o','short-iso'])
+                if output.strip() and output.strip()!='-- No entries --':
+                    return {'shop':shop,'container':name,'output':output}
+    commands={'logs':[PODMAN,'logs','--tail','200',name],
+              'top':[PODMAN,'top',name],
+              'ipsec':[PODMAN,'exec',name,'ipsec','status'],
+              'checkit':[PODMAN,'exec',name,'/usr/bin/checkit']}
+    return {'shop':shop,'container':name,'output':run(commands[action])}
+
+def worker(shop):
+    shopcode(shop)
+    value=job(shop)
+    value.update(state='running',updated_at=int(time.time()));save_job(shop,value)
+    try:
+        operation=value.get('operation')
+        if operation=='delete':
+            from mykos_containers import delete
+            result = delete(shop, value['confirmation'], value['container_id'])
+            try: run(['/usr/bin/systemctl', 'start', 'mykos-collector.service'], timeout=150)
+            except Exception as error: result['warning'] = 'Deleted; inventory refresh deferred: ' + str(error)
+            output = json.dumps(result)
+        elif operation=='delete-snapshot':
+            from mykos_snapshots import delete_snapshot
+            output=json.dumps(delete_snapshot(shop,value['snapshot']))
+        elif operation=='restore':
+            from mykos_snapshots import restore
+            output=json.dumps(restore(shop,value['snapshot']))
+        elif operation=='snapshot':
+            from mykos_snapshots import capture
+            output=json.dumps(capture(shop))
+        elif operation in ('start','stop'):
+            if value.get('desktop_os'):
+                import mykos_vm as lifecycle
+            else:
+                import mykos_linux as lifecycle
+            output=json.dumps(getattr(lifecycle,operation)(shop))
+        else:
+            command = ['/usr/local/sbin/mykos-stage-pos',shop,'yes' if value.get('restore') else 'no']
+            if value.get('desktop_os'):
+                command = ['/usr/local/sbin/mykos-desktop', shop, value['desktop_os']]
+            elif value.get('image'): command.append(value['image'])
+            output=run(command,timeout=1800)
+        if operation == 'start' or operation is None:
+            # Refresh the shared host-side inventory once after startup. systemd
+            # coalesces concurrent requests; normal collector timing stays unchanged.
+            try:
+                for collector in ('collect-nodes.py','collect-details.py','collect-extended.py'):
+                    run(['/usr/bin/nice','-n','-5',sys.executable,'/opt/mykos-web/'+collector,shop],timeout=45)
+            except Exception as error:
+                output += '\nStarted; inventory refresh deferred: ' + str(error)
+        value.update(state='done',output=output)
+    except Exception as e:
+        value.update(state='failed',output=str(e))
+    value['updated_at']=int(time.time());save_job(shop,value)
+    if value['state']=='failed': raise SystemExit(1)
+
+if __name__=='__main__':
+    if len(sys.argv)==3 and sys.argv[1]=='--stage-worker': worker(sys.argv[2])
+    elif len(sys.argv)==1:
+        conn=connection()
+        try: response={'ok':True,'result':dispatch(request(conn).get('args'))}
+        except Exception as e: response={'ok':False,'error':str(e)}
+        conn.sendall((json.dumps(response)+'\n').encode());conn.close()
+    else: raise SystemExit('Usage: mykos-container-helper [--stage-worker SHOP]')

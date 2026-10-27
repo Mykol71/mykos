@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""Retire unused MYKOS base image names without stopping containers."""
+import json
+from mykos_vm import cleanup_unused_base_images, locked
+
+if __name__=='__main__':
+    try:
+        with locked():print(json.dumps({'removed':cleanup_unused_base_images()}))
+    except (ValueError,RuntimeError,OSError) as error:raise SystemExit(str(error))

@@ -1,0 +1,3 @@
+5 * * * * /usr/local/bin/backup_perf.sh
+1 1 25 3,6,9,12 * /usr/local/bin/cloud_pricing
+33 * * * * root /var/www/cgi-bin/tsrs_batch

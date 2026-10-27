@@ -1,0 +1,12 @@
+{
+  "archive": "bin/mykos-web.img",
+  "sha256": "e8dbff3a3eccdc9908e0e921b68d5b41477aa56dbbb5a1f3fbde0987a33fc1cb",
+  "created": "2026-10-23T23:03:52.827840+00:00",
+  "format": "source-only deployment bundle",
+  "sources": [
+    "services/web",
+    "services/helpers",
+    "services/systemd"
+  ],
+  "excluded": "Runtime data, identities, keys, inventory, obsolete source copies and virtual environments are excluded. The untouched predecessor archive is preserved in the private pre-rename recovery snapshot outside this project."
+}

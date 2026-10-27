@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+import sys
+from mykos_ubuntu_vpn import interactive
+if __name__=='__main__':
+    try:
+        if len(sys.argv)!=2:raise ValueError('Select an Ubuntu instance ID')
+        interactive(sys.argv[1])
+    except (ValueError,OSError) as error:raise SystemExit(str(error))

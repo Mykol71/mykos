@@ -1,0 +1,21 @@
+[Unit]
+Description=MYKOS web dashboard and API
+After=network-online.target mykos-container-admin.socket mykos-terminal.socket
+Wants=network-online.target mykos-container-admin.socket mykos-terminal.socket
+
+[Service]
+User=mykosweb
+Group=mykosweb
+WorkingDirectory=/opt/mykos-web
+EnvironmentFile=/etc/mykos/web.env
+ExecStart=/opt/mykos-web/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/mykos-web/data
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""Text-admin entry point for desktop VM templates and persistent instances."""
+import argparse
+import getpass
+import json
+from pathlib import Path
+import sys
+
+source = Path(__file__).resolve().parents[1] / 'services/helpers'
+sys.path.insert(0, str(source) if source.is_dir() else '/usr/local/sbin')
+import mykos_vm as vm
+
+
+def show(data):
+    print(json.dumps(data, indent=2))
+
+
+def ubuntu_swap_instructions(os_name):
+    ram = vm.read(os_name).get('ram_mib', 2048)
+    print('Configure 12 GiB swap inside the installed Ubuntu VM before capturing:')
+    print('  curl --fail --show-error --location https://YOUR_MYKOS_HOST/mykos/image-setup/ubuntu.py -o /tmp/mykos-ubuntu-setup.py')
+    print('  sudo python3 /tmp/mykos-ubuntu-setup.py --ram-mib ' + str(ram))
+    print('This also enables the direct guest serial console running su - root (no SSH).')
+    print('Replace YOUR_MYKOS_HOST with this MYKOS server hostname. Verify with: swapon --show')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('action', choices=['build','build-status','create','prepare','start','stop','resume','info','list','toggle','checkpoint-enable','cleanup','memory','memory-configure','guest-agent-enable'])
+    parser.add_argument('selection', nargs='?')
+    parser.add_argument('os', nargs='?')
+    parser.add_argument('--replace', action='store_true', help='Replace an existing prepared checkpoint')
+    parser.add_argument('--target-mib', type=int, help='Guarded balloon target; omit to inspect driver support')
+    parser.add_argument('--confirm', help='Exact instance ID confirming a cold restart for RAM resizing')
+    parser.add_argument('--ram-mib', type=int, help='VM RAM: 2048 MiB; native RedHat containers have no memory cap')
+    args = parser.parse_args()
+    if args.ram_mib is not None and args.action != 'create': parser.error('--ram-mib requires create')
+    if args.ram_mib is not None and args.ram_mib != 2048: parser.error('VM images use 2048 MiB RAM')
+    if args.target_mib is not None and args.action not in ('memory','memory-configure'): parser.error('--target-mib requires memory')
+    if args.action == 'list':
+        for path in vm.ROOT.glob('*.json'): show(vm.links(vm.read(path.stem)))
+        return
+    if not args.selection: parser.error('Select an OS template or eight-digit code')
+    if args.action == 'build-status':
+        from mykos_image_build import status
+        show(status(args.selection));return
+    if args.action in ('build','create') and args.selection not in ('win98','winme','win2k','winxp','win7u'):
+        from mykos_image_build import build, STATE
+        show(build(args.selection,replace=args.replace))
+        print('Image credentials (root only): ' + str(STATE/args.selection/'credentials.json'))
+        return
+    if args.action == 'create':
+        os_name = args.selection
+        if os_name not in vm.VERSIONS: parser.error('OS must be one of: ' + ', '.join(vm.VERSIONS))
+        username = password = None
+        if vm.VERSIONS[os_name][0] == 'windows':
+            username = input('Windows username: ').strip()
+            password = getpass.getpass('Windows password: ')
+            if password != getpass.getpass('Confirm password: '): raise ValueError('Passwords do not match')
+        ram_mib = args.ram_mib
+        if ram_mib is None and sys.stdin.isatty():
+            default = vm.image_memory(os_name)
+            entered = input('Image RAM in MiB [' + str(default) + ']: ').strip()
+            if entered:
+                if not entered.isascii() or not entered.isdigit(): raise ValueError('Enter RAM as integer MiB')
+                ram_mib = int(entered)
+        show(vm.create(os_name, username, password, ram_mib))
+        print('Complete installation in console_url. Then run: ./vm prepare ' + os_name)
+        print('For macOS/Ubuntu, complete account setup in the browser console.')
+        if os_name.startswith('ubuntu'):
+            print('Inside Ubuntu before capture: sudo apt-get update && sudo apt-get install -y isc-dhcp-client iproute2 net-tools')
+            ubuntu_swap_instructions(os_name)
+    elif args.action == 'guest-agent-enable':
+        if args.confirm != args.selection: parser.error('Enabling the guest agent cold-restarts Ubuntu; use --confirm INSTANCE_ID')
+        show(vm.enable_guest_agent(args.selection))
+    elif args.action == 'memory-configure':
+        if args.confirm != args.selection or args.target_mib is None:
+            parser.error('Cold memory resize requires --target-mib and --confirm INSTANCE_ID')
+        show(vm.configure_memory(args.selection, args.target_mib))
+    elif args.action == 'memory': show(vm.memory(args.selection, args.target_mib))
+    elif args.action == 'checkpoint-enable':
+        if input('Restart this template with CPU settings for memory checkpoints? [y/N] ').lower() == 'y':
+            show(vm.checkpoint_enable(args.selection))
+    elif args.action == 'prepare':
+        if args.selection.startswith('ubuntu'):
+            print('Ubuntu guest networking packages must be installed before capture:')
+            print('  sudo apt-get update && sudo apt-get install -y isc-dhcp-client iproute2 net-tools')
+            print('Run this inside the Ubuntu desktop terminal. The host/QEMU wrapper is separate.')
+            ubuntu_swap_instructions(args.selection)
+            if input('Have you configured and verified 12 GiB swap inside Ubuntu? [y/N] ').lower() != 'y':
+                raise ValueError('Configure and verify Ubuntu swap before capturing its live state')
+        print('Finish installation and eject installation media first. Generalize Windows before cloning if required.')
+        record = vm.read(args.selection)
+        runtime_step = args.selection.startswith('win') and not record.get('ready') and not record.get('runtime_memory_prepared') and (record.get('ram_mib', 2048) > 2048 or record.get('build_pagefile_mib'))
+        prompt = ('Restart this installed image at 2 GiB with Windows-managed paging? After its desktop is ready, run Finish again to capture. [y/N] ' if runtime_step else 'Capture VM state, then shut down and commit the image? [y/N] ')
+        if input(prompt).lower() == 'y':
+            show(vm.prepare(args.selection, replace=args.replace, keep_running=True, embed_disk=True))
+    elif args.action == 'start': show(vm.start(args.selection, args.os))
+    elif args.action == 'toggle': show(vm.stop(args.selection) if vm.info(args.selection)['running'] else vm.resume(args.selection))
+    else: show(getattr(vm, args.action)(args.selection))
+
+
+if __name__ == '__main__':
+    try: main()
+    except (ValueError, RuntimeError, OSError) as error: raise SystemExit(str(error))

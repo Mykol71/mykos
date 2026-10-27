@@ -1,0 +1,11 @@
+[Unit]
+Description=Check MYKOS scheduled commands every 30 seconds
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=1s
+Unit=mykos-command-collector.service
+
+[Install]
+WantedBy=timers.target

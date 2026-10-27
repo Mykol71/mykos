@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Prepare Canonical autoinstall media inside the one Ubuntu builder container."""
+import hashlib
+import os
+from pathlib import Path
+import re
+import subprocess
+import tempfile
+import urllib.request
+
+root=Path('/storage');state=root/'.mykos-installstate'
+url=os.environ['MYKOS_UBUNTU_ISO_URL']
+if not re.fullmatch(r'https://(?:releases\.ubuntu\.com|old-releases\.ubuntu\.com)/[A-Za-z0-9/._-]+-live-server-amd64\.iso',url):
+    raise ValueError('Expected an official Canonical live-server ISO')
+source=root/'installer.iso';target=root/'custom.iso'
+if target.is_file():raise SystemExit(0)
+name=url.rsplit('/',1)[1]
+checks=urllib.request.urlopen(url.rsplit('/',1)[0]+'/SHA256SUMS',timeout=30).read().decode()
+match=re.search(r'(?m)^([0-9a-f]{64})\s+\*?'+re.escape(name)+r'$',checks)
+if not match:raise ValueError('Official ISO checksum unavailable')
+if not source.exists():
+    with urllib.request.urlopen(url,timeout=60) as response,source.open('xb') as out:
+        while True:
+            chunk=response.read(4*1024*1024)
+            if not chunk:break
+            out.write(chunk)
+hash=hashlib.sha256()
+with source.open('rb') as stream:
+    for chunk in iter(lambda:stream.read(4*1024*1024),b''):hash.update(chunk)
+if hash.hexdigest()!=match.group(1):raise ValueError('Ubuntu ISO SHA256 mismatch; media not used')
+with tempfile.TemporaryDirectory(prefix='mykos-iso-') as temp:
+    temp=Path(temp);maps=[]
+    for path in ('/boot/grub/grub.cfg','/boot/grub/loopback.cfg','/isolinux/txt.cfg'):
+        dest=temp/path.rsplit('/',1)[1]
+        result=subprocess.run(['xorriso','-osirrox','on','-indev',str(source),'-extract',path,str(dest)],capture_output=True,text=True)
+        if result.returncode:continue
+        lines=dest.read_text().splitlines()
+        changed=[]
+        for line in lines:
+            if re.match(r'\s*(?:linux|linuxefi|append)\s',line) and ('/casper/' in line or 'initrd=' in line):
+                line=line.replace(' ---',' autoinstall ds=nocloud\\;s=/cdrom/nocloud/ ---')
+            if re.match(r'\s*set timeout=',line):line='set timeout=1'
+            changed.append(line)
+        dest.write_text('\n'.join(changed)+'\n');maps+=['-map',str(dest),path]
+    if not maps:raise ValueError('Ubuntu boot configuration was not found')
+    subprocess.run(['xorriso','-indev',str(source),'-outdev',str(target),'-map',str(state/'user-data'),'/nocloud/user-data',
+                    '-map',str(state/'meta-data'),'/nocloud/meta-data',*maps,'-boot_image','any','replay'],check=True)
+os.chmod(target,0o600)

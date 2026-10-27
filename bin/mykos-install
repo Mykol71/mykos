@@ -1,0 +1,421 @@
+#!/usr/bin/env python3
+"""Install, inspect, snapshot, and remove MYKOS from explicit maintained sources."""
+import argparse
+import datetime
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import pwd
+import grp
+import shutil
+import sqlite3
+import stat
+import subprocess
+import sys
+import tarfile
+import tempfile
+from urllib.parse import urlsplit
+
+SOURCE = Path(__file__).resolve().parents[1]
+STATE = '/var/lib/mykos-installer/installed.json'
+BACKUPS = '/var/backups/mykos-installer'
+UNITS = ['mykos-host-history.service','mykos-web.service','mykos-container-admin.socket','mykos-terminal.socket',
+         'mykos-collector.timer','mykos-details.timer','mykos-extended.timer','mykos-command-collector.timer']
+PREFIXES = ('/opt/mykos-web/', '/usr/local/share/mykos/', '/etc/mykos/',
+            '/etc/systemd/system/mykos-', '/usr/local/sbin/mykos-')
+# Keep the legacy path allowed for old recovery snapshots and upgrade cleanup.
+EXACT = {'/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
+         '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
+         '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
+PACKAGES = ['podman','httpd','mod_ssl','python3','python3-pip','openssh-server','openssh-clients','rsync',
+            'iproute','net-tools','netavark','containernetworking-plugins','libreswan','curl','wget','jq','util-linux','tar','gzip',
+            'cronie','chrony','firewalld','policycoreutils-python-utils','ksh','unzip',
+            'expect','nmap','time','ipset','iptables','git','criu']
+
+def fail(message): raise ValueError(message)
+def sha(data): return hashlib.sha256(data).hexdigest()
+def allowed(path):
+    return isinstance(path,str) and path.startswith('/') and '..' not in Path(path).parts and '\\' not in path and (path in EXACT or any(path.startswith(p) for p in PREFIXES))
+
+def command(args):
+    print('+', ' '.join(map(str,args)), flush=True)
+    return subprocess.run(list(map(str,args)), check=True, text=True)
+
+class Installer:
+    def __init__(self, args):
+        self.args=args
+        self.root=Path(args.root).absolute()
+        if any(p.is_symlink() for p in (self.root,*self.root.parents)): fail('Root must not contain symlinks')
+        self.live=self.root==Path('/')
+        if not self.live and not self.root.is_dir() and args.action not in ('install',): fail('Staging root does not exist')
+        self.uid=self.gid=None
+
+    def path(self, name):
+        if not allowed(name) and name not in (BACKUPS,'/var/lib/mykos-installer','/var/lib/mykos/jobs','/backups','/opt/mykos-web','/etc/mykos'):
+            fail('Unmanaged path: '+name)
+        dest=self.root/name.lstrip('/')
+        if dest.is_symlink() or any(p.is_symlink() for p in dest.parents): fail('Refusing symlink: '+str(dest))
+        return dest
+
+    def mutation(self):
+        if self.live and os.geteuid()!=0: fail('Live mutations require root; use --root for staging')
+        if not self.live and (getattr(self.args,'install_deps',False) or getattr(self.args,'python_deps',False) or getattr(self.args,'enable',False) or getattr(self.args,'desktop_network',None)):
+            fail('--root staging never installs dependencies or changes host services')
+
+    def prepare_backups(self, create=False):
+        # Customer storage is external to the managed installation. Preserve a
+        # working /backups alias without writing through it or changing its mode.
+        dest = self.root / 'backups'
+        if dest.is_symlink():
+            if not dest.is_dir():
+                fail('/backups symlink must point to an existing directory')
+            return
+        dest = self.path('/backups')
+        if dest.exists():
+            if not dest.is_dir(): fail('/backups must be a directory')
+        elif create:
+            dest.mkdir(mode=0o755)
+
+    def identity(self):
+        if not self.live:return
+        try: user=pwd.getpwnam('mykosweb')
+        except KeyError:
+            command(['useradd','--system','--user-group','--home-dir','/opt/mykos-web',
+                     '--no-create-home','--shell','/sbin/nologin','mykosweb'])
+            user=pwd.getpwnam('mykosweb')
+        self.uid=user.pw_uid
+        self.gid=grp.getgrnam('mykosweb').gr_gid
+
+    def write(self, name, data, mode=0o644, owner='root'):
+        dest=self.path(name)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        fd,tmp=tempfile.mkstemp(prefix='.mykos-',dir=dest.parent)
+        try:
+            with os.fdopen(fd,'wb') as f: f.write(data);f.flush();os.fsync(f.fileno())
+            os.chmod(tmp,mode)
+            if self.live:
+                os.chown(tmp,self.uid if owner=='mykosweb' else 0,
+                         self.gid if owner in ('mykosweb','web-read') else 0)
+            os.replace(tmp,dest)
+        finally:
+            if os.path.exists(tmp): os.unlink(tmp)
+
+    def entries(self):
+        entries={}
+        def add(dest,data,mode=0o644,owner='root',mutable=False):
+            if not allowed(dest):fail('Invalid installation path '+dest)
+            entries[dest]={'data':data,'mode':mode,'owner':owner,'mutable':mutable}
+        for directory in ('bin','back','data','pos','repo','docs','services','packaging'):
+            for src in sorted((SOURCE/directory).rglob('*')):
+                rel=src.relative_to(SOURCE)
+                if src.is_symlink(): fail('Source symlink rejected: '+str(src))
+                if not src.is_file() or any(part.startswith('.') or part=='__pycache__' for part in rel.parts):continue
+                if src.name in ('mykos-web.img','install-legacy','cloud_pricing_previous','cloud_pricing_changed') or src.suffix=='.pyc':continue
+                # The docs page is served by mykosweb; keep guides root-owned but group-readable.
+                docs_readable = directory == 'docs' and src.name in (
+                    'BOOTSTRAP.md', 'IMAGE_BUILDS.md', 'INSTALL_SERVICES.md', 'ARCHITECTURE.md', 'IDENTITY.md',
+                    'API.md', 'SCRIPTS.md', 'VALIDATION.md', 'DESKTOPS.md', 'RPM.md', 'KEY_ISSUES.md', 'BALLOONING.md', 'HOST_SIDE_REVIEW.md', 'NETWORKING.md')
+                add('/usr/local/share/mykos/'+str(rel),src.read_bytes(),
+                    0o750 if os.access(src,os.X_OK) or directory=='bin' else 0o640,
+                    'web-read' if docs_readable else 'root')
+        for name in ('MENU','README.md','AGENTS.md'):
+            add('/usr/local/share/mykos/'+name,(SOURCE/name).read_bytes(),0o750 if name=='MENU' else 0o640)
+        for src in sorted((SOURCE/'services/web').iterdir()):
+            if src.is_file() and not src.name.startswith('.'):
+                add('/opt/mykos-web/'+src.name,src.read_bytes(),0o750 if src.suffix=='.sh' else 0o640,'web-read')
+        python=self.args.python
+        if not python.startswith('/') or any(c in python for c in '\n\r \t%'):fail('--python must be an absolute path without whitespace or systemd specifiers')
+        for src in sorted((SOURCE/'services/helpers').iterdir()):
+            if not src.is_file() or src.name.startswith('.') or src.suffix=='.pyc':continue
+            content=src.read_bytes()
+            if content.startswith(b'#!/usr/bin/env python3\n'):
+                content=('#!'+python+'\n').encode()+content.split(b'\n',1)[1]
+            add('/usr/local/sbin/'+src.name,content,0o644 if src.suffix=='.py' else 0o755)
+        for src in sorted((SOURCE/'services/systemd').glob('*')):
+            add('/etc/systemd/system/'+src.name,src.read_text().replace('@PYTHON@',python).encode())
+        add('/usr/bin/mykos',b'#!/usr/bin/env bash\nset -e\nif [ -x /usr/share/mykos/MENU ]; then\n  cd /usr/share/mykos\nelse\n  cd /usr/local/share/mykos\nfi\nexec ./MENU "$@"\n',0o755)
+        # Legacy scripts expect these support paths; no cron jobs or email jobs are activated.
+        for name in ('monthname.sh','strip.sh','recon.sh','cloud_pricing','backup_perf.sh'):
+            add('/usr/local/bin/'+name,(SOURCE/'back/bin'/name).read_bytes(),0o750)
+        origin=self.args.public_origin
+        parsed=urlsplit(origin)
+        if parsed.scheme!='https' or not parsed.hostname or parsed.path not in ('','/') or parsed.query or parsed.fragment or parsed.username:
+            fail('--public-origin must be an HTTPS origin such as https://mykos.example.com')
+        if any(c.isspace() for c in origin):fail('Invalid origin whitespace')
+        add('/etc/mykos/web.env',('MYKOS_PUBLIC_ORIGIN='+origin.rstrip('/')+'\nMYKOS_SECURE_COOKIE=1\n').encode(),0o640,'web-read',True)
+        add('/etc/mykos/config.json',(SOURCE/'services/config.example.json').read_bytes(),0o600,'root',True)
+        add('/etc/mykos/pos.env',(SOURCE/'services/pos.env.example').read_bytes(),0o600,'root',True)
+        add('/opt/mykos-web/inventory.json',b'{"nodes": []}\n',0o640,'web-read',True)
+        return entries
+
+    def snapshot(self, paths, output=None, include_data=False):
+        files=[];absent=[]
+        for name in sorted(set(paths)):
+            dest=self.path(name)
+            if not dest.exists(): absent.append(name);continue
+            if not dest.is_file():fail('Not a regular file: '+str(dest))
+            st=dest.stat()
+            if name.endswith(('.db','.sqlite','.sqlite3')):
+                # SQLite online backup includes committed WAL transactions consistently.
+                with tempfile.TemporaryDirectory() as folder:
+                    with sqlite3.connect('file:'+str(dest)+'?mode=ro',uri=True) as c, sqlite3.connect(folder+'/copy.db') as d:c.backup(d)
+                    data=Path(folder+'/copy.db').read_bytes()
+            else:data=dest.read_bytes()
+            files.append(({'path':name,'mode':stat.S_IMODE(st.st_mode),'uid':st.st_uid,'gid':st.st_gid,'sha256':sha(data)},data))
+        if output is None:
+            folder=self.path(BACKUPS);folder.mkdir(parents=True,exist_ok=True,mode=0o700)
+            output=folder/('mykos-'+datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f')+'.tar.gz')
+        output=Path(output)
+        if output.exists() or output.is_symlink():fail('Snapshot output already exists')
+        output.parent.mkdir(parents=True,exist_ok=True)
+        meta={'format':2,'kind':'mykos-snapshot','includes_data':include_data,'files':[x[0] for x in files],'absent':absent}
+        with output.open('xb') as raw:
+            os.chmod(output,0o600)
+            with tarfile.open(fileobj=raw,mode='w:gz') as tar:
+                values=[('manifest.json',json.dumps(meta).encode())]+[('files/'+e['path'].lstrip('/'),b) for e,b in files]
+                for name,data in values:
+                    info=tarfile.TarInfo(name);info.size=len(data);info.mode=0o600
+                    tar.addfile(info,io.BytesIO(data))
+        print('Snapshot:',output)
+        return output
+
+    def install(self):
+        entries=self.entries()
+        self.prepare_backups()
+        selected={p:e for p,e in entries.items() if not e['mutable'] or not self.path(p).exists()}
+        print(('Live' if self.live else 'Staging')+' installation: %d files; %d preserved settings/data files' % (len(selected),len(entries)-len(selected)))
+        if self.args.dry_run:
+            print(json.dumps({'root':str(self.root),'write':sorted(selected),'preserve':sorted(set(entries)-set(selected)),
+                'system_packages_if_requested':PACKAGES,'activate_if_requested':UNITS,
+                'desktop_network_if_requested':self.args.desktop_network},indent=2));return
+        self.mutation()
+        self.root.mkdir(parents=True,exist_ok=True)
+        if self.live:
+            if self.args.install_deps:
+                command(['dnf','install','-y',*PACKAGES])
+                # Image building tools are optional because repository availability varies.
+                if self.args.image_build_deps:command(['dnf','install','-y','lorax','anaconda-tui','pykickstart'])
+            result=subprocess.run([self.args.python,'-c','import sys,hashlib; assert sys.version_info >= (3,9), "Python 3.9+ required"; assert hasattr(hashlib, "scrypt"), "Python needs hashlib.scrypt/OpenSSL"'],check=False)
+            if result.returncode:fail('Select Python 3.9+ using --python; install that interpreter first')
+        if self.live and self.args.enable and not self.path('/etc/mykos/web.env').exists() and self.args.public_origin=='https://mykos.example.com':
+            fail('Supply the real --public-origin before activating a new installation')
+        snap=self.snapshot([*selected,STATE,'/usr/local/bin/mykos'])
+        self.identity()
+        self.prepare_backups(create=True)
+        for name in ('/opt/mykos-web','/opt/mykos-web/data','/etc/mykos','/var/lib/mykos/jobs'):
+            dest=self.path(name)
+            if dest.is_symlink():fail('Unsafe directory '+str(dest))
+            dest.mkdir(parents=True,exist_ok=True)
+            os.chmod(dest,0o700 if name.endswith(('data','jobs')) else 0o750)
+            if self.live:os.chown(dest,self.uid if name.endswith('/data') else 0,self.gid if not name.endswith('/jobs') else 0)
+        for path,entry in selected.items():self.write(path,**{k:entry[k] for k in ('data','mode','owner')})
+        notes_db=self.path('/opt/mykos-web/data/auth.db')
+        if notes_db.is_file() and not notes_db.is_symlink():
+            with notes_db.open('rb') as source: sqlite_header=source.read(16)
+            if sqlite_header == b'SQLite format 3\x00':
+                with sqlite3.connect(str(notes_db), timeout=10) as connection:
+                    if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='pane_notes'").fetchone():
+                        connection.execute('DELETE FROM pane_notes')
+        for prefix in ('/usr/local/share/mykos',):
+            removed=self.path(prefix+'/docs/notes.md')
+            if removed.is_file() and not removed.is_symlink(): removed.unlink()
+        legacy=self.path('/usr/local/bin/mykos')
+        if legacy.exists():legacy.unlink()
+        if self.live:
+            venv=self.path('/opt/mykos-web/.venv')
+            if not (venv/'bin/python').is_file():command([self.args.python,'-m','venv',venv])
+            if self.args.install_deps or self.args.python_deps:
+                command([venv/'bin/python','-m','pip','install','-r',SOURCE/'services/requirements.txt'])
+                frozen=subprocess.check_output([str(venv/'bin/python'),'-m','pip','freeze'])
+                self.write('/opt/mykos-web/installed-requirements.txt',frozen,0o640,'web-read')
+            command([venv/'bin/python','-c','import fastapi,pydantic,uvicorn'])
+            # Empty schema only; no archived accounts, passwords or API keys are imported.
+            command(['runuser','-u','mykosweb','--',venv/'bin/python','/opt/mykos-web/manage.py','users','list'])
+            command(['runuser','-u','mykosweb','--',venv/'bin/python','/opt/mykos-web/manage.py','keys','list'])
+            command(['systemctl','daemon-reload'])
+            if shutil.which('apachectl'):
+                command([self.args.python, self.path('/usr/local/share/mykos/bin/mykos-console-proxy'), '--apply'])
+        manifest={'format':1,'python':self.args.python,'staging':not self.live,'snapshot':str(snap),'files':[]}
+        for path,entry in entries.items():
+            manifest['files'].append({'path':path,'sha256':sha(self.path(path).read_bytes()),
+                                      'mode':entry['mode'],'mutable':entry['mutable'],'owner':entry['owner']})
+        self.write(STATE,json.dumps(manifest,indent=2).encode(),0o600)
+        if self.live:
+            command([self.args.python,'/usr/local/sbin/mykos-snapshot','init'])
+            command([self.args.python,'/usr/local/sbin/mykos-command','init'])
+        if self.live and getattr(self.args, 'native_network', False):
+            command([self.args.python,'/usr/local/sbin/mykos-network-setup'])
+        if self.live and self.args.desktop_network:
+            command([self.args.python,'/usr/local/sbin/mykos-desktop-setup','--network',self.args.desktop_network])
+        if self.live and self.args.enable:
+            # Restart long-running services so an update takes effect.
+            command(['systemctl','enable',*UNITS])
+            command(['systemctl','start','mykos-container-admin.socket','mykos-terminal.socket'])
+            command(['systemctl','restart','mykos-web.service','mykos-host-history.service'])
+            command(['systemctl','start','mykos-host-history.service','mykos-collector.timer','mykos-details.timer','mykos-extended.timer','mykos-command-collector.timer'])
+        print('Installed. Snapshot:',snap)
+        print('Configure HTTPS proxy, /etc/mykos settings, users, and prepared POS images before production use.')
+        if not self.live:print('Staging only: no accounts, dependency installation, chown, or service changes were performed.')
+
+    def quiescent(self):
+        if not self.live:return
+        output=subprocess.check_output(['systemctl','list-units','--state=active,activating',
+            '--plain','--no-legend','mykos-stage@*.service','mykos-terminal@*.service',
+            'mykos-container-admin@*.service','mykos-command@*.service','mykos-image-build@*.service'],text=True)
+        if output.strip():fail('Active privileged connections or staging jobs exist; finish/stop them before maintenance')
+
+    def manifest(self):
+        value=json.loads(self.path(STATE).read_text())
+        if value.get('format')!=1:fail('Unsupported installation manifest')
+        for e in value['files']:
+            if not allowed(e['path']):fail('Unsafe installation manifest')
+        return value
+
+    def verify(self):
+        errors=[]
+        manifest=self.manifest()
+        for e in manifest['files']:
+            path=self.path(e['path'])
+            if not path.is_file():errors.append('Missing '+e['path']);continue
+            if not e['mutable'] and sha(path.read_bytes())!=e['sha256']:errors.append('Changed '+e['path'])
+            if stat.S_IMODE(path.stat().st_mode)!=e['mode']:errors.append('Mode mismatch '+e['path'])
+            if self.live and path.stat().st_uid!=0:errors.append('Expected root ownership '+e['path'])
+        if self.live:
+            user=pwd.getpwnam('mykosweb');group=grp.getgrnam('mykosweb')
+            for entry in manifest['files']:
+                path=self.path(entry['path'])
+                expected_gid=group.gr_gid if entry.get('owner')=='web-read' else 0
+                if path.exists() and path.stat().st_gid!=expected_gid:errors.append('Group mismatch '+entry['path'])
+            directory=self.path('/opt/mykos-web/data')
+            if directory.stat().st_uid!=user.pw_uid or stat.S_IMODE(directory.stat().st_mode)!=0o700:
+                errors.append('Expected mykosweb-owned 0700 data directory')
+            for name in ('auth.db','api_keys.db'):
+                database=self.path('/opt/mykos-web/data/'+name)
+                if database.exists() and (database.stat().st_uid!=user.pw_uid or stat.S_IMODE(database.stat().st_mode)!=0o600):
+                    errors.append('Expected mykosweb-owned 0600 '+str(database))
+            command([self.path('/opt/mykos-web/.venv')/'bin/python','-c','import fastapi,pydantic,uvicorn'])
+            command(['systemd-analyze','verify',*[str(self.path('/etc/systemd/system/'+u)) for u in UNITS]])
+        if errors:fail('\n'.join(errors))
+        print('Verified %d managed files%s' % (len(manifest['files']), ' (staged layout only)' if not self.live else ''))
+
+    def status(self):
+        print(json.dumps(self.manifest(),indent=2))
+        if self.live:command(['systemctl','--no-pager','status',*UNITS])
+
+    def backup(self):
+        paths=[e['path'] for e in self.manifest()['files']]+[STATE]
+        if self.path('/opt/mykos-web/installed-requirements.txt').exists():paths.append('/opt/mykos-web/installed-requirements.txt')
+        if self.args.include_data:
+            for dest in (self.path('/opt/mykos-web/data'),):
+                paths.extend('/'+str(p.relative_to(self.root)) for p in dest.rglob('*') if p.is_file() and not p.name.endswith(('-wal','-shm')))
+        if self.args.dry_run:
+            print('Would snapshot %d files to %s (include_data=%s)' % (len(paths),self.args.output,self.args.include_data));return
+        self.mutation();self.snapshot(paths,self.args.output,self.args.include_data)
+
+    def restore(self):
+        contents={}
+        with tarfile.open(self.args.snapshot,'r:gz') as tar:
+            members=tar.getmembers()
+            if len(members)>20000 or len({m.name for m in members})!=len(members):fail('Duplicate/excessive archive entries')
+            mm=tar.getmember('manifest.json')
+            if not mm.isfile() or mm.size>10*1024**2:fail('Invalid manifest member')
+            meta=json.load(tar.extractfile(mm))
+            if meta.get('format')!=2 or meta.get('kind')!='mykos-snapshot':fail('Use install-bundle for legacy format 1 archives')
+            if meta.get('includes_data') and not self.args.include_data:fail('Data-bearing snapshot requires --include-data')
+            seen=set()
+            for entry in meta['files']:
+                name=entry['path']
+                if not allowed(name) or name in seen:fail('Unsafe/duplicate snapshot path')
+                if not isinstance(entry.get('mode'),int) or entry['mode']<0 or entry['mode']>0o777:
+                    fail('Invalid snapshot mode')
+                if any(not isinstance(entry.get(k),int) or entry[k]<0 for k in ('uid','gid')):fail('Invalid snapshot ownership')
+                seen.add(name);self.path(name)
+                member=tar.getmember('files/'+name.lstrip('/'))
+                if not member.isfile() or member.size>200*1024**2:fail('Invalid archive member')
+                data=tar.extractfile(member).read()
+                if sha(data)!=entry['sha256']:fail('Snapshot checksum mismatch')
+                contents[name]=(entry,data)
+            absent=meta.get('absent',[])
+            if len(set(absent))!=len(absent) or seen.intersection(absent):fail('Invalid absent paths')
+            for name in absent:self.path(name)
+        if self.args.dry_run:print('Would restore %d files and remove %d previously absent files' % (len(contents),len(absent)));return
+        self.mutation()
+        self.quiescent()
+        if self.live:
+            # Avoid workers/collectors racing restored code and SQLite WAL files.
+            command(['systemctl','stop',*UNITS,'mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service'])
+        self.snapshot([*contents,*absent],include_data=meta.get('includes_data',False))
+        for name,(entry,data) in contents.items():
+            if entry['mode'] & 0o7000:fail('Special permission bits are not accepted')
+            self.write(name,data,entry['mode'])
+            if self.live:os.chown(self.path(name),entry['uid'],entry['gid'])
+            if name.endswith('.db'):
+                for suffix in ('-wal','-shm'):
+                    side=self.path(name+suffix)
+                    if side.exists():side.unlink()
+        for name in absent:
+            path=self.path(name)
+            if path.exists():path.unlink()
+        if self.live:command(['systemctl','daemon-reload'])
+        print('Restored. Services remain stopped; verify and deliberately re-enable them.')
+
+    def uninstall(self):
+        manifest=self.manifest()
+        removable=[]
+        for entry in manifest['files']:
+            name=entry['path']
+            # Always preserve runtime data, operator settings, backup storage, accounts and images.
+            if entry['mutable']:continue
+            path=self.path(name)
+            if path.exists():
+                if sha(path.read_bytes())!=entry['sha256']:fail('Refusing to remove modified file: '+name)
+                removable.append(name)
+        if self.args.dry_run:print('Would remove:\n'+'\n'.join(removable));return
+        self.mutation()
+        self.quiescent()
+        if self.live:
+            command(['systemctl','disable','--now',*UNITS])
+            command(['systemctl','stop','mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service'])
+        self.snapshot([*removable,STATE])
+        if self.live and self.path('/usr/local/sbin/mykos-snapshot').exists():
+            command([self.args.python,'/usr/local/sbin/mykos-snapshot','unhook'])
+        for name in removable:self.path(name).unlink()
+        self.path(STATE).unlink()
+        if self.live:command(['systemctl','daemon-reload'])
+        print('Removed managed code and unit files. Retained settings, identities, venv, customer data, images, users, and snapshots.')
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    sub=parser.add_subparsers(dest='action',required=True)
+    for action in ('install','verify','status','backup','restore','uninstall'):
+        p=sub.add_parser(action)
+        p.add_argument('--root',default='/',help='Alternate staging filesystem; never runs host operations')
+        p.add_argument('--dry-run',action='store_true')
+        if action=='install':
+            p.add_argument('--public-origin',default='https://mykos.example.com')
+            p.add_argument('--python',default='/usr/bin/python3',help='Target Python 3.9+ interpreter')
+            p.add_argument('--install-deps',action='store_true')
+            p.add_argument('--python-deps',action='store_true',help='Install Python requirements only; preserve existing system packages')
+            p.add_argument('--image-build-deps',action='store_true')
+            p.add_argument('--enable',action='store_true',help='Enable sockets/timers and restart web service')
+            p.add_argument('--native-network',action='store_true',help='Create configured mykos-lan macvlan network and enable host DHCP proxy')
+            p.add_argument('--desktop-network',help='Explicit trusted private IPv4 CIDR for desktop ports; checks KVM/storage and adds persistent LAN firewall rules')
+        if action=='backup':
+            p.add_argument('--output',required=True);p.add_argument('--include-data',action='store_true')
+        if action=='restore':
+            p.add_argument('--snapshot',required=True);p.add_argument('--include-data',action='store_true')
+    args=parser.parse_args()
+    if getattr(args,'desktop_network',None):
+        import ipaddress
+        network=ipaddress.IPv4Network(args.desktop_network,strict=True)
+        if not network.is_private or network.prefixlen < 8:parser.error('--desktop-network requires an explicit private IPv4 network')
+        args.desktop_network=str(network)
+    if getattr(args,'image_build_deps',False) and not args.install_deps:parser.error('--image-build-deps requires --install-deps')
+    getattr(Installer(args),args.action)()
+
+if __name__=='__main__':
+    try:main()
+    except (ValueError,OSError,KeyError,tarfile.TarError,subprocess.SubprocessError) as e:
+        print('ERROR:',str(e),file=sys.stderr);sys.exit(1)

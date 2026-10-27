@@ -1,0 +1,26 @@
+#!/bin/bash
+# list files in a directory. Please not that it needs for Bash
+printf "Content-Type: text/html\r\n"
+printf "\r\n"
+
+cat <<EOF
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Customer Dell TSR Reports</title>
+</head>
+<body>
+<b>TSRs by<br>ShopCode</b><br>-------------<br>
+EOF
+
+files=($(ls /backups | grep tfrsync | cut -d- -f2))
+
+for file in "${files[@]}"
+do
+[ -d /var/www/html/$file ] && echo "<a href="http://rticloud.homelinux.com/$file/viewer.html">$file</a><br>"
+done
+cat <<EOF
+</body>
+</html>
+EOF

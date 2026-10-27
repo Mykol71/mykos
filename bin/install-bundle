@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""MYKOS deployment packager and installer. Run as root; Python 3.8+.
+
+This copies only named MYKOS paths. It NEVER modifies global directory permissions,
+Apache, sudoers, firewall, Podman containers, or installed Python environments.
+"""
+import argparse
+import datetime
+import fnmatch
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+VERSION = 1
+BACKUP_DIR = Path('/var/backups/mykos-installer')
+APP = Path('/opt/mykos-web')
+UNIT_DIR = Path('/etc/systemd/system')
+MYKOS = Path('/usr/local/share/mykos')
+HELPERS = Path('/usr/local/sbin')
+ALLOWED = ('/opt/mykos-web/', '/etc/systemd/system/mykos-',
+           '/usr/local/sbin/mykos-', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/share/mykos/bin/',
+           '/usr/local/share/mykos/pos/pos', '/usr/local/share/mykos/pos/pipework')
+DATA_PREFIXES = ('/opt/mykos-web/data/', '/opt/mykos-web/inventory.json',
+                 '/usr/local/share/mykos/pos/.shopcode', '/opt/mykos-web/.env')
+
+
+def fatal(s):
+    raise RuntimeError(s)
+
+
+def run(args, check=True):
+    p = subprocess.run(args, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if check and p.returncode:
+        fatal('%s failed: %s' % (' '.join(args), p.stderr.strip()))
+    return p
+
+
+def allowed(path):
+    return path.startswith('/') and '..' not in Path(path).parts and any(path.startswith(p) for p in ALLOWED)
+
+
+def is_data(path):
+    return (any(path.startswith(p) for p in DATA_PREFIXES) or
+            bool(re.fullmatch(r'/usr/local/share/mykos/pos/\.[0-9]{8}\.(postype|imagetype|container)', path)))
+
+
+def clean_app_file(path):
+    rel = path.relative_to(APP)
+    if any(x in ('data', '.venv', '__pycache__', '.git', 'node_modules', 'backups') for x in rel.parts):
+        return False
+    if path.name in ('inventory.json', '.env') or path.suffix in ('.db', '.sqlite', '.sqlite3', '.pyc', '.log', '.pem', '.key'):
+        return False
+    if path.name.endswith(('.bak', '.orig', '~', '.last-working', '.mapbak', '.recovery-candidate')) or any(s in path.name for s in ('.before-', '.emergency-backup-', '.pre-v2-')):
+        return False
+    return True
+
+
+def candidates(with_data):
+    files = []
+    if APP.is_dir():
+        files += [x for x in APP.rglob('*') if x.is_file() and not x.is_symlink() and clean_app_file(x)]
+        if with_data:
+            for directory in (APP / 'data',):
+                if directory.is_dir():
+                    files += [x for x in directory.rglob('*') if x.is_file() and not x.is_symlink()]
+            for x in (APP / 'inventory.json', APP / '.env'):
+                if x.is_file() and not x.is_symlink(): files.append(x)
+    files += [x for x in [*UNIT_DIR.glob('mykos-*')] if x.is_file() and not x.is_symlink()
+              and (x.name.endswith(('.service', '.timer', '.socket')))]
+    files += [x for x in [*HELPERS.glob('mykos-*'), *HELPERS.glob('mykos_runtime.py'), *HELPERS.glob('mykos_admin.py')] if x.is_file() and not x.is_symlink()]
+    for directory in (MYKOS / 'bin',):
+        if directory.is_dir():
+            files += [x for x in directory.rglob('*') if x.is_file() and not x.is_symlink() and x.name != 'install-services']
+    for x in (MYKOS / 'pos/pos', MYKOS / 'pos/pipework'):
+        if x.is_file() and not x.is_symlink(): files.append(x)
+    if with_data and (MYKOS / 'pos').is_dir():
+        files += [x for x in (MYKOS / 'pos').glob('.*') if x.is_file() and not x.is_symlink()
+                  and is_data(str(x))]
+    return sorted(set(x for x in files if allowed(str(x)) and (with_data or not is_data(str(x)))))
+
+
+def sha(b): return hashlib.sha256(b).hexdigest()
+
+
+def package(output, with_data):
+    if not (APP / 'app.py').is_file(): fatal('Missing /opt/mykos-web/app.py; not an MYKOS source host')
+    files = candidates(with_data)
+    if not files: fatal('No MYKOS files found')
+    entries = []
+    for p in files:
+        content = p.read_bytes()
+        st = p.stat()
+        entries.append({'path': str(p), 'sha256': sha(content), 'mode': st.st_mode & 0o7777,
+                        'uid': st.st_uid, 'gid': st.st_gid, 'size': len(content),
+                        'data': is_data(str(p))})
+    enabled = []
+    for e in entries:
+        p = e['path']
+        if p.startswith(str(UNIT_DIR) + '/') and p.endswith(('.timer', '.socket', '.service')):
+            unit = Path(p).name
+            status = run(['systemctl', 'is-enabled', unit], check=False).stdout.strip()
+            if status == 'enabled': enabled.append(unit)
+    meta = {'format': VERSION, 'kind': 'bundle', 'created': datetime.datetime.now().isoformat(),
+            'files': entries, 'enabled_units': enabled}
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(output, 'w:gz') as tar:
+        b = json.dumps(meta, indent=2).encode()
+        add_bytes(tar, 'manifest.json', b, 0o600)
+        for e in entries:
+            add_bytes(tar, 'files/' + e['path'].lstrip('/'), Path(e['path']).read_bytes(), e['mode'])
+    os.chmod(output, 0o600)
+    print('Created %s (%d files; %d enabled units; data=%s)' %
+          (output, len(entries), len(enabled), with_data))
+    print('Treat bundles containing data as sensitive: they can include login credentials.')
+
+
+def add_bytes(tar, name, b, mode):
+    info = tarfile.TarInfo(name)
+    info.size, info.mode = len(b), mode
+    tar.addfile(info, io.BytesIO(b))
+
+
+def read_bundle(path):
+    with tarfile.open(path, 'r:gz') as tar:
+        member = tar.getmember('manifest.json')
+        meta = json.load(tar.extractfile(member))
+        if meta.get('format') != VERSION or meta.get('kind') not in ('bundle', 'snapshot'):
+            fatal('Invalid MYKOS archive format')
+        paths = set()
+        contents = {}
+        for e in meta['files']:
+            p = e['path']
+            if not allowed(p) or p in paths or (not is_data(p) and e.get('data')):
+                fatal('Unsafe or duplicate bundle path: ' + p)
+            paths.add(p)
+            name = 'files/' + p.lstrip('/')
+            member = tar.getmember(name)
+            if not member.isfile() or member.size > 200 * 1024 * 1024:
+                fatal('Unsafe archive member: ' + name)
+            b = tar.extractfile(member).read()
+            if sha(b) != e['sha256']: fatal('Checksum mismatch: ' + p)
+            contents[p] = b
+        return meta, contents
+
+
+def snapshot(paths):
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(BACKUP_DIR, 0o700)
+    name = datetime.datetime.now().strftime('mykos-before-%Y%m%d-%H%M%S-%f.tar.gz')
+    dest = BACKUP_DIR / name
+    entries, contents, absent = [], {}, []
+    for p in sorted(paths):
+        x = Path(p)
+        if x.is_symlink(): fatal('Refusing to overwrite symlink: ' + p)
+        if x.exists():
+            if not x.is_file(): fatal('Destination is not regular file: ' + p)
+            s, b = x.stat(), x.read_bytes()
+            entries.append({'path': p, 'sha256': sha(b), 'mode': s.st_mode & 0o7777,
+                            'uid': s.st_uid, 'gid': s.st_gid, 'data': is_data(p)})
+            contents[p] = b
+        else: absent.append(p)
+    meta = {'kind': 'snapshot', 'format': VERSION, 'files': entries, 'absent': absent,
+            'created': datetime.datetime.now().isoformat()}
+    with tarfile.open(dest, 'w:gz') as tar:
+        add_bytes(tar, 'manifest.json', json.dumps(meta).encode(), 0o600)
+        for e in entries:
+            add_bytes(tar, 'files/' + e['path'].lstrip('/'), contents[e['path']], e['mode'])
+    os.chmod(dest, 0o600)
+    print('Pre-change snapshot: ' + str(dest), flush=True)
+    return dest
+
+
+def deploy(meta, contents, with_data, restore=False):
+    if os.geteuid() != 0: fatal('Run install/restore with sudo (root required)')
+    selected = [e for e in meta['files'] if with_data or not e.get('data', is_data(e['path']))]
+    if not selected: fatal('No files selected')
+    if not restore: snapshot([e['path'] for e in selected])
+    if restore:
+        # Snapshot files not present in the archive have to be removed to fully roll back.
+        for p in meta.get('absent', []):
+            if allowed(p) and (with_data or not is_data(p)):
+                x = Path(p)
+                if x.is_file() and not x.is_symlink(): x.unlink()
+    for e in selected:
+        p = Path(e['path'])
+        if p.is_symlink(): fatal('Refusing symlink target: ' + str(p))
+        if any(parent.is_symlink() for parent in p.parents):
+            fatal('Refusing symlinked parent directory: ' + str(p))
+        if not allowed(str(p)): fatal('Blocked destination: ' + str(p))
+        p.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(prefix='.mykos-install-', dir=p.parent)
+        try:
+            with os.fdopen(fd, 'wb') as f:
+                f.write(contents[str(p)]); f.flush(); os.fsync(f.fileno())
+            os.chmod(tmp, e['mode'] & 0o7777)
+            os.chown(tmp, e['uid'], e['gid'])
+            os.replace(tmp, p)
+        finally:
+            if os.path.exists(tmp): os.unlink(tmp)
+    print('Installed %d files (data=%s)' % (len(selected), with_data))
+    run(['systemctl', 'daemon-reload'])
+    if restore:
+        print('Snapshot restored. Review service states; systemd units were reloaded.')
+    else:
+        enabled = [x for x in meta.get('enabled_units', []) if re.fullmatch(r'mykos-[A-Za-z0-9@_.-]+\.(service|timer|socket)', x)]
+        for unit in enabled:
+            # Oneshoot services are deliberately never started/enabled here.
+            if unit.endswith(('.timer', '.socket')) or unit == 'mykos-web.service':
+                r = run(['systemctl', 'enable', '--now', unit], check=False)
+                if r.returncode: print('WARNING: could not enable %s: %s' % (unit, r.stderr.strip()))
+        print('Web service already running? If app.py changed, restart it during a maintenance window:')
+        print('  sudo systemctl restart mykos-web.service')
+        print('Existing services are not automatically restarted.')
+    print('Verify: systemctl list-timers --all | grep mykos-')
+    print('Verify: systemctl --no-pager status mykos-web.service')
+
+
+def main():
+    p = argparse.ArgumentParser(description='MYKOS safe package, install and restore tool')
+    sub = p.add_subparsers(dest='action', required=True)
+    pack = sub.add_parser('package', help='Capture the working MYKOS host as a deployment bundle')
+    pack.add_argument('--output', required=True, type=Path)
+    pack.add_argument('--with-data', action='store_true')
+    ins = sub.add_parser('install', help='Install a package, snapshotting overwritten files')
+    ins.add_argument('--bundle', required=True, type=Path)
+    ins.add_argument('--with-data', action='store_true')
+    res = sub.add_parser('restore', help='Restore an auto-created pre-install snapshot')
+    res.add_argument('--snapshot', required=True, type=Path)
+    res.add_argument('--with-data', action='store_true')
+    ver = sub.add_parser('verify', help='Check archive safety and checksums')
+    ver.add_argument('--bundle', required=True, type=Path)
+    a = p.parse_args()
+    if a.action == 'package': package(a.output, a.with_data)
+    else:
+        location = a.snapshot if a.action == 'restore' else a.bundle
+        meta, contents = read_bundle(location)
+        if a.action == 'verify': print('Verified %d files in %s' % (len(contents), location))
+        elif a.action == 'restore':
+            if meta['kind'] != 'snapshot': fatal('restore requires an installer snapshot')
+            deploy(meta, contents, a.with_data, True)
+        else:
+            if meta['kind'] != 'bundle': fatal('install requires a deployment bundle')
+            deploy(meta, contents, a.with_data)
+
+
+if __name__ == '__main__':
+    try: main()
+    except (RuntimeError, OSError, KeyError, ValueError, tarfile.TarError) as e:
+        print('ERROR: ' + str(e), file=sys.stderr)
+        sys.exit(1)

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Run inside the installed Ubuntu guest before capturing its MYKOS image.
+set -euo pipefail
+if [[ $(id -u) -ne 0 ]]; then
+    echo 'Run with sudo inside the Ubuntu guest.' >&2
+    exit 1
+fi
+source /etc/os-release
+if [[ ${ID:-} != ubuntu ]]; then
+    echo 'This setup must run inside Ubuntu, not on the MYKOS host or QEMU wrapper.' >&2
+    exit 1
+fi
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+if ! apt-cache policy isc-dhcp-client | awk '/Candidate:/ {found=($2 != "(none)")} END {exit !found}'; then
+    echo 'isc-dhcp-client is unavailable in the enabled Ubuntu repositories. Enable the appropriate Ubuntu repositories (including universe on 24.04), then retry.' >&2
+    exit 1
+fi
+apt-get install -y isc-dhcp-client iproute2 net-tools
+command -v dhclient
+command -v ip
+command -v ifconfig
+echo 'Ubuntu networking dependencies installed. Capture the image to retain them for new containers.'

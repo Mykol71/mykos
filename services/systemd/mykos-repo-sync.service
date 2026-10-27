@@ -1,0 +1,12 @@
+[Unit]
+Description=Sync MYKOS repositories
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/usr/local/share/mykos/repo
+ExecStart=/usr/bin/bash -e /usr/local/share/mykos/repo/bin/sync_repos
+TimeoutStartSec=24h
+KillMode=control-group
+UMask=0022

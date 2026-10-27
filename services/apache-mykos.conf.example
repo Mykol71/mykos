@@ -1,0 +1,17 @@
+# Include inside your HTTPS VirtualHost; requires mod_proxy/mod_proxy_http.
+# Apache 2.4.47+ supports websocket upgrade through mod_proxy_http.
+ProxyPreserveHost On
+RequestHeader set X-Forwarded-Proto "https"
+ProxyPass /mykos/api/terminal/ ws://127.0.0.1:8000/api/terminal/
+ProxyPassReverse /mykos/api/terminal/ ws://127.0.0.1:8000/api/terminal/
+ProxyPass /mykos/api/v2/terminal/ ws://127.0.0.1:8000/api/v2/terminal/
+ProxyPassReverse /mykos/api/v2/terminal/ ws://127.0.0.1:8000/api/v2/terminal/
+# RHEL 8 Apache needs explicit WebSocket routing for browser consoles.
+# Requests still pass through MYKOS authentication; do not proxy directly to VM ports.
+RewriteEngine On
+RewriteCond %{HTTP:Upgrade} =websocket [NC]
+RewriteCond %{REQUEST_URI} ^/mykos/(api/v2/)?console/
+RewriteRule ^/mykos/(.*)$ ws://127.0.0.1:8000/$1 [P,L]
+ProxyPass /mykos/ http://127.0.0.1:8000/
+ProxyPassReverse /mykos/ http://127.0.0.1:8000/
+RedirectMatch ^/mykos$ /mykos/

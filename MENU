@@ -1,0 +1,65 @@
+#!/usr/bin/bash
+
+VERSION="1.5"
+# verify root
+ID=$(/usr/bin/id -u)
+#[ $ID -ne 0 ] && echo "You must be root to run $0." && exit 1
+ROOTDIR="$(pwd)"
+export ROOTDIR > /dev/null
+[ ! -d /backups ] && mkdir /backups
+
+trap '' 2
+while :; do
+    LGGRN='\033[1;32m'
+    BLUE='\033[1;34m'
+    TEAL='\033[38;5;31m'
+    GREY='\033[0;37m'
+    NC='\033[0m'
+    clear
+    echo -e "${GREY}$(date +'%x %l:%M %p') ${NC}"
+    printf '\u250f''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\u2501''\n'
+    echo -e "\u2503${BLUE} @ ${NC}`[ -f .envtype ] && cat .envtype || echo -e Not Installed`${NC}"
+    printf '\u2503'${LGGRN}' )~ mykos  '${GREY}v$VERSION${NC}'\n'
+    printf '\u2503''\u2501''\n'
+    printf '\u2503'${GREY}${TEAL}"  $(hostname)"${NC}'\n'
+    printf '\u2503'${GREY}" Space    : $(df -h /backups | tail -1 | awk '{print $4}')"${NC}'\n'
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'"-\033[0mSystem"'\n'
+    printf '\u2503''\033[1m'" 1.\033[0m Backup ${GREY}($(ls /backups | grep tfrsync- | wc -l))${NC}"'\n'
+    printf '\u2503''\033[1m'" 2.\033[0m Containers ${GREY}($(podman container ls --noheading | grep $(hostname) | wc -l))${NC}"'\n'
+    printf '\u2503''\033[1m'" 3.\033[0m Repos  ${GREY}($(ls /var/www/html | grep rpms | wc -l))${NC}"'\n' 
+    printf '\u2503''\033[1m'" 4.\033[0m Data"'\n'
+    printf '\u2503''\n'
+    printf '\u2503''\033[1m'" r.\033[0m Readme"'\n'
+    printf '\u2503''\033[1m'" x.\033[0m Exit"'\n'
+    printf '\u2517''\u2501''\n'
+	echo -ne "-> "
+	read selection
+	case $selection in
+	1)
+		cd $ROOTDIR/back
+		./MENU
+		;;
+	2)
+		cd $ROOTDIR/pos
+		./pos
+		;;
+	3)
+		cd $ROOTDIR/repo
+		./MENU
+		;;
+	4)
+		cd $ROOTDIR/data
+		./MENU
+		;;
+	r)
+		cat README.md | more
+                echo -ne "Press enter to continue..${NC}"
+                read
+		;;
+	x)	exit
+		;;
+	*) ;;
+	esac
+	cd $ROOTDIR
+done

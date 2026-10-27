@@ -1,0 +1,14 @@
+FROM docker.io/library/ubuntu@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac
+LABEL org.opencontainers.image.title="MYKOS Linux VPN tools"
+LABEL org.opencontainers.image.description="Libreswan and ISC dhclient for a Linux container runtime with NET_ADMIN and kernel XFRM support"
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+       libreswan isc-dhcp-client iproute2 iptables iputils-ping net-tools ca-certificates tini \
+    && mkdir -p /usr/share/mykos-vpn /var/lib/ipsec/nss /etc/ipsec.d /run/pluto \
+    && dpkg-query -W > /usr/share/mykos-vpn/packages.txt \
+    && rm -rf /var/lib/apt/lists/*
+COPY ipsec.conf /etc/ipsec.conf
+COPY entrypoint /usr/local/bin/mykos-vpn
+RUN chmod 0755 /usr/local/bin/mykos-vpn
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/mykos-vpn"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD ipsec whack --status >/dev/null 2>&1 || exit 1

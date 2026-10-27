@@ -1,0 +1,14 @@
+[Unit]
+Description=MYKOS mykos-container-admin privileged socket
+
+[Socket]
+ListenStream=/run/mykos-container-admin.sock
+SocketUser=root
+SocketGroup=mykosweb
+SocketMode=0660
+Accept=yes
+MaxConnections=16
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target

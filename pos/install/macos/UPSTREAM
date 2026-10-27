@@ -1,0 +1,7 @@
+Dockur macOS unattended recovery bootstrap
+https://github.com/dockur/macos
+Commit: 16a5b470cdd601bae8b05b02d748d7edfb36c12e
+License: MIT (see LICENSE)
+
+MYKOS modifications: exact-match support for the shorter Apple Recovery
+rc.cdrom.sh while retaining its root-mount, date, prelogin and early-boot tasks.

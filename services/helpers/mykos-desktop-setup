@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Explicit installer setup for desktop storage and trusted-network access."""
+import argparse
+import ipaddress
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tarfile
+import time
+from mykos_vm import safe_dir, storage_root
+
+
+def network(value):
+    result = ipaddress.IPv4Network(value, strict=True)
+    if not result.is_private or result.prefixlen < 8:
+        raise ValueError('Choose an explicit private administrative IPv4 network')
+    return str(result)
+
+
+def rules(source):
+    source = network(source)
+    return ['rule family="ipv4" source address="' + source + '" port port="' + ports + '" protocol="' + protocol + '" accept'
+            for ports, protocol in [('18006-19005','tcp'),('23000-23999','tcp'),('23000-23999','udp')]]
+
+
+def setup(source):
+    source = network(source)
+    if os.geteuid() != 0: raise ValueError('Desktop setup requires root')
+    for device in ('/dev/kvm','/dev/net/tun'):
+        if not Path(device).exists(): raise ValueError('Missing ' + device + '; enable host KVM first')
+    import fcntl
+    fd = os.open('/dev/kvm', os.O_RDWR)
+    try:
+        if fcntl.ioctl(fd, 0xAE00, 0) != 12: raise ValueError('Unsupported KVM API')
+    finally: os.close(fd)
+    safe_dir(storage_root())
+    safe_dir(storage_root()/'snapshots')
+    if shutil.disk_usage(storage_root()).free < 32 * 1024**3:
+        raise ValueError('Desktop storage needs at least 32 GiB free')
+    def command(args): return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT).strip()
+    route = command(['ip','route','get','8.8.8.8']).split()
+    interface = route[route.index('dev') + 1]
+    zone = command(['firewall-cmd','--get-zone-of-interface=' + interface])
+    if zone in ('','no zone'): zone = command(['firewall-cmd','--get-default-zone'])
+    directory = Path('/var/backups/mykos-installer'); directory.mkdir(mode=0o700, exist_ok=True)
+    backup = directory / ('desktop-firewall-' + time.strftime('%Y%m%d-%H%M%S') + '.tar.gz')
+    with tarfile.open(str(backup), 'w:gz') as archive: archive.add('/etc/firewalld', arcname='etc/firewalld')
+    backup.chmod(0o600)
+    added = []
+    try:
+        for permanent in (False, True):
+            prefix = ['firewall-cmd','--zone=' + zone] + (['--permanent'] if permanent else [])
+            existing = command(prefix + ['--list-rich-rules']).splitlines()
+            for rule in rules(source):
+                if rule not in existing:
+                    command(prefix + ['--add-rich-rule=' + rule]); added.append((prefix, rule))
+    except Exception:
+        for prefix, rule in reversed(added): subprocess.run(prefix + ['--remove-rich-rule=' + rule], check=False)
+        raise
+    print('Desktop storage:', storage_root())
+    print('Desktop ports allowed only from', source, 'in zone', zone)
+    print('Firewall recovery snapshot:', backup)
+    print('Create, install and capture chosen OS templates through the POS menu; no guests were created.')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--network', required=True)
+    args = parser.parse_args()
+    try: setup(args.network)
+    except (ValueError, OSError, subprocess.SubprocessError) as error: raise SystemExit(str(error))

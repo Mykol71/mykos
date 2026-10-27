@@ -1,0 +1,15 @@
+[Unit]
+Description=MYKOS automatic HTTPS and initial setup
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/mykos-installer/installed.json
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=@PYTHON@ /usr/share/mykos/bin/mykos-bootstrap --installed-rpm
+TimeoutStartSec=30min
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

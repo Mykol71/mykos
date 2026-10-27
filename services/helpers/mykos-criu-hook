@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Capture writable layer and mounted data while CRIU keeps source tasks frozen."""
+import json
+import os
+from pathlib import Path
+import stat
+import sys
+import time
+import mykos_vm as vm
+
+
+def capture_files(context_path):
+    path=Path(context_path)
+    if path.is_symlink():raise ValueError('Symlink CRIU context rejected')
+    status=path.stat()
+    if status.st_uid!=0 or status.st_mode & 0o077 or not stat.S_ISREG(status.st_mode):
+        raise ValueError('CRIU context must be a private root-owned file')
+    context=json.loads(path.read_text());directory=Path(context['directory'])
+    vm.safe_dir(directory)
+    if path.parent!=directory:raise ValueError('CRIU context directory mismatch')
+    copies=[(context['upper'],directory/'rootfs-upper')]
+    for index,mount in enumerate(context['mounts']):
+        folder=directory/'mounts'/str(index);vm.safe_dir(folder)
+        copies.append((mount['source'],folder/'data'))
+    for source,destination in copies:
+        source=Path(source)
+        if source.is_symlink() or not source.exists():raise ValueError('Unsafe snapshot source')
+        vm.run(['/usr/bin/cp','-a','--reflink=auto','--sparse=auto',str(source),str(destination)],timeout=600)
+    marker=directory/'hook.complete';marker.write_text('filesystem captured before source resume\n');marker.chmod(0o600)
+
+
+if __name__=='__main__':
+    if os.environ.get('CRTOOLS_SCRIPT_ACTION')=='post-dump':
+        if len(sys.argv)==2:capture_files(sys.argv[1])
+        elif len(sys.argv)==1:
+            # Other operators' checkpoints have no MYKOS request: return immediately.
+            from mykos_snapshots import HOOK_RUN
+            pid=os.environ.get('CRTOOLS_INIT_PID','')
+            if not pid.isascii() or not pid.isdigit():raise SystemExit(0)
+            pending=HOOK_RUN/(pid+'.json')
+            if not pending.exists():raise SystemExit(0)
+            if pending.is_symlink() or pending.stat().st_uid!=0 or pending.stat().st_mode & 0o077:raise SystemExit('Unsafe CRIU request')
+            value=json.loads(pending.read_text())
+            if value['expires']<time.time():raise SystemExit(0)
+            start=Path('/proc/'+pid+'/stat').read_text().rsplit(')',1)[1].split()[19]
+            if start!=value['process_start']:raise SystemExit(0)
+            capture_files(value['context'])
+        else:raise SystemExit('Unexpected CRIU hook arguments')
