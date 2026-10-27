@@ -2,6 +2,7 @@
 """Noninteractive rootful staging equivalent, with explicit host configuration."""
 from pathlib import Path
 import json
+import shutil
 import mykos_backup_restore as backup
 import mykos_profiles as profile
 import mykos_network as network
@@ -33,16 +34,20 @@ def _stage(shop, restore, image=None):
     args=[PODMAN,'run','-d','--name',name,'--hostname',name,'--privileged','--memory=2g','--pull=never','--restart=unless-stopped',
           '--label','io.mykos.persistent=true',
           '-v',str(vpn)+':/etc/ipsec.d:rw']
+    private=None
     if restore=='yes':
         args[1:3]=['create']
         args.append('--no-hosts')
         args.extend(profile.mounts(shop,cfg))
+        private,private_args=backup.private_mounts(vpn)
+        args.extend(private_args)
     args.extend(network_args)
     args.extend([image,'/sbin/init'])
-    cid=run(args)
+    cid=None
     try:
+        cid=run(args)
         if restore=='yes':
-            prepare_backup(cid,name,shop,cfg,network_args)
+            prepare_backup(cid,name,shop,cfg,network_args,private)
             run([PODMAN,'start',cid])
         if any(vpn.glob('*.conn.conf')):
             run([PODMAN,'exec',cid,'systemctl','restart','ipsec'])
@@ -53,9 +58,11 @@ def _stage(shop, restore, image=None):
         return 'Container '+name+' ready; verify OS and configured VPN health'
     except Exception:
         # Only remove the container created by this attempt; retain customer backup/VPN data.
-        run([PODMAN,'rm','--force',cid]);raise
+        if cid:run([PODMAN,'rm','--force',cid])
+        if private:shutil.rmtree(private)
+        raise
 
-def prepare_backup(cid,name,shop,cfg,network_args):
+def prepare_backup(cid,name,shop,cfg,network_args,private=None):
     """Prepare only this new stopped container's root; binds attach at start."""
     value=json.loads(run([PODMAN,'inspect',cid]))[0]
     if value.get('Id')!=cid or value.get('Name','').lstrip('/')!=name or value.get('State',{}).get('Running'):
@@ -72,6 +79,7 @@ def prepare_backup(cid,name,shop,cfg,network_args):
             raise ValueError('Container root overlaps a host bind source')
         address=network_args[network_args.index('--ip')+1] if '--ip' in network_args else None
         backup.prepare(shop,cfg,root,name,address)
+        if private:backup.export_private(root,private)
     finally:
         if root:run([PODMAN,'unmount',cid])
 

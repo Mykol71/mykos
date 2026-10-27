@@ -141,7 +141,8 @@ can produce `Unknown` backup storage in `/host` while the rest of the response w
 
 Use an admin-scoped key and a staging shop approved for these operations. Staging
 creates a privileged container. For native Linux images, `restore: true` mounts
-available `/backups/tfrsync-ID` application folders and customer homes directly
+available `/backups/tfrsync-ID` trees `/usr2`, `/d`, `/etc`, `/home`, and
+`/usr/java` directly
 read/write; guest writes change the original backup. The application adapter need
 not be enabled. VM images do not support this restore option.
 
@@ -149,7 +150,12 @@ Before the new instance starts, its private account files are reconciled with th
 backup IDs. Conflicting image account ownership and POSIX ACLs are adjusted only
 inside that instance; backup ownership and saved account files stay unchanged.
 The image root password is retained, missing customer password hashes produce
-locked accounts, and the old `tfrsync-ID` guest account/home is omitted. The host
+locked accounts, and the old `tfrsync-ID` login account is omitted. The entire backup home tree
+is mounted, including any old backup-client home; its source is never deleted.
+Private per-instance bind mounts retain reconciled account files, hostname/hosts,
+machine ID, image fstab/crypttab and Podman interface ownership settings inside
+the complete `/etc` mount. Other saved customer configuration and service
+definitions are visible directly; files absent from the backup cannot be restored. The host
 backup account is untouched; use the existing **Backups** text menu to configure
 backup accounts afterward. Existing instances are not restored again on restart.
 

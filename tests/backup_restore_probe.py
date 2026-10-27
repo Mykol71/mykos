@@ -1,7 +1,7 @@
 """Synthetic backup test in a separate VFS store; never touches customer data."""
 import contextlib,hashlib,importlib.machinery,importlib.util,json,os,pathlib,shutil,stat,struct,subprocess,sys,tarfile,tempfile,time
-root=pathlib.Path(tempfile.mkdtemp(prefix='mykos-backup130-'));root.chmod(0o700)
-source=pathlib.Path('/home/mgreen/mykos-backup130-test-source')
+root=pathlib.Path(tempfile.mkdtemp(prefix='mykos-backup132-'));root.chmod(0o700)
+source=pathlib.Path('/home/mgreen/mykos-backup132-test-source')
 sys.path.insert(0,'/usr/local/sbin');sys.path.insert(0,str(source))
 import mykos_backup_identity as identity,mykos_backup_restore as backup
 real_before=subprocess.check_output(['/usr/bin/podman','ps','--format','{{.ID}} {{.Names}} {{.StartedAt}}'],text=True)
@@ -42,6 +42,8 @@ for rel in ('usr2','home/alice','home/tfrsync-01234567'):(back/rel).mkdir(parent
 (back/'etc/group').write_text('root:x:0:\napp:x:50:alice\ntfrsync-01234567:x:1004:\n')
 (back/'etc/shadow').write_text('root:source-root:1:0:99999:7:::\nalice:source-alice:1:0:99999:7:::\n')
 (back/'etc/shadow').chmod(0o600)
+(back/'etc/rc.d/init.d').mkdir(parents=True)
+(back/'etc/rc.d/init.d/rti').write_text('customer service definition')
 original={str(p.relative_to(back)):(p.read_bytes(),p.stat().st_uid,p.stat().st_gid,stat.S_IMODE(p.stat().st_mode)) for p in back.rglob('*') if p.is_file()}
 loader=importlib.machinery.SourceFileLoader('backup_stage',str(source/'mykos-stage-pos'));spec=importlib.util.spec_from_loader(loader.name,loader);stage=importlib.util.module_from_spec(spec);loader.exec_module(stage)
 stage.PODMAN=str(wrapper);stage.vm.locked=contextlib.nullcontext
@@ -63,6 +65,8 @@ try:
  stage.stage('01234567','yes','localhost/mykos-backup-test:latest')
  value=json.loads(pod('inspect','01234567.test.example'))[0];created=value['Id'];assert value['State']['Running']
  guest=pathlib.Path('/proc')/str(value['State']['Pid'])/'root'
+ assert {'/etc','/home','/usr2'}.issubset({m['Destination'] for m in value['Mounts']})
+ assert any(m['Destination']=='/etc/passwd' and '.mykos-restore' in m['Source'] for m in value['Mounts'])
  passwd=(guest/'etc/passwd').read_text();assert 'alice:x:50:50:' in passwd and 'tfrsync-' not in passwd
  daemon=next(line.split(':') for line in passwd.splitlines() if line.startswith('daemon:'))
  expected=(int(daemon[2]),int(daemon[3]));assert expected!=(50,50)
@@ -70,7 +74,8 @@ try:
  assert (guest/'var/lib/daemon/hardlink').stat().st_uid==expected[0]
  assert stat.S_IMODE((guest/'var/lib/daemon/owned').stat().st_mode)==0o4750
  actual_acl=os.getxattr(guest/'var/lib/daemon/acl-only','system.posix_acl_access');assert struct.unpack_from('<I',actual_acl,16)[0]==expected[0]
- assert not (guest/'home/tfrsync-01234567').exists()
+ assert (guest/'home/tfrsync-01234567/key-marker').read_text()=='not exposed to guest'
+ assert (guest/'etc/rc.d/init.d/rti').read_text()=='customer service definition'
  assert 'locked-root' in (guest/'etc/shadow').read_text() and 'source-root' not in (guest/'etc/shadow').read_text()
  for _ in range(30):
   if (back/'usr2/from-guest').exists():break
@@ -82,7 +87,7 @@ try:
  value=json.loads(pod('inspect',created))[0];guest=pathlib.Path('/proc')/str(value['State']['Pid'])/'root'
  assert 'alice:x:50:50:' in (guest/'etc/passwd').read_text()
  assert real_before==subprocess.check_output(['/usr/bin/podman','ps','--format','{{.ID}} {{.Names}} {{.StartedAt}}'],text=True)
- print('PASS actual Podman direct-RW restore, account collisions, set-ID mode, hardlinks, ACL, backup account/home exclusion, source identity preservation, stop/start, existing guests unchanged')
+ print('PASS actual Podman full etc/home restore and nested private identity mounts, customer service visibility, file ownership/ACL, original account preservation, stop/start, real guests unchanged')
 except Exception:
  print('Owned diagnostic root:',root)
  raise
@@ -90,4 +95,8 @@ finally:
  try:
   for cid in pod('ps','-aq').splitlines():pod('rm','-f',cid)
  except Exception as e:print('Private-store cleanup error:',type(e).__name__)
- shutil.rmtree(root)
+ for attempt in range(10):
+  try:shutil.rmtree(root);break
+  except OSError:
+   if attempt==9:raise
+   time.sleep(.2)

@@ -6,11 +6,13 @@ import re
 import shutil
 import stat
 import tempfile
+import uuid
 import mykos_backup_identity as identity
 from mykos_runtime import shopcode
 
 BACKUPS=Path('/backups')
-DATA_PATHS=('usr2','d','etc/cups','etc/samba','etc/mail','etc/sudoers','usr/java')
+DATA_PATHS=('usr2','d','etc','home','usr/java')
+PRIVATE_FILES=('passwd','group','shadow','gshadow','hostname','hosts','machine-id','fstab','crypttab','NetworkManager/conf.d/90-mykos-podman.conf')
 
 
 def directory(shop,settings):
@@ -43,15 +45,6 @@ def mount_pairs(shop,settings):
     for rel in DATA_PATHS:
         path=source(backup,rel)
         if path:pairs.append((path,'/'+rel))
-    home=source(backup,'home')
-    if home:
-        if not home.is_dir():raise ValueError('Backup home must be a directory')
-        # Mount customer homes individually: never expose the stale backup
-        # client's private keys/home in the newly branded guest.
-        for entry in sorted(home.iterdir()):
-            if entry.name=='tfrsync-'+shop:continue
-            path=source(backup,'home/'+entry.name)
-            if path:pairs.append((path,'/home/'+entry.name))
     if len(pairs)>512:raise ValueError('Too many backup mounts')
     return pairs
 
@@ -67,6 +60,30 @@ def mount_arguments(shop,settings):
     for path,destination in pairs:
         result+=['--mount','type=bind,source='+str(path)+',destination='+destination+',ro=false']
     return result
+
+
+def private_mounts(vpn):
+    """Persistent instance-only exceptions inside the complete /etc mount."""
+    root=Path(vpn)/'.mykos-restore'
+    root.mkdir(mode=0o700)
+    result=[]
+    try:
+        for name in PRIVATE_FILES:
+            path=root/name;path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_bytes(b'');path.chmod(0o600 if name in ('shadow','gshadow') else 0o644)
+            result+=['--mount','type=bind,source='+str(path)+',destination=/etc/'+name+',ro=false']
+    except BaseException:
+        shutil.rmtree(root);raise
+    return root,result
+
+
+def export_private(root,private):
+    for name in PRIVATE_FILES:
+        source=guest_path(root,'etc/'+name)
+        destination=guest_path(private,name)
+        if not source.is_file():raise ValueError('Missing prepared instance setting: '+name)
+        destination.write_bytes(source.read_bytes())
+        os.chown(destination,0,0);os.chmod(destination,0o600 if name in ('shadow','gshadow') else 0o644)
 
 
 def guest_path(root,relative):
@@ -118,6 +135,11 @@ def prepare(shop,settings,root,hostname,address=None):
             else:path.unlink()
     cron=guest_path(root,'var/spool/cron/'+backup_account)
     if cron.exists():cron.unlink()
+    # Keep physical-host mounts out of this container's boot transaction.
+    for name in ('fstab','crypttab'):
+        path=guest_path(root,'etc/'+name)
+        if not path.exists():write_guest(root,'etc/'+name,'')
+    write_guest(root,'etc/machine-id',uuid.uuid4().hex+'\n')
     write_guest(root,'etc/hostname',hostname+'\n')
     text='127.0.0.1 localhost localhost.localdomain\n::1 localhost localhost.localdomain\n'
     hostfile=source(backup,'etc/hosts')

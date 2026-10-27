@@ -20,10 +20,10 @@ def customer(tmp_path):
     return account,{'backup_root':str(root)}
 
 
-def test_mounts_are_direct_rw_but_identity_files_and_old_backup_home_are_private(customer):
+def test_mounts_are_complete_direct_rw_trees_with_separate_private_identities(customer):
     account,cfg=customer
     pairs=backup.mount_pairs('01234567',cfg)
-    assert pairs==[(account/'usr2','/usr2'),(account/'home/alice','/home/alice')]
+    assert pairs==[(account/'usr2','/usr2'),(account/'etc','/etc'),(account/'home','/home')]
     args=backup.mount_arguments('01234567',cfg)
     assert all('ro=false' in arg for arg in args[1::2])
     assert not any('passwd' in arg or 'tfrsync-01234567/home/tfrsync' in arg for arg in args)
@@ -98,6 +98,7 @@ def test_restore_is_prepared_before_start_and_failure_removes_only_created_guest
     assert events.index('prepare')<events.index([module.PODMAN,'start','cid'])
     assert not any('rm' in x for x in events)
     def fail(*args):raise ValueError('identity failure')
+    __import__('shutil').rmtree(tmp_path/'usr/local/share/mykos/pos/.01234567/.mykos-restore')
     monkeypatch.setattr(module,'prepare_backup',fail);events.clear()
     with pytest.raises(ValueError,match='identity failure'):module.stage('01234567','yes','localhost/rh9')
     assert [module.PODMAN,'rm','--force','cid'] in events
@@ -121,3 +122,13 @@ def test_unmount_on_identity_error_and_reject_wrong_container_root(tmp_path,monk
     value['GraphDriver']['Data']['MergedDir']=str(tmp_path/'wrong')
     with pytest.raises(ValueError,match='does not belong'):module.prepare_backup('cid','01234567.test','01234567',{},[])
     assert calls[-1]==[module.PODMAN,'unmount','cid']
+
+
+def test_private_files_live_under_existing_instance_storage(customer,tmp_path):
+    vpn=tmp_path/'vpn';vpn.mkdir()
+    root,args=backup.private_mounts(vpn)
+    assert root==vpn/'.mykos-restore'
+    assert 'destination=/etc/passwd,ro=false' in ' '.join(args)
+    assert 'destination=/etc/machine-id,ro=false' in ' '.join(args)
+    assert root.stat().st_mode & 0o777==0o700
+    with pytest.raises(FileExistsError):backup.private_mounts(vpn)
