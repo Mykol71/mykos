@@ -57,10 +57,19 @@ def _dispatch(args):
         code=shopcode(args[1]); result=add(code,**settings)
         from mykos_refresh import best_effort
         return best_effort(code,result,run=run)
+    if action in ('image-remove','image-remove-status'):
+        from mykos_image_admin import queue,job
+        if action=='image-remove' and len(args)==3:return queue(args[1],args[2])
+        if action=='image-remove-status' and len(args)==2:return job(args[1])
+        raise ValueError('Invalid image removal arguments')
     if action == 'stage-images':
         if len(args) != 1: raise ValueError('Unexpected arguments')
         from mykos_vm import installing_images
-        return {'images': stage_images(), 'builds': installing_images()}
+        from mykos_image_admin import catalog
+        result={'images':stage_images(),'builds':installing_images()}
+        try:result['captured_images']=catalog()
+        except (ValueError,RuntimeError,OSError):result['captured_images']=[]
+        return result
     if action == 'memory-configure':
         if len(args) != 4 or args[1] != args[3]: raise ValueError('Confirm the exact instance ID for cold restart')
         code = shopcode(args[1])

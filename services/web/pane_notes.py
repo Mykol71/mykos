@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from mykos_users import connect
 
-Pane = Literal['host', 'linux', 'ubuntu', 'windows', 'windows-server', 'macos', 'mssql', 'backups', 'repos', 'snapshots']
+Pane = Literal['host', 'linux', 'rocky', 'alma', 'oracle', 'centos', 'fedora', 'ubuntu', 'windows', 'windows-server', 'macos', 'mssql', 'backups', 'repos', 'snapshots']
 
 
 class NoteUpdate(BaseModel):

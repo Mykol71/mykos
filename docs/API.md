@@ -600,3 +600,18 @@ Pane notes are disposable change requests and are cleared by each installation/u
 Pane notes are private to the `mgreen` browser account. Both web and v2 notes endpoints require its authenticated session cookie; scope-only API keys cannot read or write these notes. PUT also requires the configured Origin header.
 
 The orange Host notes icon opens personal notes. The equivalent web endpoints are `GET/PUT /api/web/personal-notes`. These use the separate `personal_notes` table and must never be included in automated change-request scans. Installation clears only disposable `pane_notes`; personal text remains private to mgreen and is preserved.
+
+Prepared images stay visible to administrators in their OS panes.
+`GET /api/v2/images` also returns `captured_images` with image ID, size, version
+and removal state. `DELETE /api/v2/images/{os_name}` accepts an exact OS
+`confirmation`, queues guarded removal, and requires an administrator.
+`GET /api/v2/images/{os_name}/delete` reports removal progress. Other containers,
+saved instances, intentional snapshots, and active builds block removal. The
+generic base and its private startup capture are removed only after dependency
+checks; Podman image removal never uses force.
+
+Container terminals now accept `?action=remove-vpn` for native Linux and Ubuntu.
+The action opens the existing interactive connection selection and confirmation
+workflow. Native VPN setup advertises the actual Podman IPv4 address as a /32,
+which must match the router peer's private-subnet selector. IKE identities are
+independent of this traffic selector and remain unchanged.

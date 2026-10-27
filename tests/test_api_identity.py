@@ -836,3 +836,21 @@ def test_personal_notes_private_separate_and_revisioned(environment):
         c.execute('DELETE FROM pane_notes')
     assert owner.get(paths[1]).json()['text']==payload['text']
     assert owner.put(paths[0],headers={'Origin':'https://testserver'},json={'text':'x'*20001,'revision':1}).status_code==422
+
+
+def test_prepared_image_removal_requires_admin_and_exact_os(environment,monkeypatch):
+    import image_build_api
+    calls=[];monkeypatch.setattr(image_build_api,'invoke',lambda *a:calls.append(a) or {'state':'queued'})
+    client=TestClient(app.app,base_url='https://testserver')
+    path='/api/v2/images/rocky9';body={'confirmation':'rocky9'}
+    assert client.request('DELETE',path,json=body).status_code==401
+    reader=mykos_api_keys.create('image-removal-reader','read')
+    assert client.request('DELETE',path,json=body,headers={'X-MYKOS-API-Key':reader}).status_code==403
+    admin=mykos_api_keys.create('image-removal-admin','admin');headers={'X-MYKOS-API-Key':admin}
+    assert client.request('DELETE',path,json=body,headers=headers).status_code==200
+    assert calls[-1]==('image-remove','rocky9','rocky9')
+    assert client.get(path+'/delete',headers=headers).status_code==200
+    for os_name in ('centos8','fedora45','rocky7','alma11'):
+        assert client.request('DELETE','/api/v2/images/'+os_name,json={'confirmation':os_name},headers=headers).status_code==400
+    schema=client.get('/api/v2/openapi.json').json()
+    assert 'delete' in schema['paths']['/api/v2/images/{os_name}']

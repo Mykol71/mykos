@@ -286,10 +286,10 @@ def test_add_vpn_function_creates_configuration_in_isolated_directory(tmp_path, 
     import subprocess
     source = (HELPERS.parents[1]/'pos/pos').read_text()
     function = source[source.index('add_vpn() {'):source.index('\nrm_vpn() {')]
-    script = function + '''
+    script = 'MYKOS_PYTHON='+sys.executable+'\n'+function + '''
 VPN_PSK=test-only-secret; SHOPCODE=01234567; CONTAINER=01234567.example
 curl() { echo 203.0.113.20; }
-podman() { :; }
+podman() { [ "$1" != inspect ] || echo 192.168.22.134; }
 update_meraki() { echo unexpected-meraki; return 1; }
 add_vpn
 '''
@@ -299,6 +299,8 @@ add_vpn
     conf = (tmp_path/'.01234567/test-peer.conn.conf').read_text()
     assert 'conn test-peer' in conf and 'right=vpn.example.com' in conf
     assert 'rightsubnet="10.1.2.0/24"' in conf
+    assert 'leftsubnet="192.168.22.134/32"' in conf
+    assert 'Private Subnets: 192.168.22.134/32' in result.stdout
     assert (tmp_path/'.01234567/ipsec.secrets').stat().st_mode & 0o777 == 0o600
     assert 'unexpected-meraki' not in result.stdout
     escaped = secret.replace('\\', '\\\\').replace('"', '\\"')
@@ -328,7 +330,7 @@ def test_meraki_psk_is_serialized_as_data(tmp_path):
     script = function + '\ncurl() { cat > request.json; }; update_meraki\n'
     result = subprocess.run(['bash', '-c', script], cwd=tmp_path, text=True, capture_output=True,
         env={**os.environ, 'MYKOS_PYTHON': sys.executable, 'VPN_PSK': secret, 'MERAKI_API_KEY': 'test', 'MERAKI_ORG_ID': '123',
-             'REMOTE_NAME': 'peer', 'PUBLIC': '203.0.113.20'})
+             'REMOTE_NAME': 'peer', 'PUBLIC': '203.0.113.20','VPN_LOCAL_CIDR':'192.168.22.134/32'})
     assert result.returncode == 0, result.stderr
     assert json.loads((tmp_path/'request.json').read_text())['peers'][0]['secret'] == secret
     assert secret not in result.stdout

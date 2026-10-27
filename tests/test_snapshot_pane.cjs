@@ -45,6 +45,7 @@ console.log('Snapshot pane checks passed: grouping, per-container choices, prese
  assert.equal(el('mykos-snapshots-rows').children[0].children[5].children[0].children[0].disabled,true);
  context.fetch=async()=>({ok:true,json:async()=>({allowed:true})});
  context.mykosRenderMykos=()=>{};context.mykosCloseTerminal=()=>{};
+ const imageRefreshes=[];context.mykosLoadStageImages=force=>imageRefreshes.push(force);
  const permission=html.slice(html.indexOf('async function mykosCheckTerminalPermission()'),html.indexOf('setTimeout(mykosCheckTerminalPermission'));
  vm.runInContext(permission,context);
  await run('mykosCheckTerminalPermission()');
@@ -56,6 +57,7 @@ console.log('Snapshot pane checks passed: grouping, per-container choices, prese
  context.fetch=async()=>({ok:true,json:async()=>({allowed:false})});
  await run('mykosCheckTerminalPermission()');
  assert.equal(el('mykos-snapshots-rows').children[0].children[5].children[0].children[0].disabled,true);
+ assert.deepEqual(imageRefreshes,[true,true]);
  console.log('Snapshot permission arrival enables real actions with preview off; revocation disables them.');
  console.log('Snapshot delete sends the selected ID with DELETE; sample actions remain disabled.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

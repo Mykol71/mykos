@@ -16,7 +16,6 @@ def main():
     if action not in ('shell', 'add-vpn', 'remove-vpn'): raise ValueError('Unsupported terminal action')
     data_shop = data['shop']
     host = data_shop == 'host'
-    if action == 'remove-vpn' and not host: raise ValueError('Host VPN removal only')
     name=None if host else target(data['shop'])
     if not host:
         from mykos_vm import record_path
@@ -25,7 +24,7 @@ def main():
             vm_os=read(data['shop']).get('os','')
             if not vm_os.startswith(('ubuntu','win','wns','mac')) or (action != 'shell' and not vm_os.startswith('ubuntu')):
                 raise ValueError('Use the desktop browser console or RDP/VNC login for this VM')
-    if not host and action == 'add-vpn' and not any(item['name'] == name and item['state'].lower() == 'running' for item in containers()):
+    if not host and action in ('add-vpn','remove-vpn') and not any(item['name'] == name and item['state'].lower() == 'running' for item in containers()):
         raise ValueError('Start the container before adding a VPN')
     pid,master=pty.fork()
     if pid==0:
@@ -35,12 +34,12 @@ def main():
             os.execv('/usr/bin/python3', ['/usr/bin/python3', '/usr/local/share/mykos/pos/host-vpn'])
         elif host:
             os.execv('/bin/su', ['/bin/su', '-', 'root'])
-        elif action == 'add-vpn':
+        elif action in ('add-vpn','remove-vpn'):
             from mykos_vm import record_path,read
             if record_path(data['shop']).is_file() and read(data['shop']).get('os','').startswith('ubuntu'):
-                os.execv(sys.executable,[sys.executable,'/usr/local/sbin/mykos-ubuntu-vpn',data['shop']])
+                os.execv(sys.executable,[sys.executable,'/usr/local/sbin/mykos-ubuntu-vpn',data['shop']]+(['--remove'] if action=='remove-vpn' else []))
             os.chdir('/usr/local/share/mykos/pos')
-            os.execv('/usr/bin/bash', ['/usr/bin/bash', './pos', '--add-vpn', data['shop'], name])
+            os.execv('/usr/bin/bash', ['/usr/bin/bash', './pos', '--'+action, data['shop'], name])
         else:
             from mykos_vm import record_path
             if record_path(data['shop']).is_file():

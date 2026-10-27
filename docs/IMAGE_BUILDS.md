@@ -116,3 +116,39 @@ The capture and embedded installed-disk archive need sufficient free space on
 their respective filesystems. Check both the MYKOS VM storage and Podman image
 storage when diagnosing an out-of-space error. Changing Podman storage is a
 separate operator task; an RPM update does not move existing images or disks.
+
+## Rocky Linux and AlmaLinux native images
+
+The text menu accepts `rocky8`, `rocky9`, `rocky10`, `alma8`, `alma9`, and
+`alma10`. These use the same kickstart → livemedia-creator rootfs → Podman
+build/commit → running generic base workflow as RedHat. Recipes live in
+`pos/ks/OS.ks`; the original RedHat kickstarts remain unchanged. Use a matching
+EL8, EL9, or EL10 Anaconda/Lorax build environment. A different repository URL
+does not make an older installer compatible with a newer OS.
+
+Rocky sources BaseOS and AppStream directly from
+`https://dl.rockylinux.org/pub/rocky/MAJOR/REPOSITORY/x86_64/os/`.
+AlmaLinux uses its published installation trees at
+`https://repo.almalinux.org/almalinux/MAJOR/REPOSITORY/x86_64/kickstart/`.
+Vendor release packages, repository definitions, and signing keys remain in the
+installed filesystem. These recipes do not use the private RHEL mirror or
+download its update script. No Pipework/eth1/DHCP-client dependency is added.
+
+Once built, separate Rocky Linux and AlmaLinux panes appear. They support the
+same native Linux lifecycle, root terminal, VPN and snapshot actions. The
+show-all leaf supplies disabled 8/9/10 choices and sample rows when no image
+is available. The staging API advertises the same OS identifiers; snapshot OS
+identity and full minor versions come from image metadata, without guest probes.
+
+Oracle Linux uses `oracle8`, `oracle9`, and `oracle10`, from Oracle's public
+`https://yum.oracle.com/repo/OracleLinux/OLMAJOR/baseos/latest/x86_64/` and
+`.../OLMAJOR/appstream/x86_64/` repositories. Kernel and UEK packages are
+excluded: native containers share the host kernel.
+
+CentOS uses `centos9` and `centos10`, meaning CentOS **Stream** 9 and 10, from
+`https://mirror.stream.centos.org/MAJOR-stream/{BaseOS,AppStream}/x86_64/os/`.
+Archived Stream 8 and CentOS Linux are intentionally excluded. Fedora uses
+`fedora43` and `fedora44`, the two newest stable releases in the official
+release feed when added. The beta release is excluded. Its Everything install
+tree and matching updates repository come from `https://dl.fedoraproject.org/`.
+Fedora builds require a matching Fedora Anaconda/Lorax builder.

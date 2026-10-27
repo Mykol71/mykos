@@ -138,7 +138,8 @@ def page():
     display = ''.join(chr(ord(char) + 0xfee0) if '!' <= char <= '~'
                       else '\u3000' if char == ' ' else char for char in name)
     html = (BASE / "index.html").read_text()
-    return HTMLResponse(html.replace("__MYKOS_BRAND_DISPLAY__", html_escape(display))
+    display_html = html_escape(display).replace('｜', '<span class="mykos-env-separator">｜</span>')
+    return HTMLResponse(html.replace("__MYKOS_BRAND_DISPLAY__", display_html)
                         .replace("__MYKOS_BRAND_NAME__", html_escape(name)))
 
 # Public supporting documentation, limited to the maintained operator guides.
@@ -356,7 +357,7 @@ async def mykos_terminal_websocket(ws: WebSocket, shop: str):
         return
 
     action = ws.query_params.get('action', 'shell')
-    if action not in ('shell', 'add-vpn', 'remove-vpn') or (action == 'remove-vpn' and shop != 'host'):
+    if action not in ('shell', 'add-vpn', 'remove-vpn'):
         await ws.close(code=1008)
         return
     if action == 'shell':

@@ -15,8 +15,8 @@ def version(path):
             for line in text.splitlines():
                 if line.startswith('VERSION_ID='):
                     value = shlex.split(line.split('=',1)[1])
-                    if len(value)==1 and re.fullmatch(r'[0-9]+(?:\.[0-9]+)+',value[0]): return value[0]
-    raise ValueError('Rootfs archive has no full OS VERSION_ID')
+                    if len(value)==1 and re.fullmatch(r'[0-9]+(?:\.[0-9]+)*',value[0]): return value[0]
+    raise ValueError('Rootfs archive has no valid OS VERSION_ID')
 
 
 if __name__ == '__main__':

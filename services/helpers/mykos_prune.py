@@ -15,7 +15,7 @@ import tempfile
 import time
 
 import mykos_vm as vm
-from mykos_runtime import config
+from mykos_runtime import config, NATIVE_OS_NAMES
 
 STATE = Path('/var/lib/mykos/purge')
 WEB = Path('/opt/mykos-web')
@@ -27,7 +27,7 @@ EXPORTS = [Path('/home/mgreen')]
 TIMERS = ['mykos-collector.timer', 'mykos-details.timer', 'mykos-extended.timer', 'mykos-command-collector.timer']
 SERVICES = ['mykos-web.service', 'mykos-container-admin.socket', 'mykos-terminal.socket',
             'mykos-collector.service', 'mykos-details.service', 'mykos-extended.service',
-            'mykos-command-collector.service', 'mykos-image-build@*.service', 'mykos-stage@*.service', 'mykos-command@*.service',
+            'mykos-command-collector.service', 'mykos-image-remove-*.service', 'mykos-image-build@*.service', 'mykos-stage@*.service', 'mykos-command@*.service',
             'mykos-container-admin@*.service', 'mykos-terminal@*.service']
 
 
@@ -79,7 +79,7 @@ def targets():
                 if path.name in ('.vm', '.linux', '.shopcode', '.container') or re.fullmatch(r'\.[0-9]{8}(?:\.[A-Za-z0-9_-]+)?', path.name):
                     result.append(path)
     result.extend([BUILD, *RUNTIME])
-    for name in ('rh7', 'rh8', 'rh9', 'rh10'):
+    for name in NATIVE_OS_NAMES:
         result.append(STAGING / (name + '-docker.tar.xz'))
         result.append(STAGING / (name + '.ks'))
     # Only explicit generated archives, never source/RPM/repo content.
@@ -123,7 +123,7 @@ def builders():
     for pid, value in table.items():
         args = value['args']
         executable = any(Path(a).name in ('livemedia-creator', 'anaconda') for a in args[:2] if a)
-        staged_ks = any(re.fullmatch(r'(?:--ks=|--kickstart=)?/var/tmp/rh(?:7|8|9|10)\.ks', a) for a in args)
+        staged_ks = any(re.fullmatch(r'(?:--ks=|--kickstart=)?/var/tmp/(?:rh(?:7|8|9|10)|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:9|10)|fedora(?:43|44)|mssql(?:2022|2025))\.ks', a) for a in args)
         if executable and staged_ks: selected.add(pid)
     while True:
         children = {pid for pid, value in table.items() if value['parent'] in selected}

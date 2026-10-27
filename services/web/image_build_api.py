@@ -56,3 +56,27 @@ def web_image_build_delete(os_name:str,data:DeleteBuildRequest,request:Request):
     mykos_stage_admin(request)
     if not OS.fullmatch(os_name):raise HTTPException(400,'Unsupported unattended image OS')
     return invoke('image-build-delete',os_name,data.confirmation)
+
+
+def prepared_os(os_name):
+    NATIVE_OS_NAMES=('rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos9','centos10','fedora43','fedora44')
+    if not OS.fullmatch(os_name) and os_name not in NATIVE_OS_NAMES and os_name not in ('win7u','winxp','winme','win2k','win98','mac12','mac13','mac14','mac15'):
+        raise HTTPException(400,'Unsupported image OS')
+
+@api_router.delete('/images/{os_name}',tags=['MYKOS API v2'],summary='Remove a prepared OS image and generic base if unreferenced')
+def image_remove(os_name:str,data:DeleteBuildRequest,request:Request):
+    from api_v2 import administrator
+    administrator(request);prepared_os(os_name)
+    return invoke('image-remove',os_name,data.confirmation)
+
+@api_router.get('/images/{os_name}/delete',tags=['MYKOS API v2'],summary='Read prepared-image removal progress')
+def image_remove_status(os_name:str,request:Request):
+    from api_v2 import administrator
+    administrator(request);prepared_os(os_name)
+    return invoke('image-remove-status',os_name)
+
+@router.delete('/api/web/images/{os_name}',include_in_schema=False)
+def web_image_remove(os_name:str,data:DeleteBuildRequest,request:Request):
+    from app import mykos_stage_admin,origin
+    mykos_stage_admin(request);origin(request);prepared_os(os_name)
+    return invoke('image-remove',os_name,data.confirmation)

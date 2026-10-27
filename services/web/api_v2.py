@@ -330,7 +330,7 @@ async def terminal_websocket(ws: WebSocket, shop: str):
         await ws.close(code=1008)
         return
     action = ws.query_params.get('action', 'shell')
-    if action not in ('shell', 'add-vpn'):
+    if action not in ('shell', 'add-vpn', 'remove-vpn'):
         await ws.close(code=1008)
         return
     from app import mykos_terminal_bridge
@@ -463,7 +463,8 @@ def actions(request: Request):
                         'backups': 'POST /api/v2/backups',
                         'repos': 'POST /api/v2/repos',
                         'terminal': 'WS /api/v2/terminal/{shop}',
-                        'add_vpn': 'WS /api/v2/terminal/{shop}?action=add-vpn'},
+                        'add_vpn': 'WS /api/v2/terminal/{shop}?action=add-vpn',
+                        'remove_vpn': 'WS /api/v2/terminal/{shop}?action=remove-vpn'},
             'action_options': {'backups': ['create', 'key', 'subscriber', 'delete', 'keys'],
                                'repos': ['delete', 'enable', 'disable', 'sync']},
             'admin_required': True}

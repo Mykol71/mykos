@@ -26,7 +26,7 @@ UNITS = ['mykos-host-history.service','mykos-web.service','mykos-container-admin
 PREFIXES = ('/opt/mykos-web/', '/usr/local/share/mykos/', '/etc/mykos/',
             '/etc/systemd/system/mykos-', '/usr/local/sbin/mykos-')
 # Keep the legacy path allowed for old recovery snapshots and upgrade cleanup.
-EXACT = {'/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
+EXACT = {'/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
          '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
          '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
 PACKAGES = ['podman','httpd','mod_ssl','python3','python3-pip','openssh-server','openssh-clients','rsync',
@@ -263,7 +263,7 @@ class Installer:
         if not self.live:return
         output=subprocess.check_output(['systemctl','list-units','--state=active,activating',
             '--plain','--no-legend','mykos-stage@*.service','mykos-terminal@*.service',
-            'mykos-container-admin@*.service','mykos-command@*.service','mykos-image-build@*.service'],text=True)
+            'mykos-container-admin@*.service','mykos-command@*.service','mykos-image-remove-*.service', 'mykos-image-build@*.service'],text=True)
         if output.strip():fail('Active privileged connections or staging jobs exist; finish/stop them before maintenance')
 
     def manifest(self):

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import sys
-from mykos_ubuntu_vpn import interactive
+from mykos_ubuntu_vpn import interactive, remove_interactive
 if __name__=='__main__':
     try:
-        if len(sys.argv)!=2:raise ValueError('Select an Ubuntu instance ID')
-        interactive(sys.argv[1])
+        if len(sys.argv) not in (2,3) or (len(sys.argv)==3 and sys.argv[2]!='--remove'):raise ValueError('Select an Ubuntu instance ID')
+        remove_interactive(sys.argv[1]) if len(sys.argv)==3 else interactive(sys.argv[1])
     except (ValueError,OSError) as error:raise SystemExit(str(error))

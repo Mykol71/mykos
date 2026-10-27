@@ -146,3 +146,21 @@ def interactive(shop):
     if input('Create this Ubuntu VPN connection? [y/N] ').strip().lower()!='y': return
     result=add(shop,name,peer,remote,secret)
     print('VPN configured. Set the peer private subnet to '+result['local_subnet']+'. Status will refresh automatically.',flush=True)
+
+
+def remove_interactive(shop):
+    value=selection(shop)
+    directory=vm.POS/('.'+shop);vm.safe_dir(directory)
+    choices=[p.stem[:-5] for p in directory.glob('*.conn.conf') if p.is_file() and not p.is_symlink()]
+    if not choices:print('No connections.');return
+    for name in choices:print(name)
+    name=input('Connection to stop and remove: ').strip()
+    if name not in choices or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}',name):raise ValueError('Select a listed connection')
+    if input('Type '+name+' to confirm removal: ').strip()!=name:raise ValueError('Cancelled')
+    common,path=config_module();source=path.read_text();prefix=source[:source.index('\ndef main():')]
+    script='import json\n'+prefix+"\nanswers=iter(json.loads(sys.stdin.read()))\ninput=lambda prompt:next(answers)\nremove(Path('/etc'))\n"
+    execute(value,'/usr/bin/python3',('-c',script),json.dumps(['mykos-'+name,'mykos-'+name]).encode(),timeout=30)
+    (directory/(name+'.conn.conf')).unlink()
+    cache=vm.storage(shop)/'vpn-status.json'
+    if not cache.is_symlink():cache.unlink(missing_ok=True)
+    print('Stopped and removed '+name)

@@ -32,6 +32,12 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
 ` + source, context);
 (async () => {
     await vm.runInContext(`(async () => {
+        for (const [family,versions] of Object.entries({rocky:[8,9,10],alma:[8,9,10],oracle:[8,9,10],centos:[9,10],fedora:[43,44]})) {
+            for (const version of versions) assert.equal(mykosImageFamily(family+version), family);
+            assert.equal(mykosNodeFamily({id:'test',os_type:family,image:'localhost/'+family+versions[0]+':latest'}),family);
+        }
+        assert.equal(mykosImageFamily('centos8'),null);
+        assert.equal(mykosImageFamily('fedora45'),null);
         for (const os of ['rh7','rh8','rh9','rh10']) assert.equal(mykosImageFamily(os), 'linux');
         for (const os of ['ubuntu','ubuntu22','ubuntu24','ubuntu24.04','ubuntu26.04']) assert.equal(mykosImageFamily(os), 'ubuntu');
         for (const os of ['win10','win11','win8e','win7u','winxp','winme','win2k','win98']) assert.equal(mykosImageFamily(os), 'windows');
@@ -41,7 +47,16 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(mykosImageFamily('mssql2025'), 'mssql');
         assert.equal(mykosNodeFamily({id:'sql',os_type:'Red Hat Enterprise Linux',image:'localhost/mssql2022:latest'}), 'mssql');
         assert.equal(mykosImageFamily('other'), null);
-        for (const images of [[], ['rh9'], ['ubuntu24.04'], ['win11'], ['wns2022'], ['mac15'], ['mssql2022'], ['rh10','ubuntu24','win10','wns2025','mac14']]) {
+        el('rocky-mykos-image-builds').querySelectorAll=()=>[];
+        mykosCapturedImages=[{os:'rocky9',version:'9.10',size_bytes:2147483648,delete_state:'idle'}];
+        mykosRenderImageBuilds();
+        assert.match(el('rocky-mykos-image-builds').innerHTML,/Prepared image/);
+        assert.match(el('rocky-mykos-image-builds').innerHTML,/9\.10/);
+        mykosTerminalAllowed=false;mykosRenderImageBuilds();
+        assert.doesNotMatch(el('rocky-mykos-image-builds').innerHTML,/Prepared image/);
+        mykosTerminalAllowed=true;mykosCapturedImages=[];
+
+        for (const images of [[], ['rh9'], ['ubuntu24.04'], ['win11'], ['wns2022'], ['mac15'], ['mssql2022'], ['rocky9'], ['alma10'], ['oracle8'], ['centos10'], ['fedora44'], ['rh10','ubuntu24','win10','wns2025','mac14']]) {
             responseImages = images.map(os => ({os, image:'image-'+os})); mykosStageImagesLoadedAt = 0;
             await mykosLoadStageImages();
             for (const family of mykosOsFamilies) {
@@ -116,7 +131,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(el('mykos-stage-os').options.find(option => option.value === 'rh9').disabled, false);
         for (const family of mykosOsFamilies) {
             for (const option of el(mykosOsId(family, 'mykos-stage-os')).options.slice(1)) {
-                assert.equal(option.text, option.value.replace(/^(?:mssql|ubuntu|wns|win|mac|rh)/i, ''));
+                assert.equal(option.text, option.value.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, ''));
             }
         }
         assert.equal(el('mykos-stage-os').options.find(option => option.value === 'rh10').disabled, true);

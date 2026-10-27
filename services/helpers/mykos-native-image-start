@@ -2,12 +2,12 @@
 """Start a newly built native OS image on the configured managed network."""
 import sys
 import mykos_vm as vm
-from mykos_runtime import config, run, PODMAN
+from mykos_runtime import config, run, PODMAN, NATIVE_OS_NAMES
 from mykos_network import arguments
 
 
 def start(os_name):
-    if os_name not in ('rh7','rh8','rh9','rh10','mssql2022','mssql2025'):
+    if os_name not in NATIVE_OS_NAMES:
         raise ValueError('Select a supported native Linux image')
     with vm.locked():
         args = arguments(config(), os_name)
@@ -16,6 +16,6 @@ def start(os_name):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2: raise SystemExit('Usage: mykos-native-image-start rh7|rh8|rh9|rh10|mssql2022|mssql2025')
+    if len(sys.argv) != 2: raise SystemExit('Usage: mykos-native-image-start OS')
     try: print(start(sys.argv[1]))
     except (ValueError, RuntimeError, OSError) as error: raise SystemExit(str(error))

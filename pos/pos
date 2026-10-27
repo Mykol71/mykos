@@ -41,6 +41,32 @@ NC='\033[0m'
 ###
 
 check_image_builder() {
+  case "$OS" in
+    rocky8|alma8|oracle8) required_major=8 ;;
+    rocky9|alma9|oracle9|centos9) required_major=9 ;;
+    rocky10|alma10|oracle10|centos10) required_major=10 ;;
+    *) required_major= ;;
+  esac
+  if [ -n "$required_major" ]; then
+    local actual_major
+    actual_major=$(rpm -E '%{rhel}' 2>/dev/null) || return 1
+    [ "$actual_major" = "$required_major" ] || {
+      echo "$OS requires an EL$required_major build host or VM with matching Anaconda/Lorax." >&2
+      return 1
+    }
+    command -v ksvalidator >/dev/null 2>&1 || { echo 'Install pykickstart on the builder.' >&2; return 1; }
+    # prepare_ks adapts the maintained timesource spelling for an EL8 parser.
+    create_ks || return 1
+    ksvalidator -v "RHEL$required_major" "/var/tmp/$OS.ks" || return 1
+  fi
+  case "$OS" in
+    fedora43|fedora44)
+      local fedora_major
+      fedora_major=$(rpm -E '%{fedora}' 2>/dev/null) || return 1
+      [ "$fedora_major" = "${OS#fedora}" ] || { echo "$OS requires a matching Fedora builder with Anaconda/Lorax." >&2; return 1; }
+      command -v ksvalidator >/dev/null 2>&1 || { echo 'Install pykickstart on the builder.' >&2; return 1; }
+      ksvalidator -v "F$fedora_major" "ks/$OS.ks" || return 1 ;;
+  esac
   if [ "$OS" = rh10 ]; then
     local build_major
     build_major=$(rpm -E '%{rhel}' 2>/dev/null) || return 1
@@ -62,7 +88,16 @@ create_ks() {
 }
 
 create_dockerfile() {
-local os_version
+local os_version os_vendor update_step
+case "$OS" in
+  rocky*) os_vendor='Rocky Linux'; update_step= ;;
+  alma*) os_vendor='AlmaLinux'; update_step= ;;
+  oracle*) os_vendor='Oracle Linux'; update_step= ;;
+  centos*) os_vendor='CentOS Stream'; update_step= ;;
+  fedora*) os_vendor='Fedora'; update_step= ;;
+  *) os_vendor=RHEL
+     update_step="RUN curl --fail --show-error --location --retry 2 --connect-timeout 15 --max-time 120 https://$REPOSERVER/updateos/updateos -o /usr/bin/updateos && test -s /usr/bin/updateos && bash -n /usr/bin/updateos && chmod 0755 /usr/bin/updateos" ;;
+esac
 os_version=$("$MYKOS_PYTHON" "$ROOTDIR/image_version.py" "$OS-docker.tar.xz") || return 1
 cat << EOF > Dockerfile
 FROM scratch
@@ -71,12 +106,12 @@ LABEL io.mykos.os="$OS"
 LABEL io.mykos.os.version="$os_version"
 LABEL org.label-schema.schema-version="1.0" \
     org.label-schema.name="$OS Base Image" \
-    org.label-schema.vendor="RHEL" \
+    org.label-schema.vendor="$os_vendor" \
     org.label-schema.license="GPLv2" \
     org.label-schema.build-date="20261003"
 MAINTAINER “Mike Green" <mgreen@teleflora.com>
 ENV container $OS-docker
-RUN curl --fail --show-error --location --retry 2 --connect-timeout 15 --max-time 120 https://$REPOSERVER/updateos/updateos -o /usr/bin/updateos && test -s /usr/bin/updateos && bash -n /usr/bin/updateos && chmod 0755 /usr/bin/updateos
+$update_step
 CMD ["/sbin/init"]
 EOF
 }
@@ -109,9 +144,9 @@ stage_image() {
 }
 
 create-image() {
-  echo -n "OS (rh7-rh10, win11/win10/win8e/win7u/winxp/winme/win2k/win98, wns2025/2022/2019/2016, mac15/mac14/mac13/mac12, ubuntu20.04/22.04/24.04, mssql2025/mssql2022: " && read -r OS || return 1
+  echo -n "OS (rh7-rh10, rocky8/9/10, alma8/9/10, oracle8/9/10, centos9/10, fedora43/44, win11/win10/win8e/win7u/winxp/winme/win2k/win98, wns2025/2022/2019/2016, mac15/mac14/mac13/mac12, ubuntu20.04/22.04/24.04, mssql2025/mssql2022: " && read -r OS || return 1
   case "$OS" in win*|wns*|mac*|ubuntu*) "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;; esac
-  case "$OS" in rh7|rh8|rh9|rh10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
+  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
   check_image_builder || return 1
   if podman image exists "$OS"; then echo "Image already built."; return 0; fi
   rm -f "/var/tmp/$OS-docker.tar.xz" || return 1
@@ -139,8 +174,8 @@ set_working_shopcode() {
   [ -f .$SHOPCODE.imagetype ] && OS=$(cat .$SHOPCODE.imagetype)
   [ -f .$SHOPCODE.postype ] && POSTYPE=$(cat .$SHOPCODE.postype) && return
   [[ "$SHOPCODE" =~ ^[0-9]{8}$ ]] || { echo "ID must be eight digits"; return 1; }
-  echo -n "OS (rh7-rh10, win*, wns*, mac*, ubuntu20.04/22.04/24.04): " && read -r OS || return 1
-  case "$OS" in rh7|rh8|rh9|rh10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
+  echo -n "OS (rh7-rh10, rocky8/9/10, alma8/9/10, oracle8/9/10, centos9/10, fedora43/44, win*, wns*, mac*, ubuntu20.04/22.04/24.04): " && read -r OS || return 1
+  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
   printf '%s\n' "$OS" >".$SHOPCODE.imagetype"
   POSTYPE="$OS"; printf '%s\n' "$POSTYPE" >".$SHOPCODE.postype"
 }
@@ -164,12 +199,12 @@ update_meraki() {
 echo "Creating site-to-site peer on meraki...."
 # Serialize the entered secret as data; never put it in a generated shell script.
 local payload
-payload=$(VPN_PSK="$VPN_PSK" REMOTE_NAME="$REMOTE_NAME" PUBLIC="$PUBLIC" "$MYKOS_PYTHON" - <<'JSON_PY'
+payload=$(VPN_PSK="$VPN_PSK" REMOTE_NAME="$REMOTE_NAME" VPN_LOCAL_CIDR="$VPN_LOCAL_CIDR" PUBLIC="$PUBLIC" "$MYKOS_PYTHON" - <<'JSON_PY'
 import json, os
 peer = {
     "peerId": "657525545596112136", "name": os.environ["REMOTE_NAME"],
     "ikeVersion": "2", "secret": os.environ["VPN_PSK"],
-    "privateSubnets": ["192.168.222.0/24"],
+    "privateSubnets": [os.environ["VPN_LOCAL_CIDR"]],
     "ipsecPolicies": {"ikeCipherAlgo": ["aes128"], "ikeAuthAlgo": ["sha1"],
         "ikePrfAlgo": ["prfsha1"], "ikeDiffieHellmanGroup": ["group21"], "ikeLifetime": 28800,
         "childCipherAlgo": ["aes128", "aes192", "aes256", "tripledes"],
@@ -196,10 +231,12 @@ list_vpns() {
 }
 
 add_vpn() {
-local VPN_PSK vpn_psk_escaped host_connection
+local VPN_PSK vpn_psk_escaped host_connection VPN_LOCAL_CIDR
+VPN_LOCAL_CIDR=192.168.222.0/24
 if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
 [[ "${SHOPCODE:-}" =~ ^[0-9]{8}$ ]] || { echo "Invalid ID"; return 1; }
 [ -z "${CONTAINER:-}" ] && { echo "No running container......"; return 1; }
+
 fi
 # gather user input
 INPUTS="REMOTE_NAME REMOTE_PUBLIC REMOTE_NET"
@@ -249,13 +286,16 @@ if [ "$INPUTS" != "" ]; then
 if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then
   host_connection=$(printf '%s\0' "$REMOTE_NAME" "$REMOTE_PUBLIC" "$REMOTE_NET" "$VPN_PSK" | "$MYKOS_PYTHON" ./host-vpn --save) || return 1
 else
+local vpn_ip
+vpn_ip=$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER") || return 1
+VPN_LOCAL_CIDR=$("$MYKOS_PYTHON" -c 'import ipaddress,sys;print(str(ipaddress.IPv4Address(sys.argv[1]))+"/32")' "$vpn_ip") || return 1
 cat > .$SHOPCODE/$REMOTE_NAME.conn.conf << EOF
 conn $REMOTE_NAME
   ikev2=insist
   authby=secret
   left=%defaultroute
   leftid=192.168.222.0
-  leftsubnet="192.168.222.0/24"
+  leftsubnet="$VPN_LOCAL_CIDR"
   right=$REMOTE_PUBLIC
   rightid=192.168.222.0
   rightsubnet="$REMOTE_NET/24"
@@ -289,7 +329,7 @@ fi
     echo "Remote ID: 192.168.222.0"
     echo "Shared Secret: (entered during setup)"
     echo "Static Routing"
-    echo "Private Subnets: 192.168.222.0/24"
+    echo "Private Subnets: $VPN_LOCAL_CIDR"
     echo "Availability: All Networks"
     echo "IPsec Policy: Custom"
     echo "Phase 1 Encryption: AES128"
@@ -308,13 +348,26 @@ fi
 }
 
 rm_vpn() {
-[ ! -f .$SHOPCODE.container ] && echo "No running container......" && return 
-[ "`ls -a .$SHOPCODE | grep conn`" == "" ] && echo "No connections." && return
-echo "Connection?"
-echo `ls -a .$SHOPCODE | grep .conn | sed -e "s/.$SHOPCODE.//" | sed -e "s/.conn.conf//"`
-read CONN
-rm -f .$SHOPCODE/$CONN.conn.conf
-podman exec $CONTAINER ipsec restart
+[[ "$SHOPCODE" =~ ^[0-9]{8}$ ]] || { echo 'Invalid ID'; return 1; }
+[[ "$CONTAINER" =~ ^[0-9]{8}(\.[A-Za-z0-9_.-]+)?$ && "${CONTAINER:0:8}" = "$SHOPCODE" ]] || { echo 'Invalid container'; return 1; }
+local directory=".$SHOPCODE" path CONN found=0
+[ -d "$directory" ] && [ ! -L "$directory" ] || { echo 'No connections.'; return 1; }
+for path in "$directory"/*.conn.conf; do
+  [ -f "$path" ] && [ ! -L "$path" ] || continue
+  path=${path##*/};printf '%s\n' "${path%.conn.conf}";found=1
+done
+[ "$found" = 1 ] || { echo 'No connections.'; return; }
+read -r -p 'Connection to stop and remove: ' CONN || return 1
+[[ "$CONN" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] || { echo 'Invalid connection'; return 1; }
+path="$directory/$CONN.conn.conf"
+[ -f "$path" ] && [ ! -L "$path" ] || { echo 'Select a listed connection'; return 1; }
+local confirmation
+read -r -p "Type $CONN to confirm removal: " confirmation || return 1
+[ "$confirmation" = "$CONN" ] || { echo 'Cancelled'; return 1; }
+# Use the existing text-admin workflow: remove the selected configuration and reload IPsec.
+rm -f -- "$path" || return 1
+podman exec "$CONTAINER" ipsec restart || return 1
+echo "Removed VPN $CONN"
 }
 
 clear_vpns() {
@@ -338,10 +391,11 @@ if [ "${1:-}" = "--add-host-vpn" ]; then
   add_vpn
   exit $?
 fi
-if [ "${1:-}" = "--add-vpn" ]; then
+if [ "${1:-}" = "--add-vpn" ] || [ "${1:-}" = "--remove-vpn" ]; then
   [[ "$#" -eq 3 && "$2" =~ ^[0-9]{8}$ && "$3" =~ ^[0-9]{8}(\.[A-Za-z0-9_.-]+)?$ && "${3:0:8}" = "$2" ]] || { echo "Invalid container selection"; exit 1; }
   SHOPCODE="$2"
   CONTAINER="$3"
+  if [ "$1" = --remove-vpn ]; then rm_vpn; exit $?; fi
   add_vpn
   exit $?
 fi
