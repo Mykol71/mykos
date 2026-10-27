@@ -2,14 +2,14 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const html=fs.readFileSync(require('node:path').join(__dirname,'../services/web/index.html'),'utf8');
 const escape=x=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const cache={
- '12345678':{networks:[{name:'mykos-lan'}],vpn_topology:{links:[{name:'office',peer:'vpn.example',remote:'10.77.0.0/24',mode:'direct'}],via_gateways:[]},vpn:{established_connections:['office']}},
+ '12345678':{networks:[{name:'mykos-lan',address:'192.168.22.134',prefix:24}],vpn_topology:{links:[{name:'office',peer:'vpn.example',remote:'10.77.0.0/24',mode:'direct'}],via_gateways:[]},vpn:{established_connections:['office']}},
  '87654321':{networks:[{name:'mykos-lan'}],vpn_topology:{links:[],via_gateways:[]}},
  '00000000':{networks:[{name:'unrelated'}],vpn_topology:{links:[],via_gateways:[]}}
 };
 const context=vm.createContext({escape,mykosListMemory:cache,nodes:Object.keys(cache).map(id=>({id,vpn:'up'}))});
 vm.runInContext(html.slice(html.indexOf('function mykosVpnGraph('),html.indexOf('\nfunction table(){')),context);
 let graph=context.mykosVpnGraph('12345678');
-assert.match(graph,/vpn.example/);assert.match(graph,/>office<\/text>/);assert.match(graph,/stroke="#4ade80"/);
+assert.match(graph,/vpn.example/);assert.match(graph,/192\.168\.22\.0\/24/);assert.match(graph,/10\.77\.0\.0\/24/);assert.match(graph,/font-size="9"/);assert.match(graph,/>office<\/text>/);assert.match(graph,/stroke="#4ade80"/);
 cache['12345678'].vpn.established_connections=[];assert.doesNotMatch(context.mykosVpnGraph('12345678'),/stroke="#4ade80"/);cache['12345678'].vpn.established_connections=['office'];assert.doesNotMatch(graph,/87654321|00000000/);
 graph=context.mykosVpnGraph('12345678',true);
 assert.match(graph,/87654321/);assert.doesNotMatch(graph,/00000000/);
