@@ -103,6 +103,7 @@ def parse_vpn(output):
         result.update(loaded=int(loaded[1]), established=int(active[1]))
         result['status'] = 'not_configured' if not result['loaded'] else 'up' if result['established'] else 'down'
     result['connections'] = sorted(set(re.findall(r'^\d+\s+"([^"]+)":', output, re.M)))
+    result['established_connections'] = sorted(set(re.findall(r'^.*?"([^"]+)".*?(?:STATE_V2_ESTABLISHED_CHILD_SA|STATE_QUICK_I2|STATE_QUICK_R2|IPsec SA established)',output,re.M)))
     return result
 
 

@@ -778,3 +778,39 @@ def configure_ubuntu_vpn(shop: str, data: UbuntuVPNRequest, request: Request):
 
 from image_build_api import api_router as image_build_api_router
 router.include_router(image_build_api_router)
+
+
+class VPNGatewayRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    connection:str
+    remote:str
+    confirmation:str
+
+@router.get('/vpn/gateways',summary='List configured shared native Linux VPN gateways')
+def vpn_gateways(request:Request):
+    authenticated(request)
+    return safe_helper('vpn-gateway-list')
+
+@router.put('/nodes/{shop}/vpn/gateway',summary='Route the MYKOS guest network through a native Linux VPN gateway')
+def vpn_gateway_configure(shop:str,data:VPNGatewayRequest,request:Request):
+    administrator(request);validate_shop(shop)
+    if data.confirmation!=shop:raise HTTPException(400,'Confirm the exact gateway ID')
+    return safe_helper('vpn-gateway-configure',shop,data.connection,data.remote)
+
+@router.delete('/nodes/{shop}/vpn/gateway/{connection}',summary='Remove only the selected shared gateway routing profile')
+def vpn_gateway_remove(shop:str,connection:str,request:Request):
+    administrator(request);validate_shop(shop)
+    return safe_helper('vpn-gateway-remove',shop,connection)
+
+
+@router.put('/host/vpn/gateway',summary='Use an existing host VPN as shared guest and host internet gateway')
+def host_vpn_gateway_configure(data:VPNGatewayRequest,request:Request):
+    administrator(request)
+    import socket
+    if data.confirmation!=socket.gethostname():raise HTTPException(400,'Confirm the exact host name')
+    return safe_helper('vpn-gateway-host',data.connection,data.remote)
+
+@router.delete('/host/vpn/gateway/{connection}',summary='Remove the shared host VPN routing profile; retain its VPN configuration')
+def host_vpn_gateway_remove(connection:str,request:Request):
+    administrator(request)
+    return safe_helper('vpn-gateway-remove','host',connection)

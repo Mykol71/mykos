@@ -72,6 +72,20 @@ def arguments(settings, container_name):
     return args
 
 
+def native_arguments(settings, container_name):
+    """Keep the guest daemon from replacing Podman's eth0 with DHCP.
+
+    Podman owns eth0 for bridge static IPAM and for macvlan DHCP IPAM alike.
+    Scope this mount to native guests; VM wrappers retain their vendor setup.
+    """
+    source = Path(__file__).with_name('mykos-podman-nm.conf').absolute()
+    if source.is_symlink() or not source.is_file() or ',' in str(source):
+        raise ValueError('Missing or unsafe Podman interface ownership configuration')
+    return arguments(settings, container_name) + [
+        '--mount', 'type=bind,source=' + str(source) +
+        ',destination=/etc/NetworkManager/conf.d/90-mykos-podman.conf,ro=true']
+
+
 def address_pool(settings):
     subnet = ipaddress.IPv4Network(settings.get('native_network_subnet', '192.168.22.0/24'), strict=True)
     if not subnet.is_private or not 24 <= subnet.prefixlen <= 28:

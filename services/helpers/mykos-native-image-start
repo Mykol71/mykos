@@ -3,7 +3,7 @@
 import sys
 import mykos_vm as vm
 from mykos_runtime import config, run, PODMAN, NATIVE_OS_NAMES
-from mykos_network import arguments
+from mykos_network import native_arguments as arguments
 
 
 def start(os_name):

@@ -95,6 +95,7 @@ def test_restore_is_prepared_before_start_and_failure_removes_only_created_guest
     module.stage('01234567','yes','localhost/rh9')
     create=next(x for x in events if isinstance(x,list) and x[1]=='create')
     assert '--no-hosts' in create and '-d' not in create
+    assert sum('destination=/etc/NetworkManager/conf.d/90-mykos-podman.conf,' in str(arg) for arg in create)==1
     assert events.index('prepare')<events.index([module.PODMAN,'start','cid'])
     assert not any('rm' in x for x in events)
     def fail(*args):raise ValueError('identity failure')

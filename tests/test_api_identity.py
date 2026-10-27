@@ -906,3 +906,22 @@ def test_base_console_reports_busy_message_without_creating_a_second_session(env
     with admin.websocket_connect('wss://testserver/api/terminal/rh9?action=image-shell',headers={'Origin':'https://testserver'}) as ws:
         assert 'already has an open console' in ws.receive_text()
         assert ws.receive()['code']==1013
+
+
+def test_network_draft_gateway_api_requires_admin_and_exact_confirmation(environment):
+    _,calls=environment
+    client=TestClient(app.app,base_url='https://testserver')
+    path='/api/v2/nodes/01234567/vpn/gateway'
+    data={'connection':'office','remote':'10.77.0.0/24','confirmation':'01234567'}
+    assert client.put(path,json=data).status_code==401
+    reader={'X-MYKOS-API-Key':mykos_api_keys.create('gateway-read','read')}
+    admin={'X-MYKOS-API-Key':mykos_api_keys.create('gateway-admin','admin')}
+    assert client.put(path,headers=reader,json=data).status_code==403
+    assert client.delete(path+'/office',headers=reader).status_code==403
+    # No root mutations before authentication and confirmation checks pass.
+    assert not any(x[0].startswith('vpn-gateway') for x in calls)
+    assert client.put(path,headers=admin,json={**data,'confirmation':'wrong'}).status_code==400
+    assert client.put(path,headers=admin,json=data).status_code==200
+    assert calls[-1]==('vpn-gateway-configure','01234567','office','10.77.0.0/24')
+    assert client.delete(path+'/office',headers=admin).status_code==200
+    assert calls[-1]==('vpn-gateway-remove','01234567','office')

@@ -315,6 +315,13 @@ body, button, input, select, textarea {
 :is(#mykos-container-refresh, #ubuntu-mykos-container-refresh, #windows-mykos-container-refresh, #windows-server-mykos-container-refresh, #macos-mykos-container-refresh, #rocky-mykos-container-refresh, #alma-mykos-container-refresh, #oracle-mykos-container-refresh, #centos-mykos-container-refresh, #fedora-mykos-container-refresh, #mssql-mykos-container-refresh):disabled { opacity: .4; cursor: not-allowed; }
 :is(#mykos-container-refresh, #ubuntu-mykos-container-refresh, #windows-mykos-container-refresh, #windows-server-mykos-container-refresh, #macos-mykos-container-refresh, #rocky-mykos-container-refresh, #alma-mykos-container-refresh, #oracle-mykos-container-refresh, #centos-mykos-container-refresh, #fedora-mykos-container-refresh, #mssql-mykos-container-refresh):focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
 
+.mykos-vpn-status-cell { white-space:nowrap; }
+.mykos-network-button { background:transparent; border:0; padding:0; color:inherit; font:inherit; }
+.mykos-vpn-topology { color:#4ade80; background:transparent; border:0; padding:0 2px; vertical-align:middle; }
+.mykos-vpn-topology:hover { color:#86efac; }
+#mykos-vpn-topology-dialog { width:min(720px,92vw); max-height:85vh; overflow:auto; }
+#mykos-vpn-topology-dialog>button { float:right; }
+#mykos-vpn-topology-dialog>p { color:#94a3b8; font-size:11px; }
 /* Host performance pane */
 .mykos-host-pane { margin: 0 0 20px; padding: 4px 19px 8px; }
 .mykos-host-pane h2, .mykos-pane h2 { margin: 0; font-size: 13px; font-weight: 500; line-height: 1.2; color: #94a3b8; }
@@ -1055,6 +1062,82 @@ function mykosNodeIp(family, detail, extended) {
     return extended.ipv4 || extended.eth1_ip || detail.desktop_host || 'Unknown';
 }
 
+function mykosVpnStatus(node,ext,family) {
+    const via=ext.vpn_topology?.via_gateways || [];
+    const sharedUp=via.some(link=>link.full_tunnel_sa===true);
+    const supported=['linux','rocky','alma','oracle','centos','fedora','ubuntu','mssql'].includes(family);
+    if (!supported && !via.length) return '<td class="mykos-vpn-spacer" aria-hidden="true"></td>';
+    let status='';
+    if (supported) {
+        if (node.vpn==='not_configured') status='<button type="button" class="mykos-add-vpn-button" data-shop="'+escape(node.id)+'" title="Add VPN" aria-label="Add VPN for '+escape(node.id)+'" '+(mykosTerminalAllowed && node.status==='online'?'':'disabled')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>';
+        else if(node.vpn==='up') status='<a href="#" class="mykos-ipsec-link" data-shop="'+escape(node.id)+'" title="View IPsec status" style="text-decoration:none">'+statusIcon('vpn',node.vpn)+'</a>';
+        else status=statusIcon('vpn',node.vpn);
+    }
+    if(via.length) status='<span title="Shared gateway: '+(sharedUp?'full-tunnel SA confirmed':'not confirmed; protected traffic remains blocked')+'">'+statusIcon('vpn',sharedUp?'up':'unknown')+'</span>';
+    return '<td class="mykos-vpn-status-cell">'+status+'</td>';
+}
+function mykosVpnGraph(selectedShop = null, showPeers = false) {
+    const vertices=new Map(),edges=[];
+    const add=(key,label,kind)=>{if(!vertices.has(key))vertices.set(key,{key,label,kind});else if(kind==='gateway')vertices.get(key).kind=kind;};
+    const relevant = new Set(selectedShop ? [String(selectedShop)] : nodes.map(node=>String(node.id)));
+    if(selectedShop) for(const link of mykosListMemory[selectedShop]?.vpn_topology?.via_gateways || []) relevant.add(String(link.gateway));
+    const memberships = node => new Set((mykosListMemory[node]?.networks || []).map(n=>n.name));
+    if(selectedShop && showPeers) {
+        const ownNetworks=memberships(selectedShop);
+        for(const node of nodes) if((mykosListMemory[node.id]?.networks || []).some(n=>ownNetworks.has(n.name))) relevant.add(String(node.id));
+        // Include downstream guests explicitly using this selected VPN gateway too.
+        for(const node of nodes) if((mykosListMemory[node.id]?.vpn_topology?.via_gateways || []).some(link=>String(link.gateway)===String(selectedShop))) relevant.add(String(node.id));
+    }
+    for(const node of nodes) {
+        if (!relevant.has(String(node.id))) continue;
+        const data=mykosListMemory[node.id]?.vpn_topology;
+        if(!data)continue;
+        for(const link of data.links || []) {
+            const own='guest:'+node.id,peer='site:'+link.peer;
+            add(own,String(node.id),link.mode==='gateway'?'gateway':selectedShop && String(node.id)!==String(selectedShop)?'peer':'guest');add(peer,link.peer,'site');
+            const reported=mykosListMemory[node.id]?.vpn?.established_connections;
+            const active=Array.isArray(reported) && (reported.includes(link.name)||reported.includes('mykos-'+link.name));
+            edges.push({from:own,to:peer,label:link.remote,active});
+        }
+        for(const link of data.via_gateways || []) {
+            add('guest:'+node.id,String(node.id),selectedShop && String(node.id)!==String(selectedShop)?'peer':'guest');add('guest:'+link.gateway,link.gateway==='host'?'MYKOS host + internet':link.gateway,'gateway');
+            if(!edges.some(edge=>edge.from==='guest:'+node.id && edge.to==='guest:'+link.gateway))
+                edges.push({from:'guest:'+node.id,to:'guest:'+link.gateway,label:'shared VPN',active:link.full_tunnel_sa===true});
+            if(link.peer) {
+                add('site:'+link.peer,link.peer,'site');
+                if(!edges.some(edge=>edge.from==='guest:'+link.gateway && edge.to==='site:'+link.peer))
+                    edges.push({from:'guest:'+link.gateway,to:'site:'+link.peer,label:'Shared full-tunnel SA; '+(link.site_remote || ''),active:link.full_tunnel_sa===true});
+            }
+            if(link.mode!=='host') {
+                add('host:internet','Host internet','guest');
+                if(!edges.some(edge=>edge.from==='host:internet'&&edge.to==='guest:'+link.gateway))
+                    edges.push({from:'host:internet',to:'guest:'+link.gateway,label:'Host internet through VPN when up',active:link.full_tunnel_sa===true});
+            }
+        }
+    }
+    if(selectedShop && showPeers) {
+        add('guest:'+selectedShop,String(selectedShop),'guest');
+        const ownNetworks=memberships(selectedShop);
+        for(const node of nodes) {
+            if(String(node.id)===String(selectedShop) || !relevant.has(String(node.id)))continue;
+            const shared=(mykosListMemory[node.id]?.networks || []).filter(n=>ownNetworks.has(n.name)).map(n=>n.name);
+            if(!shared.length)continue;
+            add('guest:'+node.id,String(node.id),'peer');
+            if(!edges.some(edge=>[edge.from,edge.to].includes('guest:'+selectedShop)&&[edge.from,edge.to].includes('guest:'+node.id)))
+                edges.push({from:'guest:'+selectedShop,to:'guest:'+node.id,label:'Shared network: '+shared.join(', ')+'; reachability not tested',active:false});
+        }
+    }
+    if(!vertices.size) return '<p>No configured VPN topology.</p>';
+    const columns=['guest','peer','gateway','site'].filter(kind=>[...vertices.values()].some(v=>v.kind===kind));let height=100;
+    columns.forEach((kind,column)=>{
+        const items=[...vertices.values()].filter(v=>v.kind===kind);height=Math.max(height,items.length*64+40);
+        items.forEach((v,i)=>Object.assign(v,{x:80+column*220,y:35+i*64}));
+    });
+    const lines=edges.map(edge=>{const a=vertices.get(edge.from),b=vertices.get(edge.to);return '<g><title>'+escape(edge.label)+'</title><path d="M'+(a.x+20)+' '+a.y+' L'+(b.x-20)+' '+b.y+'" fill="none" stroke="'+(edge.active?'#4ade80':'#94a3b8')+'" stroke-width="2"'+(edge.active?'':' stroke-dasharray="4 4"')+'/></g>';}).join('');
+    const icons=[...vertices.values()].map(v=>'<g transform="translate('+v.x+' '+v.y+')"><title>'+escape(v.label)+'</title>'+(v.kind==='site'?'<path d="M-7-18v7M7-18v7"/><rect x="-14" y="-10" width="28" height="17" rx="3"/>':'<rect x="-14" y="-12" width="28" height="22" rx="3"/><path d="M-8 15h16M0 10v5"/>')+'<text y="29" text-anchor="middle" fill="currentColor" stroke="none" font-size="12">'+escape(v.label.length>26?v.label.slice(0,23)+'…':v.label)+'</text></g>').join('');
+    return '<svg viewBox="0 0 '+(columns.length*220)+' '+height+'" role="img" aria-label="Guests, VPN gateways and remote sites" style="width:100%;min-width:480px;color:#38bdf8;fill:none;stroke:currentColor;stroke-width:1.7">'+lines+icons+'</svg>';
+}
+
 function table(){
     for (const family of mykosOsFamilies) {
     el(mykosOsId(family, 'rows')).innerHTML=nodes
@@ -1073,17 +1156,8 @@ function table(){
           <td>${escape(n.id)}</td>
           <td>${statusIcon('node',n.status)}</td>
           <td class="mykos-os-type">${escape(detail.os_version && detail.os_version !== 'Unknown' ? mykosReleaseName(detail.os_type, detail.os_version, detail.os_codename) : '?')}</td>
-          <td class="mykos-node-ip">${escape(mykosNodeIp(family, detail, ext))}</td>
-          ${['linux', 'rocky', 'alma', 'oracle', 'centos', 'fedora', 'ubuntu', 'mssql'].includes(family) ? `<td>${n.vpn === 'not_configured'
-      ? `<button type="button" class="mykos-add-vpn-button" data-shop="${escape(n.id)}" title="Add VPN" aria-label="Add VPN for ${escape(n.id)}" ${mykosTerminalAllowed && n.status === 'online' ? '' : 'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`
-      : n.vpn === 'up'
-      ? `<a href="#" class="mykos-ipsec-link"
-            data-shop="${escape(n.id)}"
-            title="View IPsec status"
-            style="text-decoration:none">
-            ${statusIcon('vpn',n.vpn)}
-         </a>`
-      : statusIcon('vpn',n.vpn)}</td>` : '<td class="mykos-vpn-spacer" aria-hidden="true"></td>'}
+          <td class="mykos-node-ip"><button type="button" class="mykos-network-button" data-shop="${escape(n.id)}" title="Network information and topology" aria-label="Network information for ${escape(n.id)}">${escape(mykosNodeIp(family, detail, ext))}</button></td>
+          ${mykosVpnStatus(n,ext,family)}
           <td>${escape(uptime)}</td>
           <td><button type="button" class="mykos-top-button"
             data-shop="${escape(n.id)}">${escape(memory)}</button></td>
@@ -1098,6 +1172,8 @@ load();setInterval(()=>{if(!el('dashboard').hidden)load()},10000);
 
 // MYKOS INLINE NODE DETAILS V3
 let mykosSelectedShop = null;
+let mykosSelectedDetailMode = 'details';
+const mykosNetworkPeersVisible = new Set();
 let mykosDetailVersion = 0;
 
 function mykosSection(title, rows) {
@@ -1114,7 +1190,7 @@ function mykosSection(title, rows) {
     return section;
 }
 
-async function mykosExpandShop(shop) {
+async function mykosExpandShop(shop, mode = 'details') {
     const tbody = document.getElementById('mykos-os-panes');
     const row = Array.from(tbody.querySelectorAll('tr'))
       .find(r => r.dataset.mykosShop === shop);
@@ -1126,10 +1202,11 @@ async function mykosExpandShop(shop) {
     const version = ++mykosDetailVersion;
 
     const existing = row.nextElementSibling;
-    const reuse = existing?.classList.contains('mykos-detail-row') && existing.dataset.detailShop === shop;
+    const reuse = existing?.classList.contains('mykos-detail-row') && existing.dataset.detailShop === shop && (existing.dataset.detailMode || 'details') === mode;
     const tr = reuse ? existing : document.createElement('tr');
     tr.className = 'mykos-detail-row';
     tr.dataset.detailShop = shop;
+    tr.dataset.detailMode = mode;
 
     const td = document.createElement('td');
     td.colSpan = row.cells.length;
@@ -1139,13 +1216,16 @@ async function mykosExpandShop(shop) {
 
     const title = document.createElement('div');
     title.className = 'mykos-detail-title';
-    title.textContent = 'Shop ' + shop + ' — Details';
+    title.textContent = 'ID ' + shop + (mode === 'network' ? ' — Network' : ' — Details');
 
     const grid = reuse ? tr.querySelector('.mykos-detail-grid') : document.createElement('div');
     grid.className = 'mykos-detail-grid';
     if (!reuse) grid.textContent = 'Loading monitoring information...';
 
     if (!reuse) {
+        // Controls inside an expansion must not reach the legacy tbody row click.
+        tr.addEventListener('click',event=>event.stopPropagation());
+        if (existing?.classList.contains('mykos-detail-row')) existing.remove();
         box.append(title,grid);
         td.append(box);
         tr.append(td);
@@ -1194,6 +1274,43 @@ async function mykosExpandShop(shop) {
             }
         }
 
+        if (mode === 'network') {
+            const topology = extended.vpn_topology || mykosListMemory[shop]?.vpn_topology || {};
+            const links = topology.links || [];
+            const via = topology.via_gateways || [];
+            const reported = vpn.established_connections || [];
+            const fields = mykosSection('Network',[
+                ['IP address', (extended.networks || []).filter(ip=>ip.address).map(ip=>ip.address+(ip.prefix == null?'':'/'+ip.prefix)).join(', ') || mykosNodeIp(mykosNodeFamily({id:shop}),d,extended)],
+                ['Interface', extended.interface || d.interface || 'Unknown'],
+                ['Networks', (extended.networks || d.ips || []).map(ip=>ip.name || ip.network).filter(Boolean).join(', ') || 'Unknown'],
+                ['Gateway', (extended.networks || []).map(ip=>ip.gateway).filter(Boolean).join(', ') || extended.gateway || d.gateway || 'Unknown'],
+                ['Own VPN status', vpnLabel(vpn.status)],
+                ['Shared gateway', via.map(link=>link.gateway==='host'?'MYKOS host':link.gateway).join(', ') || 'None configured'],
+                ['Default tunnel', topology.primary || 'Not selected'],
+                ['Shared full-tunnel SA', via.length ? (via.some(link=>link.full_tunnel_sa===true)?'Confirmed':'Not confirmed') : 'Not configured']
+            ]);
+            const connections = mykosSection('VPN connections', links.length ? links.map(link=>[
+                link.name, link.peer+' · '+link.remote+' · '+
+                (reported.includes(link.name)||reported.includes('mykos-'+link.name) ? 'Established SA' : 'Not confirmed')
+            ]) : [['Connections','None configured']]);
+            if(Object.keys(extended).length) mykosListMemory[shop]={...(mykosListMemory[shop] || {}),...extended};
+            const graph=document.createElement('div');
+            graph.className='mykos-network-topology';
+            const peersLabel=document.createElement('label');
+            const peersToggle=document.createElement('input');peersToggle.type='checkbox';
+            peersToggle.checked=mykosNetworkPeersVisible.has(shop);
+            peersLabel.append(peersToggle,document.createTextNode(' Show connected guests'));
+            const picture=document.createElement('div');
+            const draw=()=>{picture.innerHTML=mykosVpnGraph(shop,mykosNetworkPeersVisible.has(shop));};
+            peersToggle.addEventListener('change',()=>{if(peersToggle.checked)mykosNetworkPeersVisible.add(shop);else mykosNetworkPeersVisible.delete(shop);draw();});
+            draw();graph.append(peersLabel,picture);
+            const legend=document.createElement('p');
+            legend.textContent='Solid green: reported established SA. Dashed grey: not confirmed. Shared-network edges indicate membership, not tested reachability. A site SA alone does not verify full-tunnel internet access.';
+            graph.append(legend);
+            grid.replaceChildren(fields,connections,graph);
+            return;
+        }
+
         grid.replaceChildren(
             mykosSection('Container',[
                 ['Name',d.container || extended.container || 'Unknown'],
@@ -1231,8 +1348,8 @@ async function mykosExpandShop(shop) {
     }
 }
 
-function mykosToggleShop(shop) {
-    if(mykosSelectedShop === shop) {
+function mykosToggleShop(shop, mode = 'details') {
+    if(mykosSelectedShop === shop && mykosSelectedDetailMode === mode) {
         mykosSelectedShop = null;
         mykosDetailVersion++;
         mykosRenderInventory();
@@ -1240,6 +1357,7 @@ function mykosToggleShop(shop) {
     }
 
     mykosSelectedShop = shop;
+    mykosSelectedDetailMode = mode;
     mykosRenderInventory();
     const row = Array.from(document.querySelectorAll('.mykos-container-rows tr'))
        .find(r => r.dataset.mykosShop === shop);
@@ -1537,7 +1655,7 @@ function mykosRenderInventory() {
         if (selected) selected.after(expanded);
     }
     if(mykosSelectedShop)
-        mykosExpandShop(mykosSelectedShop);
+        mykosExpandShop(mykosSelectedShop, mykosSelectedDetailMode);
 
     if (mykosIpsecShop) mykosDrawIpsecPanel();
     mykosRefreshSampleRows();
@@ -1559,6 +1677,8 @@ showNodeDetails = async function(shop) {
 document.getElementById('mykos-os-panes').addEventListener(
     'click',
     function(event) {
+        const networkButton = event.target.closest('.mykos-network-button');
+        if (networkButton) {event.stopImmediatePropagation();mykosToggleShop(networkButton.dataset.shop,'network');return;}
         if (event.target.closest('.mykos-top-button')) return;
         if (event.target.closest('.mykos-add-vpn-button')) return;
         if (event.target.closest(

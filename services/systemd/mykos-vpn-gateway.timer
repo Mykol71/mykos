@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh explicitly configured MYKOS shared VPN gateways
+
+[Timer]
+OnBootSec=20s
+OnUnitInactiveSec=30s
+Unit=mykos-vpn-gateway.service
+
+[Install]
+WantedBy=timers.target

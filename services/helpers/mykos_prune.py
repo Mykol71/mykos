@@ -25,7 +25,7 @@ RUNTIME = [Path('/var/lib/mykos/image-builds'), Path('/var/lib/mykos/image-admin
 STAGING = Path('/var/tmp')
 EXPORTS = [Path('/home/mgreen')]
 TIMERS = ['mykos-collector.timer', 'mykos-details.timer', 'mykos-extended.timer', 'mykos-command-collector.timer']
-SERVICES = ['mykos-web.service', 'mykos-container-admin.socket', 'mykos-terminal.socket',
+SERVICES = ['mykos-vpn-gateway-guard.service','mykos-vpn-gateway.timer','mykos-vpn-gateway.service','mykos-web.service', 'mykos-container-admin.socket', 'mykos-terminal.socket',
             'mykos-collector.service', 'mykos-details.service', 'mykos-extended.service',
             'mykos-command-collector.service', 'mykos-image-remove-*.service', 'mykos-image-reset-*.service', 'mykos-image-build@*.service', 'mykos-stage@*.service', 'mykos-command@*.service',
             'mykos-container-admin@*.service', 'mykos-terminal@*.service']
@@ -270,6 +270,8 @@ def execute():
             cancel_builders()
             with vm.locked():
                 preview = plan(); paths = [Path(p) for p in preview['remove_paths']]
+                from mykos_vpn_gateway import clear_all
+                clear_all()
                 # Official reset removes all containers, images, volumes, networks,
                 # build cache and Podman graph/run roots. Never manually rm graphRoot.
                 run([vm.PODMAN, 'system', 'reset', '--force'], timeout=1800)

@@ -42,3 +42,74 @@ settings is rejected rather than overwritten. New peers do not reuse a fixed pee
 ID. API headers and downloaded configuration use private temporary files which
 are removed when the operation ends. Avoid simultaneous changes in Dashboard or
 other API clients during an update: this endpoint replaces the complete peer list.
+
+## VPN modes and persistence
+
+New native Linux VPN setup offers independent guest tunnels or one shared default
+gateway. Independent mode supports multiple distinct remote site subnets, multiple
+guests to one site, and one remote site per guest. The first successfully connected
+tunnel owns that guest's default traffic. IKEv2 liveness checks run every 30 seconds with a 45-second retransmit timeout;
+host fallback waits until the local full-tunnel SA is actually removed, rather
+than assuming a peer is down from one lost packet. Rekeying does not change ownership; when
+the primary connection is removed, the earliest remaining established connection
+is promoted. Internet traffic and non-loopback DNS use that selected full tunnel.
+The DNS resolver is `8.8.8.8`. Generated configurations explicitly use `pfs=no` to match the existing Meraki
+child-SA policy. Default stanzas are rendered independently because overriding
+`also=` values is rejected by the tested Libreswan 4.x parser. See the
+[Libreswan configuration reference](https://libreswan.org/man/ipsec.conf.5.html).
+A separate default CHILD_SA uses `0.0.0.0/0`; a site
+SA alone is not evidence of working full-tunnel internet access.
+
+Shared mode supports either the MYKOS host or one native Linux guest as gateway.
+It routes all MYKOS guest types through that gateway and routes host internet
+traffic through it only after a matching full-tunnel SA is confirmed. Local host
+management replies and outer IKE/NAT-T/ESP transport are exempt. During an outage,
+protected guest traffic remains blocked; ordinary host WAN internet is restored.
+Only one shared default gateway may be selected. Combining this mode with other
+independent VPN configurations is currently rejected before local setup or a
+Meraki upload; existing tunnels are left unchanged.
+
+The existing customer `pos/.ID` folder remains mounted read/write at guest
+`/etc/ipsec.d`. Connection, secret, numeric endpoint, reconnect hook and default
+ownership/order files live there. Native setup checks the running guest's mount
+identity and required executables from a fixed host Python process, without
+executing guest code. The actual systemd reload/enable still runs inside the guest.
+Missing dependencies fail before the optional Meraki upload. Existing global
+IPsec configuration is preserved, with narrow include globs appended and a private
+backup before the first change. Secrets remain in mode-0600 per-connection files.
+
+The shared controller stores root-only profiles under
+`/var/lib/mykos/vpn-gateways`. Its boot guard protects configured guest routes
+before Podman automatic restart; its timer reconciles only explicitly configured
+profiles. Installing/updating MYKOS does not select a gateway, rewrite existing
+VPNs or enable these optional units. Removing the last profile disables the timer
+and guard. Uninstall deactivates owned routing/firewall changes while retaining
+operator profiles; explicit container-state purge removes profiles too.
+
+The IP address expansion shows network metadata, VPN connections and an icon
+map. **Show connected guests** adds shared-network members and gateway dependents.
+Green links require reported SA state; grey/dashed links are unconfirmed. A network
+membership edge does not prove connectivity. Read models use saved host metadata
+and cached kernel observations, never PSKs or extra guest polling.
+
+Ubuntu-specific new VPN/shared-folder work is deferred. Its released VM creation,
+RAM capture and existing individual VPN paths are unchanged. Shared host/native
+routing can still carry traffic from its wrapper, as for Windows and macOS.
+
+### Meraki update checks
+
+The chosen remote public endpoint must uniquely identify one network in the
+configured Meraki organization. New peers are restricted to that network; MYKOS
+does not fall back to all networks. Network-ID binding and route-based peer settings
+require MX 19.1 or newer. See Cisco's
+[third-party VPN peer API](https://developer.cisco.com/meraki/api-v1/update-organization-appliance-vpn-third-party-vpn-peers/).
+
+MYKOS downloads and preserves the complete peer list, rechecks for concurrent
+changes immediately before PUT, and verifies the returned public peer settings.
+An invalid/unverifiable response aborts local configuration and activation; an
+ambiguous remote result must be checked in Dashboard before retrying. There is
+no atomic compare-and-swap provided by this workflow, so avoid simultaneous
+Dashboard/API edits even with that recheck. No whole-organization rollback or blind
+retry is attempted. Router-side internet forwarding/NAT and actual MX negotiation
+still need validation for the selected site; local SA state alone does not prove
+remote internet egress.

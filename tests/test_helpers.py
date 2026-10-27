@@ -274,7 +274,9 @@ def test_add_vpn_rejects_invalid_inputs_before_commands(tmp_path, name, public, 
     import subprocess
     source = (HELPERS.parents[1]/'pos/pos').read_text()
     function = source[source.index('add_vpn() {'):source.index('\nrm_vpn() {')]
-    script = function + '\nVPN_PSK=test; SHOPCODE=01234567; CONTAINER=01234567.example\ncurl() { echo unexpected-command; }; podman() { echo unexpected-command; }; add_vpn\n'
+    function=function.replace('/usr/local/sbin/mykos-vpn-gateway','mykos_gateway')
+    function='mykos_gateway() { return 0; }\n'+function
+    script = 'MYKOS_PYTHON='+sys.executable+'\n'+function + '\nVPN_PSK=test; SHOPCODE=01234567; CONTAINER=01234567.example\ncurl() { echo unexpected-command; }; podman() { echo unexpected-command; }; add_vpn\n'
     result = subprocess.run(['bash', '-c', script], cwd=tmp_path,
                             input=name+'\n'+public+'\n'+network+'\n', text=True, capture_output=True)
     assert result.returncode != 0
@@ -287,7 +289,14 @@ def test_add_vpn_function_creates_configuration_in_isolated_directory(tmp_path, 
     import subprocess
     source = (HELPERS.parents[1]/'pos/pos').read_text()
     function = source[source.index('add_vpn() {'):source.index('\nrm_vpn() {')]
+    function=function.replace('/usr/local/sbin/mykos-vpn-gateway','mykos_gateway')
+    function='mykos_gateway() { return 0; }\n'+function
+    (tmp_path/'host-vpn').write_bytes((HELPERS.parents[1]/'pos/host-vpn').read_bytes())
+    (tmp_path/'vpn-updown').write_bytes((HELPERS.parents[1]/'pos/vpn-updown').read_bytes())
+    function=function.replace('/usr/local/sbin/mykos-linux','mykos_linux')
     script = 'MYKOS_PYTHON='+sys.executable+'\n'+function + '''
+hostname() { echo example; }
+mykos_linux() { echo 192.168.22.134; }
 VPN_PSK=test-only-secret; SHOPCODE=01234567; CONTAINER=01234567.example
 curl() { echo 203.0.113.20; }
 podman() { [ "$1" != inspect ] || echo 192.168.22.134; }
@@ -295,17 +304,17 @@ update_meraki() { echo unexpected-meraki; return 1; }
 add_vpn
 '''
     result = subprocess.run(['bash', '-c', script], cwd=tmp_path,
-        input='test-peer\nvpn.example.com\n10.1.2.0\n'+secret+'\ny\nn\n', text=True, capture_output=True)
+        input='test-peer\n203.0.113.20\n10.1.2.0\n1\n'+secret+'\ny\nn\n', text=True, capture_output=True)
     assert result.returncode == 0, result.stderr
     conf = (tmp_path/'.01234567/test-peer.conn.conf').read_text()
-    assert 'conn test-peer' in conf and 'right=vpn.example.com' in conf
-    assert 'rightsubnet="10.1.2.0/24"' in conf
-    assert 'leftsubnet="192.168.22.134/32"' in conf
+    assert 'conn test-peer' in conf and 'right=203.0.113.20' in conf
+    assert 'rightsubnet=10.1.2.0/24' in conf
+    assert 'leftsubnet=192.168.22.134/32' in conf
     assert 'Private Subnets: 192.168.22.134/32' in result.stdout
-    assert (tmp_path/'.01234567/ipsec.secrets').stat().st_mode & 0o777 == 0o600
+    assert (tmp_path/'.01234567/test-peer.secrets').stat().st_mode & 0o777 == 0o600
     assert 'unexpected-meraki' not in result.stdout
     escaped = secret.replace('\\', '\\\\').replace('"', '\\"')
-    assert (tmp_path/'.01234567/ipsec.secrets').read_text() == '192.168.222.0 192.168.222.0 : PSK "'+escaped+'"\n'
+    assert (tmp_path/'.01234567/test-peer.secrets').read_text() == '@01234567.example 203.0.113.20 : PSK "'+escaped+'"\n'
     assert secret not in result.stdout
     assert not (tmp_path/'injected').exists()
 
@@ -314,26 +323,30 @@ def test_add_vpn_requires_entered_psk_before_commands(tmp_path):
     import subprocess
     source = (HELPERS.parents[1]/'pos/pos').read_text()
     function = source[source.index('add_vpn() {'):source.index('\nrm_vpn() {')]
-    script = function + '\nVPN_PSK=old-environment-value; SHOPCODE=01234567; CONTAINER=01234567.example\ncurl() { echo unexpected-command; }; podman() { echo unexpected-command; }; add_vpn\n'
+    function=function.replace('/usr/local/sbin/mykos-vpn-gateway','mykos_gateway')
+    function='mykos_gateway() { return 0; }\n'+function
+    script = 'MYKOS_PYTHON='+sys.executable+'\n'+function + '\nVPN_PSK=old-environment-value; SHOPCODE=01234567; CONTAINER=01234567.example\ncurl() { echo unexpected-command; }; podman() { echo unexpected-command; }; add_vpn\n'
     result = subprocess.run(['bash', '-c', script], cwd=tmp_path,
-        input='test-peer\nvpn.example.com\n10.1.2.0\n\n', text=True, capture_output=True)
+        input='test-peer\n203.0.113.20\n10.1.2.0\n1\n\n', text=True, capture_output=True)
     assert result.returncode != 0
     assert 'shared secret cannot be empty' in result.stdout
     assert 'unexpected-command' not in result.stdout
     assert not list(tmp_path.iterdir())
 
 
-def run_meraki(tmp_path,existing,*,get_failure=False,put_failure=False):
+def run_meraki(tmp_path,existing,*,get_failure=False,put_failure=False,put_response=None,changed_config=False):
     import json,os,subprocess
     source=(HELPERS.parents[1]/'pos/pos').read_text()
     function=source[source.index('update_meraki() {'):source.index('\nlist_vpns() {')]
     secret = '''quotes"slashes\\and'$(touch injected)'''
     script=function+'''
 curl() {
-  local method output payload
+  local method output payload headers url
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --request) method="$2"; shift ;;
+      --dump-header) headers="$2"; shift ;;
+      --url) url="$2"; shift ;;
       --output) output="$2"; shift ;;
       --data-binary) payload="${2#@}"; shift ;;
     esac
@@ -342,19 +355,26 @@ curl() {
   echo "$method" >> calls
   if [ "$method" = GET ]; then
     [ "$GET_FAILURE" = 1 ] && return 22
-    printf '%s' "$EXISTING_PEERS" > "$output"
+    if [ -n "$headers" ]; then printf 'HTTP/1.1 200 OK\\r\\n\\r\\n' > "$headers"; fi
+    if [[ "$url" = *uplink/statuses* ]]; then
+      printf '%s' '[{"networkId":"N_test","uplinks":[{"publicIp":"203.0.113.1"}]}]' > "$output"
+    else
+      config_reads=$(( ${config_reads:-0}+1 ))
+      if [ "$CHANGED_CONFIG" = 1 ] && [ "$config_reads" -gt 1 ]; then printf '%s' '{"peers":[{"name":"concurrent-change"}]}' > "$output"
+      else printf '%s' "$EXISTING_PEERS" > "$output"; fi
+    fi
   else
     cp "$payload" request.json
     [ "$PUT_FAILURE" = 1 ] && return 22
-    printf '{}' > "$output"
+    if [ -n "$PUT_RESPONSE" ]; then printf '%s' "$PUT_RESPONSE" > "$output"; else cp "$payload" "$output"; fi
   fi
 }
 update_meraki
 '''
     result=subprocess.run(['bash','-c',script],cwd=tmp_path,text=True,capture_output=True,
         env={**os.environ,'MYKOS_PYTHON':sys.executable,'VPN_PSK':secret,'MERAKI_API_KEY':'test','MERAKI_ORG_ID':'123',
-             'REMOTE_NAME':'peer','PUBLIC':'203.0.113.20','VPN_LOCAL_CIDR':'192.168.22.134/32','TMPDIR':str(tmp_path),
-             'EXISTING_PEERS':existing,'GET_FAILURE':str(int(get_failure)),'PUT_FAILURE':str(int(put_failure))})
+             'REMOTE_NAME':'peer','REMOTE_PUBLIC':'203.0.113.1','PUBLIC':'203.0.113.20','VPN_LOCAL_CIDR':'192.168.22.134/32','TMPDIR':str(tmp_path),
+             'EXISTING_PEERS':existing,'GET_FAILURE':str(int(get_failure)),'PUT_FAILURE':str(int(put_failure)),'PUT_RESPONSE':put_response or '', 'CHANGED_CONFIG':str(int(changed_config))})
     assert not list(tmp_path.glob('mykos-meraki.*')), 'Private API configuration must be cleaned up'
     assert secret not in result.stdout+result.stderr
     assert not (tmp_path/'injected').exists()
@@ -371,7 +391,7 @@ def test_meraki_psk_is_serialized_as_data_and_existing_peers_preserved(tmp_path)
     assert peers[0]==existing and len(peers)==2
     assert peers[1]['secret']=='''quotes"slashes\\and'$(touch injected)'''
     assert 'peerId' not in peers[1]
-    assert (tmp_path/'calls').read_text().splitlines()==['GET','PUT']
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET','PUT']
 
 
 @pytest.mark.parametrize('existing,get_failure',[('bad-json',False),('{}',False),('{"peers":null}',False),('{"peers":[null]}',False),('{"peers":[]}',True)])
@@ -387,18 +407,18 @@ def test_meraki_identical_peer_is_noop_and_conflicting_name_is_not_overwritten(t
     first=run_meraki(tmp_path,'{"peers":[]}');assert first.returncode==0
     existing=(tmp_path/'request.json').read_text();(tmp_path/'calls').unlink();(tmp_path/'request.json').unlink()
     same=run_meraki(tmp_path,existing);assert same.returncode==0
-    assert (tmp_path/'calls').read_text().splitlines()==['GET']
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET']
     assert not (tmp_path/'request.json').exists()
     value=json.loads(existing);value['peers'][0]['publicIp']='203.0.113.99';(tmp_path/'calls').unlink()
     conflict=run_meraki(tmp_path,json.dumps(value));assert conflict.returncode!=0
-    assert (tmp_path/'calls').read_text().splitlines()==['GET']
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET']
     assert not (tmp_path/'request.json').exists()
 
 
 def test_meraki_failed_put_is_reported_and_private_config_cleaned(tmp_path):
     result=run_meraki(tmp_path,'{"peers":[]}',put_failure=True)
     assert result.returncode!=0
-    assert (tmp_path/'calls').read_text().splitlines()==['GET','PUT']
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET','PUT']
     assert 'Done' not in result.stdout
 
 
@@ -514,6 +534,8 @@ def test_host_add_vpn_reuses_container_workflow_without_container_commands(tmp_p
     import subprocess
     source=(HELPERS.parents[1]/'pos/pos').read_text()
     function=source[source.index('add_vpn() {'):source.index('\nrm_vpn() {')]
+    function=function.replace('/usr/local/sbin/mykos-vpn-gateway','mykos_gateway')
+    function='mykos_gateway() { return 0; }\n'+function
     function=function.replace('/usr/sbin/ipsec','ipsec')
     etc=tmp_path/'etc';directory=etc/'ipsec.d';directory.mkdir(parents=True)
     (etc/'ipsec.conf').write_text('include '+str(directory/'*.conf')+'\n')
@@ -530,7 +552,7 @@ add_vpn
 '''
     secret='test"and\\secret'
     result=subprocess.run(['bash','-c',script],cwd=tmp_path,
-        input='branch\nvpn.example.com\n10.1.0.0\n'+secret+'\ny\n'+push+'\n',text=True,capture_output=True,
+        input='branch\nvpn.example.com\n10.1.0.0\n1\n'+secret+'\ny\n'+push+'\n',text=True,capture_output=True,
         env={**__import__('os').environ, 'MYKOS_PYTHON':sys.executable})
     assert result.returncode==0,result.stderr
     assert 'Enter REMOTE_NAME: ' in result.stdout and 'Enter REMOTE_NET: ' in result.stdout
@@ -551,14 +573,16 @@ def test_host_add_vpn_cancel_makes_no_configuration_or_command_calls(tmp_path):
     import subprocess
     source=(HELPERS.parents[1]/'pos/pos').read_text()
     function=source[source.index('add_vpn() {'):source.index('\nrm_vpn() {')]
-    script=function+'''
+    function=function.replace('/usr/local/sbin/mykos-vpn-gateway','mykos_gateway')
+    function='mykos_gateway() { return 0; }\n'+function
+    script='MYKOS_PYTHON='+sys.executable+'\n'+function+'''
 MYKOS_VPN_HOST=1
 curl() { echo 203.0.113.20; }
 podman() { echo unexpected-container-command; }
 python3() { echo unexpected-save; }
 add_vpn
 '''
-    result=subprocess.run(['bash','-c',script],cwd=tmp_path,input='branch\nvpn.example.com\n10.1.0.0\ntest-secret\nn\n',text=True,capture_output=True)
+    result=subprocess.run(['bash','-c',script],cwd=tmp_path,input='branch\nvpn.example.com\n10.1.0.0\n1\ntest-secret\nn\n',text=True,capture_output=True)
     assert result.returncode==0 and 'unexpected-' not in result.stdout
     assert not list(tmp_path.iterdir())
 
@@ -668,3 +692,59 @@ exit "$status"
     args=log.read_text().split()
     assert args[:3]==['-n','1','-p'] and args[3]!=args[4], 'Only the build subprocess is reniced'
     assert 'unexpected-preflight' not in result.stderr
+
+@pytest.mark.parametrize('failure',[1,22,28])
+def test_selected_meraki_failure_does_not_create_or_activate_local_tunnel(tmp_path,failure):
+    import subprocess
+    source=(HELPERS.parents[1]/'pos/pos').read_text()
+    function=source[source.index('add_vpn() {'):source.index('\nrm_vpn() {')]
+    function=function.replace('/usr/local/sbin/mykos-vpn-gateway','mykos_gateway')
+    function='mykos_gateway() { return 0; }\n'+function
+    function=function.replace('/usr/local/sbin/mykos-linux','mykos_linux')
+    script='MYKOS_PYTHON='+sys.executable+'\n'+function+'''
+hostname() { echo host; }
+mykos_linux() { echo 192.168.22.3; }
+curl() { echo 203.0.113.20; }
+podman() { if [ "$1" = inspect ]; then echo 192.168.22.3; else echo mutation >> unexpected; fi; }
+update_meraki() { return '''+str(failure)+'''; }
+SHOPCODE=12345678;CONTAINER=12345678.host
+add_vpn
+'''
+    result=subprocess.run(['bash','-c',script],cwd=tmp_path,text=True,capture_output=True,
+        input='office\n203.0.113.1\n10.77.0.0/24\n1\nprivate-test-secret\ny\ny\n')
+    assert result.returncode!=0
+    assert not list(tmp_path.iterdir()),'Failed selected upload must not create any local VPN state or activate services'
+
+
+@pytest.mark.parametrize('response',['bad-json','{}','{"peers":[]}'])
+def test_meraki_unverified_success_never_reports_done(tmp_path,response):
+    result=run_meraki(tmp_path,'{"peers":[]}',put_response=response)
+    assert result.returncode!=0 and 'Done' not in result.stdout
+    assert 'local VPN remains unchanged' in result.stderr
+
+
+def test_meraki_concurrent_config_change_aborts_before_put(tmp_path):
+    result=run_meraki(tmp_path,'{"peers":[]}',changed_config=True)
+    assert result.returncode!=0
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET']
+    assert not (tmp_path/'request.json').exists()
+
+
+def test_default_tunnel_renders_valid_independent_connection(tmp_path):
+    import runpy,re
+    workflow=runpy.run_path(str(HELPERS.parents[1]/'pos/host-vpn'))
+    directory=tmp_path/'ipsec.d';directory.mkdir()
+    workflow['save_connection'](tmp_path,'office','127.0.0.1','192.168.22.2/32','10.77.0.0/24','private-test',
+        native_directory=directory,local_id='guest.test',remote_id='127.0.0.1',full_tunnel_hook='#!/bin/bash\nexit 0\n')
+    sections=re.split(r'^conn\s+', (directory/'office.conn.conf').read_text(),flags=re.M)[1:]
+    assert len(sections)==2
+    parsed=[]
+    for section in sections:
+        pairs=re.findall(r'^\s+([A-Za-z0-9_-]+)=(.*)$',section,re.M)
+        assert len({k for k,v in pairs})==len(pairs),'Duplicate Libreswan keys reject the connection'
+        values=dict(pairs);assert 'also' not in values;parsed.append(values)
+    assert parsed[0]['rightsubnet']=='10.77.0.0/24' and parsed[1]['rightsubnet']=='0.0.0.0/0'
+    assert parsed[1]['leftupdown']=='/bin/true' and parsed[1]['auto']=='ignore'
+    assert parsed[0]['pfs']=='no','Match the Meraki childPfsGroup disabled policy'
+    for field in ('left','leftid','leftsubnet','right','rightid','ike','esp','authby','encapsulation','pfs','dpddelay','retransmit-timeout'):
+        assert parsed[0][field]==parsed[1][field]

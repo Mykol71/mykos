@@ -90,3 +90,28 @@ def test_static_pool_excludes_gateway_and_broadcast(monkeypatch):
 def test_subnet_route_overlap_rejected(monkeypatch):
     monkeypatch.setattr(network,'run',lambda *a,**k:'[{"dst":"192.168.22.0/24"}]')
     with pytest.raises(ValueError,match='overlaps'):network.check_routes(network.address_pool({}))
+
+
+@pytest.mark.parametrize('driver',['bridge','macvlan'])
+def test_native_interface_owned_by_podman_before_guest_boot(monkeypatch,driver):
+    monkeypatch.setattr(network,'arguments',lambda settings,name:['--network','mykos-lan'])
+    args=network.native_arguments({'native_network_driver':driver},'12345678.host')
+    source=Path(network.__file__).with_name('mykos-podman-nm.conf')
+    assert args[:2]==['--network','mykos-lan']
+    mount=args[args.index('--mount')+1]
+    assert 'source='+str(source) in mount
+    assert 'destination=/etc/NetworkManager/conf.d/90-mykos-podman.conf' in mount
+    assert mount.endswith(',ro=true')
+    import configparser
+    config=configparser.ConfigParser();config.read(source)
+    assert config['device-mykos-podman']['match-device']=='interface-name:eth0'
+    assert config['device-mykos-podman']['managed']=='0'
+    # A VM's outer container must not inherit a guest NetworkManager policy.
+    assert '--mount' not in network.arguments({},'ubuntu22.04')
+
+
+def test_native_launch_paths_use_ownership_guard():
+    helper=Path(network.__file__).parent
+    assert 'network.native_arguments(' in (helper/'mykos-stage-pos').read_text()
+    assert 'native_arguments as arguments' in (helper/'mykos-native-image-start').read_text()
+    assert 'network.arguments(' in (helper/'mykos_vm.py').read_text()

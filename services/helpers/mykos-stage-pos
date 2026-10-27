@@ -24,7 +24,8 @@ def _stage(shop, restore, image=None):
     image=image if image is not None else cfg.get('stage_image')
     if not isinstance(image,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9./_:@-]*',image):
         raise ValueError('Configure stage_image to a locally prepared OS image')
-    network_args=network.arguments(cfg,shop+'.'+socket.gethostname())
+    # Restored /etc already has its own persistent interface-ownership file.
+    network_args=(network.arguments(cfg,shop+'.'+socket.gethostname()) if restore=='yes' else network.native_arguments(cfg,shop+'.'+socket.gethostname()))
     if any(x['shop']==shop for x in containers()): raise ValueError('Container already exists')
     run([PODMAN,'image','exists',image])
     vpn=Path('/usr/local/share/mykos/pos/.'+shop)

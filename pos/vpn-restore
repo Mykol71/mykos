@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+# Runs before Pluto starts; configuration is the customer's persistent bind.
+set -eu
+cd /etc/ipsec.d
+for hook in *.updown; do
+  [ -f "$hook" ] && [ ! -L "$hook" ] && [ -x "$hook" ] || continue
+  exec "./$hook" --restore
+done

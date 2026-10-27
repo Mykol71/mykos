@@ -109,6 +109,8 @@ def selection(shop, confirmation, expected_id=None):
 def delete(shop, confirmation, expected_id=None):
     with vm.locked():
         item = selection(shop, confirmation, expected_id)
+        from mykos_vpn_gateway import require_unreferenced
+        require_unreferenced(shop)
         cid = item['container_id']
         state = item['state']
         if state.get('State', {}).get('Running'):

@@ -2,16 +2,20 @@
 """Start or stop a native Linux container without deleting its writable data."""
 import argparse
 import json
-from mykos_linux import start, stop, inspect
+from mykos_linux import start, stop, inspect, prepare_vpn, vpn_preflight
 import mykos_host_monitoring as host
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=['start','stop','toggle','ip','vpn'])
+    parser.add_argument('action',choices=['start','stop','toggle','ip','vpn','prepare-vpn','vpn-preflight'])
     parser.add_argument('code')
     args=parser.parse_args()
     try:
         action=args.action
+        if action=='vpn-preflight':
+            print(json.dumps(vpn_preflight(args.code)));raise SystemExit(0)
+        if action=='prepare-vpn':
+            print(json.dumps(prepare_vpn(args.code)));raise SystemExit(0)
         if action in ('ip','vpn'):
             state=inspect(args.code)[1]
             print(host.network(state).get('ipv4') or 'Unknown' if action=='ip' else json.dumps(host.query_vpn(state)))

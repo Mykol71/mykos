@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import re
+import sys
 import tempfile
 
 import mykos_vm as vm
@@ -55,6 +56,90 @@ def remember(shop,name,state):
         except RuntimeError:pass
     save(shop,value)
     return value
+
+
+def vpn_preflight(shop):
+    """Inspect dependencies in a host Python child; never execute guest code."""
+    shopcode(shop)
+    name,state=inspect(shop)
+    if not state.get('State',{}).get('Running'):raise ValueError('Start this container first')
+    expected=(vm.POS/('.'+shop)).resolve()
+    mounts=[m for m in state.get('Mounts',[]) if m.get('Destination')=='/etc/ipsec.d']
+    if len(mounts)!=1 or Path(mounts[0].get('Source','')).resolve()!=expected or not mounts[0].get('RW'):
+        raise ValueError('VPN requires the customer folder mounted read-write at /etc/ipsec.d')
+    pid=int(state['State']['Pid']);root=Path('/proc')/str(pid)/'root'
+    mounted=(root/'etc/ipsec.d').stat();source=expected.stat()
+    if (mounted.st_dev,mounted.st_ino)!=(source.st_dev,source.st_ino):raise ValueError('Customer VPN mount identity does not match the guest')
+    # chroot resolves absolute guest symlinks correctly, including alternatives.
+    # Only this fixed host-interpreter code runs; it starts no guest processes.
+    script="""import os,json,stat,sys
+os.chroot(sys.argv[1]);os.chdir('/')
+paths={'ipsec':('/usr/sbin/ipsec','/sbin/ipsec'),'iptables':('/usr/sbin/iptables','/sbin/iptables'),
+       'ip6tables':('/usr/sbin/ip6tables','/sbin/ip6tables'),'flock':('/usr/bin/flock','/bin/flock'),
+       'setsid':('/usr/bin/setsid','/bin/setsid'),'timeout':('/usr/bin/timeout','/bin/timeout'),'systemctl':('/usr/bin/systemctl','/bin/systemctl')}
+for path in ('/etc/ipsec.conf','/etc/ipsec.secrets'):
+ if os.path.lexists(path) and (os.path.islink(path) or not os.path.isfile(path)):raise SystemExit('VPN include must be a regular file: '+path)
+missing=[name for name,choices in paths.items() if not any(os.path.isfile(p) and os.access(p,os.X_OK) for p in choices)]
+print(json.dumps(missing))
+"""
+    missing=json.loads(run([sys.executable,'-c',script,str(root)],timeout=10))
+    current=inspect(shop)[1]
+    if current['Id']!=state['Id'] or current.get('State',{}).get('Pid')!=pid:raise ValueError('Container changed during VPN preflight')
+    if missing:raise ValueError('Install VPN dependencies in this Linux image first: '+', '.join(missing))
+    return {'shop':shop,'state':'vpn_ready'}
+
+
+def prepare_vpn(shop):
+    with vm.locked():
+        return _prepare_vpn(shop)
+
+
+def _prepare_vpn(shop):
+    """Install boot reconnect support only for the existing customer bind mount."""
+    shopcode(shop)
+    name,state=inspect(shop)
+    if not state.get('State',{}).get('Running'):raise ValueError('Start this container first')
+    vpn_preflight(shop)
+    expected=vm.POS/('.'+shop)
+    mounts=[m for m in state.get('Mounts',[]) if m.get('Destination')=='/etc/ipsec.d']
+    if len(mounts)!=1 or Path(mounts[0].get('Source',''))!=expected or not mounts[0].get('RW'):
+        raise ValueError('VPN requires this customer folder mounted read-write at /etc/ipsec.d; existing container left unchanged')
+    # Installation occurs only after optional Meraki upload succeeds. Files contain
+    # no secrets; the customer directory remains the sole configuration source.
+    restore=vm.POS/'vpn-restore'
+    if restore.is_symlink() or not restore.is_file():raise ValueError('Missing VPN boot restore helper')
+    unit='[Service]\nExecStartPre=/usr/local/sbin/mykos-vpn-restore\n'
+    setup="""import os,json,pathlib,stat,sys,tempfile
+root,helper,unit,device,inode=sys.argv[1:]
+os.chroot(root);os.chdir('/')
+mounted=os.stat('/etc/ipsec.d')
+if (mounted.st_dev,mounted.st_ino)!=(int(device),int(inode)):raise ValueError('VPN mount changed; no files written')
+for filename,line in [('ipsec.conf','include /etc/ipsec.d/*.conn.conf'),('ipsec.secrets','include /etc/ipsec.d/*.secrets')]:
+ p=pathlib.Path('/etc')/filename
+ if p.is_symlink() or (p.exists() and not p.is_file()):raise ValueError('Unsafe IPsec include destination')
+ old=p.read_text() if p.exists() else ''
+ if line not in old.splitlines():
+  if p.exists():
+   backup=p.with_name(filename+'.mykos-before-include')
+   if backup.is_symlink():raise ValueError('Unsafe IPsec include backup')
+   if not backup.exists():
+    fd=os.open(backup,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    with os.fdopen(fd,'w') as h:h.write(old)
+  fd,tmp=tempfile.mkstemp(prefix='.mykos-include-',dir='/etc')
+  with os.fdopen(fd,'w') as h:h.write(old+('' if not old or old.endswith('\\n') else '\\n')+line+'\\n')
+  os.chmod(tmp,0o600);os.replace(tmp,p)
+for rel,text,mode in [('usr/local/sbin/mykos-vpn-restore',helper,0o755),('etc/systemd/system/ipsec.service.d/mykos-reconnect.conf',unit,0o644)]:
+ p=pathlib.Path('/')/rel
+ if p.is_symlink():raise ValueError('Unsafe VPN boot destination')
+ p.parent.mkdir(parents=True,exist_ok=True)
+ fd,tmp=tempfile.mkstemp(prefix='.mykos-vpn-',dir=str(p.parent))
+ with os.fdopen(fd,'w') as h:h.write(text)
+ os.chmod(tmp,mode);os.replace(tmp,p)
+"""
+    run([sys.executable,'-c',setup,str(Path('/proc')/str(int(state['State']['Pid']))/'root'),restore.read_text(),unit,str(expected.stat().st_dev),str(expected.stat().st_ino)],timeout=15)
+    run([PODMAN,'exec',name,'systemctl','daemon-reload'],timeout=15)
+    run([PODMAN,'exec',name,'systemctl','enable','ipsec'],timeout=15)
+    return {'shop':shop,'state':'vpn_boot_ready'}
 
 
 def start(shop):

@@ -245,8 +245,51 @@ endpoint="https://api.meraki.com/api/v1/organizations/$MERAKI_ORG_ID/appliance/v
 echo "Downloading existing Meraki site-to-site peers...."
 curl --fail --silent --show-error --connect-timeout 15 --max-time 60 \
   --request GET --url "$endpoint" --header "@$work/headers" --output "$work/existing.json" || exit 1
+"$MYKOS_PYTHON" - "$work/existing.json" <<'VALIDATE_PY' || exit 1
+import json,sys
+try:
+ v=json.load(open(sys.argv[1]))
+ if not isinstance(v,dict) or not isinstance(v.get('peers'),list) or not all(isinstance(p,dict) for p in v['peers']):raise ValueError()
+except (ValueError,OSError):raise SystemExit('Cannot read existing Meraki peers; configuration was not changed')
+VALIDATE_PY
+# Resolve the remote MX to one network in this organization; never fall back to all networks.
+local next_url page=0 selected_network
+next_url="https://api.meraki.com/api/v1/organizations/$MERAKI_ORG_ID/appliance/uplink/statuses?perPage=1000"
+while [ -n "$next_url" ]; do
+  page=$((page+1)); [ "$page" -le 100 ] || { echo 'Too many Meraki inventory pages'; exit 1; }
+  curl --fail --silent --show-error --connect-timeout 15 --max-time 60 --request GET \
+    --url "$next_url" --header "@$work/headers" --dump-header "$work/page.headers" --output "$work/sites-$page.json" || exit 1
+  next_url=$("$MYKOS_PYTHON" - "$work/page.headers" "$MERAKI_ORG_ID" <<'PAGE_PY'
+import re,sys,urllib.parse
+text=open(sys.argv[1]).read()
+links=re.findall(r'<([^>]+)>;\s*rel="?next"?',text,re.I)
+if len(links)>1:raise SystemExit('Ambiguous Meraki pagination')
+if links:
+ u=urllib.parse.urlsplit(links[0])
+ if u.scheme!='https' or u.netloc!='api.meraki.com' or u.path!='/api/v1/organizations/'+sys.argv[2]+'/appliance/uplink/statuses':
+  raise SystemExit('Unexpected Meraki pagination URL')
+ print(links[0])
+PAGE_PY
+) || exit 1
+done
+selected_network=$("$MYKOS_PYTHON" - "$work" "$REMOTE_PUBLIC" <<'SITE_PY'
+import ipaddress,json,pathlib,socket,sys
+try:
+ addresses={a[4][0] for a in socket.getaddrinfo(sys.argv[2],None,socket.AF_INET)}
+ rows=[]
+ for p in pathlib.Path(sys.argv[1]).glob('sites-*.json'):
+  value=json.loads(p.read_text())
+  if not isinstance(value,list) or not all(isinstance(x,dict) for x in value):raise ValueError()
+  rows+=value
+ matches={r['networkId'] for r in rows if isinstance(r.get('networkId'),str) and any(u.get('publicIp') in addresses or u.get('ip') in addresses for u in r.get('uplinks',[]) if isinstance(u,dict))}
+ if len(matches)!=1:raise ValueError()
+ print(next(iter(matches)))
+except (OSError,ValueError,KeyError):
+ raise SystemExit('Could not uniquely match the remote Meraki site in this organization; no VPN peers were changed')
+SITE_PY
+) || exit 1
 # Preserve the complete downloaded peer list. Never PUT an empty fallback on GET/JSON failure.
-VPN_PSK="$VPN_PSK" REMOTE_NAME="$REMOTE_NAME" VPN_LOCAL_CIDR="$VPN_LOCAL_CIDR" PUBLIC="$PUBLIC" "$MYKOS_PYTHON" - "$work/existing.json" "$work/payload.json" <<'JSON_PY'
+MERAKI_ROUTE_BASED="${VPN_ROUTE_BASED:-0}" VPN_PSK="$VPN_PSK" REMOTE_NAME="$REMOTE_NAME" VPN_LOCAL_CIDR="$VPN_LOCAL_CIDR" PUBLIC="$PUBLIC" MERAKI_NETWORK_ID="$selected_network" MERAKI_PEER_NAME="${SHOPCODE:+$SHOPCODE.}$REMOTE_NAME" VPN_LOCAL_ID="${VPN_LOCAL_ID:-192.168.222.0}" VPN_REMOTE_ID="${VPN_REMOTE_ID:-192.168.222.0}" "$MYKOS_PYTHON" - "$work/existing.json" "$work/payload.json" <<'JSON_PY'
 import json, os, sys
 try:
     with open(sys.argv[1]) as handle: current=json.load(handle)
@@ -255,17 +298,16 @@ try:
 except (ValueError,OSError):
     raise SystemExit('Cannot read existing Meraki peers; configuration was not changed')
 peer = {
-    "name": os.environ["REMOTE_NAME"],
+    "name": os.environ["MERAKI_PEER_NAME"],
     "ikeVersion": "2", "secret": os.environ["VPN_PSK"],
     "privateSubnets": [os.environ["VPN_LOCAL_CIDR"]],
     "ipsecPolicies": {"ikeCipherAlgo": ["aes128"], "ikeAuthAlgo": ["sha1"],
         "ikePrfAlgo": ["prfsha1"], "ikeDiffieHellmanGroup": ["group21"], "ikeLifetime": 28800,
         "childCipherAlgo": ["aes128", "aes192", "aes256", "tripledes"],
         "childAuthAlgo": ["sha256", "sha1", "md5"], "childPfsGroup": ["disabled"], "childLifetime": 28800},
-    "networkTags": ["all"], "localId": "192.168.222.0", "remoteId": "192.168.222.0",
-    "isRouteBased": False, "priorityInGroup": 1, "publicIp": os.environ["PUBLIC"],
-    "network": {"names": [], "ids": []},
-    "group": {"number": 1, "failover": {"directToInternet": False}, "activeActiveTunnel": False}}
+    "networkTags": ["none"], "localId": os.environ["VPN_REMOTE_ID"], "remoteId": os.environ["VPN_LOCAL_ID"],
+    "isRouteBased": os.environ["MERAKI_ROUTE_BASED"]=="1", "publicIp": os.environ["PUBLIC"],
+    "network": {"ids": [os.environ["MERAKI_NETWORK_ID"]]}}
 matches=[p for p in current['peers'] if p.get('name')==peer['name']]
 if matches:
     if len(matches)==1 and all(matches[0].get(k)==v for k,v in peer.items()):
@@ -277,10 +319,36 @@ JSON_PY
 local merge_status=$?
 if [ "$merge_status" = 3 ]; then echo "Meraki peer already configured; no changes needed."; exit 0; fi
 [ "$merge_status" = 0 ] || exit "$merge_status"
+# Refuse to overwrite edits made while the user was choosing a remote site.
+curl --fail --silent --show-error --connect-timeout 15 --max-time 60 --request GET \
+  --url "$endpoint" --header "@$work/headers" --output "$work/recheck.json" || exit 1
+"$MYKOS_PYTHON" - "$work/existing.json" "$work/recheck.json" <<'RECHECK_PY' || exit 1
+import json,sys
+try:
+ if json.load(open(sys.argv[1]))!=json.load(open(sys.argv[2])):raise ValueError()
+except (OSError,ValueError):raise SystemExit('Meraki peers changed during setup; nothing was uploaded. Review and retry.')
+RECHECK_PY
 echo "Appending site-to-site peer on Meraki...."
 curl --fail --silent --show-error --connect-timeout 15 --max-time 60 --request PUT \
   --url "$endpoint" --header "@$work/headers" \
   --header 'Content-Type: application/json' --data-binary "@$work/payload.json" --output "$work/result.json" || exit 1
+# A successful HTTP code alone does not verify the returned configuration.
+"$MYKOS_PYTHON" - "$work/payload.json" "$work/result.json" <<'VERIFY_PY' || exit 1
+import json,sys
+def subset(expected,actual):
+ if isinstance(expected,dict):return isinstance(actual,dict) and all(k=='secret' or (k in actual and subset(v,actual[k])) for k,v in expected.items())
+ return expected==actual
+try:
+ requested=json.load(open(sys.argv[1]))['peers'];returned=json.load(open(sys.argv[2]))['peers']
+ if not isinstance(returned,list) or len(requested)!=len(returned):raise ValueError()
+ remaining=list(returned)
+ for peer in requested:
+  match=next((i for i,value in enumerate(remaining) if subset(peer,value)),None)
+  if match is None:raise ValueError()
+  remaining.pop(match)
+except (OSError,ValueError,KeyError,TypeError):
+ raise SystemExit('Meraki reply could not be verified; local VPN remains unchanged. Check Dashboard before retrying.')
+VERIFY_PY
 echo "Done.... Existing peers retained."
 )
 }
@@ -292,7 +360,7 @@ list_vpns() {
 }
 
 add_vpn() {
-local VPN_PSK vpn_psk_escaped host_connection VPN_LOCAL_CIDR
+local VPN_PSK vpn_psk_escaped host_connection VPN_LOCAL_CIDR VPN_LOCAL_ID VPN_REMOTE_ID VPN_MODE=direct VPN_REMOTE_CIDR VPN_ROUTE_BASED=0
 VPN_LOCAL_CIDR=192.168.222.0/24
 if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
 [[ "${SHOPCODE:-}" =~ ^[0-9]{8}$ ]] || { echo "Invalid ID"; return 1; }
@@ -309,11 +377,21 @@ done
 # Names become filenames and connection names; reject traversal and config injection.
 [[ "$REMOTE_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] || { echo "Invalid remote name"; return 1; }
 [[ "$REMOTE_PUBLIC" =~ ^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$ ]] || { echo "Invalid remote public IP or hostname"; return 1; }
-[[ "$REMOTE_NET" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Enter the remote IPv4 network without /24"; return 1; }
-IFS=. read -r -a vpn_octets <<< "$REMOTE_NET"
-for vpn_octet in "${vpn_octets[@]}"; do
-  (( 10#$vpn_octet <= 255 )) || { echo "Invalid remote IPv4 network"; return 1; }
-done
+VPN_REMOTE_CIDR=$("$MYKOS_PYTHON" -c 'import ipaddress,sys;v=sys.argv[1];print(ipaddress.IPv4Network(v if "/" in v else v+"/24",strict=True))' "$REMOTE_NET") || return 1
+if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
+  read -r -p 'VPN mode: direct guest tunnel [1], gateway for all MYKOS guests [2]: ' VPN_MODE || return 1
+  case "$VPN_MODE" in ''|1|direct) VPN_MODE=direct ;; 2|gateway) VPN_MODE=gateway ;; *) echo 'Choose 1 or 2'; return 1 ;; esac
+else
+  read -r -p 'Host VPN mode: host only [1], shared gateway for all guests and host [2]: ' VPN_MODE || return 1
+  case "$VPN_MODE" in ''|1|direct) VPN_MODE=direct ;; 2|gateway) VPN_MODE=host-gateway ;; *) echo 'Choose 1 or 2'; return 1 ;; esac
+fi
+VPN_LOCAL_ID=192.168.222.0; VPN_REMOTE_ID=192.168.222.0
+if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
+  VPN_LOCAL_ID="$SHOPCODE.$(hostname)"; VPN_REMOTE_ID="$REMOTE_PUBLIC"
+elif [ "$VPN_MODE" = host-gateway ]; then
+  VPN_LOCAL_ID="$(hostname)"; VPN_REMOTE_ID="$REMOTE_PUBLIC"
+fi
+if [ "${MYKOS_VPN_HOST:-0}" != 1 ] || [ "$VPN_MODE" = host-gateway ]; then VPN_ROUTE_BASED=1; fi
 read -r -s -p "Enter VPN shared secret (PSK): " VPN_PSK || { echo; return 1; }
 echo
 [ -n "$VPN_PSK" ] || { echo "VPN shared secret cannot be empty"; return 1; }
@@ -321,14 +399,14 @@ echo
 # Escape quotes/backslashes for the quoted ipsec.secrets value.
 vpn_psk_escaped=$(printf '%s' "$VPN_PSK" | sed 's/[\\"]/\\&/g')
 #set public ip
-PUBLIC=`curl -s ifconfig.me`
+PUBLIC=$(curl --fail --silent --show-error --connect-timeout 15 --max-time 20 https://ifconfig.me) || return 1
+PUBLIC=$("$MYKOS_PYTHON" -c 'import ipaddress,sys;print(ipaddress.IPv4Address(sys.argv[1].strip()))' "$PUBLIC") || return 1
 [ "${MYKOS_VPN_HOST:-0}" = 1 ] || IP=$(/usr/local/sbin/mykos-linux ip "$SHOPCODE")
 #setup vpn-data vol
 if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then
   [ -e "/etc/ipsec.d/mykos-$REMOTE_NAME.conn.conf" ] && { echo "VPN connection already exists."; return 1; }
 else
 [[ ! -L ".$SHOPCODE" ]] || { echo "VPN directory must not be a symlink"; return 1; }
-mkdir -p -- ".$SHOPCODE" || return 1
 [[ ! -L ".$SHOPCODE/ipsec.secrets" ]] || { echo "VPN secrets must not be a symlink"; return 1; }
 # check if vpn exist
 [ -f ".$SHOPCODE/$REMOTE_NAME.conn.conf" ] && { echo "VPN connection already exists."; return 1; }
@@ -342,43 +420,67 @@ if [ "$INPUTS" != "" ]; then
   if [[ "$REPLY" != "y" && "$REPLY" != "Y" ]]; then
     return
   else
-    echo "Creating VPN Connection......"
+    echo "Validating VPN Connection......"
+# Resolve/validate all local selectors before any optional remote update.
+if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
+local vpn_ip
+vpn_ip="$IP"
+VPN_LOCAL_CIDR=$("$MYKOS_PYTHON" -c 'import ipaddress,sys;print(str(ipaddress.IPv4Address(sys.argv[1]))+"/32")' "$vpn_ip") || return 1
+if [ "$VPN_MODE" = gateway ]; then
+  VPN_LOCAL_CIDR=$("$MYKOS_PYTHON" -c 'import sys;sys.path.insert(0,"/usr/local/sbin");from mykos_network import address_pool;from mykos_runtime import config;print(address_pool(config()))') || return 1
+fi
+fi
+if [ "$VPN_MODE" = host-gateway ]; then
+  VPN_LOCAL_CIDR=$("$MYKOS_PYTHON" -c 'import sys;sys.path.insert(0,"/usr/local/sbin");from mykos_network import address_pool;from mykos_runtime import config;print(address_pool(config()))') || return 1
+fi
+# Read-only dependency/mount preflight must precede any remote peer update.
+if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
+  /usr/local/sbin/mykos-linux vpn-preflight "$SHOPCODE" >/dev/null || return 1
+fi
+local check_mode=direct check_owner="${SHOPCODE:-host}" check_connection="$REMOTE_NAME"
+case "$VPN_MODE" in gateway|host-gateway) check_mode=shared ;; esac
+if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then check_owner=host;check_connection="mykos-$REMOTE_NAME";fi
+/usr/local/sbin/mykos-vpn-gateway preflight "$check_owner" "$check_connection" "$check_mode" >/dev/null || return 1
+# A failed selected upload is a no-op locally. No directory, config, secret,
+# service or routing mutation occurs before this success gate.
+    echo -n "Push peer config to meraki? y/n " && read -r ans || return 1
+    case "$ans" in
+      y|Y) update_meraki || return 1 ;;
+      n|N|'') ;;
+      *) echo 'Choose y or n'; return 1 ;;
+    esac
+echo "Creating VPN Connection......"
 # make connection ipsec config file
 if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then
+  if [ "$VPN_MODE" = host-gateway ]; then
+    host_connection=$(printf '%s\0' "$REMOTE_NAME" "$REMOTE_PUBLIC" "$VPN_LOCAL_CIDR" "$VPN_REMOTE_CIDR" "$VPN_PSK" "$VPN_LOCAL_ID" "$VPN_REMOTE_ID" | "$MYKOS_PYTHON" ./host-vpn --save-host-shared) || return 1
+  else
   host_connection=$(printf '%s\0' "$REMOTE_NAME" "$REMOTE_PUBLIC" "$REMOTE_NET" "$VPN_PSK" | "$MYKOS_PYTHON" ./host-vpn --save) || return 1
+  fi
 else
-local vpn_ip
-vpn_ip=$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER") || return 1
-VPN_LOCAL_CIDR=$("$MYKOS_PYTHON" -c 'import ipaddress,sys;print(str(ipaddress.IPv4Address(sys.argv[1]))+"/32")' "$vpn_ip") || return 1
-cat > .$SHOPCODE/$REMOTE_NAME.conn.conf << EOF
-conn $REMOTE_NAME
-  ikev2=insist
-  authby=secret
-  left=%defaultroute
-  leftid=192.168.222.0
-  leftsubnet="$VPN_LOCAL_CIDR"
-  right=$REMOTE_PUBLIC
-  rightid=192.168.222.0
-  rightsubnet="$REMOTE_NET/24"
-  ike=aes128-sha1-dh21
-  esp=aes128-sha1
-  auto=start
-  encapsulation=yes
+mkdir -p -- ".$SHOPCODE" || return 1
+printf '%s\0' "$SHOPCODE" "$REMOTE_NAME" "$REMOTE_PUBLIC" "$VPN_LOCAL_CIDR" "$VPN_REMOTE_CIDR" "$VPN_PSK" "$VPN_LOCAL_ID" "$VPN_REMOTE_ID" | "$MYKOS_PYTHON" ./host-vpn --save-native || return 1
 
-# rightid=$(/usr/local/sbin/mykos-linux ip "$SHOPCODE")
-EOF
-
-(umask 077; printf '192.168.222.0 192.168.222.0 : PSK "%s"\n' "$vpn_psk_escaped" > ".$SHOPCODE/ipsec.secrets") || return 1
-    chmod 600 ".$SHOPCODE/ipsec.secrets"
 fi
-    echo -n "Push peer config to meraki? y/n " && read ans
-      [ "$ans" == "y" ] && update_meraki
     if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then
+      if [ "$VPN_MODE" = host-gateway ]; then systemctl start ipsec || return 1; fi
       /usr/sbin/ipsec auto --rereadsecrets || return 1
       /usr/sbin/ipsec auto --add "$host_connection" || return 1
       /usr/sbin/ipsec auto --up "$host_connection" || return 1
+      if [ "$VPN_MODE" = host-gateway ]; then
+        /usr/local/sbin/mykos-vpn-gateway configure-host "$host_connection" "$VPN_REMOTE_CIDR" || return 1
+      fi
     else
-      podman exec $CONTAINER ipsec restart 2>/dev/null
+      /usr/local/sbin/mykos-linux prepare-vpn "$SHOPCODE" || return 1
+      podman exec "$CONTAINER" systemctl start ipsec || return 1
+      vpn_peer=$(cat ".$SHOPCODE/$REMOTE_NAME.vpn-peer") || return 1
+      podman exec "$CONTAINER" "/etc/ipsec.d/$REMOTE_NAME.updown" --allow-peer "$vpn_peer" || return 1
+      podman exec "$CONTAINER" ipsec auto --rereadsecrets || return 1
+      podman exec "$CONTAINER" ipsec auto --add "$REMOTE_NAME" || return 1
+      podman exec "$CONTAINER" ipsec auto --asynchronous --up "$REMOTE_NAME" || return 1
+      if [ "$VPN_MODE" = gateway ]; then
+        /usr/local/sbin/mykos-vpn-gateway configure "$SHOPCODE" "$REMOTE_NAME" "$VPN_REMOTE_CIDR" || return 1
+      fi
     fi
     echo "VPN Connection info..." && echo
     echo "Remote-side VPN Info:"
@@ -386,12 +488,12 @@ fi
     echo "Name: $REMOTE_NAME"
     echo "IKE Version: IKEv2"
     echo "Public IP or Hostname: $PUBLIC"
-    echo "Local ID: 192.168.222.0"
-    echo "Remote ID: 192.168.222.0"
+    echo "Local ID: $VPN_REMOTE_ID"
+    echo "Remote ID: $VPN_LOCAL_ID"
     echo "Shared Secret: (entered during setup)"
     echo "Static Routing"
     echo "Private Subnets: $VPN_LOCAL_CIDR"
-    echo "Availability: All Networks"
+    echo "Availability: Selected remote Meraki site only"
     echo "IPsec Policy: Custom"
     echo "Phase 1 Encryption: AES128"
     echo "Authentication: SHA1"
@@ -426,8 +528,13 @@ local confirmation
 read -r -p "Type $CONN to confirm removal: " confirmation || return 1
 [ "$confirmation" = "$CONN" ] || { echo 'Cancelled'; return 1; }
 # Use the existing text-admin workflow: remove the selected configuration and reload IPsec.
-rm -f -- "$path" || return 1
-podman exec "$CONTAINER" ipsec restart || return 1
+/usr/local/sbin/mykos-vpn-gateway remove "$SHOPCODE" "$CONN" || return 1
+if [ -f "$directory/$CONN.updown" ] && [ ! -L "$directory/$CONN.updown" ]; then
+  podman exec "$CONTAINER" "/etc/ipsec.d/$CONN.updown" --remove "$CONN" || return 1
+fi
+podman exec "$CONTAINER" ipsec auto --delete "$CONN" || return 1
+rm -f -- "$path" "$directory/$CONN.secrets" "$directory/$CONN.updown" "$directory/$CONN.default.conf" "$directory/$CONN.vpn-peer" || return 1
+podman exec "$CONTAINER" ipsec auto --rereadsecrets || return 1
 echo "Removed VPN $CONN"
 }
 
@@ -449,6 +556,7 @@ echo "Continue y/n?" && read -p ""
 if [ "${1:-}" = "--add-host-vpn" ]; then
   [ "$#" -eq 1 ] || { echo "Invalid host VPN selection"; exit 1; }
   MYKOS_VPN_HOST=1
+  unset SHOPCODE CONTAINER
   add_vpn
   exit $?
 fi

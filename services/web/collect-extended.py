@@ -9,6 +9,8 @@ from pathlib import Path
 
 from mykos_config import BASE
 import host_monitoring as host
+from mykos_vpn_topology import topology
+from mykos_vpn_gateway import summaries as gateway_profiles
 OUT = BASE / "data/extended.json"
 SHOP = re.compile(r"^[0-9]{8}(?:\.|$)")
 
@@ -24,6 +26,7 @@ def collect(shop_filter=None):
     infos = host.containers(shop_filter) if shop_filter else host.containers()
     resources = host.statistics(infos)
     nodes = {}
+    shared_gateways=gateway_profiles()
     for info in infos:
         name = host.name(info)
         if not SHOP.match(name):
@@ -31,14 +34,19 @@ def collect(shop_filter=None):
         shop = name[:8]
         running = bool(info.get('State', {}).get('Running'))
         nic = host.network(info)
+        memberships=[{'name':key,'address':value.get('IPAddress') or None,'prefix':value.get('IPPrefixLen'),
+                      'gateway':value.get('Gateway') or None,'mac':value.get('MacAddress') or None}
+                     for key,value in (info.get('NetworkSettings',{}).get('Networks') or {}).items()]
         nodes[shop] = {
             "container": name,
             "running": running,
             "ipv4": nic.get("ipv4") or "Unknown",
             "interface": nic.get("interface"),
+            "networks": memberships,
             "eth1_ip": nic.get("ipv4") or "Unknown", # legacy API alias
             "started_at_epoch": host.started_epoch(info) if running else None,
             "resources": resources.get(name, {}),
+            "vpn_topology": topology(shop,shared_gateways),
             "vpn": host.cached_vpn(info, BASE / "data/status.json") if running else {
                 "status": "unknown"
             }

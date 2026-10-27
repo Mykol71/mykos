@@ -49,12 +49,22 @@ def ensure_include(path, target, pattern):
         handle.flush();os.fsync(handle.fileno())
 
 
-def save_connection(root, name, peer, local, remote, secret):
+def identity(value):
+    import ipaddress
+    try:return str(ipaddress.IPv4Address(value))
+    except ValueError:
+        if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,252}',value):
+            raise ValueError('Invalid IKE identity')
+        return '@'+value
+
+
+def save_connection(root, name, peer, local, remote, secret, *, local_id="192.168.222.0", remote_id="192.168.222.0", native_directory=None, full_tunnel_hook=None):
     local, remote = validate(name, peer, local, remote, secret)
-    directory = root / 'ipsec.d'
+    directory = native_directory if native_directory is not None else root / 'ipsec.d'
     if directory.is_symlink() or not directory.is_dir():
         raise ValueError('Host /etc/ipsec.d must be an existing directory')
-    connection = 'mykos-' + name
+    connection = name if native_directory is not None else 'mykos-' + name
+    left_id, right_id = identity(local_id), identity(remote_id)
     config = directory / (connection + '.conn.conf')
     secrets = directory / (connection + '.secrets')
     for path in (config, secrets):
@@ -63,19 +73,44 @@ def save_connection(root, name, peer, local, remote, secret):
             raise ValueError('Connection already exists: ' + name)
     # Creation has been confirmed. Preserve global content and add only missing
     # MYKOS include globs, with a private backup before each append.
-    ensure_include(root/'ipsec.conf',config,directory/'mykos-*.conn.conf')
-    ensure_include(root/'ipsec.secrets',secrets,directory/'mykos-*.secrets')
+    if native_directory is None:
+        ensure_include(root/'ipsec.conf',config,directory/'mykos-*.conn.conf')
+        ensure_include(root/'ipsec.secrets',secrets,directory/'mykos-*.secrets')
     escaped = secret.replace('\\', '\\\\').replace('"', '\\"')
     config_text = ('conn ' + connection + '\n'
                    '  ikev2=insist\n  authby=secret\n'
-                   '  left=%defaultroute\n  leftid=192.168.222.0\n  leftsubnet=' + local + '\n'
-                   '  right=' + peer + '\n  rightid=192.168.222.0\n  rightsubnet=' + remote + '\n'
-                   '  ike=aes128-sha1-dh21\n  esp=aes128-sha1\n  auto=start\n  encapsulation=yes\n')
+                   '  left=%defaultroute\n  leftid=' + left_id + '\n  leftsubnet=' + local + '\n'
+                   '  right=' + peer + '\n  rightid=' + right_id + '\n  rightsubnet=' + remote + '\n'
+                   '  ike=aes128-sha1-dh21\n  esp=aes128-sha1\n  pfs=no\n  dpddelay=30s\n  retransmit-timeout=45s\n  auto=start\n  encapsulation=yes\n')
+    extra=[]
+    if full_tunnel_hook is not None:
+        # Per-connection files are exclusive; existing tunnels and credentials stay intact.
+        import ipaddress,socket
+        address=str(ipaddress.IPv4Address(socket.gethostbyname(peer)))
+        # Persist a numeric peer endpoint so reconnect never depends on DNS
+        # escaping the full-tunnel guard. IKE identity remains the configured peer.
+        config_text=config_text.replace('  right='+peer+'\n','  right='+address+'\n')
+        config_text+='  leftupdown=/etc/ipsec.d/'+connection+'.updown\n'
+        # Libreswan 4.x treats explicit settings plus also= inheritance as
+        # duplicate keys. Render an independent stanza with identical identity,
+        # crypto and transport settings, changing only the intended selectors.
+        default_text=(config_text.replace('conn '+connection+'\n','conn '+connection+'-mykos-default\n',1)
+                      .replace('  rightsubnet='+remote+'\n','  rightsubnet=0.0.0.0/0\n',1)
+                      .replace('  leftupdown=/etc/ipsec.d/'+connection+'.updown\n','  leftupdown=/bin/true\n',1)
+                      .replace('  auto=start\n','  auto=ignore\n',1))
+        # Keep the default connection in the included .conn.conf file. A separate
+        # .default.conf is not matched by the existing MYKOS include glob.
+        config_text+='\n'+default_text
+        extra=[(directory/(connection+'.updown'),full_tunnel_hook,0o700),
+               (directory/(connection+'.vpn-peer'),address+'\n',0o600)]
+        for path,_,_ in extra:
+            regular(path)
+            if path.exists():raise ValueError('Connection files already exist: '+name)
     # Exclusive creation prevents replacing an existing tunnel or its PSK.
     created = []
     try:
-        for path, text in ((secrets, '192.168.222.0 192.168.222.0 : PSK "' + escaped + '"\n'), (config, config_text)):
-            fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        for path, text, mode in [(secrets, left_id+' '+right_id+' : PSK "' + escaped + '"\n',0o600),(config,config_text,0o600),*extra]:
+            fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
             created.append(path)
             with os.fdopen(fd, 'w') as handle:
                 handle.write(text)
@@ -99,15 +134,36 @@ def remove(root):
     name=input('Connection to stop and remove: ').strip()
     if name not in choices: raise ValueError('Select a listed MYKOS connection')
     if input('Type '+name+' to confirm removal: ').strip()!=name: raise ValueError('Cancelled')
+    gateway=Path('/usr/local/sbin/mykos-vpn-gateway')
+    if gateway.is_file():subprocess.run([str(gateway),'remove','host',name],check=True)
     # Delete the loaded tunnel first; refuse file removal when Libreswan rejects it.
     subprocess.run(['/usr/sbin/ipsec','auto','--delete',name],check=True)
-    for suffix in ('.conn.conf','.secrets'):
+    hook=directory/(name+'.updown');regular(hook)
+    if hook.exists():subprocess.run([str(hook),'--remove',name],check=True)
+    for suffix in ('.conn.conf','.secrets','.updown','.default.conf','.vpn-peer'):
         path=directory/(name+suffix); regular(path)
         if path.exists(): path.unlink()
     print('Stopped and removed '+name)
 
 
 def main():
+    if sys.argv[1:]==['--save-host-shared']:
+        data=sys.stdin.buffer.read(16385)
+        if len(data)>16384:raise ValueError('Host VPN input is too large')
+        values=data.decode('utf-8').split('\0')
+        if len(values)!=8 or values[-1]!='':raise ValueError('Invalid shared host VPN input')
+        name,peer,local,remote,secret,local_id,remote_id=values[:-1]
+        text=Path(__file__).with_name('vpn-updown').read_text()
+        text=text.split('\n',1)[0]+'\nMYKOS_HOST_GATEWAY=1\n'+text.split('\n',1)[1]
+        print(save_connection(Path('/etc'),name,peer,local,remote,secret,local_id=local_id,remote_id=remote_id,full_tunnel_hook=text))
+        return
+    if sys.argv[1:]==['--save-native']:
+        values=sys.stdin.buffer.read(16385).decode('utf-8').split('\0')
+        if len(values)!=9 or values[-1]!='':raise ValueError('Invalid native VPN input')
+        shop,name,peer,local,remote,secret,local_id,remote_id=values[:-1]
+        if not re.fullmatch(r'[0-9]{8}',shop):raise ValueError('Invalid ID')
+        print(save_connection(Path.cwd(),name,peer,local,remote,secret,local_id=local_id,remote_id=remote_id,native_directory=Path('.'+shop),full_tunnel_hook=Path(__file__).with_name('vpn-updown').read_text()))
+        return
     if sys.argv[1:]==['--remove']:
         remove(Path('/etc'));return
     if sys.argv[1:] == ['--save']:
@@ -117,9 +173,8 @@ def main():
         values=data.decode('utf-8').split('\0')
         if len(values)!=5 or values[-1]!='':raise ValueError('Invalid host VPN input')
         name,peer,network,secret=values[:-1]
-        if not re.fullmatch(r'(?:[0-9]{1,3}\.){3}[0-9]{1,3}',network):
-            raise ValueError('Enter the remote IPv4 network without /24')
-        print(save_connection(Path('/etc'),name,peer,'192.168.222.0/24',network+'/24',secret))
+        if '/' not in network: network+='/24'
+        print(save_connection(Path('/etc'),name,peer,'192.168.222.0/24',network,secret))
         return
     if len(sys.argv)!=1:raise ValueError('Unexpected host VPN arguments')
     os.chdir(Path(__file__).resolve().parent)

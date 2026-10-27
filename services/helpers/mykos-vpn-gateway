@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""Configure or inspect an explicit MYKOS native Linux VPN gateway."""
+import argparse,json
+import mykos_vpn_gateway as gateway
+p=argparse.ArgumentParser(description=__doc__)
+p.add_argument('action',choices=['preflight','configure','configure-host','remove','guard','sync','list','deactivate'])
+p.add_argument('shop',nargs='?');p.add_argument('connection',nargs='?');p.add_argument('remote',nargs='?')
+a=p.parse_args()
+try:
+    if a.action=='preflight':
+        if not a.shop or not a.connection or a.remote not in ('direct','shared'):p.error('Expected target, connection and direct/shared mode')
+        result=gateway.preflight_mode(a.shop,a.connection,a.remote)
+    elif a.action=='configure-host':
+        if not a.shop or not a.connection or a.remote:p.error('Expected host connection and remote CIDR')
+        result=gateway.configure_host(a.shop,a.connection)
+    elif a.action in ('configure','remove'):
+        if not a.shop or not a.connection:p.error('Select guest ID and connection')
+        if a.action=='configure' and not a.remote:p.error('Enter remote CIDR')
+        result=getattr(gateway,a.action)(a.shop,a.connection,*([a.remote] if a.action=='configure' else []))
+    elif a.action=='deactivate':
+        if any((a.shop,a.connection,a.remote)):p.error('Deactivation takes no selections')
+        result=gateway.deactivate_all()
+    else:result=gateway.summaries() if a.action=='list' else gateway.guard() if a.action=='guard' else gateway.sync()
+    print(json.dumps(result))
+except (ValueError,RuntimeError,OSError) as error:p.exit(1,str(error)+'\n')

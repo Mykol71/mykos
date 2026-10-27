@@ -1,0 +1,9 @@
+[Unit]
+Description=Reconcile configured MYKOS shared VPN gateways
+After=network-online.target firewalld.service podman-restart.service
+
+[Service]
+Type=oneshot
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-vpn-gateway sync
+UMask=0077
+TimeoutStartSec=60s

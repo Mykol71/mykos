@@ -346,7 +346,7 @@ The dashboard requires an OS selection when adding a container. The helper valid
 
 ### Add a VPN from the container pane
 
-For a running container with VPN status `not_configured`, administrators can use the blue plus in its VPN column. It opens the existing POS `add_vpn` prompts in the popup terminal. Enable terminal access in `/etc/mykos/config.json`. The prompts collect the remote name, public IP/hostname, IPv4 network (without `/24`), and a hidden PSK entry, then ask for confirmation and whether to push to Meraki. The entered PSK is written to the selected container’s `ipsec.secrets` with mode `0600`; no preconfigured `VPN_PSK` is required. The host runs the fixed `pos --add-vpn SHOP CONTAINER` entry point, not an arbitrary host shell.
+For a running container with VPN status `not_configured`, administrators can use the blue plus in its VPN column. It opens the existing POS `add_vpn` prompts in the popup terminal. Enable terminal access in `/etc/mykos/config.json`. The prompts collect the remote name, public IP/hostname, IPv4 network (without `/24`), and a hidden PSK entry, then ask for confirmation and whether to push to Meraki. The entered PSK is written to its customer folder’s per-connection `.secrets` file with mode `0600`; no preconfigured `VPN_PSK` is required. The host runs the fixed `pos --add-vpn SHOP CONTAINER` entry point, not an arbitrary host shell.
 
 API clients use `WS /api/v2/terminal/{shop}?action=add-vpn` with an admin API key in the handshake header. The browser uses the authenticated, Origin-checked `/api/terminal/{shop}?action=add-vpn` route. Standard root container terminals retain the default `action=shell`.
 
@@ -647,3 +647,37 @@ seconds, or null when unavailable). Production time comes from Podman's image
 creation metadata, without probing a guest. Admin image rows show both size
 and the production date/time in the browser's local timezone, including when
 removal is blocked by a dependency.
+
+
+## Shared VPN gateways and topology
+
+The existing admin terminal VPN prompts select independent or shared mode. A
+shared gateway must use a newly managed full-tunnel-capable host/native Linux
+connection; legacy site-only configurations are rejected before routing changes.
+Independent configurations and shared-default profiles cannot be mixed in this
+release. Ubuntu-specific new VPN storage support is deferred.
+
+| Method/path under `/mykos/api/v2` | Permission | Behavior |
+|---|---|---|
+| `GET /vpn/gateways` | Read | Configured profiles and cached full-tunnel/controller status; no credentials |
+| `PUT /nodes/{shop}/vpn/gateway` | Admin | Select an existing managed native Linux VPN as shared gateway |
+| `PUT /host/vpn/gateway` | Admin | Select an existing managed host VPN as shared gateway |
+| `DELETE /nodes/{shop}/vpn/gateway/{connection}` | Admin | Remove only that guest gateway routing profile |
+| `DELETE /host/vpn/gateway/{connection}` | Admin | Remove only that host gateway routing profile |
+
+PUT body is `{"connection":"office","remote":"10.77.0.0/24","confirmation":"01234567"}`
+for a guest gateway; host confirmation is `"host"`. `remote` identifies the
+specific site subnet while the selected default CHILD_SA carries `0.0.0.0/0`.
+The host connection name includes its `mykos-` prefix. Profile removal retains the
+underlying tunnel files; use the existing interactive remove-VPN workflow to
+remove the tunnel as well. Deleting a gateway container is refused until its
+shared profiles are removed.
+
+Collected extended node data includes `vpn_topology` with `guest`, `links`,
+`via_gateways` and `primary`, plus network membership metadata. Connection links
+contain only name, peer, local/remote subnets and mode. Shared links include gateway
+ID (`host` for the host option), site subnet and cached `full_tunnel_sa`. Stale
+state is unconfirmed, not connected. `host_internet_via_vpn` indicates installed
+routing through a confirmed local full-tunnel SA, not a successful remote internet
+probe. All guest types can use a shared gateway. No new per-guest polling or PSK
+fields are introduced.

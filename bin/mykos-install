@@ -26,7 +26,8 @@ UNITS = ['mykos-host-history.service','mykos-web.service','mykos-container-admin
 PREFIXES = ('/opt/mykos-web/', '/usr/local/share/mykos/', '/etc/mykos/',
             '/etc/systemd/system/mykos-', '/usr/local/sbin/mykos-')
 # Keep the legacy path allowed for old recovery snapshots and upgrade cleanup.
-EXACT = {'/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
+OPTIONAL_UNITS = ['mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service','mykos-vpn-gateway.timer']
+EXACT = {'/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
          '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
          '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
 PACKAGES = ['podman','httpd','mod_ssl','python3','python3-pip','openssh-server','openssh-clients','rsync',
@@ -132,7 +133,7 @@ class Installer:
             content=src.read_bytes()
             if content.startswith(b'#!/usr/bin/env python3\n'):
                 content=('#!'+python+'\n').encode()+content.split(b'\n',1)[1]
-            add('/usr/local/sbin/'+src.name,content,0o644 if src.suffix=='.py' else 0o755)
+            add('/usr/local/sbin/'+src.name,content,0o644 if src.suffix in ('.py','.conf') else 0o755)
         for src in sorted((SOURCE/'services/systemd').glob('*')):
             add('/etc/systemd/system/'+src.name,src.read_text().replace('@PYTHON@',python).encode())
         add('/usr/bin/mykos',b'#!/usr/bin/env bash\nset -e\nif [ -x /usr/share/mykos/MENU ]; then\n  cd /usr/share/mykos\nelse\n  cd /usr/local/share/mykos\nfi\nexec ./MENU "$@"\n',0o755)
@@ -296,7 +297,7 @@ class Installer:
                 if database.exists() and (database.stat().st_uid!=user.pw_uid or stat.S_IMODE(database.stat().st_mode)!=0o600):
                     errors.append('Expected mykosweb-owned 0600 '+str(database))
             command([self.path('/opt/mykos-web/.venv')/'bin/python','-c','import fastapi,pydantic,uvicorn'])
-            command(['systemd-analyze','verify',*[str(self.path('/etc/systemd/system/'+u)) for u in UNITS]])
+            command(['systemd-analyze','verify',*[str(self.path('/etc/systemd/system/'+u)) for u in UNITS+OPTIONAL_UNITS]])
         if errors:fail('\n'.join(errors))
         print('Verified %d managed files%s' % (len(manifest['files']), ' (staged layout only)' if not self.live else ''))
 
@@ -345,7 +346,7 @@ class Installer:
         self.quiescent()
         if self.live:
             # Avoid workers/collectors racing restored code and SQLite WAL files.
-            command(['systemctl','stop',*UNITS,'mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service'])
+            command(['systemctl','stop',*UNITS,*OPTIONAL_UNITS,'mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service'])
         self.snapshot([*contents,*absent],include_data=meta.get('includes_data',False))
         for name,(entry,data) in contents.items():
             if entry['mode'] & 0o7000:fail('Special permission bits are not accepted')
@@ -376,11 +377,13 @@ class Installer:
         self.mutation()
         self.quiescent()
         if self.live:
-            command(['systemctl','disable','--now',*UNITS])
+            command(['systemctl','disable','--now',*UNITS,*OPTIONAL_UNITS])
             command(['systemctl','stop','mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service'])
         self.snapshot([*removable,STATE])
         if self.live and self.path('/usr/local/sbin/mykos-snapshot').exists():
             command([self.args.python,'/usr/local/sbin/mykos-snapshot','unhook'])
+        if self.live and self.path('/usr/local/sbin/mykos-vpn-gateway').exists():
+            command([self.args.python,'/usr/local/sbin/mykos-vpn-gateway','deactivate'])
         for name in removable:self.path(name).unlink()
         self.path(STATE).unlink()
         if self.live:command(['systemctl','daemon-reload'])

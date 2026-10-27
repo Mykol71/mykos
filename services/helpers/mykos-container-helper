@@ -61,6 +61,13 @@ def _dispatch(args):
         if len(args)!=3:raise ValueError('Expected image OS and confirmation')
         from mykos_image_admin import queue_reset
         return queue_reset(args[1],args[2])
+    if action in ('vpn-gateway-configure','vpn-gateway-host','vpn-gateway-remove','vpn-gateway-list'):
+        import mykos_vpn_gateway as gateway
+        if action=='vpn-gateway-host' and len(args)==3:return gateway.configure_host(args[1],args[2])
+        if action=='vpn-gateway-configure' and len(args)==4:return gateway.configure(args[1],args[2],args[3])
+        if action=='vpn-gateway-remove' and len(args)==3:return gateway.remove(args[1],args[2])
+        if action=='vpn-gateway-list' and len(args)==1:return gateway.summaries()
+        raise ValueError('Invalid shared VPN gateway arguments')
     if action in ('image-remove','image-remove-status'):
         from mykos_image_admin import queue,job as image_job
         if action=='image-remove' and len(args)==3:return queue(args[1],args[2])
