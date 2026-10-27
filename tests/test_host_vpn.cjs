@@ -22,10 +22,12 @@ for(const status of ['up','down','unknown']) {
     assert.equal(button.classes.has('mykos-add-vpn-button'),false);assert.equal(button.innerHTML,status);
 }
 context.mykosRenderHostStatus({host:{hostname:'prod.example.com',certificate_domain:'example.com',vpn:'unknown'}});
-assert.equal(el('mykos-host-pane-name').textContent,'example.com');
+assert.ok(!elements.has('mykos-host-pane-name'));
+assert.doesNotMatch(html,/id="mykos-host-title"|mykos-logo-host-apple/);
+assert.match(html,/id="mykos-host-pane"[^>]*aria-label="Host performance and status"/);
 assert.equal(el('mykos-host-row-name').textContent,'prod.example.com');
 context.mykosRenderHostStatus({host:{hostname:'dev.example.com',vpn:'unknown'}});
-assert.equal(el('mykos-host-pane-name').textContent,'dev.example.com');
-console.log('Host VPN icon and certificate heading checks passed.');
+assert.equal(el('mykos-host-row-name').textContent,'dev.example.com');
+console.log('Host VPN actions and status-row hostname retained without a title heading.');
 
 context.mykosRenderHostStatus({host:{os:'Red Hat Enterprise Linux 8.10 (Ootpa)',version:'8.10'}});assert.equal(el('mykos-host-row-version').textContent,'8.10 Ootpa');
