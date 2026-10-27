@@ -77,3 +77,32 @@ def test_targeted_container_query_filters_podman_on_host(monkeypatch):
     monkeypatch.setattr(host,'run',lambda args,**kw:calls.append(args) or '[]')
     assert host.containers('12345678')==[]
     assert calls==[['podman','ps','-a','--format','json','--filter','name=^12345678\\.']]
+
+
+def test_established_names_stay_on_the_same_status_line():
+    # Real Libreswan4.12 shape from production: IKE and CHILD lines are adjacent.
+    output = '\n'.join([
+        '000 Total IPsec connections: loaded 2, active 1',
+        '000 IPsec SAs: total(1), authenticated(1)',
+        '000 "PG-QA": configured',
+        '000 "waiting": configured',
+        '000 #235: "PG-QA":4500 STATE_V2_ESTABLISHED_IKE_SA (established IKE SA); idle;',
+        '000 #236: "PG-QA":4500 STATE_V2_ESTABLISHED_CHILD_SA (established Child SA); eroute owner;',
+        '000 #237: "waiting":4500 STATE_V2_PARENT_I1; idle;',
+        '000 #236: "PG-QA" Traffic: ESPin=336B ESPout=336B',
+    ])
+    result = host.parse_vpn(output)
+    assert result['status'] == 'up'
+    assert result['established_connections'] == ['PG-QA']
+    ike_only = output.replace('STATE_V2_ESTABLISHED_CHILD_SA', 'STATE_V2_PARENT_I1')
+    assert host.parse_vpn(ike_only)['established_connections'] == []
+
+
+def test_established_names_include_only_established_child_states():
+    output = '\n'.join([
+        '000 #1: "ikev1-a": STATE_QUICK_I2 (IPsec SA established)',
+        '000 #2: "ikev1-b": STATE_QUICK_R2 (IPsec SA established)',
+        '000 #3: "ikev1-a": STATE_QUICK_I2 (IPsec SA established)',
+        '000 #4: "pending": STATE_MAIN_I1',
+    ])
+    assert host.parse_vpn(output)['established_connections'] == ['ikev1-a','ikev1-b']

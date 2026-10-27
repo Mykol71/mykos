@@ -9,7 +9,8 @@ const cache={
 const context=vm.createContext({escape,mykosListMemory:cache,nodes:Object.keys(cache).map(id=>({id,vpn:'up'}))});
 vm.runInContext(html.slice(html.indexOf('function mykosVpnGraph('),html.indexOf('\nfunction table(){')),context);
 let graph=context.mykosVpnGraph('12345678');
-assert.match(graph,/vpn.example/);assert.doesNotMatch(graph,/87654321|00000000/);
+assert.match(graph,/vpn.example/);assert.match(graph,/stroke="#4ade80"/);
+cache['12345678'].vpn.established_connections=[];assert.doesNotMatch(context.mykosVpnGraph('12345678'),/stroke="#4ade80"/);cache['12345678'].vpn.established_connections=['office'];assert.doesNotMatch(graph,/87654321|00000000/);
 graph=context.mykosVpnGraph('12345678',true);
 assert.match(graph,/87654321/);assert.doesNotMatch(graph,/00000000/);
 assert.match(graph,/reachability not tested/);assert.match(graph,/stroke-dasharray/);
