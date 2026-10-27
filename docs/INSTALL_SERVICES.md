@@ -360,7 +360,8 @@ at-most-once behavior and Windows guest-agent prerequisites.
 ### Completed action refreshes and saved-image retries
 
 Container actions refresh only the affected ID's inventory, details and resource
-rows at nice -5. Host terminal/VPN completion refreshes host data without probing
+rows at nice -5. VM startup publishes that row as soon as Podman is running,
+before memory restoration and ID-specific hooks finish. Host terminal/VPN completion refreshes host data without probing
 containers. Backup/repository actions reload only their own pane; privileged
 listing work also runs at nice -5. Routine collector intervals are unchanged.
 

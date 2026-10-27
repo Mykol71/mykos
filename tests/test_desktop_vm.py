@@ -11,6 +11,7 @@ import mykos_vm as vm
 @pytest.fixture
 def desktop(tmp_path, monkeypatch):
     monkeypatch.setattr(vm, 'host_config', lambda: {})
+    monkeypatch.setattr(vm, 'publish_started', lambda shop: None)
     monkeypatch.setattr(vm, 'verify_windows_installation', lambda value: None)
     monkeypatch.setattr(vm.network, 'arguments', lambda cfg, name: ['--network', 'mykos-lan', '--ip', '192.168.22.2'])
     monkeypatch.setattr(vm, 'POS', tmp_path)
@@ -836,3 +837,17 @@ def test_saved_base_retry_waits_for_slow_stopped_builder_cleanup(desktop,monkeyp
     assert vm.ensure_prepared_base('mac15')['ready']
     assert vm.inspect('mac15')['State']['Running']
     assert not any(c[1]=='commit' for c in calls)
+
+
+def test_started_row_is_published_before_memory_restore_finishes(desktop,monkeypatch):
+    import shutil
+    monkeypatch.setattr(vm,'tree_copy',lambda src,dst,**kwargs:shutil.copytree(src,dst))
+    vm.create('mac15')
+    (vm.storage('mac15')/'storage/data.img').write_bytes(b'installed disk')
+    vm.prepare('mac15')
+    events=[]
+    monkeypatch.setattr(vm,'publish_started',lambda key:events.append(('published',key)))
+    monkeypatch.setattr(vm,'wait_for_restore',lambda *args:events.append(('restored',args[0]['name'])))
+    result=vm.start('90909090','mac15')
+    assert result['ready'] and result['last_start']=='memory-restore'
+    assert events[0]==('published','90909090') and events[1][0]=='restored'

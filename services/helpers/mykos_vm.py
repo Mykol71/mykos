@@ -1008,6 +1008,13 @@ Write-Output 'Runtime RAM and Windows-managed paging verified.'
         return links(value)
 
 
+def publish_started(shop):
+    # Podman is running before VM memory restore and ID hooks finish. Publish
+    # this ID now so the browser need not wait for the entire startup job.
+    from mykos_refresh import best_effort
+    best_effort(shop,{})
+
+
 def start(shop, os_name=None):
     if not re.fullmatch(r'[0-9]{8}', shop): raise ValueError('ID must be eight ASCII digits')
     with locked():
@@ -1021,6 +1028,7 @@ def start(shop, os_name=None):
             run([PODMAN, 'start', value['name']], timeout=120)
             if not data.get('State', {}).get('Running'):
                 value['last_start'] = 'boot'; save(shop, value)
+                publish_started(shop)
         else:
             preflight(os_name)
             template = read(os_name)
@@ -1047,6 +1055,7 @@ def start(shop, os_name=None):
                     if request.is_symlink(): raise ValueError('Symlink restore request rejected')
                     request.write_text('restore once\n'); request.chmod(0o600)
                 launch(shop, value)
+                publish_started(shop)
                 if value.get('capture_mode') == 'memory':
                     wait_for_restore(value, storage(shop)/'storage')
                     value['last_start'] = 'memory-restore'
