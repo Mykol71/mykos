@@ -42,46 +42,12 @@ NC='\033[0m'
 
 check_image_builder() {
   case "$OS" in
-    rocky8|alma8|oracle8|centos8) required_major=8 ;;
-    rocky9|alma9|oracle9|centos9) required_major=9 ;;
-    rocky10|alma10|oracle10|centos10) required_major=10 ;;
-    *) required_major= ;;
-  esac
-  if [ -n "$required_major" ]; then
-    local actual_major
-    actual_major=$(rpm -E '%{rhel}' 2>/dev/null) || return 1
-    if [ "$required_major" = 10 ] && [ "$actual_major" != 10 ]; then
-      echo "$OS uses EL10-only kickstart syntax; select an EL10 Anaconda/Lorax builder." >&2
-      return 1
-    fi
-    command -v ksvalidator >/dev/null 2>&1 || { echo 'Install pykickstart on the builder.' >&2; return 1; }
-    # Use the actual local parser, as with the existing RH9-on-RH8 workflow.
-    # prepare_ks adapts maintained timesource syntax when the local parser is older.
-    create_ks || return 1
-    ksvalidator "/var/tmp/$OS.ks" || return 1
-  fi
-  case "$OS" in
-    fedora43|fedora44)
-      local fedora_major
-      fedora_major=$(rpm -E '%{fedora}' 2>/dev/null) || return 1
-      [ "$fedora_major" = "${OS#fedora}" ] || { echo "$OS requires a matching Fedora builder with Anaconda/Lorax." >&2; return 1; }
+    rh10|rocky8|rocky9|rocky10|alma8|alma9|alma10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44)
       command -v ksvalidator >/dev/null 2>&1 || { echo 'Install pykickstart on the builder.' >&2; return 1; }
-      ksvalidator -v "F$fedora_major" "ks/$OS.ks" || return 1 ;;
+      # Validate the temporary copy with the installed parser, independent of host release.
+      create_ks || return 1
+      ksvalidator "/var/tmp/$OS.ks" || return 1 ;;
   esac
-  if [ "$OS" = rh10 ]; then
-    local build_major
-    build_major=$(rpm -E '%{rhel}' 2>/dev/null) || return 1
-    if [ "$build_major" != 10 ]; then
-      echo 'rh10 requires a RHEL 10 build host or VM with RHEL 10 Anaconda/Lorax.' >&2
-      echo 'This --no-virt workflow uses the local installer; changing repository URLs does not upgrade it.' >&2
-      return 1
-    fi
-    command -v ksvalidator >/dev/null 2>&1 || {
-      echo 'Install pykickstart on the RHEL 10 builder to validate rh10.ks.' >&2
-      return 1
-    }
-    ksvalidator -v RHEL10 "ks/$OS.ks" || return 1
-  fi
 }
 
 create_ks() {

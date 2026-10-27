@@ -382,11 +382,11 @@ provides `ksvalidator`. `python3-kickstart` alone supplies only its Python
 library on EL8/EL9 and does not provide that command. Existing installations
 missing the CLI can install it with `sudo dnf install -y pykickstart`.
 
-EL8/EL9 native builds use the existing local Anaconda/Lorax workflow, including
+All native Linux builds use the existing local Anaconda/Lorax workflow, including
 the operator's established RH9-on-RH8 method. The menu validates the prepared
-kickstart against the actual installed parser, rather than rejecting an EL9
-image merely because the host is EL8. Repository/package compatibility still
-has to succeed during the actual build. EL10 recipes currently retain their
-EL10 Anaconda/Lorax requirement because they use newer kickstart syntax. Fedora 43/44 use matching Fedora builders.
-Changing repository URLs does not upgrade the local installer. This requirement
-affects image creation; using an already built native image is a separate path.
+kickstart against the installed parser without imposing a matching host release.
+Temporary copies adapt timesource and weak-dependency option spellings to that
+parser; saved kickstarts remain unchanged. Repository/package compatibility
+still has to succeed during the actual build. Changing repository URLs does not
+upgrade the local installer. Using an already built image is a separate path.
+

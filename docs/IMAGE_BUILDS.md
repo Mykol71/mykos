@@ -125,10 +125,11 @@ build/commit → running generic base workflow as RedHat. Recipes live in
 `pos/ks/OS.ks`; each EL vendor recipe derives from the corresponding operator
 `rh8.ks`, `rh9.ks`, or `rh10.ks`, preserving its package list and post-install
 customizations. The original RedHat kickstarts remain unchanged. Use an
-Anaconda/Lorax build environment that accepts the prepared kickstart. EL8/EL9
-images follow the operator's local workflow, including RH9-on-RH8, without a
-blanket host-major restriction. EL10 recipes retain their explicit newer-parser
-requirement.
+Anaconda/Lorax build environment that accepts the prepared kickstart. All native
+Linux selections follow the operator's local workflow, including RH9-on-RH8,
+without a host-major restriction. Temporary build copies adapt timesource and
+weak-dependency option spellings to the installed parser; saved kickstarts stay
+unchanged. Actual installer and repository compatibility is checked during the build.
 
 Rocky sources BaseOS and AppStream directly from
 `https://dl.rockylinux.org/pub/rocky/MAJOR/REPOSITORY/x86_64/os/`.
@@ -158,4 +159,4 @@ CentOS Linux is not included. Fedora uses
 `fedora43` and `fedora44`, the two newest stable releases in the official
 release feed when added. The beta release is excluded. Its Everything install
 tree and matching updates repository come from `https://dl.fedoraproject.org/`.
-Fedora builds require a matching Fedora Anaconda/Lorax builder.
+Fedora kickstarts are prepared and validated with the installed local parser, without requiring a Fedora host. The existing Anaconda/Lorax build performs the actual repository/package compatibility checks.

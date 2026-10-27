@@ -1,5 +1,5 @@
 # Fedora 44 native container rootfs for livemedia-creator --make-tar.
-# Use an Fedora 44 Anaconda/Lorax builder. Runtime networking comes from Podman.
+# Use the installed Anaconda/Lorax builder after local kickstart validation. Runtime networking comes from Podman.
 # Basic setup information
 # Accounts are locked at build time; provision host/container access explicitly.
 rootpw --lock

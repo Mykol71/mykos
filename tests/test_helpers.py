@@ -10,8 +10,8 @@ sys.path.insert(0,str(HELPERS))
 import mykos_runtime
 
 
-@pytest.mark.parametrize('build_major,expected', [('8','RHEL 10 build host'), ('10','Image creation failed')])
-def test_image_build_stops_before_unsafe_followup(tmp_path,build_major,expected):
+@pytest.mark.parametrize('build_major', ['8','9','10'])
+def test_image_build_stops_before_unsafe_followup(tmp_path,build_major):
     import subprocess
     source=(HELPERS.parents[1]/'pos/pos').read_text()
     preflight=source[source.index('check_image_builder() {'):source.index('\ncreate_ks() {')]
@@ -36,7 +36,7 @@ create-image
     result=subprocess.run(['bash','-c',script],cwd=tmp_path,input='rh10\n',text=True,capture_output=True,
                           env={**os.environ,'TEST_BUILD_MAJOR':build_major})
     assert result.returncode!=0
-    assert expected in result.stderr
+    assert 'Image creation failed' in result.stderr
     assert 'unexpected-' not in result.stdout+result.stderr
     assert not list(tmp_path.iterdir())
 
@@ -527,12 +527,13 @@ def test_image_removal_status_uses_its_own_job_lookup(monkeypatch):
     assert module.dispatch(['image-remove-status','rocky9'])=={'os':'rocky9','state':'deleted'}
 
 
-@pytest.mark.parametrize('os_name',['rocky9','alma9','oracle9','centos9'])
-def test_el9_kickstart_accepts_the_established_el8_builder(tmp_path,os_name):
+@pytest.mark.parametrize('os_name',['rh10','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44'])
+def test_native_kickstart_uses_local_parser_without_host_gate(tmp_path,os_name):
     import subprocess,os
     source=(HELPERS.parents[1]/'pos/pos').read_text()
     check=source[source.index('check_image_builder() {'):source.index('\ncreate_ks() {')]
-    script=check+"\nrpm() { echo 8; }; ksvalidator() { [ \"$1\" = \"/var/tmp/$OS.ks\" ]; }; create_ks() { echo prepared; }; check_image_builder\n"
+    script=check+"\nrpm() { echo unexpected-host-check; return 99; }; ksvalidator() { [ \"$1\" = \"/var/tmp/$OS.ks\" ]; }; create_ks() { echo prepared; }; check_image_builder\n"
     result=subprocess.run(['bash','-c',script],env={**os.environ,'OS':os_name},text=True,capture_output=True,cwd=tmp_path)
     assert result.returncode==0,result.stdout+result.stderr
     assert 'prepared' in result.stdout
+    assert 'unexpected-host-check' not in result.stdout+result.stderr
