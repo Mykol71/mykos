@@ -537,3 +537,22 @@ def test_native_kickstart_uses_local_parser_without_host_gate(tmp_path,os_name):
     assert result.returncode==0,result.stdout+result.stderr
     assert 'prepared' in result.stdout
     assert 'unexpected-host-check' not in result.stdout+result.stderr
+
+
+@pytest.mark.parametrize('os_name',['rh8','rh9','rh10','rocky10','fedora43'])
+def test_native_image_starter_binds_host_cgroups_read_only(monkeypatch,os_name):
+    from contextlib import nullcontext
+    module=load('mykos-native-image-start')
+    monkeypatch.setattr(module.vm,'locked',nullcontext)
+    monkeypatch.setattr(module,'config',lambda:{'network_name':'mykos-lan'})
+    monkeypatch.setattr(module,'arguments',lambda config,name:['--network','mykos-lan'])
+    calls=[]
+    monkeypatch.setattr(module,'run',lambda command:calls.append(command) or 'created-base')
+    assert module.start(os_name)=='created-base'
+    command=calls[0]
+    assert command[command.index('--volume')+1]=='/sys/fs/cgroup:/sys/fs/cgroup:ro'
+    assert command.count('--volume')==1
+    assert command[-2:]==[os_name,'/sbin/init']
+    assert '--network' in command and '--pull=never' in command
+    with pytest.raises(ValueError):module.start('invalid-image')
+    assert len(calls)==1

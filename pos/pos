@@ -90,6 +90,7 @@ LABEL org.label-schema.schema-version="1.0" \
     org.label-schema.build-date="20261003"
 MAINTAINER “Mike Green" <mgreen@teleflora.com>
 ENV container $OS-docker
+VOLUME /sys/fs/cgroup
 $update_step
 CMD ["/usr/bin/bash"]
 EOF

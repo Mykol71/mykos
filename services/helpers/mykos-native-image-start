@@ -12,7 +12,7 @@ def start(os_name):
     with vm.locked():
         args = arguments(config(), os_name)
         return run([PODMAN,'run','-d','-it','--hostname',os_name,'--name',os_name,
-                    '--rm','--privileged','--memory=4g','--pull=never',*args,os_name,'/sbin/init'])
+                    '--rm','--privileged','--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro','--memory=4g','--pull=never',*args,os_name,'/sbin/init'])
 
 
 if __name__ == '__main__':
