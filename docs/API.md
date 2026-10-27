@@ -140,7 +140,24 @@ can produce `Unknown` backup storage in `/host` while the rest of the response w
 ### Administrative examples
 
 Use an admin-scoped key and a staging shop approved for these operations. Staging
-creates a privileged container; restore mounts customer backup data read/write.
+creates a privileged container. For native Linux images, `restore: true` mounts
+available `/backups/tfrsync-ID` application folders and customer homes directly
+read/write; guest writes change the original backup. The application adapter need
+not be enabled. VM images do not support this restore option.
+
+Before the new instance starts, its private account files are reconciled with the
+backup IDs. Conflicting image account ownership and POSIX ACLs are adjusted only
+inside that instance; backup ownership and saved account files stay unchanged.
+The image root password is retained, missing customer password hashes produce
+locked accounts, and the old `tfrsync-ID` guest account/home is omitted. The host
+backup account is untouched; use the existing **Backups** text menu to configure
+backup accounts afterward. Existing instances are not restored again on restart.
+
+Root configuration can explicitly map receiver-owned files to customer identities:
+`"backup_identity_overrides": {"01234567": {"users": {"appuser": 1011},
+"groups": {"appgroup": 1012}}}`. Only use IDs confirmed for that backup; mappings
+never change the backup files. An optional `backup_root` changes the host search
+root from `/backups`.
 Stopping affects the selected running POS instance.
 
 ```sh

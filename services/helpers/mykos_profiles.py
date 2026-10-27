@@ -11,23 +11,13 @@ def adapter(settings=None):
 
 
 def has_backup(shop, settings=None):
-    return adapter(settings) == 'rti' and (Path('/backups/tfrsync-' + shop) / 'usr2').is_dir()
+    from mykos_backup_restore import available
+    return available(shop,runtime.config() if settings is None else settings)
 
 
-def mounts(shop):
-    if not has_backup(shop):
-        raise ValueError('Restore requires an explicitly configured application adapter and its backup')
-    backup = Path('/backups/tfrsync-' + shop)
-    result = []
-    for rel in ('usr2','etc/cups','etc/samba','etc/mail','etc/hosts','etc/passwd','etc/passwd-',
-                'etc/group','etc/group-','etc/shadow','etc/shadow-','etc/gshadow','etc/gshadow-',
-                'etc/sudoers','usr/java','home'):
-        source = backup / rel
-        if source.exists():
-            if backup.resolve() not in source.resolve().parents:
-                raise ValueError('Backup mount escapes account directory: ' + rel)
-            result += ['-v', str(source) + ':/' + rel + ':rw']
-    return result
+def mounts(shop, settings=None):
+    from mykos_backup_restore import mount_arguments
+    return mount_arguments(shop,runtime.config() if settings is None else settings)
 
 
 def services():

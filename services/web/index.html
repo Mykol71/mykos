@@ -2547,8 +2547,8 @@ for (const family of mykosOsFamilies) {
             if (check.exists && !check.desktop) throw new Error('Container already exists for this shop.');
             if (check.active) throw new Error('Another staging job is in progress.');
             let restore = false;
-            if (check.backup && /^rh\d+$/.test(os)) {
-                restore = window.confirm('Backup found at /backups/tfrsync-'+shop+'. Use this backup?');
+            if (check.backup && /^(?:rh\d+|rocky\d+|alma\d+|oracle\d+|centos\d+|fedora\d+|mssql\d+)$/.test(os)) {
+                restore = window.confirm('Backup found for '+shop+'. Mount its original folders read/write? Changes in this container will change the backup files.');
             }
             if (!window.confirm('Start container '+shop+' with OS '+os+'?')) {
                 mykosStageButton.disabled = false; return;

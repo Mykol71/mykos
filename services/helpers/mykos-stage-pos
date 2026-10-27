@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Noninteractive rootful staging equivalent, with explicit host configuration."""
 from pathlib import Path
+import json
+import mykos_backup_restore as backup
 import mykos_profiles as profile
 import mykos_network as network
 import mykos_vm as vm
@@ -32,11 +34,16 @@ def _stage(shop, restore, image=None):
           '--label','io.mykos.persistent=true',
           '-v',str(vpn)+':/etc/ipsec.d:rw']
     if restore=='yes':
-        args.extend(profile.mounts(shop))
+        args[1:3]=['create']
+        args.append('--no-hosts')
+        args.extend(profile.mounts(shop,cfg))
     args.extend(network_args)
     args.extend([image,'/sbin/init'])
     cid=run(args)
     try:
+        if restore=='yes':
+            prepare_backup(cid,name,shop,cfg,network_args)
+            run([PODMAN,'start',cid])
         if any(vpn.glob('*.conn.conf')):
             run([PODMAN,'exec',cid,'systemctl','restart','ipsec'])
         if restore=='yes':
@@ -47,6 +54,27 @@ def _stage(shop, restore, image=None):
     except Exception:
         # Only remove the container created by this attempt; retain customer backup/VPN data.
         run([PODMAN,'rm','--force',cid]);raise
+
+def prepare_backup(cid,name,shop,cfg,network_args):
+    """Prepare only this new stopped container's root; binds attach at start."""
+    value=json.loads(run([PODMAN,'inspect',cid]))[0]
+    if value.get('Id')!=cid or value.get('Name','').lstrip('/')!=name or value.get('State',{}).get('Running'):
+        raise ValueError('Backup preparation requires the newly created stopped container')
+    root=None
+    try:
+        root=run([PODMAN,'mount',cid])
+        mounted=json.loads(run([PODMAN,'mount','--format','json']))
+        matching=[item for item in mounted if item.get('id')==cid]
+        if len(matching)!=1 or not matching[0].get('mountpoint') or Path(root).resolve()!=Path(matching[0]['mountpoint']).resolve():
+            raise ValueError('Mounted root does not belong to the created container')
+        if any(Path(root)==Path(item['Source']) or Path(item['Source']).resolve() in Path(root).resolve().parents
+               for item in value.get('Mounts',[]) if item.get('Type')=='bind'):
+            raise ValueError('Container root overlaps a host bind source')
+        address=network_args[network_args.index('--ip')+1] if '--ip' in network_args else None
+        backup.prepare(shop,cfg,root,name,address)
+    finally:
+        if root:run([PODMAN,'unmount',cid])
+
 
 if __name__=='__main__':
     if len(sys.argv) not in (3,4): raise SystemExit('Usage: mykos-stage-pos SHOP yes|no [IMAGE]')
