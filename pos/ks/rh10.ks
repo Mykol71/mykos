@@ -39,6 +39,7 @@ bind-utils
 telnet
 rsyslog
 sed
+perl
 yum
 rsync
 curl

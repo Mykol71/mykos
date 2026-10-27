@@ -14,7 +14,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        127%{?dist}
+Release:        128%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-Proprietary AND MIT
 URL: https://mykol.com/mykos/

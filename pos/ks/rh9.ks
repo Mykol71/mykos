@@ -33,6 +33,7 @@ repo --name="BaseOS" --install --baseurl=https://mykol.com/rhel-9-for-x86_64-bas
 bash
 ksh
 yum
+perl
 net-tools
 wget
 procmail
