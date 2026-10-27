@@ -9,10 +9,14 @@ from mykos_network import arguments
 def start(os_name):
     if os_name not in NATIVE_OS_NAMES:
         raise ValueError('Select a supported native Linux image')
-    with vm.locked():
-        args = arguments(config(), os_name)
-        return run([PODMAN,'run','-d','-it','--hostname',os_name,'--name',os_name,
-                    '--rm','--privileged','--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro','--memory=4g','--pull=never',*args,os_name,'/sbin/init'])
+    with vm.locked():return launch(os_name)
+
+
+def launch(os_name):
+    if os_name not in NATIVE_OS_NAMES:raise ValueError('Select a supported native Linux image')
+    args = arguments(config(), os_name)
+    return run([PODMAN,'run','-d','-it','--hostname',os_name,'--name',os_name,
+                '--rm','--privileged','--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro','--memory=4g','--pull=never',*args,os_name,'/sbin/init'])
 
 
 if __name__ == '__main__':

@@ -384,6 +384,9 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell')
         writer.write((json.dumps(payload) + '\n').encode())
         await writer.drain()
         ready = await _mykos_asyncio.wait_for(reader.readline(), 20)
+        if ready.startswith(b'MYKOS_TERMINAL_ERROR '):
+            writer.close();await writer.wait_closed()
+            await ws.accept();await ws.send_text(ready.decode('utf-8','replace').removeprefix('MYKOS_TERMINAL_ERROR '));await ws.close(code=1013);return
         if ready != b'MYKOS_TERMINAL_READY\n':
             writer.close()
             await writer.wait_closed()

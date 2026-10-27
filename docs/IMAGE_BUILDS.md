@@ -191,3 +191,19 @@ their paired disk/RAM startup capture, commit the installed disk, and restart th
 generic base from the saved state. Existing ID-specific containers and intentional
 snapshots retain their original state. Capture native images after package updates
 have completed; external mounted data is not part of a Podman filesystem commit.
+
+
+### Base console sessions
+
+Base-image logins guard common shutdown and reboot commands. These are session
+safeguards against accidental power actions, not a security sandbox for an
+administrator with root access. Regular ID-specific console sessions are unchanged.
+Only one base-image console can be open for an OS at a time.
+
+**Capture changes before logging out or closing the console.** The server queues
+a reset when the console disconnects, including browser-window closure. Reset
+recreates only the generic base from its latest captured image and, for VMs, the
+matching saved disks/RAM. It never commits uncaptured edits. Capture is serialized
+with reset, so a completed capture becomes the reset source. Existing ID-specific
+containers, intentional snapshots and OS images are preserved. Reset failures
+appear on the image row and can be retried using **Reset base to captured image**.

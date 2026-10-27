@@ -44,4 +44,8 @@ def open_terminal(key, *, allow_image=False):
     print('macOS shell: enable Remote Login in guest System Settings > General > Sharing first.', flush=True)
     user = input('macOS login user: ').strip()
     args = ssh_arguments(address, known, user)
+    if allow_image:
+        import shlex
+        from mykos_base_session import shell_command
+        args+=['/bin/bash -c '+shlex.quote(shell_command(mac=True))]
     os.execv(args[0], args)

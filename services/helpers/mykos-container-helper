@@ -57,6 +57,10 @@ def _dispatch(args):
         code=shopcode(args[1]); result=add(code,**settings)
         from mykos_refresh import best_effort
         return best_effort(code,result,run=run)
+    if action=='image-reset':
+        if len(args)!=3:raise ValueError('Expected image OS and confirmation')
+        from mykos_image_admin import queue_reset
+        return queue_reset(args[1],args[2])
     if action in ('image-remove','image-remove-status'):
         from mykos_image_admin import queue,job as image_job
         if action=='image-remove' and len(args)==3:return queue(args[1],args[2])

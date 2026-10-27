@@ -876,3 +876,32 @@ def test_image_terminal_requires_admin_valid_os_and_origin(environment,monkeypat
     with admin.websocket_connect('/api/v2/terminal/rh9?action=image-shell',headers={'X-MYKOS-API-Key':key}) as ws:
         assert ws.receive_text()=='base shell'
     assert calls==[('rh9','image-shell'),('rh9','image-shell')]
+
+
+def test_base_reset_requires_administrator_and_browser_origin(environment,monkeypatch):
+    import image_build_api
+    calls=[];monkeypatch.setattr(image_build_api,'invoke',lambda *a:calls.append(a) or {'state':'queued'})
+    reader=login('reader','reader-password-123');admin=login('operator','operator-password-123')
+    path='/api/web/images/rh9/reset';body={'confirmation':'rh9'}
+    assert reader.post(path,json=body,headers={'Origin':'https://testserver'}).status_code==403
+    assert admin.post(path,json=body,headers={'Origin':'https://wrong.example'}).status_code==403
+    assert admin.post(path,json=body,headers={'Origin':'https://testserver'}).status_code==200
+    key=mykos_api_keys.create('base-reset','admin')
+    assert admin.post('/api/v2/images/rh9/reset',json=body,headers={'X-MYKOS-API-Key':key}).status_code==200
+    assert calls==[('image-reset','rh9','rh9'),('image-reset','rh9','rh9')]
+
+
+def test_base_console_reports_busy_message_without_creating_a_second_session(environment,monkeypatch):
+    class Reader:
+        async def readline(self):return b'MYKOS_TERMINAL_ERROR This base image already has an open console\n'
+    class Writer:
+        def write(self,data):pass
+        async def drain(self):pass
+        def close(self):pass
+        async def wait_closed(self):pass
+    async def connect(*args,**kwargs):return Reader(),Writer()
+    monkeypatch.setattr(app._mykos_asyncio,'open_unix_connection',connect)
+    admin=login('operator','operator-password-123')
+    with admin.websocket_connect('wss://testserver/api/terminal/rh9?action=image-shell',headers={'Origin':'https://testserver'}) as ws:
+        assert 'already has an open console' in ws.receive_text()
+        assert ws.receive()['code']==1013

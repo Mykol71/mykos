@@ -32,6 +32,12 @@ def main():
                 raise ValueError('Use the desktop browser console or RDP/VNC login for this VM')
     if not host and action in ('add-vpn','remove-vpn') and not any(item['name'] == name and item['state'].lower() == 'running' for item in containers()):
         raise ValueError('Start the container before adding a VPN')
+    session_fd=None
+    if image_shell:
+        from mykos_base_session import acquire
+        try:session_fd=acquire(data_shop)
+        except ValueError as error:
+            conn.sendall(('MYKOS_TERMINAL_ERROR '+str(error)+'\n').encode());conn.close();return
     pid,master=pty.fork()
     if pid==0:
         if host and action == 'remove-vpn':
@@ -47,8 +53,8 @@ def main():
             os.chdir('/usr/local/share/mykos/pos')
             os.execv('/usr/bin/bash', ['/usr/bin/bash', './pos', '--'+action, data['shop'], name])
         else:
-            from mykos_vm import record_path
-            if record_path(data['shop']).is_file():
+            from mykos_vm import record_path,VERSIONS
+            if (not image_shell or data_shop in VERSIONS) and record_path(data['shop']).is_file():
                 from mykos_vm import read
                 if read(data['shop'])['os'].startswith('ubuntu'):
                     from mykos_serial import open_terminal
@@ -59,7 +65,14 @@ def main():
                 if image_shell: open_terminal(data['shop'], allow_image=True)
                 else: open_terminal(data['shop'])
                 raise SystemExit(0)
+            if image_shell:
+                from mykos_base_session import shell_command
+                os.execv(PODMAN,[PODMAN,'exec','-it','--user','0',name,'/bin/su','--login','--shell','/bin/bash','--command',shell_command(),'root'])
             os.execv(PODMAN,[PODMAN,'exec','-it',name,'/bin/su','-','root'])
+    def closing_signal(signum,frame):raise SystemExit(0)
+    if image_shell:
+        signal.signal(signal.SIGTERM,closing_signal)
+        signal.signal(signal.SIGHUP,closing_signal)
     try:
         conn.sendall(b'MYKOS_TERMINAL_READY\n');conn.settimeout(None)
         with selectors.DefaultSelector() as selector:
@@ -78,12 +91,30 @@ def main():
                         except OSError:return
                         if not data:return
                         conn.sendall(data)
+    except (ConnectionResetError,BrokenPipeError):
+        pass
     finally:
         os.close(master);conn.close()
         try:os.kill(pid,signal.SIGTERM)
         except ProcessLookupError:pass
-        try:os.waitpid(pid,0)
-        except ChildProcessError:pass
+        import time
+        deadline=time.monotonic()+1
+        while True:
+            try:
+                if os.waitpid(pid,os.WNOHANG)[0]:break
+            except ChildProcessError:break
+            if time.monotonic()>=deadline:
+                try:os.kill(pid,signal.SIGKILL);os.waitpid(pid,0)
+                except (ProcessLookupError,ChildProcessError):pass
+                break
+            time.sleep(.05)
+        if image_shell:
+            try:
+                from mykos_image_admin import queue_reset
+                queue_reset(data_shop,data_shop,closing_session=True)
+            except Exception as error:print('Base reset could not be queued: '+str(error),file=sys.stderr)
+            finally:
+                if session_fd is not None:os.close(session_fd)
         # A closed shell or VPN workflow may have changed this resource.
         try:
             from mykos_refresh import refresh

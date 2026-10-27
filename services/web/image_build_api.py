@@ -80,3 +80,16 @@ def web_image_remove(os_name:str,data:DeleteBuildRequest,request:Request):
     from app import mykos_stage_admin,origin
     mykos_stage_admin(request);origin(request);prepared_os(os_name)
     return invoke('image-remove',os_name,data.confirmation)
+
+
+@api_router.post('/images/{os_name}/reset',tags=['MYKOS API v2'],summary='Reset only the generic base to its last captured image')
+def image_reset(os_name:str,data:DeleteBuildRequest,request:Request):
+    from api_v2 import administrator
+    administrator(request);prepared_os(os_name)
+    return invoke('image-reset',os_name,data.confirmation)
+
+@router.post('/api/web/images/{os_name}/reset',include_in_schema=False)
+def web_image_reset(os_name:str,data:DeleteBuildRequest,request:Request):
+    from app import mykos_stage_admin,origin
+    mykos_stage_admin(request);origin(request);prepared_os(os_name)
+    return invoke('image-reset',os_name,data.confirmation)

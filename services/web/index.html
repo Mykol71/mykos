@@ -872,7 +872,7 @@ showNodeDetails = async function(shop) {
 </script><script>
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let map,markers=[],nodes=[];
 el('form').onsubmit=async e=>{e.preventDefault();const r=await fetch('/mykos/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:el('user').value,password:el('pass').value})});if(!r.ok){el('error').textContent='Login failed';return}el('pass').value='';load()};
-el('logout').onclick=async()=>{await fetch('/mykos/api/logout',{method:'POST'});mykosResetHostChart();el('dashboard').hidden=true;el('login').hidden=false};
+el('logout').onclick=async()=>{mykosCloseTerminal();await fetch('/mykos/api/logout',{method:'POST'});mykosResetHostChart();el('dashboard').hidden=true;el('login').hidden=false};
 el('geo').onclick=()=>view(false);el('topo').onclick=()=>view(true);
 function view(top){el('map').hidden=top;el('topology').hidden=!top;el('geo').classList.toggle('active',!top);el('topo').classList.toggle('active',top);if(!top&&map)setTimeout(()=>map.invalidateSize(),50)}
 async function load(){
@@ -2361,7 +2361,7 @@ function mykosRenderImageBuilds() {
             const span = 4;
             const phase = ({queued:'Queued',building:'Installing',configuring:'Preparing',capturing:'Capturing',failed:'Failed',ready:'Image'})[item.build_state] || 'Installing';
             const produced=Number.isFinite(item.created_at) && item.created_at>0 ? new Date(item.created_at*1000).toLocaleString() : 'Unknown';
-            const imageState=item.delete_state==='queued'||item.delete_state==='deleting' ? 'Removing image…' : item.delete_state==='failed' ? 'Removal failed: '+item.delete_error : 'Prepared image';
+            const imageState=['queued','resetting'].includes(item.reset_state)?'Resetting base…':item.reset_state==='failed'?'Base reset failed: '+item.reset_error:item.delete_state==='queued'||item.delete_state==='deleting' ? 'Removing image…' : item.delete_state==='failed' ? 'Removal failed: '+item.delete_error : 'Prepared image';
             const imageSize=Number.isFinite(item.size_bytes) && item.size_bytes>=0 ? (item.size_bytes/1073741824).toFixed(2)+' GiB' : 'Unknown';
             const imageHint=item.build_state==='ready' ? imageState+' | Size: '+imageSize+' | Produced: '+produced : '';
             const hint = imageHint || (item.unattended ? (item.build_message || 'Installing and preparing the image automatically') : 'Finish installation using the console action');
@@ -2375,7 +2375,19 @@ function mykosRenderImageBuilds() {
                 const console=document.createElement('button');console.type='button';console.className='mykos-icon';console.style.color='#38bdf8';
                 console.title='Connect to running base image';console.setAttribute('aria-label',console.title+' '+item.os);
                 console.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 6 6 6-6 6M13 18h7"/></svg>';
+                const resetting=['queued','resetting'].includes(item.reset_state);
+                console.disabled=resetting;
+                console.title='Edit base image; close or logout to reset uncaptured changes';
                 console.onclick=()=>mykosOpenTerminal(item.os,false,'image-shell');actions.append(console);
+                const reset=document.createElement('button');reset.type='button';reset.className='mykos-icon';reset.style.color='#fbbf24';
+                reset.title='Reset base to captured image';reset.setAttribute('aria-label',reset.title+' '+item.os);reset.disabled=resetting;
+                reset.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10a9 9 0 1 1 2 9M3 4v6h6"/></svg>';
+                reset.onclick=async()=>{
+                    if(window.prompt('Discard uncaptured changes and reset only the '+item.os+' base? Close its console first. ID-specific containers and snapshots stay unchanged. Type '+item.os+' to confirm:')!==item.os)return;
+                    reset.disabled=true;
+                    try {await mykosStageJSON('/mykos/api/web/images/'+encodeURIComponent(item.os)+'/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirmation:item.os})});await mykosLoadStageImages(true);}
+                    catch(error){alert(error.message);reset.disabled=false;}
+                };actions.append(reset);
             }
             const remove=document.createElement('button');remove.type='button';remove.className='mykos-icon';
             const prepared=item.build_state==='ready';
@@ -2463,7 +2475,7 @@ async function mykosRefreshStartupInventory() {
     } catch (_) {} finally { mykosStartupRefreshBusy=false; }
 }
 setInterval(()=>{
-    if (!el('dashboard').hidden && (mykosInstallingImages.some(item=>['queued','building','configuring','capturing'].includes(item.build_state)) || mykosCapturedImages.some(item=>['queued','deleting'].includes(item.delete_state))))
+    if (!el('dashboard').hidden && (mykosInstallingImages.some(item=>['queued','building','configuring','capturing'].includes(item.build_state)) || mykosCapturedImages.some(item=>['queued','deleting'].includes(item.delete_state)||['queued','resetting'].includes(item.reset_state))))
         mykosLoadStageImages(true);
 },5000);
 async function mykosStageJSON(url, options) {
@@ -2561,6 +2573,7 @@ let mykosTerminalSocket = null;
 let mykosTerminalInstance = null;
 let mykosTerminalPanel = null;
 let mykosTerminalOpener = null;
+let mykosTerminalBase = false;
 
 async function mykosCheckTerminalPermission() {
     try {
@@ -2583,6 +2596,8 @@ setTimeout(mykosCheckTerminalPermission, 1500);
 setInterval(mykosCheckTerminalPermission, 5000);
 
 function mykosCloseTerminal() {
+    const closedBase=mykosTerminalBase;mykosTerminalBase=false;
+    if(closedBase)setTimeout(()=>mykosLoadStageImages(true),1500);
     const socket = mykosTerminalSocket;
     mykosTerminalSocket = null;
     if (socket) {
@@ -2613,6 +2628,7 @@ function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
     const opener = document.activeElement;
     mykosCloseTerminal();
     mykosTerminalOpener = opener;
+    mykosTerminalBase = action==='image-shell';
 
     const dialog = document.createElement('dialog');
     dialog.id = 'mykos-terminal-dialog';
@@ -2649,6 +2665,7 @@ function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
     mykosTerminalInstance = term;
     term.open(surface);
     term.focus();
+    if(action==='image-shell')term.write('Base session: shutdown/reboot disabled. Capture to keep edits. Closing this window resets the base.\r\n');
     term.write(action === 'add-vpn' ? 'Opening add_vpn...\r\n' : isPowerShell ? 'Connecting to PowerShell...\r\n' : isMacShell ? 'Connecting to macOS shell...\r\n' : 'Connecting to root...\r\n');
     const url = new URL('/mykos/api/terminal/' + encodeURIComponent(shop), window.location.href);
     url.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -2673,7 +2690,7 @@ function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
         else term.write(event.data);
     };
     ws.onerror = () => term.write('\r\n[Terminal connection error]\r\n');
-    ws.onclose = () => term.write('\r\n[Terminal disconnected]\r\n');
+    ws.onclose = () => {term.write('\r\n[Terminal disconnected]\r\n');if(action==='image-shell')setTimeout(()=>mykosLoadStageImages(true),1500);};
 }
 
 window.addEventListener('pagehide', mykosCloseTerminal);
