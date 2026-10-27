@@ -125,12 +125,23 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         fail = true; mykosStageImagesLoadedAt = 0; await mykosLoadStageImages();
         for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, true);
         el('mykos-show-all-panes').onclick({preventDefault(){}});
-        for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, false);
+        for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, !mykosPreviewOsFamilies.has(family));
         for (const family of mykosOsFamilies) {
             const select = el(mykosOsId(family, 'mykos-stage-os'));
-            assert.equal(select.disabled, false, 'Preview dropdown must open without templates');
-            assert.equal(select.options.length, mykosOsChoices[family].length + 1);
+            assert.equal(select.disabled, !mykosPreviewOsFamilies.has(family), 'Only EL preview dropdowns open without images');
+            assert.equal(select.options.length, mykosPreviewOsFamilies.has(family) ? mykosOsChoices[family].length + 1 : 1);
             assert.ok(select.options.slice(1).every(option => option.disabled), 'Unavailable preview images must be disabled');
+        }
+        fail = false;
+        responseImages = ['fedora44','ubuntu24.04','win11','wns2022','mac15','mssql2022'].map(os=>({os,image:'image-'+os}));
+        mykosStageImagesLoadedAt=0;await mykosLoadStageImages();
+        for (const family of mykosOsFamilies.filter(family=>!mykosPreviewOsFamilies.has(family))) {
+            assert.equal(el(mykosOsId(family,'mykos-container-panel')).hidden,false,'Real non-EL images remain visible with the leaf on');
+            assert.equal(el(mykosOsId(family,'mykos-stage-os')).options.length,2,'Non-EL choices contain actual images only');
+        }
+        responseImages=[];mykosStageImagesLoadedAt=0;await mykosLoadStageImages();
+        for (const family of mykosOsFamilies) {
+            assert.equal(el(mykosOsId(family,'mykos-container-panel')).hidden,!mykosPreviewOsFamilies.has(family));
         }
         fail = false; responseImages = [{os:'rh9',image:'image-rh9'}]; mykosStageImagesLoadedAt = 0;
         await mykosLoadStageImages();
@@ -147,7 +158,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         fail = true;
         for (const kind of ['backups','repos']) assert.equal(el('mykos-'+kind+'-pane').hidden,false);
         mykosStageImagesLoadedAt = 0; await mykosLoadStageImages();
-        for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, false, 'Failed image refresh must not override Show all');
+        for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, !mykosPreviewOsFamilies.has(family), 'Failed refresh preserves EL-only preview');
         mykosSetPaneVisible('backups', true);
         el('mykos-show-all-panes').onclick({preventDefault(){}});
         for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, true);

@@ -90,14 +90,16 @@ confirmation and administrator authorization, then a helper exact-hostname check
 before scheduling reboot after five seconds. Reboot and terminal tests use mocks;
 verification never reboots the host. These host actions have API v2 equivalents.
 
-The footer's green leaf link toggles Show all panes, overriding OS/Backup/Repos visibility,
-including matching navigation links. Its preference is stored locally in the
-browser; turning it off immediately restores each pane's latest automatic state.
-It does not change permissions or enable staging when OS templates are unavailable.
-With Show all panes enabled, an empty OS, Backup or Repos pane displays two clearly
-labeled sample rows. These rows exist only in the browser, have disabled actions,
-never enter inventory/graph/API counts, and disappear when real rows arrive or the
-override is turned off.
+The footer's green leaf link previews the EL OS panes (RedHat, Rocky Linux,
+AlmaLinux, Oracle Linux and CentOS Stream) and utility panes, including their
+navigation links. Fedora, Ubuntu, Windows, Windows Server, macOS and SQL Server
+retain support and normal visibility when images, builds or containers are
+available; the leaf does not reveal their empty preview panes. The preference is
+stored locally in the browser; turning it off restores automatic visibility.
+It does not change permissions or enable staging when images are unavailable.
+Empty preview panes show disabled example choices and two labeled sample rows.
+Samples exist only in the browser, never enter inventory/graph/API counts, and
+disappear when real rows arrive or the preview is turned off.
 
 Vendor pane icons use recognizable brand silhouettes in the dashboard's blue.
 Red Hat, Ubuntu and Apple SVG outlines are inlined from the Simple Icons project
