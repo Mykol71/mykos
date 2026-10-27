@@ -39,9 +39,7 @@ bind-utils
 rsyslog
 sed
 rsync
-kernel-modules
-cups
-samba
+curl
 -tuned
 -kernel
 -kernel-core
