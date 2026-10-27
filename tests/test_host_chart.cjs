@@ -98,6 +98,12 @@ mykosDrawHostChart();
 const countBars = el('mykos-host-chart').children.filter(item => item.attrs['data-series'] === 'containers');
 assert.equal(countBars.length, 4, 'Only actual known count buckets are drawn; gaps remain empty');
 assert.ok(countBars.every(item => item.tag === 'rect' && Number(item.attrs.width)>0));
+assert.equal(countBars.filter(item=>item.attrs['data-changed']==='true').length,1, 'Only a known adjacent count change is emphasized');
+const emphasized=countBars.find(item=>item.attrs['data-changed']==='true');
+assert.equal(emphasized.attrs['stroke-width'],'1.5');
+assert.equal(emphasized.attrs['fill-opacity'],'0.36');
+assert.equal(countBars[0].attrs['fill-opacity'],'0.09');
+
 mykosResetHostChart();
 mykosSetHostMetric('cpu', 10, '10%', '8 CPUs'); mykosDrawHostChart();
 const firstReading = clock.now;

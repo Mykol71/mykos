@@ -372,3 +372,5 @@ installation and memory capture are not repeated. An unusable builder requiring
 manual cleanup is reported explicitly, without deleting its disks or image.
 
 The performance chart draws running container and VPN connection counts as translucent paired columns behind the resource lines. Container and VPN columns alternate beside each other in five-second buckets without overlap. Both count series rise from zero; 15 running containers or active VPN connections equals 100%. Historical counts use the same scale, and missing or stale readings leave gaps. The history slider uses a grey accent.
+
+Host has an orange personal-notes icon beside its white change-request icon. Both use the same icon shape and a larger notes dialog. Personal notes persist across updates and are excluded from change-request processing. Changed container/VPN count bars receive a brighter fill and bold edge at the time of the change; other bars remain faint. A subtle diagonal texture overlays the dashboard background.

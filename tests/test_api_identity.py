@@ -808,3 +808,31 @@ def test_host_history_requires_browser_session_or_api_key(environment, monkeypat
     headers = {'X-MYKOS-API-Key': mykos_api_keys.create('history', 'read')}
     assert client.get('/api/v2/host/history', headers=headers).status_code == 200
     assert client.get('/api/v2/host/history?since=-1', headers=headers).status_code == 400
+
+
+def test_personal_notes_private_separate_and_revisioned(environment):
+    anonymous=TestClient(app.app,base_url='https://testserver')
+    paths=('/api/web/personal-notes','/api/v2/personal-notes')
+    for path in paths:
+        assert anonymous.get(path).status_code==401
+        for name in ('reader','operator'):
+            client=login(name,name+'-password-123')
+            assert client.get(path).status_code==403
+            assert client.put(path,headers={'Origin':'https://testserver'},json={'text':'denied','revision':0}).status_code==403
+        key=mykos_api_keys.create('not-personal-owner','admin')
+        assert anonymous.get(path,headers={'X-MYKOS-API-Key':key}).status_code==401
+    mykos_users.set_password('mgreen','mgreen-test-password-123',role='admin',create=True)
+    owner=login('mgreen','mgreen-test-password-123')
+    payload={'text':'Personal text, never a change request','revision':0}
+    assert owner.put(paths[0],json=payload).status_code==403
+    assert owner.put(paths[0],headers={'Origin':'https://testserver'},json=payload).status_code==200
+    assert owner.get(paths[1]).json()['text']==payload['text']
+    assert owner.get('/api/web/notes/host').json()['text']==''
+    assert owner.put(paths[1],headers={'Origin':'https://testserver'},json=payload).status_code==409
+    assert owner.put('/api/v2/notes/host',headers={'Origin':'https://testserver'},json={'text':'change request','revision':0}).status_code==200
+    assert owner.get(paths[0]).json()['text']==payload['text']
+    with mykos_users.connect() as c:
+        assert c.execute('SELECT text FROM pane_notes').fetchall()==[('change request',)]
+        c.execute('DELETE FROM pane_notes')
+    assert owner.get(paths[1]).json()['text']==payload['text']
+    assert owner.put(paths[0],headers={'Origin':'https://testserver'},json={'text':'x'*20001,'revision':1}).status_code==422

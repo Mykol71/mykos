@@ -22,7 +22,20 @@ SHOP_RE = re.compile(r'[0-9]{8}\Z')
 router = APIRouter(prefix='/api/v2', tags=['MYKOS API v2'])
 
 from pane_notes import Pane, NoteUpdate, read as read_pane_note, save as save_pane_note, authorize as authorize_pane_notes
+from pane_notes import read_personal as read_personal_note, save_personal as save_personal_note
 
+
+
+@router.get('/personal-notes', summary='Read personal notes (mgreen only; excluded from change requests)')
+def personal_note(request: Request):
+    authorize_pane_notes(request)
+    return read_personal_note()
+
+
+@router.put('/personal-notes', summary='Save personal notes (preserved through updates)')
+def update_personal_note(data: NoteUpdate, request: Request):
+    authorize_pane_notes(request, write=True)
+    return save_personal_note(data)
 
 @router.get('/nodes/{shop}/desktop', summary='Desktop browser console and native login endpoints')
 def desktop_connection(shop: str, request: Request):

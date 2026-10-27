@@ -165,6 +165,8 @@ def test_update_clears_notes_but_preserves_identity(tmp_path):
     with sqlite3.connect(database) as db:
         db.execute('CREATE TABLE pane_notes(pane TEXT, text TEXT)')
         db.execute("INSERT INTO pane_notes VALUES('host','change request')")
+        db.execute('CREATE TABLE personal_notes(pane TEXT, text TEXT)')
+        db.execute("INSERT INTO personal_notes VALUES('host','private personal text')")
         db.execute('CREATE TABLE users(name TEXT, hash TEXT)')
         db.execute("INSERT INTO users VALUES('admin','preserved')")
         db.execute('CREATE TABLE api_keys(digest TEXT)')
@@ -172,5 +174,6 @@ def test_update_clears_notes_but_preserves_identity(tmp_path):
     run(root,'install')
     with sqlite3.connect(database) as db:
         assert db.execute('SELECT * FROM pane_notes').fetchall()==[]
+        assert db.execute('SELECT * FROM personal_notes').fetchall()==[('host','private personal text')]
         assert db.execute('SELECT * FROM users').fetchall()==[('admin','preserved')]
         assert db.execute('SELECT * FROM api_keys').fetchall()==[('preserved-key',)]

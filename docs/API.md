@@ -77,6 +77,8 @@ including leading zeros. The read column includes both `read` and `admin` keys.
 | `GET /images` | Read | OS choices from running supported template containers; returns `os` and the local source `image` |
 | `GET /notes/{pane}` | mgreen session | Private plain-text pane notes (mgreen session only), revision, and last-saved timestamp |
 | `PUT /notes/{pane}` | mgreen session | Save notes with JSON `text` (up to 20,000 characters) and current `revision`; stale revisions return 409 |
+| `GET /personal-notes` | mgreen session | Read personal notes; separate from change requests and retained through updates |
+| `PUT /personal-notes` | mgreen session | Save personal notes with `text` and `revision`; stale revisions return 409 |
 | `GET /actions` | Read | Supported administrative operations and permissions |
 | `GET /actions/stage/{shop}/check` | Admin | Container existence, active job, RTI backup presence, host configuration readiness |
 | `GET /jobs/{shop}` | Admin | Staging state and bounded output; `idle` if no recorded job |
@@ -596,3 +598,5 @@ Repository responses include `latest_rpm`, the filename (without directories), p
 Pane notes are disposable change requests and are cleared by each installation/update. User accounts, password hashes and API key digests are preserved.
 
 Pane notes are private to the `mgreen` browser account. Both web and v2 notes endpoints require its authenticated session cookie; scope-only API keys cannot read or write these notes. PUT also requires the configured Origin header.
+
+The orange Host notes icon opens personal notes. The equivalent web endpoints are `GET/PUT /api/web/personal-notes`. These use the separate `personal_notes` table and must never be included in automated change-request scans. Installation clears only disposable `pane_notes`; personal text remains private to mgreen and is preserved.

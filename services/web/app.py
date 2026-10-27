@@ -33,7 +33,20 @@ class Credentials(BaseModel):
     password: str
 
 from pane_notes import Pane, NoteUpdate, read as read_pane_note, save as save_pane_note, authorize as authorize_pane_notes
+from pane_notes import read_personal as read_personal_note, save_personal as save_personal_note
 
+
+
+@app.get('/api/web/personal-notes', summary='Read personal notes (mgreen only; excluded from change requests)')
+def personal_note(request: Request):
+    authorize_pane_notes(request)
+    return read_personal_note()
+
+
+@app.put('/api/web/personal-notes', summary='Save personal notes (preserved through updates)')
+def update_personal_note(data: NoteUpdate, request: Request):
+    authorize_pane_notes(request, write=True)
+    return save_personal_note(data)
 
 @app.get('/image-setup/ubuntu.py', include_in_schema=False)
 def ubuntu_image_setup():
