@@ -347,6 +347,9 @@ body, button, input, select, textarea {
 
 
 header { flex-wrap: wrap; align-items: center; gap: 10px 20px; }
+/* A fixed layer keeps the texture stationary on mobile as well as desktop. */
+body { isolation: isolate; }
+body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: inherit; }
 /* Phones and touch-first mobile browsers use the dashboard without a header. */
 @media (max-width: 767px), (hover: none) and (pointer: coarse) {
     #dashboard > header { display: none !important; }
