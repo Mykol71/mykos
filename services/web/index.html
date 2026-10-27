@@ -1196,7 +1196,18 @@ function mykosVpnGraph(selectedShop = null, showPeers = false) {
         });
         height=top+Math.ceil(peers.length/perRow)*60;
     }
-    const lines=edges.map(edge=>{const a=vertices.get(edge.from),b=vertices.get(edge.to);return '<g><title>'+escape(edge.label)+'</title><path d="M'+(a.x+(a.kind==='peer'?15:20))+' '+a.y+' L'+(b.x-(b.kind==='peer'?15:20))+' '+b.y+'" fill="none" stroke="'+(edge.active?'#4ade80':'#94a3b8')+'" stroke-width="2"'+(edge.active?'':' stroke-dasharray="4 4"')+'/>'+(edge.caption?'<text x="'+((a.x+b.x)/2)+'" y="'+((a.y+b.y)/2-8)+'" text-anchor="middle" fill="'+(edge.active?'#4ade80':'#94a3b8')+'" stroke="none" font-size="11">'+escape(edge.caption)+'</text>':'')+'</g>';}).join('');
+
+    const lines=edges.map(edge=>{
+        const a=vertices.get(edge.from),b=vertices.get(edge.to),color=edge.active?'#4ade80':'#94a3b8';
+        const ax=a.x+(a.kind==='peer'?15:20),ay=a.y,bx=b.x-(b.kind==='peer'?15:20),by=b.y;
+        const distance=Math.hypot(bx-ax,by-ay) || 1,dx=(bx-ax)/distance,dy=(by-ay)/distance;
+        const arrow=(x,y,direction)=>{
+            const baseX=x+direction*dx*5.5,baseY=y+direction*dy*5.5;
+            return '<path d="M'+x+' '+y+' L'+(baseX-dy*2.5)+' '+(baseY+dx*2.5)+' L'+(baseX+dy*2.5)+' '+(baseY-dx*2.5)+' Z" fill="'+color+'" stroke="none"/>';
+        };
+        return '<g><title>'+escape(edge.label)+'</title><path d="M'+ax+' '+ay+' L'+bx+' '+by+'" fill="none" stroke="'+color+'" stroke-width="2"'+(edge.active?'':' stroke-dasharray="4 4"')+'/>'+arrow(ax,ay,1)+arrow(bx,by,-1)+(edge.caption?'<text x="'+((a.x+b.x)/2)+'" y="'+((a.y+b.y)/2-8)+'" text-anchor="middle" fill="'+color+'" stroke="none" font-size="11">'+escape(edge.caption)+'</text>':'')+'</g>';
+    }).join('');
+
     const icons=[...vertices.values()].map(v=>{const connected=edges.some(edge=>edge.active && (edge.from===v.key || edge.to===v.key));const color=connected?'#38bdf8':'#94a3b8';return '<g style="color:'+color+'" stroke="currentColor" transform="translate('+v.x+' '+v.y+')'+(v.kind==='peer'?' scale(0.75)':'')+'"><title>'+escape(v.label)+'</title>'+(v.kind==='site'?'<path d="M-7-18v7M7-18v7"/><rect x="-14" y="-10" width="28" height="17" rx="3"/>':'<rect x="-14" y="-12" width="28" height="22" rx="3"/><path d="M-8 15h16M0 10v5"/>')+osIcon(v,connected)+'<text y="-25" text-anchor="middle" fill="currentColor" stroke="none" font-size="10">'+(v.kind==='gateway'?'VPN gateway':v.key==='host:internet'?'Host':'')+'</text><text y="29" text-anchor="middle" fill="'+(v.kind==='site' || /^guest:[0-9]{8}$/.test(v.key)?'#facc15':'currentColor')+'" stroke="none" font-size="12">'+escape(v.label.length>26?v.label.slice(0,23)+'…':v.label)+'</text>'+networkLabel(v)+'</g>';}).join('');
     return '<p class="mykos-network-mode">'+escape(mode)+'</p><svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Guests, VPN gateways and remote sites" style="width:100%;min-width:480px;color:#38bdf8;fill:none;stroke:currentColor;stroke-width:1.7">'+lines+icons+'</svg>';
 }
