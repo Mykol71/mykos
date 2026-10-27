@@ -71,7 +71,8 @@ def test_build_labels_full_version_from_archive_in_build_directory(tmp_path):
         member=tarfile.TarInfo('usr/lib/os-release');member.size=len(content);archive.addfile(member,io.BytesIO(content))
     source=(root/'pos/pos').read_text()
     function=source[source.index('create_dockerfile() {'):source.index('stop_container() {')]
-    subprocess.run(['bash','-c',function+'\ncreate_dockerfile'],cwd=tmp_path,
+    subprocess.run(['bash','-c',function+'''\ncurl() { printf '#!/bin/bash\\necho test\\n' > "${@: -1}"; }
+create_dockerfile'''],cwd=tmp_path,
                    env={**os.environ,'MYKOS_PYTHON':sys.executable,'ROOTDIR':str(root/'pos'),'OS':'rh9','REPOSERVER':'example.org'},check=True)
     assert 'LABEL io.mykos.os.version="9.8"' in (tmp_path/'Dockerfile').read_text()
 

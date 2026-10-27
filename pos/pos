@@ -124,8 +124,10 @@ stage_image() {
 }
 
 create-image() {
+  local image_selection
   printf '%s\n' \
     'OS choices:' \
+    '  All EL images   all' \
     '  RedHat          rh7 rh8 rh9 rh10' \
     '  Rocky Linux     rocky8 rocky9 rocky10' \
     '  AlmaLinux       alma8 alma9 alma10' \
@@ -136,11 +138,26 @@ create-image() {
     '  Windows Server  wns2025 wns2022 wns2019 wns2016' \
     '  macOS           mac15 mac14 mac13 mac12' \
     '  Ubuntu          ubuntu20.04 ubuntu22.04 ubuntu24.04' \
-    '  SQL Server      mssql2025 mssql2022' && printf 'OS: ' && read -r OS || return 1
-  case "$OS" in win*|wns*|mac*|ubuntu*) "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;; esac
+    '  SQL Server      mssql2025 mssql2022' && printf 'OS: ' && read -r image_selection || return 1
+  if [ "$image_selection" = all ]; then
+    build-all-images
+  else
+    OS="$image_selection"
+    build-image "$OS"
+  fi
+}
+
+build-image() (
+  local OS="$1"
+  case "$OS" in
+    win*|wns*|mac*|ubuntu*)
+      renice -n 10 -p "$BASHPID" >/dev/null || return 1
+      "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;;
+  esac
   case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
+  renice -n 10 -p "$BASHPID" >/dev/null || return 1
+  if podman image exists "$OS"; then echo "Image already built: $OS"; return 0; fi
   check_image_builder || return 1
-  if podman image exists "$OS"; then echo "Image already built."; return 0; fi
   rm -f "/var/tmp/$OS-docker.tar.xz" || return 1
   create_ks || return 1
   if ! livemedia-creator --no-virt --make-tar --ks="/var/tmp/$OS.ks" --image-name="$OS-docker.tar.xz" --logfile="/tmp/build-$OS-container.error.log"; then
@@ -158,6 +175,22 @@ create-image() {
   podman exec "$CONTAINER" /bin/sh -c 'if [ -f /etc/yum/pluginconf.d/subscription-manager.conf ]; then sed -i "s/enabled=1/enabled=0/g" /etc/yum/pluginconf.d/subscription-manager.conf; fi' || return 1
   podman exec "$CONTAINER" systemctl restart sshd || return 1
   podman commit "$CONTAINER" "$OS:latest"
+)
+
+build-all-images() {
+  local image completed=0
+  local images=(rh7 rh8 rh9 rh10 rocky8 rocky9 rocky10 alma8 alma9 alma10 oracle8 oracle9 oracle10 centos8 centos9 centos10)
+  for image in "${images[@]}"; do
+    printf '\n[%s/%s] Build EL image: %s\n' "$((completed+1))" "${#images[@]}" "$image"
+    if build-image "$image"; then
+      completed=$((completed+1))
+    else
+      printf 'Build stopped at %s; remaining images were not started.\n' "$image" >&2
+      printf 'Built or reused: %s/%s\n' "$completed" "${#images[@]}" >&2
+      return 1
+    fi
+  done
+  printf '\nAll EL images built or reused: %s/%s\n' "$completed" "${#images[@]}"
 }
 
 set_working_shopcode() {

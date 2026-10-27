@@ -17,6 +17,7 @@ def test_image_build_stops_before_unsafe_followup(tmp_path,build_major):
     preflight=source[source.index('check_image_builder() {'):source.index('\ncreate_ks() {')]
     build=source[source.index('create-image() {'):source.index('\nset_working_shopcode() {')]
     script=preflight+'\n'+build+'''
+renice() { :; }
 rpm() { echo "$TEST_BUILD_MAJOR"; }
 ksvalidator() { return 0; }
 podman() {
@@ -556,3 +557,51 @@ def test_native_image_starter_binds_host_cgroups_read_only(monkeypatch,os_name):
     assert '--network' in command and '--pull=never' in command
     with pytest.raises(ValueError):module.start('invalid-image')
     assert len(calls)==1
+
+
+@pytest.mark.parametrize('failed', ['', 'rh9'])
+def test_all_image_choice_is_el_only_sequential_and_stops_on_failure(tmp_path,failed):
+    import os,subprocess
+    source=(HELPERS.parents[1]/'pos/pos').read_text()
+    functions=source[source.index('create-image() {'):source.index('\nset_working_shopcode() {')]
+    calls=tmp_path/'calls'
+    script=functions+'''
+build-image() { printf '%s\\n' "$1" >> "$CALLS"; [ "$1" != "$FAILED_IMAGE" ]; }
+OS=rh8
+create-image
+status=$?
+[ "$OS" = rh8 ] || exit 98
+exit "$status"
+'''
+    result=subprocess.run(['bash','-c',script],cwd=tmp_path,input='all\n',text=True,capture_output=True,
+                          env={**os.environ,'CALLS':str(calls),'FAILED_IMAGE':failed})
+    expected=['rh7','rh8','rh9','rh10','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10']
+    assert calls.read_text().splitlines()==(expected[:3] if failed else expected)
+    assert result.returncode==(1 if failed else 0),result.stderr
+    assert ('Build stopped at rh9' in result.stderr)==bool(failed)
+    if not failed:assert '16/16' in result.stdout
+
+
+def test_existing_native_image_is_reused_without_touching_menu_priority(tmp_path):
+    import os,subprocess
+    source=(HELPERS.parents[1]/'pos/pos').read_text()
+    functions=source[source.index('create-image() {'):source.index('\nset_working_shopcode() {')]
+    script=functions+'''
+renice() { printf '%s %s\\n' "$*" "$PARENT_PID" > "$NICE_CALL"; }
+podman() { [ "$1 $2 $3" = 'image exists rh9' ]; }
+check_image_builder() { echo unexpected-preflight >&2; return 77; }
+PARENT_PID=$BASHPID
+OS=rh8
+CONTAINER=original
+build-image rh9
+status=$?
+[ "$OS" = rh8 ] && [ "$CONTAINER" = original ] || exit 98
+exit "$status"
+'''
+    log=tmp_path/'nice'
+    result=subprocess.run(['bash','-c',script],cwd=tmp_path,text=True,capture_output=True,env={**os.environ,'NICE_CALL':str(log)})
+    assert result.returncode==0,result.stderr
+    assert 'Image already built: rh9' in result.stdout
+    args=log.read_text().split()
+    assert args[:3]==['-n','10','-p'] and args[3]!=args[4], 'Only the build subprocess is reniced'
+    assert 'unexpected-preflight' not in result.stderr

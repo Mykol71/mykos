@@ -577,7 +577,7 @@ def test_old_image_ram_rejected_before_creating_instance(desktop):
 
 
 @pytest.mark.parametrize('os_name', ['win10', 'win11', 'wns2022', 'mac15', 'ubuntu22.04'])
-def test_cpu_priority_is_limited_to_windows_image_creation(desktop, os_name):
+def test_image_build_nice_10_does_not_leak_to_instances(desktop, os_name):
     root, calls = desktop
     if os_name.startswith(('win', 'wns')):
         vm.create(os_name, 'operator', 'private-password')
@@ -585,7 +585,7 @@ def test_cpu_priority_is_limited_to_windows_image_creation(desktop, os_name):
         vm.create(os_name)
     command = next(c for c in calls if c[1] == 'run')
     windows = os_name.startswith(('win', 'wns'))
-    assert ('MYKOS_BUILD_NICE=-5' in command) == windows
+    assert 'MYKOS_BUILD_NICE=10' in command
     assert ('--cap-add=SYS_NICE' in command) == windows
     value = vm.read(os_name)
     value.update(role='instance', name='12345678.test', ready=True, ram_mib=2048)

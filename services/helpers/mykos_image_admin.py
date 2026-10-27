@@ -98,7 +98,16 @@ def remove(os_name,expected_id):
         for container in containers:
             name=container.get('Name','').lstrip('/')
             if name==os_name:
-                if ident(container.get('Image'))!=ident(expected_id):raise ValueError('Generic base points to another image')
+                if ident(container.get('Image'))!=ident(expected_id):
+                    labels=container.get('Config',{}).get('Labels') or {}
+                    # Native commit retags the resulting child image; its running
+                    # generic base remains attached to the original parent.
+                    committed_native=(os_name not in vm.VERSIONS and
+                        labels.get('io.mykos.os')==os_name and
+                        container.get('ImageName')==reference(os_name) and
+                        bool(container.get('Image')) and
+                        ident(image.get('Parent'))==ident(container.get('Image')))
+                    if not committed_native:raise ValueError('Generic base points to another image')
                 if os_name in vm.VERSIONS:
                     labels=container.get('Config',{}).get('Labels') or {}
                     if labels.get('io.mykos.vm.os')!=os_name or labels.get('io.mykos.vm.role')!='template':raise ValueError('Generic base identity changed')

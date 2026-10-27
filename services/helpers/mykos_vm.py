@@ -234,11 +234,11 @@ def launch(key, value):
             '-p', '%s:%s:8006/tcp' % (value['bind'], value['console_port']),
             '-p', '%s:%s:%s/tcp' % (value['bind'], value['desktop_port'], desktop),
             '-p', '%s:%s:%s/udp' % (value['bind'], value['desktop_port'], desktop)]
-    building_windows = kind == 'windows' and value['role'] == 'template' and not value.get('ready')
+    building_image = value['role'] == 'template' and not value.get('ready')
     # Explicitly reset the environment when launching instances from a committed
     # build image, so build priority cannot leak into ordinary guests.
-    args += ['-e', 'MYKOS_BUILD_NICE=' + ('-5' if building_windows else '0')]
-    if building_windows:
+    args += ['-e', 'MYKOS_BUILD_NICE=' + ('10' if building_image else '0')]
+    if building_image and kind == 'windows':
         args += ['--cap-add=SYS_NICE']
     if kind == 'ubuntu':
         args += ['-e', 'SERIAL=unix:/dev/shm/mykos-serial.sock,server=on,wait=off']

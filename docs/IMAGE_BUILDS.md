@@ -165,3 +165,13 @@ RedHat's `updateos` script is downloaded and syntax-checked on the build host,
 then copied into the image with executable permissions. Minimal kickstarts do
 not need a guest `curl` package for this step. Download or validation failures
 stop before Podman builds the image.
+
+In the text menu, choose `c`, then enter `all` to build the 16 EL images
+sequentially: RedHat 7–10 and Rocky Linux, AlmaLinux, Oracle Linux and CentOS
+Stream 8–10. Existing local images are reused. A failed build stops the batch
+before another installer starts; completed images remain available. Correct the
+reported error and clear any failed installer workspace before retrying `all`.
+Fedora, SQL Server and desktop VM images remain individual selections.
+Image installation runs at nice 10; the menu and regular containers retain their
+normal priority. VM image builders reset their build-priority setting for regular
+instances.

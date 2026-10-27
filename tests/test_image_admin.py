@@ -53,3 +53,35 @@ def test_additional_image_alias_prevents_removal(monkeypatch,tmp_path):
     (None,None),('invalid',None)])
 def test_image_production_time_uses_image_metadata(value,expected):
     assert images.produced_at(value)==expected
+
+
+@pytest.mark.parametrize('label,parent,allowed',[
+    ('mssql2022','parent',True),
+    ('other','parent',False),
+    ('mssql2022','unrelated',False),
+])
+def test_native_committed_image_accepts_only_verified_parent_base(monkeypatch,tmp_path,label,parent,allowed):
+    import mykos_containers as containers
+    import mykos_snapshots as snapshots
+    import mykos_prune as prune
+    monkeypatch.setattr(vm,'ROOT',tmp_path)
+    monkeypatch.setattr(prune,'builders',lambda:{})
+    monkeypatch.setattr(prune,'process_table',lambda:{})
+    monkeypatch.setattr(images.subprocess,'run',lambda *a,**kw:subprocess.CompletedProcess(a,3,'inactive\n',''))
+    base={'Name':'/mssql2022','Image':'parent','ImageName':'localhost/mssql2022:latest','Id':'base','State':{'Running':True},'Config':{'Labels':{'io.mykos.os':label}}}
+    current=[base];calls=[]
+    monkeypatch.setattr(containers,'all_containers',lambda:current[:])
+    monkeypatch.setattr(snapshots,'list_snapshots',lambda:[])
+    def run(args,**kwargs):
+        calls.append(args)
+        if args[1:3]==['image','inspect']:return json.dumps([{'Id':'child','Parent':parent,'RepoTags':['localhost/mssql2022:latest']}])
+        if args[1]=='stop':current.clear()
+        return ''
+    monkeypatch.setattr(images,'run',run)
+    if allowed:
+        assert images.remove('mssql2022','child')['state']=='deleted'
+        assert [c[1] for c in calls]==['image','stop','rmi']
+        assert '--force' not in sum(calls,[])
+    else:
+        with pytest.raises(ValueError,match='points to another image'):images.remove('mssql2022','child')
+        assert len(calls)==1
