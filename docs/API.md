@@ -681,3 +681,45 @@ state is unconfirmed, not connected. `host_internet_via_vpn` indicates installed
 routing through a confirmed local full-tunnel SA, not a successful remote internet
 probe. All guest types can use a shared gateway. No new per-guest polling or PSK
 fields are introduced.
+
+
+## Separate browser terminal windows
+
+`GET /api/terminal/window/{shop}` serves a standalone terminal page to an
+administrator with an active browser session. `{shop}` is an eight-digit ID or
+`host`; `action=image-shell` instead accepts a validated prepared-image OS name.
+Login buttons open separate windows in the same browser, sharing its existing
+MYKOS cookie. The URL carries only the target and display/action options, never a
+session token or password. If the browser blocks the window, the inline dialog
+remains available.
+
+Each window has its own authenticated `WS /api/terminal/{shop}` connection.
+Closing one window does not close another container's shell. Existing direct-serial
+and base-image session limits still apply. Base-image shutdown protection and
+reset-on-close use the existing server-side lifecycle. Terminal notes retain their
+mgreen-only authorization and optimistic revision checks.
+
+`GET /api/terminal/permission?include_user=true` adds the current `username` to the
+existing `allowed` result. Standalone terminals recheck it every five seconds and
+close their transport when the session expires, is revoked, or changes identity.
+They do not run dashboard collectors. These are browser-session endpoints; an API
+key alone does not open an interactive terminal.
+
+
+### Compact dashboard clock
+
+`GET /api/web/host-version` retains the detailed `server_time` value and adds
+`server_time_display`, for example `Oct 27 · 7:42 PM`. Both come from the same
+server-local clock sample. The dashboard uses the compact value and keeps the
+full timestamp, including timezone, in the header clock tooltip.
+
+
+### Saved geographic metadata
+
+`GET /api/v2/geography` accepts a read or admin API key and returns saved `nodes`
+and `hosts` location records plus the available non-secret system display fields.
+Node metadata can include `shop_name`, configured `pos_type`, and `app_info`.
+Coordinates that are absent remain absent; the UI omits those map points. Host
+location records are saved inventory metadata; current host health remains
+available from the host metrics endpoint. No guest execution or geolocation
+service request is needed to read this endpoint.

@@ -59,3 +59,26 @@ run("mykosOpenTerminal('22222222')");assert.equal(body.children[0].children[0].c
 
 run("mykosOpenTerminal('rh9',false,'image-shell')");
 assert.equal(sockets.at(-1).url,'wss://mykol.com/mykos/api/terminal/rh9?action=image-shell');
+
+// Successful same-browser windows do not replace an existing main-page session.
+const popouts=[];context.window.open=(url,name,features)=>{const popup={focus(){this.focused=true;}};popouts.push({url,name,features,popup});return popup;};
+const prior=sockets.length;
+run("mykosOpenTerminal('01234567');mykosOpenTerminal('87654321')");
+assert.equal(popouts.length,2);assert.equal(sockets.length,prior);
+assert.match(popouts[0].url,/\/mykos\/api\/terminal\/window\/01234567/);
+assert.match(popouts[1].url,/87654321/);assert.equal(popouts[0].name,'_blank');
+assert.ok(popouts.every(item=>item.popup.opener===null && item.popup.focused));
+context.window.open=()=>null;run("mykosOpenTerminal('host')");assert.equal(sockets.length,prior+1,'Blocked popup keeps the inline fallback');
+console.log('Separate same-browser windows and blocked-popup fallback passed.');
+
+(async()=>{
+ const host={host:{vpn:'not_configured'}},renders=[];let requests=0;
+ const permissions=vm.createContext({document:{readyState:'complete'},fetch:async()=>{requests++;return {ok:true,json:async()=>({allowed:true})};},
+  mykosTerminalAllowed:false,mykosHostStatusData:host,mykosRenderHostStatus:data=>renders.push(data),
+  mykosLoadStageImages(){},mykosCloseTerminal(){},mykosRenderMykos(){},mykosRenderSnapshots(){},mykosRenderInventory(){}});
+ const check=html.slice(html.indexOf('async function mykosCheckTerminalPermission()'),html.indexOf('setTimeout(mykosCheckTerminalPermission'));
+ vm.runInContext(check,permissions);
+ await Promise.all([vm.runInContext('mykosCheckTerminalPermission()',permissions),vm.runInContext('mykosCheckTerminalPermission()',permissions)]);
+ assert.equal(requests,1);assert.deepEqual(renders,[host]);
+ console.log('Host icons redraw on permission arrival using cached data, without duplicate permission calls.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

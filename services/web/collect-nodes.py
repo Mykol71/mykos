@@ -116,6 +116,8 @@ def collect(shop_filter=None):
             "lon": existing.get("lon")
         }
 
+        for field in ('shop_name', 'pos_type', 'app_info'):
+            if field in existing: node[field] = existing[field]
         nodes.append(node)
 
         vpn = host.query_vpn(info)
@@ -135,7 +137,7 @@ def collect(shop_filter=None):
     nodes.sort(key=lambda n: n["id"])
 
     if not host_only:
-        atomic_json(INVENTORY, {"nodes": nodes})
+        atomic_json(INVENTORY, {**({"hosts": old_inventory["hosts"]} if "hosts" in old_inventory else {}), "nodes": nodes})
     atomic_json(STATUS, {
         "collected_at": int(time.time()),
         "graph_totals": graph_totals(),

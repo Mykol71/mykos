@@ -1,0 +1,70 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MYKOS terminal</title>
+<link rel="stylesheet" href="https://unpkg.com/@xterm/xterm@5.5.0/css/xterm.css">
+<style>
+:root{color-scheme:dark;font:13px monospace;background:#050a12;color:#e2e8f0}*{box-sizing:border-box}body{margin:0;min-height:100vh}header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#111c30;border-bottom:1px solid #334155}header strong{color:#38bdf8}#status{flex:1;color:#94a3b8;font-size:11px}button,a{font:inherit;color:#38bdf8}button{background:transparent;border:1px solid #334155;border-radius:5px;padding:5px 8px;cursor:pointer}button svg{width:17px;height:17px;vertical-align:middle}#notes-button{color:#fb923c}#surface{padding:12px;overflow:auto}#base-notice{margin:10px 14px;color:#facc15;font-size:11px}dialog{background:#121d30;color:#e2e8f0;border:1px solid #334155;border-radius:9px;width:min(960px,94vw);max-height:90vh}dialog::backdrop{background:#0008}textarea{width:100%;height:55vh;background:#050a12;color:#e2e8f0;border:1px solid #334155;padding:12px;font:13px monospace;resize:vertical}#notes-status{min-height:1.5em;color:#94a3b8}.tools{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}[hidden]{display:none!important}
+</style></head><body>
+<header><strong id="title">MYKOS terminal</strong><span id="status" role="status">Connecting…</span><button id="notes-button" type="button" title="Terminal notes" aria-label="Terminal notes" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg></button><button id="close" type="button">Close</button></header>
+<p id="base-notice" hidden>Base session: shutdown/reboot disabled. Capture from the text menu to keep edits. Closing this window resets the base.</p><div id="surface"></div>
+<dialog id="notes"><h2>Terminal notes</h2><form id="notes-form"><textarea id="notes-text" maxlength="20000" aria-label="Private terminal notes"></textarea><p id="notes-status" role="status"></p><div class="tools"><button id="notes-reload" type="button">Reload</button><button id="notes-close" type="button">Close</button><button id="notes-save" type="submit">Save</button></div></form></dialog>
+<script id="terminal-config" type="application/json">__MYKOS_TERMINAL_CONFIG__</script>
+<script src="https://unpkg.com/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+<script>
+// Independent browser window: no dashboard collectors and no credential in its URL.
+const config=JSON.parse(document.getElementById('terminal-config').textContent),el=id=>document.getElementById(id);
+let socket=null,term=null,permissionTimer=null,permissionBusy=false,closed=false;
+const notes=el('notes'),noteText=el('notes-text');let noteRevision=0,noteSaved='',noteBusy=false;
+el('title').textContent=config.title;document.title=config.title+' · MYKOS';el('base-notice').hidden=config.action!=='image-shell';el('notes-button').hidden=config.username!=='mgreen';
+function stop(message='Disconnected') {
+    if(closed)return;closed=true;clearInterval(permissionTimer);permissionTimer=null;
+    if(socket){socket.onopen=socket.onmessage=socket.onerror=socket.onclose=null;socket.close();socket=null;}
+    if(term)term.write('\r\n['+message+']\r\n');el('status').textContent=message;
+}
+async function permission() {
+    if(closed || permissionBusy)return;permissionBusy=true;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
+    try {
+        const response=await fetch('/mykos/api/terminal/permission?include_user=true',{cache:'no-store',signal:controller.signal});
+        const state=response.ok?await response.json():null;
+        if(!state?.allowed || state.username!==config.username) {
+            stop('Session ended. Sign in to MYKOS again.');
+            if(notes.open)notes.close();noteText.value=noteSaved='';el('notes-button').hidden=true;
+        }
+    } catch(_){stop('Unable to verify session. Reopen this terminal from MYKOS.');}
+    finally {clearTimeout(timer);permissionBusy=false;}
+}
+function start() {
+    if(!window.Terminal){el('status').textContent='Terminal display library is unavailable';return;}
+    term=new Terminal({cursorBlink:true,scrollback:1000,theme:{background:'#050a12',foreground:'#e2e8f0'},fontFamily:'monospace',fontSize:13});
+    term.open(el('surface'));term.focus();
+    const url=new URL('/mykos/api/terminal/'+encodeURIComponent(config.shop),window.location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';
+    if(config.action!=='shell')url.searchParams.set('action',config.action);
+    socket=new WebSocket(url);socket.binaryType='arraybuffer';
+    socket.onopen=()=>{el('status').textContent='Connected';term.onData(data=>{if(socket?.readyState===WebSocket.OPEN)socket.send(data);});if(config.run_sshbbx)socket.send('export TERM=linux; sshbbx\r');term.focus();};
+    socket.onmessage=event=>term.write(event.data instanceof ArrayBuffer?new Uint8Array(event.data):event.data);
+    socket.onerror=()=>{el('status').textContent='Terminal connection error';};
+    socket.onclose=()=>stop('Terminal disconnected');
+    permissionTimer=setInterval(permission,5000);
+}
+function canDiscard(){return noteText.value===noteSaved || confirm('Discard unsaved notes?');}
+function busy(value){noteBusy=value;for(const id of ['notes-save','notes-reload','notes-close'])el(id).disabled=value;noteText.disabled=value;}
+async function loadNotes(){
+    let loaded=false;busy(true);el('notes-status').textContent='Loading…';
+    try{const response=await fetch('/mykos/api/web/notes/terminal',{cache:'no-store'});if(!response.ok)throw Error('Unable to load notes');const data=await response.json();noteText.value=noteSaved=data.text;noteRevision=data.revision;loaded=true;el('notes-status').textContent='Private terminal notes';}
+    catch(error){el('notes-status').textContent=error.message;el('notes-save').disabled=true;}
+    finally{busy(false);el('notes-save').disabled=noteText.disabled=!loaded;if(loaded)noteText.focus();}
+}
+el('notes-button').onclick=()=>{notes.showModal();loadNotes();};
+el('notes-reload').onclick=()=>{if(!noteBusy && canDiscard())loadNotes();};
+el('notes-close').onclick=()=>{if(!noteBusy && canDiscard()){noteText.value=noteSaved;notes.close();}};
+notes.addEventListener('cancel',event=>{if(noteBusy || !canDiscard())event.preventDefault();else noteText.value=noteSaved;});
+el('notes-form').onsubmit=async event=>{
+    event.preventDefault();if(noteBusy)return;busy(true);el('notes-status').textContent='Saving…';
+    try{const response=await fetch('/mykos/api/web/notes/terminal',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:noteText.value,revision:noteRevision})});const data=await response.json();if(!response.ok)throw Error(data.detail || 'Unable to save notes');noteSaved=data.text;noteRevision=data.revision;el('notes-status').textContent='Saved';}
+    catch(error){el('notes-status').textContent=error.message;}
+    finally{busy(false);}
+};
+el('close').onclick=()=>{if(!noteBusy && canDiscard()){noteSaved=noteText.value;stop();window.close();}};
+window.addEventListener('beforeunload',event=>{if(noteText.value!==noteSaved){event.preventDefault();event.returnValue='';}});
+window.addEventListener('pagehide',()=>{stop();if(term)term.dispose();});
+start();
+</script></body></html>

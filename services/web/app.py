@@ -118,10 +118,13 @@ def mykos_host_version(request: Request):
     except Exception:
         pass
 
+    clock = time.localtime()
+    short_time = f"{time.strftime('%b', clock)} {clock.tm_mday} · {clock.tm_hour % 12 or 12}:{clock.tm_min:02d} {'AM' if clock.tm_hour < 12 else 'PM'}"
     return {
         "hostname": hostname,
         "internal_ip": internal_ip(),
-        "server_time": time.strftime("%m/%d/%Y %I:%M:%S %p %Z"),
+        "server_time": time.strftime("%m/%d/%Y %I:%M:%S %p %Z", clock),
+        "server_time_display": short_time,
         "os": os_name,
         "kernel": platform.release(),
         "free": free
@@ -329,7 +332,7 @@ import asyncio as _mykos_asyncio
 import re as _mykos_re
 
 @app.get('/api/terminal/permission')
-def mykos_terminal_permission(request: Request):
+def mykos_terminal_permission(request: Request, include_user: bool = False):
     check(request)
     raw = request.cookies.get('mykos_session', '')
     with db() as connection:
@@ -337,7 +340,27 @@ def mykos_terminal_permission(request: Request):
             'SELECT sessions.name FROM sessions JOIN users ON users.name=sessions.name WHERE token=? AND expires>?',
             (hashlib.sha256(raw.encode()).hexdigest(), int(time.time()))
         ).fetchone()
-    return {'allowed': bool(row and is_admin(row[0]))}
+    result = {'allowed': bool(row and is_admin(row[0]))}
+    if include_user: result['username'] = row[0] if row else ''
+    return result
+
+@app.get('/api/terminal/window/{shop}', include_in_schema=False)
+def mykos_terminal_window(shop: str, request: Request, action: str = 'shell', family: str = 'linux', run_sshbbx: bool = False):
+    permission = mykos_terminal_permission(request, include_user=True)
+    if not permission['allowed']: raise HTTPException(403, 'Admin terminal required')
+    if action not in ('shell', 'image-shell'): raise HTTPException(400, 'Invalid terminal window action')
+    if action == 'image-shell':
+        from image_build_api import prepared_os
+        prepared_os(shop)
+    elif shop != 'host' and not _mykos_re.fullmatch(r'[0-9]{8}', shop):
+        raise HTTPException(400, 'Invalid ID')
+    label = 'PowerShell' if family in ('windows','windows-server') else 'macOS shell' if family == 'macos' else 'root terminal'
+    payload = {'shop': shop, 'action': action, 'title': label+' — '+shop,
+               'username': permission['username'], 'run_sshbbx': bool(run_sshbbx)}
+    config = json.dumps(payload).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+    html = Path(__file__).with_name('terminal-window.html').read_text().replace('__MYKOS_TERMINAL_CONFIG__', config)
+    return HTMLResponse(html)
+
 
 @app.websocket('/api/terminal/{shop}')
 async def mykos_terminal_websocket(ws: WebSocket, shop: str):

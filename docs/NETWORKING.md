@@ -113,3 +113,21 @@ Dashboard/API edits even with that recheck. No whole-organization rollback or bl
 retry is attempted. Router-side internet forwarding/NAT and actual MX negotiation
 still need validation for the selected site; local SA state alone does not prove
 remote internet egress.
+
+
+## Geographic map
+
+Click the host IP address to expand the existing geographic map beneath the host
+row. It uses saved inventory latitude/longitude values and marks current node
+status. Nodes without valid saved coordinates are omitted rather than placed at
+an invented location. Closing the pane retains the map for reopening; no extra
+guest collection or IP geolocation lookup is performed.
+
+
+Map points are IDs and saved host locations. Hovering a point shows the available
+shop name, hostname, configured POS type, OS/IP/status, and saved application
+information. Green means up, red means down, and yellow means unknown. Optional
+`shop_name`, `pos_type`, and `app_info` node metadata survives collection. Host
+locations can be saved in the inventory `hosts` list with `hostname`, `lat`, and
+`lon`; the current host's cached status is joined by hostname. No saved location
+means no map pin. POS permission enforcement is separate from these display fields.

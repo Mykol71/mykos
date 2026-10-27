@@ -925,3 +925,60 @@ def test_network_draft_gateway_api_requires_admin_and_exact_confirmation(environ
     assert calls[-1]==('vpn-gateway-configure','01234567','office','10.77.0.0/24')
     assert client.delete(path+'/office',headers=admin).status_code==200
     assert calls[-1]==('vpn-gateway-remove','01234567','office')
+
+
+def test_standalone_terminal_windows_share_login_and_validate_targets(environment):
+    import re
+    client=TestClient(app.app,base_url='https://testserver')
+    assert client.get('/api/terminal/window/01234567').status_code==401
+    reader=login('reader','reader-password-123')
+    assert reader.get('/api/terminal/window/01234567').status_code==403
+    admin=login('operator','operator-password-123')
+    for target in ('01234567','87654321','host'):
+        response=admin.get('/api/terminal/window/'+target)
+        assert response.status_code==200
+        data=json.loads(re.search(r'<script id="terminal-config" type="application/json">(.*?)</script>',response.text).group(1))
+        assert data['shop']==target and data['username']=='operator'
+        assert admin.cookies.get('mykos_session') not in response.text
+        assert response.headers['cache-control']=='no-store'
+    assert admin.get('/api/terminal/window/not-an-id').status_code==400
+    assert admin.get('/api/terminal/window/01234567?action=add-vpn').status_code==400
+    assert admin.get('/api/terminal/window/not-an-os?action=image-shell').status_code==400
+    assert admin.get('/api/terminal/window/rh9?action=image-shell').status_code==200
+    assert admin.get('/api/terminal/permission?include_user=true').json()=={'allowed':True,'username':'operator'}
+    admin.post('/api/logout',headers={'Origin':'https://testserver'})
+    assert admin.get('/api/terminal/window/01234567').status_code==401
+
+
+def test_two_terminal_connections_remain_independent_with_one_login(environment,monkeypatch):
+    from starlette.websockets import WebSocketDisconnect
+    async def bridge(ws,shop,action='shell'):
+        await ws.accept();await ws.send_text(shop)
+        try:
+            while True:await ws.send_text(shop+':'+await ws.receive_text())
+        except WebSocketDisconnect:pass
+    monkeypatch.setattr(app,'mykos_terminal_bridge',bridge)
+    admin=login('operator','operator-password-123')
+    with admin.websocket_connect('wss://testserver/api/terminal/01234567',headers={'Origin':'https://testserver'}) as first:
+        assert first.receive_text()=='01234567'
+        with admin.websocket_connect('wss://testserver/api/terminal/87654321',headers={'Origin':'https://testserver'}) as second:
+            assert second.receive_text()=='87654321'
+            first.send_text('one');second.send_text('two')
+            assert first.receive_text()=='01234567:one'
+            assert second.receive_text()=='87654321:two'
+        first.send_text('still-open');assert first.receive_text()=='01234567:still-open'
+
+
+def test_geography_read_api_retains_optional_metadata_without_host_secrets(environment):
+    base,calls=environment
+    (base/'inventory.json').write_text(json.dumps({'nodes':[{'id':'01234567','name':'Store','shop_name':'Flower shop','pos_type':'rti','lat':41,'lon':-90,'app_info':{'version':'example'}}],
+        'hosts':[{'hostname':'host.example','lat':40,'lon':-91,'private_setting':'not-a-map-field'}]}))
+    client=TestClient(app.app,base_url='https://testserver')
+    assert client.get('/api/v2/geography').status_code==401
+    key=mykos_api_keys.create('map-reader','read')
+    response=client.get('/api/v2/geography',headers={'X-MYKOS-API-Key':key})
+    assert response.status_code==200
+    value=response.json();assert value['nodes'][0]['pos_type']=='rti'
+    assert value['nodes'][0]['shop_name']=='Flower shop'
+    assert value['hosts']==[{'hostname':'host.example','lat':40,'lon':-91}]
+    assert calls==[]

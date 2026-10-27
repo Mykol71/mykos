@@ -143,7 +143,9 @@ def snapshot():
                              'extended': extended.get('collected_at')},
             'fresh': {'status': status_fresh, 'details': detail_fresh, 'extended': ext_fresh},
             'age_seconds': {'status': status_age, 'details': detail_age, 'extended': ext_age},
-            'nodes': nodes}
+            'nodes': nodes,
+            'hosts': [{key:host[key] for key in ('name','hostname','lat','lon','os','version','internal_ip','status','app_info') if key in host}
+                      for host in inventory.get('hosts', []) if isinstance(host,dict)] if isinstance(inventory.get('hosts', []),list) else []}
 
 
 def node_by_shop(shop: str):
@@ -177,6 +179,15 @@ def overview(request: Request):
     return {'host': host(request), 'counts': {'total': len(nodes),
              'online': sum(n['status']=='online' for n in nodes),
              'vpn_up': sum(n['vpn_status']=='up' for n in nodes)}, **data}
+
+
+@router.get('/geography', summary='Saved ID and host locations with available system metadata')
+def geography(request: Request):
+    authenticated(request)
+    data=snapshot()
+    fields=('id','shopcode','name','shop_name','pos_type','lat','lon','status','os_type','os_version','app_info','network')
+    return {'nodes':[{key:node[key] for key in fields if key in node} for node in data['nodes']],
+            'hosts':data['hosts']}
 
 
 @router.get('/host', summary='Host OS, kernel, uptime and backup storage')
