@@ -487,6 +487,10 @@ def build(os_name, username=None, password=None, replace=False):
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise ValueError('This OS image is already building')
         previous=vm.read(os_name) if vm.record_path(os_name).exists() and not replace else None
+        if previous and previous.get('role')=='template' and previous.get('ready') and previous.get('committed'):
+            result=vm.ensure_prepared_base(os_name)
+            report(os_name,'ready','Saved image reused; the generic base container is running')
+            return result
         if previous:
             if previous.get('role')!='template' or not previous.get('unattended') or previous.get('ready'):
                 raise ValueError('An existing image is not an unfinished unattended build; use --replace to rebuild')
@@ -522,7 +526,11 @@ def build(os_name, username=None, password=None, replace=False):
             report(os_name,'ready','Image committed; the generic base container is running')
             return result
         except BaseException:
-            report(os_name,'failed','Build did not finish; retained its disks and diagnostics')
+            saved=vm.read(os_name) if vm.record_path(os_name).exists() else {}
+            if saved.get('ready') and saved.get('committed'):
+                report(os_name,'ready','Image committed; rerun Build to retry the generic base restart without reinstalling')
+            else:
+                report(os_name,'failed','Build did not finish; retained its disks and diagnostics')
             raise
 
 

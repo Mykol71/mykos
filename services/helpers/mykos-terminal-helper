@@ -14,7 +14,8 @@ def main():
     if set(data) not in ({'shop'}, {'shop', 'action'}): raise ValueError('Expected shop and optional action')
     action = data.get('action', 'shell')
     if action not in ('shell', 'add-vpn', 'remove-vpn'): raise ValueError('Unsupported terminal action')
-    host = data['shop'] == 'host'
+    data_shop = data['shop']
+    host = data_shop == 'host'
     if action == 'remove-vpn' and not host: raise ValueError('Host VPN removal only')
     name=None if host else target(data['shop'])
     if not host:
@@ -77,6 +78,13 @@ def main():
         except ProcessLookupError:pass
         try:os.waitpid(pid,0)
         except ChildProcessError:pass
+        # A closed shell or VPN workflow may have changed this resource.
+        try:
+            from mykos_refresh import refresh
+            refresh('host' if host else data_shop)
+        except Exception as error:
+            print('Related terminal data refresh deferred: ' + str(error), file=sys.stderr)
+
 
 if __name__=='__main__':
     try:main()

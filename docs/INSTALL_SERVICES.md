@@ -356,3 +356,16 @@ sudo systemctl enable --now mykos-command-collector.timer
 The queue is mutable data outside the RPM and survives updates. Finish active
 jobs before removal/rollback. See API.md for admin-key submission, result access,
 at-most-once behavior and Windows guest-agent prerequisites.
+
+### Completed action refreshes and saved-image retries
+
+Container actions refresh only the affected ID's inventory, details and resource
+rows at nice -5. Host terminal/VPN completion refreshes host data without probing
+containers. Backup/repository actions reload only their own pane; privileged
+listing work also runs at nice -5. Routine collector intervals are unchanged.
+
+After image capture and commit, builder removal allows up to five minutes for
+Podman storage cleanup. If only the generic base restart fails, the committed
+image remains ready. Rerun the same Build command to retry that base restart;
+installation and memory capture are not repeated. An unusable builder requiring
+manual cleanup is reported explicitly, without deleting its disks or image.

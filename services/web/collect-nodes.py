@@ -89,7 +89,8 @@ def collect(shop_filter=None):
         if not str(node.get("name", "")).startswith("Sample ")
     }
 
-    infos = host.containers(shop_filter) if shop_filter else host.containers()
+    host_only = shop_filter == "host"
+    infos = [] if host_only else host.containers(shop_filter) if shop_filter else host.containers()
     nodes = []
     observations = {}
     vpn_samples = {}
@@ -127,30 +128,31 @@ def collect(shop_filter=None):
         }
 
     if shop_filter:
-        nodes += [node for node in old_inventory.get('nodes',[]) if str(node['id'])!=shop_filter]
+        nodes += [node for node in old_inventory.get('nodes',[]) if host_only or str(node['id'])!=shop_filter]
         old=json.loads(STATUS.read_text()) if STATUS.exists() else {}
-        observations={**old.get('observations',{}),**observations}
-        vpn_samples={**old.get('vpn_samples',{}),**vpn_samples}
+        observations={**{key:value for key,value in old.get('observations',{}).items() if key!=shop_filter},**observations}
+        vpn_samples={**{key:value for key,value in old.get('vpn_samples',{}).items() if host_only or not SHOP_PATTERN.match(key) or SHOP_PATTERN.match(key).group(1)!=shop_filter},**vpn_samples}
     nodes.sort(key=lambda n: n["id"])
 
-    atomic_json(INVENTORY, {"nodes": nodes})
+    if not host_only:
+        atomic_json(INVENTORY, {"nodes": nodes})
     atomic_json(STATUS, {
         "collected_at": int(time.time()),
         "graph_totals": graph_totals(),
-        "host_vpn_status": host.query_vpn()["status"],
-        "host_certificate_domain": host.apache_certificate_domain(),
+        "host_vpn_status": host.query_vpn()["status"] if not shop_filter or host_only else old.get("host_vpn_status","unknown"),
+        "host_certificate_domain": host.apache_certificate_domain() if not shop_filter or host_only else old.get("host_certificate_domain"),
         "vpn_samples": vpn_samples,
         "observations": observations
     })
 
     for node in nodes:
         shop = node["id"]
-        state = observations[shop]
+        state = observations.get(shop, {"status":"unknown","vpn_status":"unknown"})
 
         print(
             shop,
-            state["status"],
-            "VPN:", state["vpn_status"]
+            state.get("status","unknown"),
+            "VPN:", state.get("vpn_status","unknown")
         )
 
 
@@ -158,5 +160,5 @@ if __name__ == "__main__":
     import sys
     from collector_lock import collect_locked
     shop=sys.argv[1] if len(sys.argv)==2 else None
-    if shop is not None and not re.fullmatch(r'[0-9]{8}',shop): raise SystemExit('Expected eight-digit ID')
+    if shop is not None and shop!='host' and not re.fullmatch(r'[0-9]{8}',shop): raise SystemExit('Expected eight-digit ID')
     collect_locked(STATUS,lambda:collect(shop))

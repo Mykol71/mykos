@@ -233,3 +233,17 @@ def test_callback_origin_can_match_certificate_without_changing_browser_origin(t
     assert b.origin(env)=='https://192.168.222.123'
     env.write_text('MYKOS_PUBLIC_ORIGIN=https://192.168.222.123\nMYKOS_IMAGE_BUILD_ORIGIN=http://wrong.example\n')
     with pytest.raises(ValueError):b.origin(env)
+
+
+def test_build_retry_reuses_committed_capture_without_reinstall(state,monkeypatch):
+    record=state/'saved.json';record.write_text('{}')
+    value={'role':'template','unattended':True,'ready':True,'committed':True}
+    monkeypatch.setattr(b.vm,'record_path',lambda key:record)
+    monkeypatch.setattr(b.vm,'read',lambda key:value)
+    calls=[]
+    monkeypatch.setattr(b.vm,'ensure_prepared_base',lambda key:calls.append(key) or {'ready':True})
+    monkeypatch.setattr(b,'credentials',lambda *a:pytest.fail('credentials must not change'))
+    monkeypatch.setattr(b,'wait_installed',lambda *a:pytest.fail('installation must not repeat'))
+    monkeypatch.setattr(b.vm,'prepare',lambda *a,**k:pytest.fail('capture must not repeat'))
+    assert b.build('win10')['ready']
+    assert calls==['win10']

@@ -998,11 +998,11 @@ Write-Output 'Runtime RAM and Windows-managed paging verified.'
             shutil.rmtree(temporary)
         try:
             if keep_running:
-                run([PODMAN,'rm',value['name']],timeout=30)
+                run([PODMAN,'rm',value['name']],timeout=300)
                 launch(os_name,value)
             else:
                 cleanup_template(value)
-        except (ValueError, RuntimeError, OSError) as error:
+        except (ValueError, RuntimeError, OSError, subprocess.SubprocessError) as error:
             if keep_running:raise RuntimeError('Image saved, but the generic base could not restart: '+str(error)) from error
             print('Template saved; builder cleanup deferred: ' + str(error))
         return links(value)
@@ -1081,6 +1081,33 @@ def stop(key):
     with locked():
         value = read(key)
         stop_container(value['name'])
+        return links(value)
+
+
+def ensure_prepared_base(os_name):
+    """Retry only a saved image's base restart; never repeat installation/capture."""
+    with locked():
+        value=read(os_name)
+        if value.get('role')!='template' or not value.get('ready') or not value.get('committed') or value.get('capture_mode')!='memory':
+            raise ValueError('A committed memory image is required')
+        if not (storage(os_name)/'golden/.mykos-checkpoint/manifest.json').is_file():
+            raise ValueError('Saved image capture is missing; storage was left intact')
+        try:
+            state=inspect(value['name'])
+        except RuntimeError:
+            matches=json.loads(run([PODMAN,'ps','-a','--filter','name=^'+re.escape(value['name'])+'$','--format','json'],timeout=30))
+            if matches:
+                raise ValueError('Saved image is intact, but its unusable builder needs cleanup before retrying')
+            launch(os_name,value)
+        else:
+            labels=state.get('Config',{}).get('Labels') or {}
+            if labels.get('io.mykos.vm.os')!=os_name or labels.get('io.mykos.vm.role')!='template':
+                raise ValueError('Base container identity mismatch; left intact')
+            if state.get('State',{}).get('Paused'):
+                raise ValueError('Base is paused; left intact')
+            if not state.get('State',{}).get('Running'):
+                run([PODMAN,'rm',value['name']],timeout=300)
+                launch(os_name,value)
         return links(value)
 
 

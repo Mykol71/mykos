@@ -439,7 +439,8 @@ def test_delete_container_queue_pins_identity_and_worker_dispatch(tmp_path,monke
     module.worker('01234567')
     assert deleted==[('01234567','01234567','a'*64)]
     assert json.loads((tmp_path/'01234567.json').read_text())['state']=='done'
-    assert calls[-1]==['/usr/bin/systemctl','start','mykos-collector.service']
+    assert calls[-3:]==[['/usr/bin/nice','-n','-5',sys.executable,'/opt/mykos-web/'+name,'01234567'] for name in ('collect-nodes.py','collect-details.py','collect-extended.py')]
+    assert not any('mykos-collector.service' in call for call in calls)
 
 
 @pytest.mark.parametrize('push',['y','n'])

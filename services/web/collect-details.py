@@ -76,7 +76,7 @@ def collect(shop_filter=None):
         }
 
     if shop_filter and OUTPUT.exists():
-        details={**json.loads(OUTPUT.read_text()).get('details',{}),**details}
+        details={**{k:v for k,v in json.loads(OUTPUT.read_text()).get('details',{}).items() if k!=shop_filter},**details}
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
 

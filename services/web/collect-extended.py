@@ -45,7 +45,7 @@ def collect(shop_filter=None):
         }
 
     if shop_filter and OUT.exists():
-        nodes={**json.loads(OUT.read_text()).get('nodes',{}),**nodes}
+        nodes={**{k:v for k,v in json.loads(OUT.read_text()).get('nodes',{}).items() if k!=shop_filter},**nodes}
 
     payload = {
         "collected_at": int(time.time()),

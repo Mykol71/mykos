@@ -62,3 +62,14 @@ def test_recovery_copy_validation_without_cmp(tmp_path):
     assert subprocess.run(['/bin/bash', '-c', script, 'check', str(a), str(b)], env=env).returncode == 0
     b.write_bytes(b'other data')
     assert subprocess.run(['/bin/bash', '-c', script, 'check', str(a), str(b)], env=env).returncode == 1
+
+
+def test_sonoma_extended_startup_preserves_both_boot_sections(tmp_path,monkeypatch):
+    script=patch.SCRIPT_MODERN+b'\n'+patch.SCRIPT_ORIGINAL+b'boot_mode="$1"\n'
+    image=tmp_path/'base.dmg';length=dmg(image,script);size=image.stat().st_size
+    monkeypatch.setattr(sys,'argv',['patch.py',str(image)]);patch.main()
+    assert image.stat().st_size==size
+    data=zlib.decompress(image.read_bytes()[:length])
+    assert patch.SCRIPT_MODERN in data
+    assert b'boot_mode="$1"' in data
+    assert data.count(b'exec /Volumes/installstate/launch.sh')==1

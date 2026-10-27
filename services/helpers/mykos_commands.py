@@ -272,5 +272,7 @@ def work(key):
         value.update(result,interpreter=interpreter,state='timed_out' if result['timed_out'] else ('succeeded' if result['exit_code']==0 else 'failed'))
     except Exception as exc:
         value.update(state='failed',error=str(exc)[:2000])
+    from mykos_refresh import best_effort
+    best_effort(value['target'],value)
     with locked():
         value.update(finished_at=time.time(),updated_at=time.time());save(value)

@@ -25,7 +25,7 @@ def stage_check(shop):
             'active':active(shop), 'backup':profile.has_backup(shop, cfg),
             'configured':True, 'network_device':device}
 
-def dispatch(args):
+def _dispatch(args):
     if not isinstance(args, list) or not args or not all(isinstance(x,str) for x in args):
         raise ValueError('args must be a nonempty array of strings')
     action = args[0]
@@ -54,7 +54,9 @@ def dispatch(args):
         from mykos_ubuntu_vpn import add
         settings=json.loads(args[2])
         if not isinstance(settings,dict) or set(settings)-{'name','peer','remote','secret','local'}:raise ValueError('Invalid VPN settings')
-        return add(shopcode(args[1]),**settings)
+        code=shopcode(args[1]); result=add(code,**settings)
+        from mykos_refresh import best_effort
+        return best_effort(code,result,run=run)
     if action == 'stage-images':
         if len(args) != 1: raise ValueError('Unexpected arguments')
         from mykos_vm import installing_images
@@ -74,7 +76,9 @@ def dispatch(args):
         code = shopcode(args[1])
         if action == 'memory-info': return memory(code)
         if not args[2].isascii() or not args[2].isdigit(): raise ValueError('Invalid memory target')
-        return memory(code, int(args[2]))
+        result=memory(code, int(args[2]))
+        from mykos_refresh import best_effort
+        return best_effort(code,result,run=run)
     if action == 'list-snapshots':
         if len(args) not in (1,2):raise ValueError('Unexpected arguments')
         from mykos_snapshots import list_snapshots
@@ -233,6 +237,14 @@ def dispatch(args):
               'checkit':[PODMAN,'exec',name,'/usr/bin/checkit']}
     return {'shop':shop,'container':name,'output':run(commands[action])}
 
+def dispatch(args):
+    from mykos_refresh import priority
+    if isinstance(args,list) and args and args[0] in ('backup-list','repo-list','list-snapshots','stage-images','host-logs','host-top','host-ipsec','logs','top','ipsec','checkit','memory-info'):
+        with priority():
+            return _dispatch(args)
+    return _dispatch(args)
+
+
 def worker(shop):
     shopcode(shop)
     value=job(shop)
@@ -242,8 +254,6 @@ def worker(shop):
         if operation=='delete':
             from mykos_containers import delete
             result = delete(shop, value['confirmation'], value['container_id'])
-            try: run(['/usr/bin/systemctl', 'start', 'mykos-collector.service'], timeout=150)
-            except Exception as error: result['warning'] = 'Deleted; inventory refresh deferred: ' + str(error)
             output = json.dumps(result)
         elif operation=='delete-snapshot':
             from mykos_snapshots import delete_snapshot
@@ -266,14 +276,12 @@ def worker(shop):
                 command = ['/usr/local/sbin/mykos-desktop', shop, value['desktop_os']]
             elif value.get('image'): command.append(value['image'])
             output=run(command,timeout=1800)
-        if operation == 'start' or operation is None:
-            # Refresh the shared host-side inventory once after startup. systemd
-            # coalesces concurrent requests; normal collector timing stays unchanged.
-            try:
-                for collector in ('collect-nodes.py','collect-details.py','collect-extended.py'):
-                    run(['/usr/bin/nice','-n','-5',sys.executable,'/opt/mykos-web/'+collector,shop],timeout=45)
-            except Exception as error:
-                output += '\nStarted; inventory refresh deferred: ' + str(error)
+        # Every completed resource action refreshes only its own cache rows.
+        try:
+            from mykos_refresh import refresh
+            refresh(shop, run=run)
+        except Exception as error:
+            output += '\nAction completed; related data refresh deferred: ' + str(error)
         value.update(state='done',output=output)
     except Exception as e:
         value.update(state='failed',output=str(e))

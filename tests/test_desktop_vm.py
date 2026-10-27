@@ -818,3 +818,21 @@ def test_mac_installed_boot_drops_build_ram_and_installer_devices(desktop,monkey
     assert not (disk/'base.dmg').exists()
     assert (disk/'data.img').read_bytes()==b'installed-disk'
     assert 'RAM_SIZE=2048M' in [c for c in calls if c[1]=='run'][-1]
+
+
+def test_saved_base_retry_waits_for_slow_stopped_builder_cleanup(desktop,monkeypatch):
+    import subprocess
+    root,calls=desktop
+    vm.create('mac15')
+    value=vm.read('mac15');value.update(ready=True,committed=True,capture_mode='memory');vm.save('mac15',value)
+    manifest=vm.storage('mac15')/'golden/.mykos-checkpoint/manifest.json';manifest.parent.mkdir(parents=True);manifest.write_text('{}')
+    vm.stop_container('mac15')
+    original=vm.run
+    def slow_remove(args,**kwargs):
+        if args[1]=='rm' and kwargs.get('timeout',0)<180:
+            raise subprocess.TimeoutExpired(args,30)
+        return original(args,**kwargs)
+    monkeypatch.setattr(vm,'run',slow_remove)
+    assert vm.ensure_prepared_base('mac15')['ready']
+    assert vm.inspect('mac15')['State']['Running']
+    assert not any(c[1]=='commit' for c in calls)

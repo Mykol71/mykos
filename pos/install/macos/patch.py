@@ -150,6 +150,17 @@ def main():
                     }
 
         scripts = [patch for patch in patches[:-1] if matches[patch[0]]]
+        if len(scripts) == 2:
+            # Sonoma retains the exact modern prefix followed by the older boot
+            # block in the SAME startup file. Patch that later comment block so
+            # all early-boot tasks and the legacy boot-mode handling survive.
+            legacy = matches["legacy rc.cdrom.sh bootstrap"]
+            modern = matches["modern rc.cdrom.sh bootstrap"]
+            if len(legacy) == len(modern) == 1:
+                (legacy_key, legacy_offset), (modern_key, modern_offset) = legacy[0], modern[0]
+                end = modern_offset + len(SCRIPT_MODERN)
+                if legacy_key == modern_key and end <= legacy_offset <= end + 8 and not chunks[legacy_key]["decoded"][end:legacy_offset].strip():
+                    scripts = [patches[0]]
         if len(scripts) != 1:
             raise RuntimeError("Expected exactly one supported rc.cdrom.sh startup script")
         patches = (scripts[0], patches[-1])
