@@ -347,6 +347,10 @@ body, button, input, select, textarea {
 
 
 header { flex-wrap: wrap; align-items: center; gap: 10px 20px; }
+/* Phones and touch-first mobile browsers use the dashboard without a header. */
+@media (max-width: 767px), (hover: none) and (pointer: coarse) {
+    #dashboard > header { display: none !important; }
+}
 .mykos-header-nav { flex-basis: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; font-size: 10px; }
 #mykos-host-row-code { color:#38bdf8; display:inline-flex; align-items:center; gap:6px; }
 #mykos-show-all-panes { display:inline-flex; vertical-align:middle; color:#4ade80; text-decoration:none; }
