@@ -55,7 +55,7 @@ create_ks() {
 }
 
 create_dockerfile() {
-local os_version os_vendor update_step
+local os_version os_vendor update_step update_tmp
 case "$OS" in
   rocky*) os_vendor='Rocky Linux'; update_step= ;;
   alma*) os_vendor='AlmaLinux'; update_step= ;;
@@ -63,7 +63,19 @@ case "$OS" in
   centos*) os_vendor='CentOS Stream'; update_step= ;;
   fedora*) os_vendor='Fedora'; update_step= ;;
   *) os_vendor=RHEL
-     update_step="RUN curl --fail --show-error --location --retry 2 --connect-timeout 15 --max-time 120 https://$REPOSERVER/updateos/updateos -o /usr/bin/updateos && test -s /usr/bin/updateos && bash -n /usr/bin/updateos && chmod 0755 /usr/bin/updateos" ;;
+     # Fetch and validate on the builder; minimal guests need no download client.
+     update_tmp=$(mktemp .mykos-updateos.XXXXXX) || return 1
+     if ! curl --fail --show-error --location --retry 2 --connect-timeout 15 --max-time 120 "https://$REPOSERVER/updateos/updateos" -o "$update_tmp" ||
+        ! test -s "$update_tmp" || ! bash -n "$update_tmp"; then
+       rm -f -- "$update_tmp"
+       echo 'Could not stage the updateos script; Podman build was not started.' >&2
+       return 1
+     fi
+     if ! chmod 0755 "$update_tmp" || ! mv -f -- "$update_tmp" updateos; then
+       rm -f -- "$update_tmp"
+       return 1
+     fi
+     update_step='COPY updateos /usr/bin/updateos' ;;
 esac
 os_version=$("$MYKOS_PYTHON" "$ROOTDIR/image_version.py" "$OS-docker.tar.xz") || return 1
 cat << EOF > Dockerfile

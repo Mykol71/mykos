@@ -45,3 +45,29 @@ def test_native_dockerfile_labels_version_vendor_and_avoids_private_update_scrip
     dockerfile=(tmp_path/'Dockerfile').read_text();assert 'io.mykos.os.version="'+version+'"' in dockerfile
     assert 'org.label-schema.vendor="'+title+'"' in dockerfile
     assert 'private.example' not in dockerfile and 'updateos' not in dockerfile
+
+
+@pytest.mark.parametrize('payload,status,success',[
+    ('#!/bin/bash\necho ready\n',0,True),
+    ('#!/bin/bash\necho partial\n',22,False),
+    ('',0,False),
+    ('if then\n',0,False),
+])
+def test_redhat_minimal_image_stages_validated_update_script_on_host(tmp_path,payload,status,success):
+    with tarfile.open(tmp_path/'rh10-docker.tar.xz','w:xz') as t:
+        data=b'VERSION_ID="10.1"\n';m=tarfile.TarInfo('etc/os-release');m.size=len(data);t.addfile(m,io.BytesIO(data))
+    # No curl binary exists in this rootfs. Downloads run only on the host.
+    (tmp_path/'updateos').write_text('previous valid script')
+    source=(ROOT/'pos/pos').read_text();function=source[source.index('create_dockerfile() {'):source.index('stop_container() {')]
+    script=function+"\ncurl() { printf '%s' \"$TEST_PAYLOAD\" > \"${@: -1}\"; return \"$TEST_STATUS\"; }; create_dockerfile\n"
+    result=subprocess.run(['bash','-c',script],cwd=tmp_path,env={**os.environ,'OS':'rh10','ROOTDIR':str(ROOT/'pos'),'MYKOS_PYTHON':sys.executable,'REPOSERVER':'test.invalid','TEST_PAYLOAD':payload,'TEST_STATUS':str(status)},text=True,capture_output=True)
+    assert (result.returncode==0)==success,result.stdout+result.stderr
+    assert not list(tmp_path.glob('.mykos-updateos.*'))
+    if success:
+        dockerfile=(tmp_path/'Dockerfile').read_text()
+        assert 'COPY updateos /usr/bin/updateos' in dockerfile and 'RUN curl' not in dockerfile
+        assert (tmp_path/'updateos').read_text()==payload
+        assert (tmp_path/'updateos').stat().st_mode & 0o777==0o755
+    else:
+        assert not (tmp_path/'Dockerfile').exists()
+        assert (tmp_path/'updateos').read_text()=='previous valid script'

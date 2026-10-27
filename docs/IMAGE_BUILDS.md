@@ -160,3 +160,8 @@ CentOS Linux is not included. Fedora uses
 release feed when added. The beta release is excluded. Its Everything install
 tree and matching updates repository come from `https://dl.fedoraproject.org/`.
 Fedora kickstarts are prepared and validated with the installed local parser, without requiring a Fedora host. The existing Anaconda/Lorax build performs the actual repository/package compatibility checks.
+
+RedHat's `updateos` script is downloaded and syntax-checked on the build host,
+then copied into the image with executable permissions. Minimal kickstarts do
+not need a guest `curl` package for this step. Download or validation failures
+stop before Podman builds the image.

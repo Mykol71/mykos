@@ -41,6 +41,7 @@ telnet
 rsyslog
 sed
 rsync
+curl
 -tuned
 # Containers share the host kernel; do not install then erase kernel RPMs.
 -kernel
@@ -87,7 +88,7 @@ rm -rf /var/lib/dnf/history.*
 # These paths may already be absent in a minimal image.
 rm -f /var/run/nologin /var/lib/systemd/random-seed
 # Give every instance its own machine ID on first boot.
-: > /etc/machine-id
+#: > /etc/machine-id
 # /bin/sh is supplied by the distribution. Access accounts are provisioned later.
 
 %end
