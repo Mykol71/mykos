@@ -35,7 +35,7 @@ def desktop(tmp_path, monkeypatch):
             if args[-1] in removed:raise RuntimeError('No such container')
             key=args[-1] if args[-1] in vm.VERSIONS else args[-1].split('.')[0];path=vm.ROOT/(key+'.json')
             value=json.loads(path.read_text()) if path.exists() else {'os':key,'role':'template'}
-            return json.dumps([{'State':{'Running':args[-1] not in stopped,'ExitCode':0},'Config':{'Labels':{'io.mykos.vm.os':value['os'],'io.mykos.vm.role':value['role']}}}])
+            return json.dumps([{'Id':'id-'+args[-1],'State':{'Running':args[-1] not in stopped,'ExitCode':0},'Config':{'Labels':{'io.mykos.vm.os':value['os'],'io.mykos.vm.role':value['role']}}}])
         return 'container-id'
     monkeypatch.setattr(vm, 'run', run)
     class Monitor:
@@ -350,7 +350,9 @@ def test_commit_failure_keeps_previous_checkpoint_and_metadata(desktop, monkeypa
         return original(args,**kwargs)
     monkeypatch.setattr(vm,'run',fail)
     with pytest.raises(RuntimeError,match='commit failed'):vm.prepare('mac15',replace=True)
-    assert vm.record_path('mac15').read_bytes()==before
+    after=vm.read('mac15');pending=after.pop('pending_commit')
+    assert after==json.loads(before)
+    assert (vm.storage('mac15')/pending['directory']/'golden/.mykos-checkpoint/manifest.json').is_file()
     assert (vm.storage('mac15')/'golden/.mykos-checkpoint/manifest.json').read_bytes()==golden
 
 
@@ -851,3 +853,47 @@ def test_started_row_is_published_before_memory_restore_finishes(desktop,monkeyp
     result=vm.start('90909090','mac15')
     assert result['ready'] and result['last_start']=='memory-restore'
     assert events[0]==('published','90909090') and events[1][0]=='restored'
+
+
+def test_commit_retry_reuses_completed_capture_without_guest_calls(desktop,monkeypatch):
+    root,calls=desktop;vm.create('mac15')
+    (vm.storage('mac15')/'storage/data.img').write_bytes(b'installed disk')
+    import shutil,mykos_image_build as build
+    monkeypatch.setattr(vm,'tree_copy',lambda s,d,**kw:shutil.copytree(s,d))
+    embedded=[];monkeypatch.setattr(build,'embed_capture',lambda v,p:embedded.append(p))
+    original=vm.run
+    def fail(args,**kwargs):
+        if args[1]=='commit':raise RuntimeError('no space left on device')
+        return original(args,**kwargs)
+    monkeypatch.setattr(vm,'run',fail)
+    with pytest.raises(RuntimeError,match='no space'):vm.prepare('mac15',keep_running=True,embed_disk=True)
+    pending=vm.read('mac15')['pending_commit'];saved=vm.storage('mac15')/pending['directory']/'golden'
+    assert (saved/'data.img').read_bytes()==b'installed disk'
+    assert (saved/'.mykos-checkpoint/memory.gz').is_file()
+    assert pending['embedded'] and len(embedded)==1
+    monkeypatch.setattr(vm,'run',original)
+    monkeypatch.setattr(vm,'capture_live',lambda *a:pytest.fail('Retry recaptured the VM'))
+    monkeypatch.setattr(vm,'verify_windows_installation',lambda *a:pytest.fail('Retry queried the guest'))
+    assert vm.prepare('mac15',keep_running=True,embed_disk=True)['ready']
+    assert 'pending_commit' not in vm.read('mac15') and not saved.parent.exists()
+    assert (vm.storage('mac15')/'golden/data.img').read_bytes()==b'installed disk'
+    assert len(embedded)==1
+
+
+def test_pending_commit_rejects_replaced_builder(desktop,monkeypatch):
+    root,calls=desktop;vm.create('mac15')
+    (vm.storage('mac15')/'storage/data.img').write_bytes(b'installed disk')
+    import shutil
+    monkeypatch.setattr(vm,'tree_copy',lambda s,d,**kw:shutil.copytree(s,d))
+    original=vm.run
+    def fail(args,**kwargs):
+        if args[1]=='commit':raise RuntimeError('commit failed')
+        return original(args,**kwargs)
+    monkeypatch.setattr(vm,'run',fail)
+    with pytest.raises(RuntimeError,match='commit failed'):vm.prepare('mac15')
+    previous=vm.inspect
+    def replaced(name):
+        result=previous(name);result['Id']='another-container';return result
+    monkeypatch.setattr(vm,'inspect',replaced)
+    with pytest.raises(ValueError,match='identity changed'):vm.prepare('mac15')
+    assert vm.pending_capture(vm.read('mac15')).is_dir()

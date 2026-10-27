@@ -247,3 +247,31 @@ def test_build_retry_reuses_committed_capture_without_reinstall(state,monkeypatc
     monkeypatch.setattr(b.vm,'prepare',lambda *a,**k:pytest.fail('capture must not repeat'))
     assert b.build('win10')['ready']
     assert calls==['win10']
+
+
+def test_pending_commit_build_skips_installer_and_capture_boots(state,monkeypatch):
+    record=state/'record.json';record.write_text('{}')
+    value={'os':'mac15','role':'template','unattended':True,'ready':False,'pending_commit':{'directory':'.capture-test'}}
+    monkeypatch.setattr(b.vm,'record_path',lambda name:record)
+    monkeypatch.setattr(b.vm,'read',lambda name:value)
+    calls=[]
+    monkeypatch.setattr(b.vm,'prepare',lambda name,**kw:calls.append(name) or {'ready':True})
+    monkeypatch.setattr(b.vm,'resume',lambda *a:pytest.fail('Restarted a builder with a pending capture'))
+    monkeypatch.setattr(b.vm,'create',lambda *a,**kw:pytest.fail('Recreated a pending build'))
+    monkeypatch.setattr(b,'wait_installed',lambda *a:pytest.fail('Repeated installed boot checks'))
+    monkeypatch.setattr(b.vm,'run',lambda *a,**kw:(_ for _ in ()).throw(RuntimeError('No upstream tag')))
+    assert b.build('mac15')['ready'] and calls==['mac15']
+
+
+def test_pending_commit_failure_reports_safe_retry(state,monkeypatch):
+    record=state/'record.json';record.write_text('{}')
+    value={'os':'mac15','role':'template','unattended':True,'ready':False,'pending_commit':{'directory':'.capture-test'}}
+    monkeypatch.setattr(b.vm,'record_path',lambda name:record)
+    monkeypatch.setattr(b.vm,'read',lambda name:value)
+    monkeypatch.setattr(b.vm,'prepare',lambda *a,**kw:(_ for _ in ()).throw(RuntimeError('No space left')))
+    reports=[]
+    monkeypatch.setattr(b,'report',lambda *args:reports.append(args))
+    with pytest.raises(RuntimeError,match='No space left'):b.build('mac15')
+    assert reports[-1][1]=='failed'
+    assert 'completed disk/RAM capture retained' in reports[-1][2]
+    assert 'without reinstalling' in reports[-1][2]

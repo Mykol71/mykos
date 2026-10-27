@@ -487,35 +487,39 @@ def build(os_name, username=None, password=None, replace=False):
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise ValueError('This OS image is already building')
         previous=vm.read(os_name) if vm.record_path(os_name).exists() and not replace else None
-        if previous and previous.get('role')=='template' and previous.get('ready') and previous.get('committed'):
+        if previous and previous.get('role')=='template' and previous.get('ready') and previous.get('committed') and not previous.get('pending_commit'):
             result=vm.ensure_prepared_base(os_name)
             report(os_name,'ready','Saved image reused; the generic base container is running')
             return result
         if previous:
-            if previous.get('role')!='template' or not previous.get('unattended') or previous.get('ready'):
+            if previous.get('role')!='template' or not previous.get('unattended') or (previous.get('ready') and not previous.get('pending_commit')):
                 raise ValueError('An existing image is not an unfinished unattended build; use --replace to rebuild')
             if username is not None or password is not None:
                 raise ValueError('Resume uses the existing build credentials; use --replace to change them')
         values=credentials(os_name,username,password)
         try:
             report(os_name,'building','Starting unattended '+os_name+' installation')
-            if replace:archive_existing(os_name)
-            if previous:
-                report(os_name,'building','Resuming unattended '+os_name+' installation')
-                if vm.VERSIONS[os_name][0]=='macos': renew_completion_window(os_name)
-                vm.resume(os_name)
+            if previous and previous.get('pending_commit'):
+                report(os_name,'capturing','Resuming saved installed disk/RAM commit')
+                result=vm.prepare(os_name,keep_running=True,embed_disk=True)
             else:
-                vm.create(os_name,values['username'],values['password'],2048,unattended=True)
-            wait_installed(os_name)
-            report(os_name,'configuring','Booting the installed system without installation-only devices')
-            if not vm.read(os_name).get('installation_complete'):boot_installed(os_name)
-            wait_installed(os_name,900)
-            report(os_name,'capturing','Capturing installed state and committing '+vm.template_image(os_name))
-            install_state=vm.storage(os_name)/'storage/.mykos-installstate'
-            if install_state.exists():
-                if install_state.is_symlink():raise ValueError('Unsafe installation-state directory')
-                shutil.rmtree(install_state)
-            result=vm.prepare(os_name,keep_running=True,embed_disk=True)
+                if replace:archive_existing(os_name)
+                if previous:
+                    report(os_name,'building','Resuming unattended '+os_name+' installation')
+                    if vm.VERSIONS[os_name][0]=='macos': renew_completion_window(os_name)
+                    vm.resume(os_name)
+                else:
+                    vm.create(os_name,values['username'],values['password'],2048,unattended=True)
+                wait_installed(os_name)
+                report(os_name,'configuring','Booting the installed system without installation-only devices')
+                if not vm.read(os_name).get('installation_complete'):boot_installed(os_name)
+                wait_installed(os_name,900)
+                report(os_name,'capturing','Capturing installed state and committing '+vm.template_image(os_name))
+                install_state=vm.storage(os_name)/'storage/.mykos-installstate'
+                if install_state.exists():
+                    if install_state.is_symlink():raise ValueError('Unsafe installation-state directory')
+                    shutil.rmtree(install_state)
+                result=vm.prepare(os_name,keep_running=True,embed_disk=True)
             try:
                 upstream='docker.io/qemux/qemu:latest' if os_name.startswith('ubuntu') else 'docker.io/dockurr/'+vm.VERSIONS[os_name][0]+':latest'
                 image_id=json.loads(vm.run([vm.PODMAN,'image','inspect',upstream],timeout=30))[0]['Id']
@@ -527,8 +531,10 @@ def build(os_name, username=None, password=None, replace=False):
             return result
         except BaseException:
             saved=vm.read(os_name) if vm.record_path(os_name).exists() else {}
-            if saved.get('ready') and saved.get('committed'):
+            if saved.get('ready') and saved.get('committed') and not saved.get('pending_commit'):
                 report(os_name,'ready','Image committed; rerun Build to retry the generic base restart without reinstalling')
+            elif saved.get('pending_commit'):
+                report(os_name,'failed','Image commit did not finish; completed disk/RAM capture retained. Resolve the reported error, then rerun Build to retry the commit without reinstalling')
             else:
                 report(os_name,'failed','Build did not finish; retained its disks and diagnostics')
             raise

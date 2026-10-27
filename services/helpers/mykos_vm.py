@@ -918,11 +918,92 @@ Write-Output 'Installed Windows verified'
         raise ValueError('Windows installation is not ready for capture: ' + result.get('output','Guest check failed'))
 
 
+def pending_capture(value):
+    """Validate the completed immutable capture reserved for a commit retry."""
+    pending=value.get('pending_commit')
+    if not isinstance(pending,dict) or not re.fullmatch(r'\.capture-[A-Za-z0-9_-]+',str(pending.get('directory',''))):
+        raise ValueError('Invalid pending capture metadata')
+    if pending.get('source_image')!=value.get('image'):
+        raise ValueError('Pending capture belongs to another source image')
+    captured=storage(value['os'])/pending['directory']/'golden'
+    for path in (captured.parent,captured,captured/'.mykos-checkpoint',captured/'.mykos-checkpoint/manifest.json',captured/'.mykos-checkpoint/memory.gz'):
+        info=path.lstat()
+        if path.is_symlink() or info.st_uid!=os.geteuid() or info.st_mode & 0o022:
+            raise ValueError('Unsafe pending capture path')
+    manifest=json.loads((captured/'.mykos-checkpoint/manifest.json').read_text())
+    if (manifest.get('os')!=value['os'] or manifest.get('ram_mib')!=2048 or
+        manifest.get('memory_bytes',0)<=0 or manifest['memory_bytes']!=(captured/'.mykos-checkpoint/memory.gz').stat().st_size or
+        manifest.get('image') not in (pending['source_image'],pending.get('image_id'))):
+        raise ValueError('Pending capture is incomplete or belongs to another VM')
+    return captured
+
+
+def commit_capture(os_name,value,captured,keep_running=False,embed_disk=False):
+    """Finish a verified capture without touching its saved disk/RAM pairing."""
+    pending=value['pending_commit']
+    state=inspect(value['name']);labels=state.get('Config',{}).get('Labels') or {}
+    if (state.get('Id')!=pending['container_id'] or labels.get('io.mykos.vm.os')!=os_name or
+        labels.get('io.mykos.vm.role')!='template'):
+        raise ValueError('Pending capture builder identity changed; saved state left intact')
+    if state.get('State',{}).get('Running'):stop_container(value['name'])
+    if inspect(value['name']).get('State',{}).get('Running'):
+        raise RuntimeError('Builder did not stop; completed capture retained')
+    embed_disk=bool(embed_disk or pending['embed_disk'])
+    if embed_disk and not pending.get('embedded'):
+        from mykos_image_build import embed_capture
+        print('Saving installed disk archive; completed RAM capture retained',flush=True)
+        embed_capture(value,captured)
+        pending.update(embed_disk=True,embedded=True);save(os_name,value)
+    image_name=template_image(os_name)
+    image_id=pending.get('image_id')
+    if image_id:
+        if json.loads(run([PODMAN,'image','inspect',image_name],timeout=30))[0]['Id']!=image_id:
+            raise ValueError('Saved commit image reference changed; capture retained')
+    else:
+        commit=[PODMAN,'commit']
+        if value.get('unattended'):
+            commit+=['--change','ENV MYKOS_UNATTENDED=','--change','ENV MYKOS_UBUNTU_ISO_URL=','--change','ENV MYKOS_WINDOWS_ASSET=']
+        if VERSIONS[os_name][0]=='windows':commit+=['--change','ENV USERNAME=','--change','ENV PASSWORD=']
+        print('Committing installed image '+image_name,flush=True)
+        with tempfile.TemporaryDirectory(prefix='.commit-',dir=str(storage(os_name))) as scratch:
+            run(commit+[value['name'],image_name],env={**os.environ,'TMPDIR':scratch})
+        image_id=json.loads(run([PODMAN,'image','inspect',image_name],timeout=30))[0]['Id']
+        pending['image_id']=image_id;save(os_name,value)
+    manifest_path=captured/'.mykos-checkpoint/manifest.json'
+    manifest=json.loads(manifest_path.read_text());manifest['image']=image_id
+    manifest_path.write_text(json.dumps(manifest,indent=2)+'\n')
+    golden=storage(os_name)/'golden';previous=None
+    if golden.exists():
+        previous=storage(os_name)/('.golden-previous-'+os.urandom(8).hex());os.replace(golden,previous)
+    os.replace(captured,golden)
+    try:
+        value.update(image=image_id,image_name=image_name,ready=True,capture_mode='memory',committed=True)
+        value.pop('pending_commit',None);save(os_name,value)
+    except BaseException:
+        os.replace(golden,captured)
+        if previous is not None:os.replace(previous,golden)
+        raise
+    try:
+        if keep_running:
+            print('Starting generic base from the committed image',flush=True)
+            run([PODMAN,'rm',value['name']],timeout=300);launch(os_name,value)
+        else:cleanup_template(value)
+    except (ValueError,RuntimeError,OSError,subprocess.SubprocessError) as error:
+        if keep_running:raise RuntimeError('Image saved, but the generic base could not restart: '+str(error)) from error
+        print('Template saved; builder cleanup deferred: '+str(error))
+    return links(value)
+
+
 def prepare(os_name, replace=False, keep_running=False, embed_disk=False):
     if os_name not in VERSIONS: raise ValueError('Select a template OS')
     with locked():
         value = read(os_name)
         value.setdefault('cpu_env', {})
+        if value.get('pending_commit'):
+            captured=pending_capture(value)
+            try:return commit_capture(os_name,value,captured,keep_running,embed_disk)
+            finally:
+                if not captured.exists():captured.parent.rmdir()
         verify_windows_installation(value)
         if value['os'].startswith('ubuntu') and not value.get('ready') and value.get('guest_agent'):
             from mykos_ubuntu_vpn import execute
@@ -951,61 +1032,24 @@ Write-Output 'Runtime RAM and Windows-managed paging verified.'
 
         if value['ready'] and value.get('capture_mode') == 'memory' and not replace:
             raise ValueError('Memory template is already prepared; use --replace to recapture')
-        golden = storage(os_name) / 'golden'
-        previous = None
+        golden = storage(os_name)/'golden'
         if golden.exists() and not value['ready']:
             raise ValueError('A prior capture exists; inspect it before retrying')
-        temporary = Path(tempfile.mkdtemp(prefix='.capture-', dir=str(storage(os_name))))
-        captured = temporary/'golden'
+        temporary=Path(tempfile.mkdtemp(prefix='.capture-',dir=str(storage(os_name))))
+        captured=temporary/'golden';completed=False
         try:
-            capture_live(value, storage(os_name)/'storage', captured)
-            if not inspect(value['name']).get('State', {}).get('Running'):
-                raise RuntimeError('Template exited during capture; no image was published')
-            # The matching RAM/disk checkpoint is complete before guest shutdown.
-            stop_container(value['name'])
-            if inspect(value['name']).get('State', {}).get('Running'):
-                raise RuntimeError('Template did not stop; no image was published')
-            if embed_disk:
-                from mykos_image_build import embed_capture
-                embed_capture(value, captured)
-            image_name = template_image(os_name)
-            commit = [PODMAN, 'commit']
-            if value.get('unattended'):
-                commit += ['--change', 'ENV MYKOS_UNATTENDED=', '--change', 'ENV MYKOS_UBUNTU_ISO_URL=', '--change', 'ENV MYKOS_WINDOWS_ASSET=']
-            if VERSIONS[os_name][0] == 'windows':
-                # Credentials are supplied privately at launch, never baked into images.
-                commit += ['--change', 'ENV USERNAME=', '--change', 'ENV PASSWORD=']
-            with tempfile.TemporaryDirectory(prefix='.commit-',dir=str(storage(os_name))) as scratch:
-                run(commit + [value['name'], image_name],env={**os.environ,'TMPDIR':scratch})
-            image_id = json.loads(run([PODMAN, 'image', 'inspect', image_name]))[0]['Id']
-            manifest_path = captured/'.mykos-checkpoint/manifest.json'
-            manifest = json.loads(manifest_path.read_text())
-            manifest['image'] = image_id
-            manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
-            value.update(image=image_id, image_name=image_name)
-            if golden.exists():
-                previous = storage(os_name)/('.golden-previous-' + os.urandom(8).hex())
-                os.replace(golden, previous)
-            os.replace(captured, golden)
-            try:
-                value.update(ready=True, capture_mode='memory', committed=True)
-                save(os_name, value)
-            except BaseException:
-                os.replace(golden, captured)
-                if previous is not None: os.replace(previous, golden)
-                raise
+            capture_live(value,storage(os_name)/'storage',captured)
+            completed=True
+            state=inspect(value['name'])
+            value['pending_commit']={'directory':temporary.name,'container_id':state['Id'],
+                                     'source_image':value['image'],'embed_disk':bool(embed_disk),'embedded':False}
+            save(os_name,value)
+            pending_capture(value)
+            return commit_capture(os_name,value,captured,keep_running,embed_disk)
         finally:
-            shutil.rmtree(temporary)
-        try:
-            if keep_running:
-                run([PODMAN,'rm',value['name']],timeout=300)
-                launch(os_name,value)
-            else:
-                cleanup_template(value)
-        except (ValueError, RuntimeError, OSError, subprocess.SubprocessError) as error:
-            if keep_running:raise RuntimeError('Image saved, but the generic base could not restart: '+str(error)) from error
-            print('Template saved; builder cleanup deferred: ' + str(error))
-        return links(value)
+            if completed and captured.exists():
+                print('Completed disk/RAM capture retained for commit retry: '+str(captured),flush=True)
+            else:shutil.rmtree(temporary)
 
 
 def publish_started(shop):

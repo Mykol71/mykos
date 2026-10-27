@@ -102,3 +102,17 @@ images by default. The pane uses native Linux lifecycle, root console and
 snapshot operations; it does not create a Windows VM. SQL product versions
 come from the image name, without probing the running guest. The show-all
 leaf includes disabled choices and sample rows when no SQL images exist.
+
+## Retrying a failed image commit
+
+If saving or committing an image fails after its disk/RAM capture completes,
+MYKOS retains the matching capture and the existing installed builder. Resolve
+the reported storage or Podman error, then repeat the same image build command.
+The retry continues the saved commit without reinstalling, rebooting the guest,
+or capturing its memory again. A previous prepared image remains available
+until the replacement commit succeeds. Do not use `--replace` for this retry.
+
+The capture and embedded installed-disk archive need sufficient free space on
+their respective filesystems. Check both the MYKOS VM storage and Podman image
+storage when diagnosing an out-of-space error. Changing Podman storage is a
+separate operator task; an RPM update does not move existing images or disks.
