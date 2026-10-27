@@ -79,7 +79,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.match(el('ubuntu-mykos-image-builds').innerHTML, /<tr class="mykos-image-build-row">/);
         assert.match(el('ubuntu-mykos-image-builds').innerHTML, /<td colspan="4">Finish installation/);
         assert.match(el('ubuntu-mykos-image-builds').innerHTML, /<td class="mykos-actions-cell"><div class="mykos-row-actions"[^>]*><a /);
-        assert.ok(html.includes('<tbody id="ubuntu-mykos-image-builds" class="mykos-image-build-rows" hidden></tbody><tbody id="ubuntu-rows"'));
+        assert.ok(html.includes('<tbody id="ubuntu-rows" class="mykos-container-rows"></tbody><tbody id="ubuntu-mykos-image-builds" class="mykos-image-build-rows" hidden>'));
         assert.ok(el('ubuntu-mykos-image-builds').innerHTML.includes('https://testserver/mykos/console/ubuntu24.04/'));
         assert.equal(el('ubuntu-mykos-stage-os').options.length, 1, 'Unfinished builds must not be startable');
         mykosTerminalAllowed = false; mykosRenderImageBuilds();
