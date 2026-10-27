@@ -39,6 +39,7 @@ wget
 bind-utils
 telnet
 rsyslog
+yum
 sed
 rsync
 curl

@@ -39,6 +39,7 @@ procmail
 bind-utils
 rsyslog
 sed
+yum
 rsync
 -tuned
 -kernel

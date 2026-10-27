@@ -25,6 +25,7 @@ bash
 ksh
 net-tools
 wget
+yum
 mailx
 procmail
 bind-utils

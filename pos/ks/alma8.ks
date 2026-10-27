@@ -31,6 +31,7 @@ bind-utils
 telnet
 rsyslog
 sed
+yum
 rsync
 kernel-modules
 mlocate

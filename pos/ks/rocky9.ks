@@ -36,6 +36,7 @@ ksh
 net-tools
 wget
 procmail
+yum
 bind-utils
 rsyslog
 sed

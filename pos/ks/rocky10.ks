@@ -38,6 +38,7 @@ net-tools
 wget
 bind-utils
 telnet
+yum
 rsyslog
 sed
 rsync

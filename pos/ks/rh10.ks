@@ -39,6 +39,7 @@ bind-utils
 telnet
 rsyslog
 sed
+yum
 rsync
 curl
 openssh-server
