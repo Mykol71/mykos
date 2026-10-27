@@ -177,3 +177,11 @@ def test_update_clears_notes_but_preserves_identity(tmp_path):
         assert db.execute('SELECT * FROM personal_notes').fetchall()==[('host','private personal text')]
         assert db.execute('SELECT * FROM users').fetchall()==[('admin','preserved')]
         assert db.execute('SELECT * FROM api_keys').fetchall()==[('preserved-key',)]
+
+
+def test_rpm_and_installer_include_kickstart_validator(tmp_path):
+    result=run(tmp_path/'root','install','--dry-run')
+    plan=json.loads(result.stdout[result.stdout.index('{'):])
+    assert 'pykickstart' in plan['system_packages_if_requested']
+    spec=(REPO/'packaging/rpm/mykos.spec').read_text()
+    assert any(line.startswith('Requires:') and 'pykickstart' in line.split() for line in spec.splitlines())

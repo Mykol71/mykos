@@ -5,7 +5,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'services/helpers'))
 import mykos_image_admin as images
 import mykos_vm as vm
 
-@pytest.mark.parametrize('selection',['../rh9','rocky7','alma11','centos8','fedora45','other'])
+@pytest.mark.parametrize('selection',['../rh9','rocky7','alma11','centos7','fedora45','other'])
 def test_invalid_image_selections_cannot_start_workers(selection):
     with pytest.raises(ValueError):images.selection(selection)
 
@@ -45,3 +45,11 @@ def test_additional_image_alias_prevents_removal(monkeypatch,tmp_path):
     monkeypatch.setattr(images,'run',lambda args,**kw:calls.append(args) or json.dumps([{'Id':'sha256:abc','RepoTags':['localhost/rocky9:latest','localhost/shared:latest']}]))
     with pytest.raises(ValueError,match='additional tags'):images.remove('rocky9','sha256:abc')
     assert len(calls)==1
+
+
+@pytest.mark.parametrize('value,expected',[
+    ('2026-10-26T12:00:00.123456789Z',1793016000),
+    ('2026-10-26T07:00:00-05:00',1793016000),
+    (None,None),('invalid',None)])
+def test_image_production_time_uses_image_metadata(value,expected):
+    assert images.produced_at(value)==expected

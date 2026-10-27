@@ -850,7 +850,7 @@ def test_prepared_image_removal_requires_admin_and_exact_os(environment,monkeypa
     assert client.request('DELETE',path,json=body,headers=headers).status_code==200
     assert calls[-1]==('image-remove','rocky9','rocky9')
     assert client.get(path+'/delete',headers=headers).status_code==200
-    for os_name in ('centos8','fedora45','rocky7','alma11'):
+    for os_name in ('centos7','fedora45','rocky7','alma11'):
         assert client.request('DELETE','/api/v2/images/'+os_name,json={'confirmation':os_name},headers=headers).status_code==400
     schema=client.get('/api/v2/openapi.json').json()
     assert 'delete' in schema['paths']['/api/v2/images/{os_name}']

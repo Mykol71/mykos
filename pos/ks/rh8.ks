@@ -36,6 +36,11 @@ mlocate
 iptables-services
 -firewalld
 -tuned
+-kernel
+-kernel-core
+-kernel-modules
+-kernel-modules-core
+-kernel-modules-extra
 %end
 %post
 sed -i "s/enabled=1/enabled=0/g" /etc/yum/pluginconf.d/subscription-manager.conf

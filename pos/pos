@@ -42,7 +42,7 @@ NC='\033[0m'
 
 check_image_builder() {
   case "$OS" in
-    rocky8|alma8|oracle8) required_major=8 ;;
+    rocky8|alma8|oracle8|centos8) required_major=8 ;;
     rocky9|alma9|oracle9|centos9) required_major=9 ;;
     rocky10|alma10|oracle10|centos10) required_major=10 ;;
     *) required_major= ;;
@@ -50,14 +50,15 @@ check_image_builder() {
   if [ -n "$required_major" ]; then
     local actual_major
     actual_major=$(rpm -E '%{rhel}' 2>/dev/null) || return 1
-    [ "$actual_major" = "$required_major" ] || {
-      echo "$OS requires an EL$required_major build host or VM with matching Anaconda/Lorax." >&2
+    if [ "$required_major" = 10 ] && [ "$actual_major" != 10 ]; then
+      echo "$OS uses EL10-only kickstart syntax; select an EL10 Anaconda/Lorax builder." >&2
       return 1
-    }
+    fi
     command -v ksvalidator >/dev/null 2>&1 || { echo 'Install pykickstart on the builder.' >&2; return 1; }
-    # prepare_ks adapts the maintained timesource spelling for an EL8 parser.
+    # Use the actual local parser, as with the existing RH9-on-RH8 workflow.
+    # prepare_ks adapts maintained timesource syntax when the local parser is older.
     create_ks || return 1
-    ksvalidator -v "RHEL$required_major" "/var/tmp/$OS.ks" || return 1
+    ksvalidator "/var/tmp/$OS.ks" || return 1
   fi
   case "$OS" in
     fedora43|fedora44)
@@ -144,9 +145,9 @@ stage_image() {
 }
 
 create-image() {
-  echo -n "OS (rh7-rh10, rocky8/9/10, alma8/9/10, oracle8/9/10, centos9/10, fedora43/44, win11/win10/win8e/win7u/winxp/winme/win2k/win98, wns2025/2022/2019/2016, mac15/mac14/mac13/mac12, ubuntu20.04/22.04/24.04, mssql2025/mssql2022: " && read -r OS || return 1
+  echo -n "OS (rh7-rh10, rocky8/9/10, alma8/9/10, oracle8/9/10, centos8/9/10, fedora43/44, win11/win10/win8e/win7u/winxp/winme/win2k/win98, wns2025/2022/2019/2016, mac15/mac14/mac13/mac12, ubuntu20.04/22.04/24.04, mssql2025/mssql2022: " && read -r OS || return 1
   case "$OS" in win*|wns*|mac*|ubuntu*) "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;; esac
-  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
+  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
   check_image_builder || return 1
   if podman image exists "$OS"; then echo "Image already built."; return 0; fi
   rm -f "/var/tmp/$OS-docker.tar.xz" || return 1
@@ -174,8 +175,8 @@ set_working_shopcode() {
   [ -f .$SHOPCODE.imagetype ] && OS=$(cat .$SHOPCODE.imagetype)
   [ -f .$SHOPCODE.postype ] && POSTYPE=$(cat .$SHOPCODE.postype) && return
   [[ "$SHOPCODE" =~ ^[0-9]{8}$ ]] || { echo "ID must be eight digits"; return 1; }
-  echo -n "OS (rh7-rh10, rocky8/9/10, alma8/9/10, oracle8/9/10, centos9/10, fedora43/44, win*, wns*, mac*, ubuntu20.04/22.04/24.04): " && read -r OS || return 1
-  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
+  echo -n "OS (rh7-rh10, rocky8/9/10, alma8/9/10, oracle8/9/10, centos8/9/10, fedora43/44, win*, wns*, mac*, ubuntu20.04/22.04/24.04): " && read -r OS || return 1
+  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
   printf '%s\n' "$OS" >".$SHOPCODE.imagetype"
   POSTYPE="$OS"; printf '%s\n' "$POSTYPE" >".$SHOPCODE.postype"
 }

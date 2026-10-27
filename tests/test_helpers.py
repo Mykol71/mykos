@@ -525,3 +525,14 @@ def test_image_removal_status_uses_its_own_job_lookup(monkeypatch):
     monkeypatch.setattr(module,'job',lambda *a:pytest.fail('Image status must not read a container job'))
     monkeypatch.setattr(mykos_image_admin,'job',lambda os:{'os':os,'state':'deleted'})
     assert module.dispatch(['image-remove-status','rocky9'])=={'os':'rocky9','state':'deleted'}
+
+
+@pytest.mark.parametrize('os_name',['rocky9','alma9','oracle9','centos9'])
+def test_el9_kickstart_accepts_the_established_el8_builder(tmp_path,os_name):
+    import subprocess,os
+    source=(HELPERS.parents[1]/'pos/pos').read_text()
+    check=source[source.index('check_image_builder() {'):source.index('\ncreate_ks() {')]
+    script=check+"\nrpm() { echo 8; }; ksvalidator() { [ \"$1\" = \"/var/tmp/$OS.ks\" ]; }; create_ks() { echo prepared; }; check_image_builder\n"
+    result=subprocess.run(['bash','-c',script],env={**os.environ,'OS':os_name},text=True,capture_output=True,cwd=tmp_path)
+    assert result.returncode==0,result.stdout+result.stderr
+    assert 'prepared' in result.stdout

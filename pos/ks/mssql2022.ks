@@ -32,21 +32,22 @@ repo --name="BaseOS" --install --baseurl=https://mykol.com/rhel-9-for-x86_64-bas
 @system-tools
 bash
 ksh
-expect
-perl
 net-tools
 wget
 procmail
 bind-utils
-telnet
 rsyslog
 sed
 rsync
-sendmail
 kernel-modules
 cups
 samba
 -tuned
+-kernel
+-kernel-core
+-kernel-modules
+-kernel-modules-core
+-kernel-modules-extra
 %end
 
 %addon org_fedora_oscap      
@@ -82,6 +83,7 @@ rm -rf /usr/lib/udev/hwdb.d/
 rm -rf /boot
 rm -rf /var/lib/dnf/history.*
 rm /var/run/nologin
+updatedb
 ln -s /usr/bin/sh /bin/sh
 curl -s https://mykol.com/updateos/updateos -O /bin/updateos
 /bin/updateos help > /dev/null

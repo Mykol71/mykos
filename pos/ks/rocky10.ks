@@ -1,5 +1,6 @@
-# Rocky Linux 10 native container rootfs for livemedia-creator --make-tar.
-# Use an EL10 Anaconda/Lorax builder. Runtime networking comes from Podman.
+# Rocky Linux 10: derived from the operator-maintained rh10.ks.
+# RHEL 10 container rootfs for livemedia-creator --make-tar.
+# Build with a RHEL 10 Anaconda/Lorax environment, not the host's RHEL 8 installer.
 # Basic setup information
 # Accounts are locked at build time; provision host/container access explicitly.
 rootpw --lock
@@ -8,7 +9,7 @@ timezone UTC --utc
 timesource --ntp-disable
 selinux --permissive
 firewall --disabled
-# Build networking is selected automatically; Podman supplies runtime eth0 and the configured private NAT network.
+# Build networking is selected automatically; Podman supplies runtime eth0 and LAN DHCP.
 network  --bootproto=dhcp --device=link --noipv6 --activate --onboot=on
 network  --hostname=SHOPCODE.HOSTNAME
 bootloader --disabled
@@ -30,36 +31,31 @@ repo --name="AppStream" --install --baseurl=https://dl.rockylinux.org/pub/rocky/
 repo --name="BaseOS" --install --baseurl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/
 
 # Package setup
-%packages --excludedocs
+%packages --nocore --exclude-weakdeps
 @^minimal-environment
 bash
-curl
-openssh-server
-iproute
-procps-ng
-util-linux
-shadow-utils
-findutils
-tar
-gzip
-rsync
-sed
 net-tools
-bind-utils
 wget
-ksh
-expect
-python3
-libreswan
+bind-utils
+telnet
+rsyslog
+sed
+rsync
 -tuned
+# Containers share the host kernel; do not install then erase kernel RPMs.
 -kernel
 -kernel-core
 -kernel-modules
 -kernel-modules-core
 -kernel-modules-extra
+# MYKOS native VPN, SSH and download tools from this vendor.
+libreswan
+openssh-server
+curl
 %end
 
-# Keep vendor release packages, signing keys and repository definitions.
+# RHEL 10 removed the installer OpenSCAP add-on and %anaconda section.
+# Apply any required RHEL 10 security profile after building the image.
 %post --erroronfail --log=/root/mykos-image-post.log
 set -eu
 

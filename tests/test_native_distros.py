@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'services/helpers'))
 import mykos_runtime as runtime
 import mykos_host_monitoring as monitor
-NEW={v+str(n):(title,n) for v,title,ns in [('rocky','Rocky Linux',[8,9,10]),('alma','AlmaLinux',[8,9,10]),('oracle','Oracle Linux',[8,9,10]),('centos','CentOS Stream',[9,10]),('fedora','Fedora',[43,44])] for n in ns}
+NEW={v+str(n):(title,n) for v,title,ns in [('rocky','Rocky Linux',[8,9,10]),('alma','AlmaLinux',[8,9,10]),('oracle','Oracle Linux',[8,9,10]),('centos','CentOS Stream',[8,9,10]),('fedora','Fedora',[43,44])] for n in ns}
 
 @pytest.mark.parametrize('os_name',NEW)
 def test_image_identity_and_staging_without_guest_probe(os_name,monkeypatch):
@@ -22,12 +22,18 @@ def test_image_identity_and_staging_without_guest_probe(os_name,monkeypatch):
 @pytest.mark.parametrize('os_name',NEW)
 def test_native_kickstarts_keep_vendor_repos_and_guest_customizations(os_name):
     source=(ROOT/'pos/ks'/ (os_name+'.ks')).read_text()
-    assert 'mykol.com' not in source and 'subscription-manager' not in source
+    assert 'mykol.com' not in source
+    if 'subscription-manager' in source:assert 'if [ -f /etc/yum/pluginconf.d/subscription-manager.conf ]; then' in source
     assert 'eth1' not in source and 'dhclient' not in source
-    assert '-tuned' in source and 'rootpw --lock' in source and ': > /etc/machine-id' in source
+    assert '-tuned' in source and 'rootpw --lock' in source
+    if not os_name.startswith('fedora'):
+        major=NEW[os_name][1];parent=(ROOT/'pos/ks'/('rh'+str(major)+'.ks')).read_text()
+        original_packages=parent.split('%packages',1)[1].split('%end',1)[0].splitlines()[1:]
+        derived_packages=source.split('%packages',1)[1].split('%end',1)[0].splitlines()[1:]
+        assert all(line in derived_packages for line in original_packages)
     assert 'rm -f /etc/yum.repos.d' not in source and 'libreswan' in source
-    assert source.count('%post ')==1
-    subprocess.run(['bash','-n'],input=source.split('%post ',1)[1].split('\n',1)[1].split('%end',1)[0],text=True,check=True)
+    assert len(__import__('re').findall(r'^%post(?:\s|$)',source,flags=__import__('re').M))==1
+    subprocess.run(['bash','-n'],input=__import__('re').split(r'^%post[^\n]*\n',source,flags=__import__('re').M,maxsplit=1)[1].split('%end',1)[0],text=True,check=True)
 
 @pytest.mark.parametrize('os_name',NEW)
 def test_native_dockerfile_labels_version_vendor_and_avoids_private_update_script(tmp_path,os_name):

@@ -122,9 +122,13 @@ separate operator task; an RPM update does not move existing images or disks.
 The text menu accepts `rocky8`, `rocky9`, `rocky10`, `alma8`, `alma9`, and
 `alma10`. These use the same kickstart → livemedia-creator rootfs → Podman
 build/commit → running generic base workflow as RedHat. Recipes live in
-`pos/ks/OS.ks`; the original RedHat kickstarts remain unchanged. Use a matching
-EL8, EL9, or EL10 Anaconda/Lorax build environment. A different repository URL
-does not make an older installer compatible with a newer OS.
+`pos/ks/OS.ks`; each EL vendor recipe derives from the corresponding operator
+`rh8.ks`, `rh9.ks`, or `rh10.ks`, preserving its package list and post-install
+customizations. The original RedHat kickstarts remain unchanged. Use an
+Anaconda/Lorax build environment that accepts the prepared kickstart. EL8/EL9
+images follow the operator's local workflow, including RH9-on-RH8, without a
+blanket host-major restriction. EL10 recipes retain their explicit newer-parser
+requirement.
 
 Rocky sources BaseOS and AppStream directly from
 `https://dl.rockylinux.org/pub/rocky/MAJOR/REPOSITORY/x86_64/os/`.
@@ -145,9 +149,12 @@ Oracle Linux uses `oracle8`, `oracle9`, and `oracle10`, from Oracle's public
 `.../OLMAJOR/appstream/x86_64/` repositories. Kernel and UEK packages are
 excluded: native containers share the host kernel.
 
-CentOS uses `centos9` and `centos10`, meaning CentOS **Stream** 9 and 10, from
+CentOS uses `centos8`, `centos9`, and `centos10`, meaning CentOS **Stream**. Stream 9 and 10 use
 `https://mirror.stream.centos.org/MAJOR-stream/{BaseOS,AppStream}/x86_64/os/`.
-Archived Stream 8 and CentOS Linux are intentionally excluded. Fedora uses
+Stream 8 uses the archived official BaseOS/AppStream trees at
+`https://vault.centos.org/8-stream/`, including saved runtime repo definitions
+with RPM signature checks enabled. This archive receives no further updates.
+CentOS Linux is not included. Fedora uses
 `fedora43` and `fedora44`, the two newest stable releases in the official
 release feed when added. The beta release is excluded. Its Everything install
 tree and matching updates repository come from `https://dl.fedoraproject.org/`.

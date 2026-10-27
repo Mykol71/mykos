@@ -190,7 +190,7 @@ def image_name(info, image):
     if not re.fullmatch(r'(?:sha256:)?[0-9a-f]{12,64}', stored):
         return stored
     tags = image.get('RepoTags') or []
-    return next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:9|10)|fedora(?:43|44)|ubuntu[0-9.]*|win[^/:]+|wns[0-9]+|macos[0-9]+):[^/]+', tag)), next(iter(tags), stored))
+    return next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|ubuntu[0-9.]*|win[^/:]+|wns[0-9]+|macos[0-9]+):[^/]+', tag)), next(iter(tags), stored))
 
 
 def parse_os_release(text):

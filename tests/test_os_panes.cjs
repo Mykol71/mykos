@@ -32,11 +32,11 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
 ` + source, context);
 (async () => {
     await vm.runInContext(`(async () => {
-        for (const [family,versions] of Object.entries({rocky:[8,9,10],alma:[8,9,10],oracle:[8,9,10],centos:[9,10],fedora:[43,44]})) {
+        for (const [family,versions] of Object.entries({rocky:[8,9,10],alma:[8,9,10],oracle:[8,9,10],centos:[8,9,10],fedora:[43,44]})) {
             for (const version of versions) assert.equal(mykosImageFamily(family+version), family);
             assert.equal(mykosNodeFamily({id:'test',os_type:family,image:'localhost/'+family+versions[0]+':latest'}),family);
         }
-        assert.equal(mykosImageFamily('centos8'),null);
+        assert.equal(mykosImageFamily('centos7'),null);
         assert.equal(mykosImageFamily('fedora45'),null);
         for (const os of ['rh7','rh8','rh9','rh10']) assert.equal(mykosImageFamily(os), 'linux');
         for (const os of ['ubuntu','ubuntu22','ubuntu24','ubuntu24.04','ubuntu26.04']) assert.equal(mykosImageFamily(os), 'ubuntu');
@@ -48,9 +48,15 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(mykosNodeFamily({id:'sql',os_type:'Red Hat Enterprise Linux',image:'localhost/mssql2022:latest'}), 'mssql');
         assert.equal(mykosImageFamily('other'), null);
         el('rocky-mykos-image-builds').querySelectorAll=()=>[];
-        mykosCapturedImages=[{os:'rocky9',version:'9.10',size_bytes:2147483648,delete_state:'idle'}];
+        mykosCapturedImages=[{os:'rocky9',version:'9.10',size_bytes:2147483648,created_at:1793060009,delete_state:'idle'}];
         mykosRenderImageBuilds();
         assert.match(el('rocky-mykos-image-builds').innerHTML,/Prepared image/);
+        assert.ok(el('rocky-mykos-image-builds').innerHTML.includes('Size: 2.00 GiB'));
+        assert.ok(el('rocky-mykos-image-builds').innerHTML.includes('Produced: '+new Date(1793060009*1000).toLocaleString()));
+        mykosCapturedImages[0].delete_state='failed';mykosCapturedImages[0].delete_error='Dependency';
+        mykosRenderImageBuilds();
+        assert.ok(el('rocky-mykos-image-builds').innerHTML.includes('Size: 2.00 GiB | Produced:'));
+        mykosCapturedImages[0].delete_state='idle';
         assert.match(el('rocky-mykos-image-builds').innerHTML,/9\.10/);
         mykosTerminalAllowed=false;mykosRenderImageBuilds();
         assert.doesNotMatch(el('rocky-mykos-image-builds').innerHTML,/Prepared image/);

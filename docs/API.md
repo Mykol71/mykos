@@ -615,3 +615,9 @@ The action opens the existing interactive connection selection and confirmation
 workflow. Native VPN setup advertises the actual Podman IPv4 address as a /32,
 which must match the router peer's private-subnet selector. IKE identities are
 independent of this traffic selector and remain unchanged.
+
+Prepared-image catalog entries include `size_bytes` and `created_at` (Unix
+seconds, or null when unavailable). Production time comes from Podman's image
+creation metadata, without probing a guest. Admin image rows show both size
+and the production date/time in the browser's local timezone, including when
+removal is blocked by a dependency.

@@ -993,7 +993,7 @@ const mykosOsChoices = {
     rocky: ['rocky8','rocky9','rocky10'],
     alma: ['alma8','alma9','alma10'],
     fedora: ['fedora43','fedora44'],
-    centos: ['centos9','centos10'],
+    centos: ['centos8','centos9','centos10'],
     oracle: ['oracle8','oracle9','oracle10'],
     ubuntu: ['ubuntu20.04', 'ubuntu22.04', 'ubuntu24.04'],
     windows: ['win11', 'win10', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98'],
@@ -1012,7 +1012,7 @@ function mykosImageFamily(os) {
     if (/^rocky(?:8|9|10)$/i.test(os)) return 'rocky';
     if (/^alma(?:8|9|10)$/i.test(os)) return 'alma';
     if (/^oracle(?:8|9|10)$/i.test(os)) return 'oracle';
-    if (/^centos(?:9|10)$/i.test(os)) return 'centos';
+    if (/^centos(?:8|9|10)$/i.test(os)) return 'centos';
     if (/^fedora(?:43|44)$/i.test(os)) return 'fedora';
     if (/^rh\d+$/i.test(os)) return 'linux';
     if (/^ubuntu(?:\d{2}(?:\.\d{2})?)?$/i.test(os)) return 'ubuntu';
@@ -2360,7 +2360,10 @@ function mykosRenderImageBuilds() {
             const version = item.build_state==='ready' && !item.os.startsWith('mssql') && item.version ? item.version : item.os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '');
             const span = 4;
             const phase = ({queued:'Queued',building:'Installing',configuring:'Preparing',capturing:'Capturing',failed:'Failed',ready:'Image'})[item.build_state] || 'Installing';
-            const imageHint=item.build_state==='ready' ? (item.delete_state==='queued'||item.delete_state==='deleting' ? 'Removing image…' : item.delete_state==='failed' ? 'Removal failed: '+item.delete_error : 'Prepared image · '+(Number(item.size_bytes||0)/1073741824).toFixed(2)+' GiB') : '';
+            const produced=Number.isFinite(item.created_at) && item.created_at>0 ? new Date(item.created_at*1000).toLocaleString() : 'Unknown';
+            const imageState=item.delete_state==='queued'||item.delete_state==='deleting' ? 'Removing image…' : item.delete_state==='failed' ? 'Removal failed: '+item.delete_error : 'Prepared image';
+            const imageSize=Number.isFinite(item.size_bytes) && item.size_bytes>=0 ? (item.size_bytes/1073741824).toFixed(2)+' GiB' : 'Unknown';
+            const imageHint=item.build_state==='ready' ? imageState+' | Size: '+imageSize+' | Produced: '+produced : '';
             const hint = imageHint || (item.unattended ? (item.build_message || 'Installing and preparing the image automatically') : 'Finish installation using the console action');
             return '<tr class="mykos-image-build-row"><td>' + escape(item.name || item.os) + '</td><td' + (item.build_state === 'failed' ? ' style="color:#ef4444"' : '') + '>' + phase + '</td><td>' + escape(version) + '</td><td colspan="' + span + '">' + escape(hint) + '</td><td class="mykos-actions-cell"><div class="mykos-row-actions" role="group" aria-label="Image installation actions">' + consoleLink + '</div></td></tr>';
         }).join('');

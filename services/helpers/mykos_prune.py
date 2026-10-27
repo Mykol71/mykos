@@ -123,7 +123,7 @@ def builders():
     for pid, value in table.items():
         args = value['args']
         executable = any(Path(a).name in ('livemedia-creator', 'anaconda') for a in args[:2] if a)
-        staged_ks = any(re.fullmatch(r'(?:--ks=|--kickstart=)?/var/tmp/(?:rh(?:7|8|9|10)|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:9|10)|fedora(?:43|44)|mssql(?:2022|2025))\.ks', a) for a in args)
+        staged_ks = any(re.fullmatch(r'(?:--ks=|--kickstart=)?/var/tmp/(?:rh(?:7|8|9|10)|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|mssql(?:2022|2025))\.ks', a) for a in args)
         if executable and staged_ks: selected.add(pid)
     while True:
         children = {pid for pid, value in table.items() if value['parent'] in selected}

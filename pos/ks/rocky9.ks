@@ -1,18 +1,16 @@
-# Rocky Linux 9 native container rootfs for livemedia-creator --make-tar.
-# Use an EL9 Anaconda/Lorax builder. Runtime networking comes from Podman.
+# Rocky Linux 9: derived from the operator-maintained rh9.ks.
 # Basic setup information
 # Accounts are locked at build time; provision host/container access explicitly.
 rootpw --lock
 keyboard us
-timezone UTC --utc
+timezone --utc UTC
 timesource --ntp-disable
 selinux --permissive
 firewall --disabled
-# Build networking is selected automatically; Podman supplies runtime eth0 and the configured private NAT network.
-network  --bootproto=dhcp --device=link --noipv6 --activate --onboot=on
+network  --bootproto=dhcp --device=link --ipv6=no --activate --onboot=on
 network  --hostname=SHOPCODE.HOSTNAME
-bootloader --disabled
-lang en_US.UTF-8
+bootloader --disable
+lang en_US
 shutdown
 eula --agreed
 skipx
@@ -22,7 +20,7 @@ skipx
 # Disk setup
 zerombr
 clearpart --all --initlabel
-part / --asprimary --fstype="ext4" --size=20000
+part / --asprimary --fstype="ext4" --size=10000
 
 # Repos
 url --url=https://dl.rockylinux.org/pub/rocky/9/BaseOS/x86_64/os/
@@ -30,48 +28,40 @@ repo --name="AppStream" --install --baseurl=https://dl.rockylinux.org/pub/rocky/
 repo --name="BaseOS" --install --baseurl=https://dl.rockylinux.org/pub/rocky/9/BaseOS/x86_64/os/
 
 # Package setup
-%packages --excludedocs
+%packages
 @^minimal-environment
+@system-tools
 bash
-curl
-openssh-server
-iproute
-procps-ng
-util-linux
-shadow-utils
-findutils
-tar
-gzip
-rsync
-sed
-net-tools
-bind-utils
-wget
 ksh
-expect
-python3
-libreswan
+net-tools
+wget
+procmail
+bind-utils
+rsyslog
+sed
+rsync
 -tuned
 -kernel
 -kernel-core
 -kernel-modules
 -kernel-modules-core
 -kernel-modules-extra
+# MYKOS native VPN, SSH and download tools from this vendor.
+libreswan
+openssh-server
+curl
 %end
 
-# Keep vendor release packages, signing keys and repository definitions.
-%post --erroronfail --log=/root/mykos-image-post.log
-set -eu
+# The source RedHat-specific OpenSCAP datastream is not applied to another vendor.
+%post
 
-# container customizations inside the chroot
-mkdir -p /etc/dnf/vars /etc/rpm
 echo 'container' > /etc/dnf/vars/infra
 
 #Generate installtime file record
 /bin/date +%Y%m%d_%H%M > /etc/BUILDTIME
 
 # Limit languages to help reduce size.
-LANG="en_US.UTF-8"
+LANG="en_US:UTF-8"
 echo "%_install_langs $LANG" > /etc/rpm/macros.image-language-conf
 
 # systemd fixes
@@ -84,11 +74,7 @@ rm -f /etc/udev/hwdb.bin
 rm -rf /usr/lib/udev/hwdb.d/
 rm -rf /boot
 rm -rf /var/lib/dnf/history.*
-
-# These paths may already be absent in a minimal image.
-rm -f /var/run/nologin /var/lib/systemd/random-seed
-# Give every instance its own machine ID on first boot.
-: > /etc/machine-id
-# /bin/sh is supplied by the distribution. Access accounts are provisioned later.
-
+rm /var/run/nologin
+ln -s /usr/bin/sh /bin/sh
+usermod -G wheel -a tfsupport
 %end

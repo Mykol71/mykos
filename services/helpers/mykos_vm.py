@@ -692,7 +692,7 @@ def cleanup_unused_base_images():
     removed=[]
     for item in json.loads(run([PODMAN,'images','--format','json'],timeout=30)):
         for name in item.get('Names') or []:
-            if not re.fullmatch(r'localhost/(?:rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:9|10)|fedora(?:43|44)|macos[0-9]+|win[0-9a-z]+|wns[0-9]+|ubuntu[0-9.]+):base',name):continue
+            if not re.fullmatch(r'localhost/(?:rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|macos[0-9]+|win[0-9a-z]+|wns[0-9]+|ubuntu[0-9.]+):base',name):continue
             image=json.loads(run([PODMAN,'image','inspect',name],timeout=30))[0]['Id']
             if image.removeprefix('sha256:') in used:continue
             try:run([PODMAN,'image','rm',name],timeout=120)

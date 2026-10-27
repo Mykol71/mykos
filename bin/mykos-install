@@ -32,7 +32,7 @@ EXACT = {'/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.p
 PACKAGES = ['podman','httpd','mod_ssl','python3','python3-pip','openssh-server','openssh-clients','rsync',
             'iproute','net-tools','netavark','containernetworking-plugins','libreswan','curl','wget','jq','util-linux','tar','gzip',
             'cronie','chrony','firewalld','policycoreutils-python-utils','ksh','unzip',
-            'expect','nmap','time','ipset','iptables','git','criu']
+            'expect','nmap','time','ipset','iptables','git','criu','pykickstart']
 
 def fail(message): raise ValueError(message)
 def sha(data): return hashlib.sha256(data).hexdigest()

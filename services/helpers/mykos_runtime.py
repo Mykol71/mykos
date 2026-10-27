@@ -11,8 +11,8 @@ CONFIG = Path('/etc/mykos/config.json')
 JOBS = Path('/var/lib/mykos/jobs')
 PODMAN = '/usr/bin/podman'
 SHOP = re.compile(r'[0-9]{8}\Z')
-NATIVE_OS_NAMES = ('rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos9','centos10','fedora43','fedora44')
-STAGE_OS_NAMES = ('mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos9','centos10','fedora43','fedora44', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12')
+NATIVE_OS_NAMES = ('rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44')
+STAGE_OS_NAMES = ('mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12')
 
 def shopcode(value):
     if not isinstance(value, str) or not SHOP.fullmatch(value):

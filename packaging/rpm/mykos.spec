@@ -14,7 +14,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        109%{?dist}
+Release:        110%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-Proprietary AND MIT
 URL: https://mykol.com/mykos/
@@ -26,7 +26,7 @@ Requires: system-release(releasever) = %{mykos_target_el}
 Requires: %{mykos_python_packages} podman httpd mod_ssl
 Requires: openssh-server openssh-clients rsync iproute net-tools netavark containernetworking-plugins criu libreswan
 Requires: curl wget jq util-linux tar gzip cronie chrony firewalld
-Requires: policycoreutils-python-utils ksh unzip expect nmap time ipset iptables git
+Requires: policycoreutils-python-utils ksh unzip expect nmap time ipset iptables git pykickstart
 Requires(pre): shadow-utils
 Requires(post): systemd %{mykos_python_packages}
 Requires(preun): systemd

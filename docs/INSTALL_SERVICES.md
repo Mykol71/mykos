@@ -374,3 +374,19 @@ manual cleanup is reported explicitly, without deleting its disks or image.
 The performance chart draws running container and VPN connection counts as translucent paired columns behind the resource lines. Container and VPN columns alternate beside each other in five-second buckets without overlap. Both count series rise from zero; 15 running containers or active VPN connections equals 100%. Historical counts use the same scale, and missing or stale readings leave gaps. The history slider uses a grey accent.
 
 Host has an orange personal-notes icon beside its white change-request icon. Both use the same icon shape and a larger notes dialog. Personal notes persist across updates and are excluded from change-request processing. Changed container/VPN count bars receive a brighter fill and bold edge at the time of the change; other bars remain faint. A subtle diagonal texture overlays the dashboard background.
+
+## Native image builder prerequisite
+
+The standard installer dependency set and RPM require `pykickstart`, which
+provides `ksvalidator`. `python3-kickstart` alone supplies only its Python
+library on EL8/EL9 and does not provide that command. Existing installations
+missing the CLI can install it with `sudo dnf install -y pykickstart`.
+
+EL8/EL9 native builds use the existing local Anaconda/Lorax workflow, including
+the operator's established RH9-on-RH8 method. The menu validates the prepared
+kickstart against the actual installed parser, rather than rejecting an EL9
+image merely because the host is EL8. Repository/package compatibility still
+has to succeed during the actual build. EL10 recipes currently retain their
+EL10 Anaconda/Lorax requirement because they use newer kickstart syntax. Fedora 43/44 use matching Fedora builders.
+Changing repository URLs does not upgrade the local installer. This requirement
+affects image creation; using an already built native image is a separate path.

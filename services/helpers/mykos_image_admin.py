@@ -1,5 +1,6 @@
 """Admin image catalog and guarded asynchronous removal; no forced image deletion."""
-import fcntl,json,os,shutil,subprocess,time
+import fcntl,json,os,shutil,subprocess,time,re
+from datetime import datetime,timezone
 from pathlib import Path
 import mykos_vm as vm
 from mykos_runtime import NATIVE_OS_NAMES,PODMAN,run
@@ -28,6 +29,17 @@ def save(os_name,value):
     from mykos_image_build import write
     write(STATE/(selection(os_name)+'.json'),json.dumps(value)+'\n')
 
+def produced_at(value):
+    try:
+        stamp=str(value).replace('Z','+00:00')
+        # Podman emits nanoseconds; Python 3.9 accepts only 3/6 fractional digits.
+        stamp=re.sub(r'\.(\d+)(?=[+-]|$)',lambda m:'.'+(m[1]+'000000')[:6],stamp)
+        created=datetime.fromisoformat(stamp)
+        if created.tzinfo is None:created=created.replace(tzinfo=timezone.utc)
+        return int(created.timestamp())
+    except (ValueError,TypeError,OverflowError):return None
+
+
 def catalog():
     names=set(run([PODMAN,'images','--format','{{.Repository}}:{{.Tag}}'],timeout=20).splitlines())
     selected={reference(k):k for k in (*NATIVE_OS_NAMES,*vm.VERSIONS) if reference(k) in names}
@@ -39,7 +51,7 @@ def catalog():
         if row is None:continue
         labels=row.get('Labels') or row.get('Config',{}).get('Labels') or {}
         pending=job(key)
-        result.append({'os':key,'image':tag,'image_id':row['Id'],'size_bytes':row.get('Size',0),
+        result.append({'os':key,'image':tag,'image_id':row['Id'],'size_bytes':row.get('Size',0),'created_at':produced_at(row.get('Created')),
                        'version':key[5:] if key.startswith('mssql') else labels.get('io.mykos.os.version') or key.lstrip('abcdefghijklmnopqrstuvwxyz'),
                        'delete_state':pending.get('state'),'delete_error':pending.get('error','')})
     return result
