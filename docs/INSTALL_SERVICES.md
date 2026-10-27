@@ -371,4 +371,4 @@ image remains ready. Rerun the same Build command to retry that base restart;
 installation and memory capture are not repeated. An unusable builder requiring
 manual cleanup is reported explicitly, without deleting its disks or image.
 
-The performance chart draws running container and VPN connection counts as faded filled areas behind the resource lines. Both count series rise from zero; 15 running containers or active VPN connections equals 100%. Historical counts use the same scale, and missing or stale readings leave gaps. The history slider uses a grey accent.
+The performance chart draws running container and VPN connection counts as translucent paired columns behind the resource lines. Container and VPN columns alternate beside each other in five-second buckets without overlap. Both count series rise from zero; 15 running containers or active VPN connections equals 100%. Historical counts use the same scale, and missing or stale readings leave gaps. The history slider uses a grey accent.
