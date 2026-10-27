@@ -124,7 +124,6 @@ rm -f /etc/udev/hwdb.bin
 rm -rf /usr/lib/udev/hwdb.d/
 rm -rf /boot
 # Keep Yum's package history intact; this image does not use DNF.
-rm -f /var/run/nologin
 
 # /bin/sh is supplied by the distribution; access accounts are provisioned later.
 # A failed download or an invalid shell script must fail the image build.

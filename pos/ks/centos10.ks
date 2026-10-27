@@ -83,7 +83,7 @@ rm -rf /boot
 rm -rf /var/lib/dnf/history.*
 
 # These paths may already be absent in a minimal image.
-rm -f /var/run/nologin /var/lib/systemd/random-seed
+rm -f /var/lib/systemd/random-seed
 # Give every instance its own machine ID on first boot.
 : > /etc/machine-id
 # /bin/sh is supplied by the distribution. Access accounts are provisioned later.

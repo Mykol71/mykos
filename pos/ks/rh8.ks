@@ -53,7 +53,6 @@ systemctl mask systemd-logind.service getty.target console-getty.service sys-fs-
 rm -f /etc/udev/hwdb.bin
 rm -rf /usr/lib/udev/hwdb.d/
 rm -rf /boot
-rm -f /var/run/nologin
 rf /var/lib/dnf/history.*
 ln -s /usr/bin/sh /bin/sh
 updatedb

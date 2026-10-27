@@ -74,7 +74,6 @@ rm -f /etc/udev/hwdb.bin
 rm -rf /usr/lib/udev/hwdb.d/
 rm -rf /boot
 rm -rf /var/lib/dnf/history.*
-rm /var/run/nologin
 ln -s /usr/bin/sh /bin/sh
 usermod -G wheel -a tfsupport
 %end
