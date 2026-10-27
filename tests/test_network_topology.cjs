@@ -25,3 +25,18 @@ assert.match(html,/function mykosToggleShop\(shop, mode = 'details'\)/);
 assert.doesNotMatch(html,/function mykosOpenVpnTopology/);
 assert.match(html,/tr.addEventListener\('click',event=>event.stopPropagation\(\)\)/);
 console.log('Network topology optional guest membership, separation, escaping and entry-point checks passed.');
+
+// Per-ID choice survives a new page context, with safe fallback if storage is blocked.
+const preferences=html.slice(html.indexOf('const mykosNetworkPeersHidden ='),html.indexOf('function mykosSection('));
+const stored=new Map(),storage={getItem:key=>stored.get(key)??null,setItem:(key,value)=>stored.set(key,value)};
+const prefs=vm.createContext({localStorage:storage});vm.runInContext(preferences,prefs);
+assert.equal(prefs.mykosNetworkPeersShown('12345678'),true);
+prefs.mykosSaveNetworkPeers('12345678',false);
+const reopened=vm.createContext({localStorage:storage});vm.runInContext(preferences,reopened);
+assert.equal(reopened.mykosNetworkPeersShown('12345678'),false);
+assert.equal(reopened.mykosNetworkPeersShown('87654321'),true);
+reopened.mykosSaveNetworkPeers('12345678',true);
+assert.equal(reopened.mykosNetworkPeersShown('12345678'),true);
+const blocked=vm.createContext({localStorage:{getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}}});vm.runInContext(preferences,blocked);
+blocked.mykosSaveNetworkPeers('12345678',false);assert.equal(blocked.mykosNetworkPeersShown('12345678'),false);
+console.log('Per-ID network peer preference persistence and storage fallback passed.');

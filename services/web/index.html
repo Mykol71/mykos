@@ -317,6 +317,14 @@ body, button, input, select, textarea {
 
 .mykos-vpn-status-cell { white-space:nowrap; }
 .mykos-network-button { background:transparent; border:0; padding:0; color:inherit; font:inherit; }
+.mykos-network-grid { grid-template-columns:minmax(0,3fr) minmax(260px,2fr); align-items:start; }
+.mykos-network-topology { min-width:0; overflow-x:auto; }
+.mykos-network-topology p { margin:10px 0 0; }
+.mykos-network-mode { color:#e2e8f0; font-weight:600; margin:0 0 12px !important; }
+[data-theme="light"] .mykos-network-mode { color:#0f172a; }
+.mykos-network-details { display:grid; gap:20px; min-width:0; overflow-wrap:anywhere; }
+@media(max-width:800px) { .mykos-network-grid { grid-template-columns:1fr; } }
+
 .mykos-vpn-topology { color:#4ade80; background:transparent; border:0; padding:0 2px; vertical-align:middle; }
 .mykos-vpn-topology:hover { color:#86efac; }
 #mykos-vpn-topology-dialog { width:min(720px,92vw); max-height:85vh; overflow:auto; }
@@ -1128,14 +1136,33 @@ function mykosVpnGraph(selectedShop = null, showPeers = false) {
         }
     }
     if(!vertices.size) return '<p>No configured VPN topology.</p>';
-    const columns=['guest','peer','gateway','site'].filter(kind=>[...vertices.values()].some(v=>v.kind===kind));let height=100;
+    const selected=mykosListMemory[selectedShop]?.vpn_topology;
+    let mode='VPN topology';
+    if(selected) {
+        const via=selected.via_gateways || [],own=selected.links || [];
+        if(via.length) mode='Shared VPN · '+(via[0].gateway==='host'?'MYKOS host gateway':'Guest '+via[0].gateway+' gateway');
+        else if(own.some(link=>link.mode==='gateway')) mode='Shared VPN · This guest is the gateway';
+        else if(own.length) mode='Independent VPN · '+new Set(own.map(link=>link.peer)).size+' remote site'+(new Set(own.map(link=>link.peer)).size===1?'':'s');
+        else mode='Local network · No own VPN configured';
+    }
+    const columns=['guest','gateway','site'].filter(kind=>[...vertices.values()].some(v=>v.kind===kind));
+    const width=Math.max(440,columns.length*220);let height=100;
     columns.forEach((kind,column)=>{
         const items=[...vertices.values()].filter(v=>v.kind===kind);height=Math.max(height,items.length*64+40);
         items.forEach((v,i)=>Object.assign(v,{x:80+column*220,y:35+i*64}));
     });
+    const peers=[...vertices.values()].filter(v=>v.kind==='peer');
+    if(peers.length) {
+        const perRow=Math.max(1,Math.floor(width/140)),top=height+40;
+        peers.forEach((v,i)=>{
+            const row=Math.floor(i/perRow),count=Math.min(perRow,peers.length-row*perRow);
+            Object.assign(v,{x:width*(i%perRow+1)/(count+1),y:top+row*80});
+        });
+        height=top+Math.ceil(peers.length/perRow)*80;
+    }
     const lines=edges.map(edge=>{const a=vertices.get(edge.from),b=vertices.get(edge.to);return '<g><title>'+escape(edge.label)+'</title><path d="M'+(a.x+20)+' '+a.y+' L'+(b.x-20)+' '+b.y+'" fill="none" stroke="'+(edge.active?'#4ade80':'#94a3b8')+'" stroke-width="2"'+(edge.active?'':' stroke-dasharray="4 4"')+'/></g>';}).join('');
-    const icons=[...vertices.values()].map(v=>'<g transform="translate('+v.x+' '+v.y+')"><title>'+escape(v.label)+'</title>'+(v.kind==='site'?'<path d="M-7-18v7M7-18v7"/><rect x="-14" y="-10" width="28" height="17" rx="3"/>':'<rect x="-14" y="-12" width="28" height="22" rx="3"/><path d="M-8 15h16M0 10v5"/>')+'<text y="29" text-anchor="middle" fill="currentColor" stroke="none" font-size="12">'+escape(v.label.length>26?v.label.slice(0,23)+'…':v.label)+'</text></g>').join('');
-    return '<svg viewBox="0 0 '+(columns.length*220)+' '+height+'" role="img" aria-label="Guests, VPN gateways and remote sites" style="width:100%;min-width:480px;color:#38bdf8;fill:none;stroke:currentColor;stroke-width:1.7">'+lines+icons+'</svg>';
+    const icons=[...vertices.values()].map(v=>'<g transform="translate('+v.x+' '+v.y+')"><title>'+escape(v.label)+'</title>'+(v.kind==='site'?'<path d="M-7-18v7M7-18v7"/><rect x="-14" y="-10" width="28" height="17" rx="3"/>':'<rect x="-14" y="-12" width="28" height="22" rx="3"/><path d="M-8 15h16M0 10v5"/>')+'<text y="-25" text-anchor="middle" fill="currentColor" stroke="none" font-size="10">'+(v.kind==='site'?'Remote site':v.kind==='gateway'?'VPN gateway':v.kind==='peer'?'Network guest':v.key==='host:internet'?'Host':'Selected ID')+'</text><text y="29" text-anchor="middle" fill="currentColor" stroke="none" font-size="12">'+escape(v.label.length>26?v.label.slice(0,23)+'…':v.label)+'</text></g>').join('');
+    return '<p class="mykos-network-mode">'+escape(mode)+'</p><svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Guests, VPN gateways and remote sites" style="width:100%;min-width:480px;color:#38bdf8;fill:none;stroke:currentColor;stroke-width:1.7">'+lines+icons+'</svg>';
 }
 
 function table(){
@@ -1173,7 +1200,19 @@ load();setInterval(()=>{if(!el('dashboard').hidden)load()},10000);
 // MYKOS INLINE NODE DETAILS V3
 let mykosSelectedShop = null;
 let mykosSelectedDetailMode = 'details';
-const mykosNetworkPeersVisible = new Set();
+const mykosNetworkPeersHidden = new Set();
+function mykosNetworkPeersShown(shop) {
+    try {
+        const saved=localStorage.getItem('mykos-network-peers:'+shop);
+        if(saved==='true' || saved==='false') return saved==='true';
+    } catch (_) {}
+    return !mykosNetworkPeersHidden.has(shop);
+}
+function mykosSaveNetworkPeers(shop,shown) {
+    if(shown) mykosNetworkPeersHidden.delete(shop); else mykosNetworkPeersHidden.add(shop);
+    try { localStorage.setItem('mykos-network-peers:'+shop,String(shown)); } catch (_) {}
+}
+
 let mykosDetailVersion = 0;
 
 function mykosSection(title, rows) {
@@ -1219,7 +1258,7 @@ async function mykosExpandShop(shop, mode = 'details') {
     title.textContent = 'ID ' + shop + (mode === 'network' ? ' — Network' : ' — Details');
 
     const grid = reuse ? tr.querySelector('.mykos-detail-grid') : document.createElement('div');
-    grid.className = 'mykos-detail-grid';
+    grid.className = 'mykos-detail-grid' + (mode === 'network' ? ' mykos-network-grid' : '');
     if (!reuse) grid.textContent = 'Loading monitoring information...';
 
     if (!reuse) {
@@ -1298,16 +1337,19 @@ async function mykosExpandShop(shop, mode = 'details') {
             graph.className='mykos-network-topology';
             const peersLabel=document.createElement('label');
             const peersToggle=document.createElement('input');peersToggle.type='checkbox';
-            peersToggle.checked=mykosNetworkPeersVisible.has(shop);
+            peersToggle.checked=mykosNetworkPeersShown(shop);
             peersLabel.append(peersToggle,document.createTextNode(' Show connected guests'));
             const picture=document.createElement('div');
-            const draw=()=>{picture.innerHTML=mykosVpnGraph(shop,mykosNetworkPeersVisible.has(shop));};
-            peersToggle.addEventListener('change',()=>{if(peersToggle.checked)mykosNetworkPeersVisible.add(shop);else mykosNetworkPeersVisible.delete(shop);draw();});
+            const draw=()=>{picture.innerHTML=mykosVpnGraph(shop,mykosNetworkPeersShown(shop));};
+            peersToggle.addEventListener('change',()=>{mykosSaveNetworkPeers(shop,peersToggle.checked);draw();});
             draw();graph.append(peersLabel,picture);
             const legend=document.createElement('p');
             legend.textContent='Solid green: reported established SA. Dashed grey: not confirmed. Shared-network edges indicate membership, not tested reachability. A site SA alone does not verify full-tunnel internet access.';
             graph.append(legend);
-            grid.replaceChildren(fields,connections,graph);
+            const details=document.createElement('div');
+            details.className='mykos-network-details';
+            details.append(fields,connections);
+            grid.replaceChildren(graph,details);
             return;
         }
 
