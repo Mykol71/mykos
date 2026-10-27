@@ -182,11 +182,16 @@ def shell(args, timeout):
 
 class GuestAgent:
     """Private Unix QGA connection; no guest/network credentials or exposed port."""
-    def __init__(self,value,allow_image_builder=False,timeout=10):
+    def __init__(self,value,allow_image_builder=False,timeout=10,*,allow_prepared_image=False):
         from mykos_vm import inspect
         state=inspect(value['name']);labels=state.get('Config',{}).get('Labels') or {}
         pid=state.get('State',{}).get('Pid',0)
-        role = 'template' if allow_image_builder else 'instance'
+        role = 'template' if allow_image_builder or allow_prepared_image else 'instance'
+        if allow_prepared_image:
+            from mykos_image_admin import base_container
+            base_container(value.get('os'))
+            if value.get('name')!=value.get('os') or value.get('role')!='template' or not value.get('ready'):
+                raise QueueError('Select a completed generic image')
         if allow_image_builder and (value.get('role') != 'template' or value.get('ready') or not value.get('os', '').startswith(('win','wns','ubuntu')) or value.get('name') != value.get('os')):
             raise QueueError('Select an unfinished Windows or Ubuntu image')
         if (not state.get('State',{}).get('Running') or not isinstance(pid,int) or pid<=0
@@ -226,8 +231,8 @@ class GuestAgent:
     def close(self): self.socket.close()
 
 
-def powershell(value,script,timeout,*,allow_image_builder=False):
-    agent=GuestAgent(value,allow_image_builder=True) if allow_image_builder else GuestAgent(value)
+def powershell(value,script,timeout,*,allow_image_builder=False,allow_prepared_image=False):
+    agent=GuestAgent(value,allow_prepared_image=True) if allow_prepared_image else GuestAgent(value,allow_image_builder=True) if allow_image_builder else GuestAgent(value)
     try:
         encoded=base64.b64encode(script.encode('utf-16le')).decode()
         pid=agent.call('guest-exec',{'path':r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe',

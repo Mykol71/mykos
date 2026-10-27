@@ -343,7 +343,15 @@ def mykos_terminal_permission(request: Request):
 async def mykos_terminal_websocket(ws: WebSocket, shop: str):
     # Validate Origin and session before WebSocket accept.
     expected = os.environ.get('MYKOS_PUBLIC_ORIGIN', 'https://mykol.com')
-    if ws.headers.get('origin') != expected or (shop != 'host' and not _mykos_re.fullmatch(r'[0-9]{8}', shop)):
+    action = ws.query_params.get('action', 'shell')
+    image_shell = action == 'image-shell'
+    from image_build_api import prepared_os
+    try:
+        if image_shell: prepared_os(shop)
+    except HTTPException:
+        await ws.close(code=1008)
+        return
+    if ws.headers.get('origin') != expected or (not image_shell and shop != 'host' and not _mykos_re.fullmatch(r'[0-9]{8}', shop)):
         await ws.close(code=1008)
         return
     token = ws.cookies.get('mykos_session', '')
@@ -357,7 +365,7 @@ async def mykos_terminal_websocket(ws: WebSocket, shop: str):
         return
 
     action = ws.query_params.get('action', 'shell')
-    if action not in ('shell', 'add-vpn', 'remove-vpn'):
+    if action not in ('shell', 'add-vpn', 'remove-vpn', 'image-shell'):
         await ws.close(code=1008)
         return
     if action == 'shell':

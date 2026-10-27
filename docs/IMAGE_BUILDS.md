@@ -172,6 +172,22 @@ Stream 8–10. Existing local images are reused. A failed build stops the batch
 before another installer starts; completed images remain available. Correct the
 reported error and clear any failed installer workspace before retrying `all`.
 Fedora, SQL Server and desktop VM images remain individual selections.
-Image installation runs at nice 10; the menu and regular containers retain their
+Image installation runs at nice +1 (slightly below normal CPU priority); the menu and regular containers retain their
 normal priority. VM image builders reset their build-priority setting for regular
 instances.
+
+
+### Update an existing image
+
+Administrators can use **Connect to running base image** on a prepared image row.
+This connects to the generic base itself: `su - root` for native Linux, the direct
+Ubuntu guest serial terminal, PowerShell for Windows, or the macOS SSH shell.
+The base must be running; connecting does not create an instance or restart it.
+
+After making changes, close the console and select **f. Capture image** in the
+text menu, enter the image OS, and confirm its exact name. Native Linux commits
+the base filesystem with a brief pause and leaves it running. VM images refresh
+their paired disk/RAM startup capture, commit the installed disk, and restart the
+generic base from the saved state. Existing ID-specific containers and intentional
+snapshots retain their original state. Capture native images after package updates
+have completed; external mounted data is not part of a Podman filesystem commit.

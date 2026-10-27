@@ -237,7 +237,7 @@ def launch(key, value):
     building_image = value['role'] == 'template' and not value.get('ready')
     # Explicitly reset the environment when launching instances from a committed
     # build image, so build priority cannot leak into ordinary guests.
-    args += ['-e', 'MYKOS_BUILD_NICE=' + ('10' if building_image else '0')]
+    args += ['-e', 'MYKOS_BUILD_NICE=' + ('1' if building_image else '0')]
     if building_image and kind == 'windows':
         args += ['--cap-add=SYS_NICE']
     if kind == 'ubuntu':
@@ -913,7 +913,7 @@ if ($env:SystemDrive -ne 'C:' -or $setup.SystemSetupInProgress -ne 0 -or $setup.
     throw 'Finish Windows installation and reach the installed desktop before capturing the image'
 }
 Write-Output 'Installed Windows verified'
-""", 30, allow_image_builder=True)
+""", 30, **({'allow_prepared_image':True} if value.get('ready') else {'allow_image_builder':True}))
     if result.get('timed_out') or result.get('exit_code') != 0:
         raise ValueError('Windows installation is not ready for capture: ' + result.get('output','Guest check failed'))
 

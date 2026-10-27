@@ -151,11 +151,11 @@ build-image() (
   local OS="$1"
   case "$OS" in
     win*|wns*|mac*|ubuntu*)
-      renice -n 10 -p "$BASHPID" >/dev/null || return 1
+      renice -n 1 -p "$BASHPID" >/dev/null || return 1
       "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;;
   esac
   case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
-  renice -n 10 -p "$BASHPID" >/dev/null || return 1
+  renice -n 1 -p "$BASHPID" >/dev/null || return 1
   if podman image exists "$OS"; then echo "Image already built: $OS"; return 0; fi
   check_image_builder || return 1
   rm -f "/var/tmp/$OS-docker.tar.xz" || return 1
@@ -470,7 +470,7 @@ while :; do
     printf '\u2503''\033[1m'" s.\033[0m ID"'\n'
     printf '\u2503''\033[1m'" m.\033[0m Images"'\n'
     printf '\u2503''\033[1m'" c.\033[0m Build image"'\n'
-    printf '\u2503''\033[1m'" f.\033[0m Capture image"'\n'
+    printf '\u2503''\033[1m'" f.\033[0m Capture/update image"'\n'
     printf '\u2503''\033[1m'" g.\033[0m Enable checkpoints"'\n'
     printf '\u2503''\033[1m'" v.\033[0m Images / consoles"'\n'
     printf '\u2503''\033[1m'" t.\033[0m Start/stop image"'\n'
@@ -496,7 +496,7 @@ while :; do
           p) prune-docker ;;
           m) podman image ls ;;
           c) create-image ;;
-          f) read -r -p 'Image OS: ' VMOS; "$MYKOS_PYTHON" ./vm prepare "$VMOS" ;;
+          f) read -r -p 'Image OS: ' VMOS; /usr/local/sbin/mykos-image-admin "$VMOS" --capture ;;
           g) read -r -p 'Image OS: ' VMOS; "$MYKOS_PYTHON" ./vm checkpoint-enable "$VMOS" ;;
           v) "$MYKOS_PYTHON" ./vm list ;;
           b) read -r -p 'Guest ID or image OS: ' VMKEY; read -r -p 'Target MiB (blank for status): ' VMMEM; if [ -z "$VMMEM" ]; then "$MYKOS_PYTHON" ./vm memory "$VMKEY"; else "$MYKOS_PYTHON" ./vm memory "$VMKEY" --target-mib "$VMMEM"; fi ;;

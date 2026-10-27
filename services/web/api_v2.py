@@ -323,14 +323,18 @@ def repo_action(request: Request, data: RepoAction):
 @router.websocket('/terminal/{shop}')
 async def terminal_websocket(ws: WebSocket, shop: str):
     # Non-browser WebSocket clients can supply the API key in handshake headers.
+    action = ws.query_params.get('action', 'shell')
     try:
         administrator(ws)
-        validate_shop(shop)
+        if action == 'image-shell':
+            from image_build_api import prepared_os
+            prepared_os(shop)
+        else: validate_shop(shop)
     except HTTPException:
         await ws.close(code=1008)
         return
     action = ws.query_params.get('action', 'shell')
-    if action not in ('shell', 'add-vpn', 'remove-vpn'):
+    if action not in ('shell', 'add-vpn', 'remove-vpn', 'image-shell'):
         await ws.close(code=1008)
         return
     from app import mykos_terminal_bridge

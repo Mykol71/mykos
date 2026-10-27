@@ -2371,6 +2371,12 @@ function mykosRenderImageBuilds() {
             if (!['failed','ready'].includes(item.build_state) || !mykosTerminalAllowed) continue;
             const actions=panel.querySelectorAll('.mykos-row-actions')[index];
             if (!actions) continue;
+            if (item.build_state==='ready') {
+                const console=document.createElement('button');console.type='button';console.className='mykos-icon';console.style.color='#38bdf8';
+                console.title='Connect to running base image';console.setAttribute('aria-label',console.title+' '+item.os);
+                console.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 6 6 6-6 6M13 18h7"/></svg>';
+                console.onclick=()=>mykosOpenTerminal(item.os,false,'image-shell');actions.append(console);
+            }
             const remove=document.createElement('button');remove.type='button';remove.className='mykos-icon';
             const prepared=item.build_state==='ready';
             remove.disabled=['queued','deleting'].includes(item.delete_state);
@@ -2616,8 +2622,9 @@ function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
     title.className = 'mykos-terminal-titlebar';
     const label = document.createElement('strong');
     label.id = 'mykos-terminal-title';
-    const isPowerShell = shop !== 'host' && ['windows','windows-server'].includes(mykosNodeFamily({id:shop}));
-    const isMacShell = shop !== 'host' && mykosNodeFamily({id:shop}) === 'macos';
+    const terminalFamily = action==='image-shell' ? mykosImageFamily(shop) : mykosNodeFamily({id:shop});
+    const isPowerShell = shop !== 'host' && ['windows','windows-server'].includes(terminalFamily);
+    const isMacShell = shop !== 'host' && terminalFamily === 'macos';
     label.textContent = (action === 'remove-vpn' ? 'Remove VPN — ' : action === 'add-vpn' ? 'Add VPN — ' : isPowerShell ? 'PowerShell — ' : isMacShell ? 'macOS shell — ' : 'root terminal — ') + shop;
     const close = document.createElement('button');
     close.type = 'button'; close.className = 'mykos-icon';
@@ -2645,7 +2652,7 @@ function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
     term.write(action === 'add-vpn' ? 'Opening add_vpn...\r\n' : isPowerShell ? 'Connecting to PowerShell...\r\n' : isMacShell ? 'Connecting to macOS shell...\r\n' : 'Connecting to root...\r\n');
     const url = new URL('/mykos/api/terminal/' + encodeURIComponent(shop), window.location.href);
     url.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    if (action === 'add-vpn' || action === 'remove-vpn') url.searchParams.set('action', action);
+    if (action === 'add-vpn' || action === 'remove-vpn' || action === 'image-shell') url.searchParams.set('action', action);
     const ws = new WebSocket(url);
     mykosTerminalSocket = ws;
     ws.binaryType = 'arraybuffer';

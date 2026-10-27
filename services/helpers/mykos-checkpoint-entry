@@ -58,8 +58,8 @@ RESTORE
     mv "$checkpoint/restore.request" "$checkpoint/restore.consumed"
 fi
 # QEMU and its vCPU/I/O threads inherit the image builder's CPU priority.
-if [[ ${MYKOS_BUILD_NICE:-0} == 10 ]]; then
-    renice -n 10 -p "$$" >/dev/null || echo 'Warning: Image build CPU priority could not be set' >&2
+if [[ ${MYKOS_BUILD_NICE:-0} == 1 ]]; then
+    renice -n 1 -p "$$" >/dev/null || echo 'Warning: Image build CPU priority could not be set' >&2
 fi
 if [[ ${MYKOS_UNATTENDED:-} == ubuntu || ${MYKOS_UNATTENDED:-} == macos ]]; then
     exec /run/mykos-unattended-entry

@@ -150,3 +150,45 @@ def worker(os_name):
     except Exception as error:
         value.update(state='failed',error=str(error));save(os_name,value);raise
     save(os_name,value);return value
+
+
+def base_container(os_name):
+    """Resolve only the named managed base, never an ID-specific instance."""
+    selection(os_name)
+    state=vm.inspect(os_name)
+    labels=state.get('Config',{}).get('Labels') or {}
+    if state.get('Name','').lstrip('/')!=os_name:
+        raise ValueError('Generic base identity mismatch')
+    if not state.get('State',{}).get('Running') or state['State'].get('Paused'):
+        raise ValueError('Start the generic base before connecting or capturing')
+    if os_name in vm.VERSIONS:
+        value=vm.read(os_name)
+        if (value.get('name')!=os_name or value.get('role')!='template' or not value.get('ready') or value.get('pending_commit') or
+            labels.get('io.mykos.vm.os')!=os_name or labels.get('io.mykos.vm.role')!='template'):
+            raise ValueError('Select a completed generic VM base')
+    elif labels.get('io.mykos.os')!=os_name or state.get('ImageName')!=reference(os_name):
+        raise ValueError('Generic native base identity mismatch')
+    return state
+
+
+def capture(os_name,confirmation):
+    selection(os_name)
+    if confirmation!=os_name:raise ValueError('Confirm the exact image OS')
+    if os_name in vm.VERSIONS:
+        value=vm.read(os_name)
+        if value.get('ready'):base_container(os_name)
+        return vm.prepare(os_name,replace=bool(value.get('ready')),keep_running=True,embed_disk=True)
+    with vm.locked():
+        base=base_container(os_name)
+        if job(os_name).get('state') in ('queued','deleting'):
+            raise ValueError('Image removal is active')
+        import mykos_prune
+        if any(any('/var/tmp/'+os_name+'.ks' in arg for arg in proc['args']) for proc in mykos_prune.builders().values()):
+            raise ValueError('Native image build is still active')
+        for process in mykos_prune.process_table().values():
+            args=process['args']
+            if any(Path(arg).name=='podman' for arg in args[:2]) and any(arg in ('build','commit') for arg in args[1:3]) and any(arg in (os_name,os_name+':latest',reference(os_name)) for arg in args):
+                raise ValueError('Native image build or capture is still active')
+        # Commit pauses filesystem writes briefly and leaves this base running.
+        image_id=vm.run([PODMAN,'commit','--pause=true',base['Id'],reference(os_name)],timeout=3600)
+        return {'os':os_name,'image':reference(os_name),'image_id':image_id,'base_running':True}

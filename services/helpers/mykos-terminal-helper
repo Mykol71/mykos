@@ -13,11 +13,17 @@ def main():
     data=request(conn)
     if set(data) not in ({'shop'}, {'shop', 'action'}): raise ValueError('Expected shop and optional action')
     action = data.get('action', 'shell')
-    if action not in ('shell', 'add-vpn', 'remove-vpn'): raise ValueError('Unsupported terminal action')
+    if action not in ('shell', 'add-vpn', 'remove-vpn', 'image-shell'): raise ValueError('Unsupported terminal action')
     data_shop = data['shop']
     host = data_shop == 'host'
-    name=None if host else target(data['shop'])
-    if not host:
+    image_shell = action == 'image-shell'
+    if image_shell:
+        from mykos_image_admin import base_container
+        base_container(data_shop)
+        name=data_shop
+    else:
+        name=None if host else target(data['shop'])
+    if not host and not image_shell:
         from mykos_vm import record_path
         if record_path(data['shop']).is_file():
             from mykos_vm import read
@@ -50,7 +56,8 @@ def main():
                     from mykos_ssh import open_terminal
                 else:
                     from mykos_powershell import open_terminal
-                open_terminal(data['shop'])
+                if image_shell: open_terminal(data['shop'], allow_image=True)
+                else: open_terminal(data['shop'])
                 raise SystemExit(0)
             os.execv(PODMAN,[PODMAN,'exec','-it',name,'/bin/su','-','root'])
     try:
@@ -80,7 +87,7 @@ def main():
         # A closed shell or VPN workflow may have changed this resource.
         try:
             from mykos_refresh import refresh
-            refresh('host' if host else data_shop)
+            if not image_shell: refresh('host' if host else data_shop)
         except Exception as error:
             print('Related terminal data refresh deferred: ' + str(error), file=sys.stderr)
 

@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 import argparse,json
-from mykos_image_admin import worker
+from mykos_image_admin import worker,capture
 p=argparse.ArgumentParser(description='MYKOS prepared image removal worker')
-p.add_argument('os');p.add_argument('--worker',action='store_true',required=True)
+p.add_argument('os')
+g=p.add_mutually_exclusive_group(required=True)
+g.add_argument('--worker',action='store_true');g.add_argument('--capture',action='store_true')
 a=p.parse_args()
-try:print(json.dumps(worker(a.os)))
+try:
+    if a.capture:
+        confirmation=input('Capture changes into '+a.os+' and keep its generic base running? Type '+a.os+' to confirm: ')
+        print(json.dumps(capture(a.os,confirmation)))
+    else:print(json.dumps(worker(a.os)))
 except (ValueError,RuntimeError,OSError) as e:p.exit(1,str(e)+'\n')

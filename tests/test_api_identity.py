@@ -854,3 +854,25 @@ def test_prepared_image_removal_requires_admin_and_exact_os(environment,monkeypa
         assert client.request('DELETE','/api/v2/images/'+os_name,json={'confirmation':os_name},headers=headers).status_code==400
     schema=client.get('/api/v2/openapi.json').json()
     assert 'delete' in schema['paths']['/api/v2/images/{os_name}']
+
+
+def test_image_terminal_requires_admin_valid_os_and_origin(environment,monkeypatch):
+    from starlette.websockets import WebSocketDisconnect
+    calls=[]
+    async def bridge(ws,shop,action='shell'):
+        calls.append((shop,action));await ws.accept();await ws.send_text('base shell');await ws.close()
+    monkeypatch.setattr(app,'mykos_terminal_bridge',bridge)
+    reader=login('reader','reader-password-123');admin=login('operator','operator-password-123')
+    url='wss://testserver/api/terminal/rh9?action=image-shell'
+    with admin.websocket_connect(url,headers={'Origin':'https://testserver'}) as ws:
+        assert ws.receive_text()=='base shell'
+    for client,path,origin in [(reader,url,'https://testserver'),(admin,url,'https://wrong.example'),
+                               (admin,url.replace('rh9','host'),'https://testserver'),
+                               (admin,url.replace('rh9','12345678'),'https://testserver'),
+                               (admin,url.replace('?action=image-shell',''),'https://testserver')]:
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect(path,headers={'Origin':origin}):pass
+    key=mykos_api_keys.create('image-console','admin')
+    with admin.websocket_connect('/api/v2/terminal/rh9?action=image-shell',headers={'X-MYKOS-API-Key':key}) as ws:
+        assert ws.receive_text()=='base shell'
+    assert calls==[('rh9','image-shell'),('rh9','image-shell')]

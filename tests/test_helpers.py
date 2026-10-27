@@ -603,5 +603,5 @@ exit "$status"
     assert result.returncode==0,result.stderr
     assert 'Image already built: rh9' in result.stdout
     args=log.read_text().split()
-    assert args[:3]==['-n','10','-p'] and args[3]!=args[4], 'Only the build subprocess is reniced'
+    assert args[:3]==['-n','1','-p'] and args[3]!=args[4], 'Only the build subprocess is reniced'
     assert 'unexpected-preflight' not in result.stderr

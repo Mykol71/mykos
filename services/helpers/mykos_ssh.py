@@ -5,15 +5,19 @@ import re
 import mykos_vm as vm
 
 
-def destination(key):
+def destination(key, *, allow_image=False):
     value = vm.read(key)
-    if value.get('role') != 'instance' or not value.get('os', '').startswith('mac'):
+    role = 'template' if allow_image else 'instance'
+    if allow_image:
+        from mykos_image_admin import base_container
+        base_container(key)
+    if value.get('role') != role or not value.get('os', '').startswith('mac'):
         raise ValueError('Only macOS guests use SSH terminals')
     state = vm.inspect(value['name'])
     labels = state.get('Config', {}).get('Labels') or {}
     if not state.get('State', {}).get('Running') or state.get('State', {}).get('Paused'):
         raise ValueError('Start the macOS VM before opening its shell')
-    if labels.get('io.mykos.vm.os') != value['os'] or labels.get('io.mykos.vm.role') != 'instance':
+    if labels.get('io.mykos.vm.os') != value['os'] or labels.get('io.mykos.vm.role') != role:
         raise ValueError('macOS VM identity mismatch')
     addresses = [n.get('IPAddress') for n in state.get('NetworkSettings', {}).get('Networks', {}).values() if n.get('IPAddress')]
     if len(addresses) != 1: raise ValueError('Expected one private Podman VM bridge address')
@@ -35,8 +39,8 @@ def ssh_arguments(address, known, user):
             '-o', 'ForwardAgent=no', '-o', 'ForwardX11=no', '-l', user, address]
 
 
-def open_terminal(key):
-    address, known = destination(key)
+def open_terminal(key, *, allow_image=False):
+    address, known = destination(key, allow_image=True) if allow_image else destination(key)
     print('macOS shell: enable Remote Login in guest System Settings > General > Sharing first.', flush=True)
     user = input('macOS login user: ').strip()
     args = ssh_arguments(address, known, user)

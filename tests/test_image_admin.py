@@ -85,3 +85,52 @@ def test_native_committed_image_accepts_only_verified_parent_base(monkeypatch,tm
     else:
         with pytest.raises(ValueError,match='points to another image'):images.remove('mssql2022','child')
         assert len(calls)==1
+
+
+def native_base(**updates):
+    return {'Name':'/rh9','Id':'base-id','ImageName':'localhost/rh9:latest',
+            'Config':{'Labels':{'io.mykos.os':'rh9'}},'State':{'Running':True},**updates}
+
+@pytest.mark.parametrize('state',[
+    native_base(Name='/12345678.host'),native_base(ImageName='unrelated'),
+    native_base(Config={'Labels':{'io.mykos.os':'rh8'}}),
+    native_base(State={'Running':False}),native_base(State={'Running':True,'Paused':True}),
+])
+def test_base_console_rejects_wrong_identity_or_stopped_base(monkeypatch,state):
+    monkeypatch.setattr(vm,'inspect',lambda name:state)
+    with pytest.raises(ValueError):images.base_container('rh9')
+
+
+def test_native_capture_commits_exact_base_and_does_not_stop_or_remove(monkeypatch):
+    import contextlib,mykos_prune as prune
+    monkeypatch.setattr(vm,'locked',contextlib.nullcontext)
+    monkeypatch.setattr(vm,'inspect',lambda name:native_base())
+    monkeypatch.setattr(images,'job',lambda name:{'state':'idle'})
+    monkeypatch.setattr(prune,'builders',lambda:{})
+    monkeypatch.setattr(prune,'process_table',lambda:{})
+    calls=[];monkeypatch.setattr(vm,'run',lambda args,**kw:calls.append(args) or 'new-image-id')
+    assert images.capture('rh9','rh9')['base_running']
+    assert calls==[[images.PODMAN,'commit','--pause=true','base-id','localhost/rh9:latest']]
+
+
+def test_capture_requires_confirmation_before_any_inspection(monkeypatch):
+    monkeypatch.setattr(vm,'inspect',lambda name:pytest.fail('Must not inspect before confirmation'))
+    with pytest.raises(ValueError,match='Confirm'):images.capture('rh9','other')
+
+
+def test_vm_recapture_keeps_generic_base_and_embeds_disk(monkeypatch):
+    monkeypatch.setattr(vm,'read',lambda key:{'ready':True})
+    monkeypatch.setattr(images,'base_container',lambda key:{})
+    calls=[];monkeypatch.setattr(vm,'prepare',lambda *a,**kw:calls.append((a,kw)) or {'ready':True})
+    images.capture('mac15','mac15')
+    assert calls==[(('mac15',),{'replace':True,'keep_running':True,'embed_disk':True})]
+
+
+def test_native_capture_rejects_active_installer(monkeypatch):
+    import contextlib,mykos_prune as prune
+    monkeypatch.setattr(vm,'locked',contextlib.nullcontext)
+    monkeypatch.setattr(vm,'inspect',lambda name:native_base())
+    monkeypatch.setattr(images,'job',lambda name:{'state':'idle'})
+    monkeypatch.setattr(prune,'builders',lambda:{1:{'args':['anaconda','--kickstart','/var/tmp/rh9.ks']}})
+    monkeypatch.setattr(vm,'run',lambda *a,**kw:pytest.fail('No commit during install'))
+    with pytest.raises(ValueError,match='build is still active'):images.capture('rh9','rh9')

@@ -31,6 +31,7 @@ const document={body,activeElement:opener,createElement:tag=>new Element(tag)};
 const window={Terminal,location:{href:'https://mykol.com/mykos/',protocol:'https:'},addEventListener:(name,fn)=>events[name]=fn};
 const source=html.slice(html.indexOf('// MYKOS INTERACTIVE TERMINAL V1'),html.indexOf('</script>',html.indexOf('// MYKOS INTERACTIVE TERMINAL V1')));
 const context=vm.createContext({document,window,Terminal,WebSocket,URL,ArrayBuffer,Uint8Array,
+ mykosImageFamily:os=>os==='rh9'?'linux':os.startsWith('win')?'windows':'macos',
  mykosNodeFamily:node=>node.id==='11111111'?'windows':node.id==='22222222'?'macos':'ubuntu',
  setTimeout(){},setInterval(){},alert(){throw Error('Unexpected terminal alert');},mykosRenderMykos(){},mykosRenderInventory(){}});
 const run=code=>vm.runInContext(code,context);
@@ -53,3 +54,6 @@ console.log('Terminal popup checks passed: host/container targets, permission gu
 
 run("mykosOpenTerminal('11111111')");assert.equal(body.children[0].children[0].children[0].textContent,'PowerShell — 11111111');
 run("mykosOpenTerminal('22222222')");assert.equal(body.children[0].children[0].children[0].textContent,'macOS shell — 22222222');
+
+run("mykosOpenTerminal('rh9',false,'image-shell')");
+assert.equal(sockets.at(-1).url,'wss://mykol.com/mykos/api/terminal/rh9?action=image-shell');

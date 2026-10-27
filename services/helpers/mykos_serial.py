@@ -11,15 +11,19 @@ import mykos_vm as vm
 from mykos_host_monitoring import process_token
 
 
-def serial_path(key):
+def serial_path(key, *, allow_image=False):
     value = vm.read(key)
-    if value.get('role') != 'instance' or not value.get('os', '').startswith('ubuntu'):
+    role = 'template' if allow_image else 'instance'
+    if allow_image:
+        from mykos_image_admin import base_container
+        base_container(key)
+    if value.get('role') != role or not value.get('os', '').startswith('ubuntu'):
         raise ValueError('Only Ubuntu guests use this serial terminal')
     state = vm.inspect(value['name'])
     labels = state.get('Config', {}).get('Labels') or {}
     if not state.get('State', {}).get('Running') or state.get('State', {}).get('Paused'):
         raise ValueError('Start the Ubuntu VM before opening its terminal')
-    if labels.get('io.mykos.vm.os') != value['os'] or labels.get('io.mykos.vm.role') != 'instance':
+    if labels.get('io.mykos.vm.os') != value['os'] or labels.get('io.mykos.vm.role') != role:
         raise ValueError('Ubuntu VM identity mismatch')
     pid = state['State']['Pid']
     token = process_token(pid)
@@ -32,8 +36,8 @@ def serial_path(key):
     return path, pid, token
 
 
-def open_terminal(key):
-    path, pid, token = serial_path(key)
+def open_terminal(key, *, allow_image=False):
+    path, pid, token = serial_path(key, allow_image=True) if allow_image else serial_path(key)
     lock = os.open(vm.storage(key)/'.serial-console.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
     try:
         try: fcntl.flock(lock, fcntl.LOCK_EX|fcntl.LOCK_NB)
