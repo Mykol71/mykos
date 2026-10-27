@@ -84,9 +84,12 @@ def directory_fds(packet, peer_pid, retained):
     # RPC keeps the path storage alive on older CRIU config-parser versions.
     if request.get(1) == 1:
         existing = [v for n, w, v, _ in wire_fields(options_data) if n == 36 and w == 2]
-        for hint in (b'/usr/share/dbus-1/system.d', b'/usr/lib/NetworkManager', b'/usr/lib/firmware', b'/usr/share/polkit-1'):
+        from mykos_watch_paths import watch_paths
+        dynamic=[os.fsencode(path) for path in watch_paths(options.get(2))]
+        for hint in (*dynamic, b'/usr/share/dbus-1/system.d', b'/usr/lib/NetworkManager', b'/usr/lib/firmware', b'/usr/share/polkit-1'):
             if hint not in existing:
                 options_data += integer((36 << 3) | 2) + integer(len(hint)) + hint
+                existing.append(hint)
     return replace_fields(packet, {2: options_data})
 
 
