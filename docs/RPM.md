@@ -95,15 +95,15 @@ Build the same source/spec for RHEL 9 with:
 rpmbuild -ba --define 'mykos_target_el 9' --define 'dist .el9' ~/rpmbuild/SPECS/mykos.spec
 ```
 
-The signed RHEL 9 repository is `/home/html/el-9-for-x86_64-mykos-1.5` on prod,
-served at `https://mykol.com/el-9-for-x86_64-mykos-1.5/`. Refresh its metadata
-with `createrepo_c --update /home/html/el-9-for-x86_64-mykos-1.5`.
+The signed RHEL 9 repository is `/home/html/mykos-1.5-for-x86_64-el9` on prod,
+served at `https://mykol.com/mykos-1.5-for-x86_64-el9/`. Refresh its metadata
+with `createrepo_c --update /home/html/mykos-1.5-for-x86_64-el9`.
 Keep it separate from Red Hat synced repositories.
 
 Install the repository configuration on a RHEL 9 client:
 
 ```bash
-sudo curl -fsSL https://mykol.com/el-9-for-x86_64-mykos-1.5/mykos-el9.repo -o /etc/yum.repos.d/mykos-el9.repo
+sudo curl -fsSL https://mykol.com/mykos-1.5-for-x86_64-el9/mykos-el9.repo -o /etc/yum.repos.d/mykos-el9.repo
 sudo dnf install mykos
 sudo mykos-setup --public-origin https://YOUR_HOST --enable
 ```
@@ -125,3 +125,9 @@ blue and Apple white. Existing icon sizes and alignment remain unchanged.
 Release 20 changes visible container/account labels from Code to ID, including
 forms, column headings, confirmation dialogs, API error text and text menus.
 Existing API field names, endpoints and stored identifiers remain compatible.
+
+The signed MYKOS repositories use `mykos-1.5-for-x86_64-el8` and
+`mykos-1.5-for-x86_64-el9` under `/home/html` on production. The bootstrap
+installer selects the matching repository for the host release. Legacy MYKOS
+repository URLs redirect to these paths so existing clients can still download
+metadata, packages and the unchanged signing key.

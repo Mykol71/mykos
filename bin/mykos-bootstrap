@@ -226,7 +226,7 @@ class Bootstrap:
         self.run(['systemctl', 'enable', '--now', 'mykos-certificate-renew.timer'])
 
     def repository(self, el):
-        origin = 'https://mykol.com/el-' + el + '-for-x86_64-mykos-1.5'
+        origin = 'https://mykol.com/mykos-1.5-for-x86_64-el' + el
         key = self.key('mykos', origin + '/RPM-GPG-KEY-MYKOS')
         self.managed('/etc/yum.repos.d/mykos-bootstrap.repo',
                      '[mykos-bootstrap]\nname=MYKOS signed RPMs\nbaseurl=' + origin +

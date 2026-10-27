@@ -219,3 +219,16 @@ def test_rpm_queues_setup_outside_transaction():
     assert 'mykos-bootstrap --installed-rpm' in unit
     preun = spec.split('%preun\n', 1)[1].split('%postun', 1)[0]
     assert preun.index('disable --now mykos-firstboot.service') < preun.index('mykos-bootstrap --uninstall')
+
+
+@pytest.mark.parametrize('el',['8','9'])
+def test_repository_uses_renamed_signed_repository(tmp_path,monkeypatch,el):
+    a,calls=app(tmp_path)
+    keys=[]
+    monkeypatch.setattr(a,'key',lambda name,url:keys.append((name,url)) or '/etc/pki/rpm-gpg/RPM-GPG-KEY-MYKOS')
+    a.repository(el)
+    origin='https://mykol.com/mykos-1.5-for-x86_64-el'+el
+    assert keys==[('mykos',origin+'/RPM-GPG-KEY-MYKOS')]
+    text=a.path('/etc/yum.repos.d/mykos-bootstrap.repo').read_text()
+    assert 'baseurl='+origin+'\n' in text
+    assert 'gpgcheck=1\n' in text and 'enabled=1\n' in text
