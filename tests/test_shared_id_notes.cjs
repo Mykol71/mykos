@@ -17,3 +17,14 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
  assert.ok(html.includes("if (event.target.closest('[data-id-notes]')) return;"));
  console.log('Shared ID notes: isolated customer IDs, conflict retention, load failures, discard protection and logout clearing verified.');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+// Exercise the real capture handler: SVG leaf clicks must never reach row details.
+const captureStart=html.indexOf('// Capture inventory clicks before the previous details handler.');
+const captureEnd=html.indexOf('// Infrastructure uptime and memory refresh',captureStart);
+let capture,opened=[],details=[];
+const events=vm.createContext({document:{getElementById:()=>({addEventListener:(name,handler,capturePhase)=>{assert.equal(capturePhase,true);capture=handler;}})},mykosOpenIdNotes:id=>opened.push(id),showNodeDetails:id=>details.push(id),mykosToggleShop:()=>{}});
+vm.runInContext(html.slice(captureStart,captureEnd),events);
+let stopped=false,prevented=false;
+capture({target:{closest:selector=>selector==='[data-id-notes]'?{dataset:{idNotes:'01234567'}}:selector==='tr.mykos-node-row'?{dataset:{mykosShop:'01234567'}}:null},preventDefault(){prevented=true},stopImmediatePropagation(){stopped=true}});
+assert.deepEqual(opened,['01234567']);assert.deepEqual(details,[]);assert.ok(stopped&&prevented);
+capture({target:{closest:selector=>selector==='tr.mykos-node-row'?{dataset:{mykosShop:'87654321'}}:null},stopImmediatePropagation(){}});assert.deepEqual(details,['87654321']);

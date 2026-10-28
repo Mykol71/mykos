@@ -1831,6 +1831,13 @@ showNodeDetails = async function(shop) {
 document.getElementById('mykos-os-panes').addEventListener(
     'click',
     function(event) {
+        const notesButton = event.target.closest('[data-id-notes]');
+        if (notesButton) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            mykosOpenIdNotes(notesButton.dataset.idNotes);
+            return;
+        }
         const networkButton = event.target.closest('.mykos-network-button');
         if (networkButton) {event.stopImmediatePropagation();mykosToggleShop(networkButton.dataset.shop,'network');return;}
         if (event.target.closest('.mykos-top-button')) return;
