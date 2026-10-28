@@ -612,6 +612,10 @@ table:has(> .mykos-container-rows) > thead > tr > th:last-child { text-align:rig
 #mykos-repos-pane :is(th:last-child,td.mykos-actions-cell) { width:8%; min-width:0; }
 #mykos-repos-pane td:nth-child(4) { overflow-wrap:anywhere; }
 #dashboard [hidden], #login [hidden] { display:none !important; }
+.mykos-id-notes-button { display:inline-flex;vertical-align:middle;color:#4ade80;background:transparent;border:0;padding:0;margin:0 5px 0 0; }
+.mykos-id-notes-button svg { width:12px;height:12px; }
+#mykos-id-notes-dialog { width:min(760px,94vw);max-height:90vh; }
+#mykos-id-notes-text { width:100%;height:45vh;min-height:180px;resize:vertical;background:transparent;color:inherit;font:inherit; }
 </style><link rel="stylesheet" href="https://unpkg.com/@xterm/xterm@5.5.0/css/xterm.css">
 <script src="https://unpkg.com/@xterm/xterm@5.5.0/lib/xterm.js"></script>
 </head><body><div id="mykos-page-background" aria-hidden="true"></div><p id="mykos-session-status" role="status" style="padding:24px;color:#94a3b8">Checking session…</p><section id="login" hidden><form class="loginbox" id="form"><h1><span class="mykos-original-banner"><svg class="mykos-brand-flower" viewBox="0 0 24 29" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C13.2 24 9 25.4 10.5 28" stroke="#a16207" stroke-width="1.4"/><path class="mykos-flower-leaf" d="M11.7 24.3C12.3 22.3 15 21.5 16.7 22.1c-.3 2.4-2.6 3.5-5 2.2Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg><span class="mykos-store-title" aria-label="__MYKOS_BRAND_NAME__">__MYKOS_BRAND_DISPLAY__</span>
@@ -773,6 +777,7 @@ el('node-overlay').onclick = closeNodeDetails;
 
 // Clicking a node inventory row opens its details.
 el('mykos-os-panes').addEventListener('click', function(event) {
+    if (event.target.closest('[data-id-notes]')) return;
     const row = event.target.closest('tr');
 
     if (!row) return;
@@ -902,6 +907,8 @@ async function load(){
         const r = await fetch('/mykos/api/nodes', {signal:controller.signal, cache:'no-store'});
         if (r.status === 401) {
             mykosSetNotesAccess(false);
+    mykosSetPanePreviewAccess(false);
+    if (typeof mykosCloseIdNotes === 'function') mykosCloseIdNotes(true);
             el('dashboard').hidden = true;
             el('login').hidden = false;
             return;
@@ -1009,6 +1016,18 @@ function mykosUptime(started) {
 const mykosOsFamilies = ['linux', 'rocky', 'alma', 'oracle', 'centos', 'fedora', 'ubuntu', 'windows', 'windows-server', 'macos', 'mssql'];
 // Temporarily limit leaf previews; all OS families retain normal availability.
 const mykosPreviewOsFamilies = new Set(['linux', 'rocky', 'alma', 'oracle', 'centos']);
+let mykosPreviewAllPanes = false;
+function mykosCanPreviewFamily(family) { return mykosPreviewAllPanes || mykosPreviewOsFamilies.has(family); }
+function mykosSetPanePreviewAccess(allowed) {
+    if (mykosPreviewAllPanes === allowed) return;
+    mykosPreviewAllPanes = allowed;
+    mykosUpdatePaneToggle();
+    for (const family of mykosOsFamilies) {
+        const state = mykosPaneVisibility.get(mykosOsId(family, 'mykos-containers-pane'));
+        if (state) mykosSetOsPaneVisible(family, state.automatic);
+    }
+    mykosRefreshSampleRows();
+}
 const mykosOsChoices = {
     linux: ['rh7', 'rh8', 'rh9', 'rh10'],
     rocky: ['rocky8','rocky9','rocky10'],
@@ -1232,7 +1251,7 @@ function table(){
                 ? mykosUptime(detail.started_at)
                 : 'Unknown';
         return `<tr data-shop="${escape(n.id)}">
-          <td>${escape(n.id)}</td>
+          <td><button type="button" class="mykos-id-notes-button" data-id-notes="${escape(n.id)}" title="Shared notes for ${escape(n.id)}" aria-label="Shared notes for ${escape(n.id)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4C13 3 6 6 6 13a6 6 0 0 0 6 6c7 0 10-8 8-15Z"/><path d="M4 21 17 8M9 16l-1-5M12 13l5 1"/></svg></button>${escape(n.id)}</td>
           <td>${statusIcon('node',n.status)}</td>
           <td class="mykos-os-type">${escape(detail.os_version && detail.os_version !== 'Unknown' ? mykosReleaseName(detail.os_type, detail.os_version, detail.os_codename) : '?')}</td>
           <td class="mykos-node-ip"><button type="button" class="mykos-network-button" data-shop="${escape(n.id)}" title="Network information and topology" aria-label="Network information for ${escape(n.id)}">${escape(mykosNodeIp(family, detail, ext))}</button></td>
@@ -2593,6 +2612,7 @@ async function mykosLoadCurrentUser() {
 
         if (element) element.textContent = data.username || '';
         mykosSetNotesAccess(data.username === 'mgreen');
+        mykosSetPanePreviewAccess(data.preview_all_panes === true);
     } catch (_) {}
 }
 
@@ -2668,7 +2688,7 @@ function mykosRefreshOsChoices() {
     for (const family of mykosOsFamilies) {
         const images = mykosAvailableImages.filter(item => mykosImageFamily(item.os) === family);
         const available = new Set(images.map(item => item.os));
-        const choices = mykosShowAllPanes && mykosPreviewOsFamilies.has(family)
+        const choices = mykosShowAllPanes && mykosCanPreviewFamily(family)
             ? [...new Set([...mykosOsChoices[family], ...available])]
             : [...available];
         const select = el(mykosOsId(family, 'mykos-stage-os'));
@@ -2744,7 +2764,7 @@ async function mykosStageJSON(url, options) {
 function mykosStageSetAccess() {
     if (mykosImageBuildAccess !== mykosTerminalAllowed) mykosRenderImageBuilds();
     for (const family of mykosOsFamilies)
-        el(mykosOsId(family, 'mykos-stage-controls')).style.display = mykosTerminalAllowed || (mykosShowAllPanes && mykosPreviewOsFamilies.has(family)) ? 'inline-flex' : 'none';
+        el(mykosOsId(family, 'mykos-stage-controls')).style.display = mykosTerminalAllowed || (mykosShowAllPanes && mykosCanPreviewFamily(family)) ? 'inline-flex' : 'none';
 }
 setInterval(mykosStageSetAccess, 1000);
 for (const family of mykosOsFamilies) {
@@ -3043,7 +3063,7 @@ function mykosRefreshSampleRows() {
         const used = mykosOsFamilies.includes(kind)
             ? nodes.some(node => mykosNodeFamily(node) === kind)
             : (mykosData[kind]?.[kind === 'backups' ? 'accounts' : 'repos'] || []).length > 0;
-        if (!mykosShowAllPanes || (mykosOsFamilies.includes(kind) && !mykosPreviewOsFamilies.has(kind)) || used) continue;
+        if (!mykosShowAllPanes || (mykosOsFamilies.includes(kind) && !mykosCanPreviewFamily(kind)) || used) continue;
         tbody.querySelectorAll('.mykos-empty-row').forEach(row => row.remove());
         for (let index = 0; index < 2; index++) {
             const row = document.createElement('tr');
@@ -3090,7 +3110,7 @@ function mykosApplyPaneVisibility(headingId, panelId, automatic, preview = true)
 }
 function mykosSetOsPaneVisible(family, visible) {
     const headingId = mykosOsId(family, 'mykos-containers-pane');
-    mykosApplyPaneVisibility(headingId, mykosOsId(family, 'mykos-container-panel'), visible, mykosPreviewOsFamilies.has(family));
+    mykosApplyPaneVisibility(headingId, mykosOsId(family, 'mykos-container-panel'), visible, mykosCanPreviewFamily(family));
 }
 function mykosSetPaneVisible(kind, visible) {
     const headingId = kind === 'containers' ? 'mykos-containers-pane' : 'mykos-' + kind + '-title';
@@ -3100,7 +3120,9 @@ function mykosSetPaneVisible(kind, visible) {
 function mykosUpdatePaneToggle() {
     mykosRefreshOsChoices();
     el('mykos-show-all-panes').setAttribute('aria-pressed', String(mykosShowAllPanes));
-    el('mykos-show-all-panes').title = mykosShowAllPanes ? 'Use automatic pane visibility' : 'Preview EL and utility panes';
+    const label = mykosShowAllPanes ? 'Use automatic pane visibility' : mykosPreviewAllPanes ? 'Preview all panes' : 'Preview EL and utility panes';
+    el('mykos-show-all-panes').title = label;
+    el('mykos-show-all-panes').setAttribute('aria-label', label);
 }
 mykosUpdatePaneToggle();
 el('mykos-show-all-panes').onclick = event => {
@@ -3265,6 +3287,8 @@ el('mykos-keys-download').onclick = () => {
 el('logout').addEventListener('click', () => {
     mykosCloseTerminal();
     mykosSetNotesAccess(false);
+    mykosSetPanePreviewAccess(false);
+    if (typeof mykosCloseIdNotes === 'function') mykosCloseIdNotes(true);
     el('mykos-keys-dialog').close();
     el('mykos-backup-dialog').close();
     el('mykos-keys-output').textContent = '';
@@ -3575,4 +3599,68 @@ mykosHostStatusTable.addEventListener('click',async event=>{
     });
     update();
 })();
-</script></body></html>
+</script><dialog id="mykos-id-notes-dialog" aria-labelledby="mykos-id-notes-title">
+<form id="mykos-id-notes-form"><h2 id="mykos-id-notes-title">Customer notes</h2>
+<p>Shared with everyone who uses this customer ID.</p>
+<textarea id="mykos-id-notes-text" maxlength="20000" aria-label="Shared customer notes" spellcheck="true"></textarea>
+<p id="mykos-id-notes-status" role="status" aria-live="polite"></p>
+<div class="mykos-actions"><button type="button" id="mykos-id-notes-reload">Reload</button><button type="button" id="mykos-id-notes-close">Close</button><button type="submit" id="mykos-id-notes-save">Save</button></div></form></dialog>
+<script>
+const mykosIdNotesDialog=document.getElementById('mykos-id-notes-dialog');
+const mykosIdNotesText=document.getElementById('mykos-id-notes-text');
+let mykosIdNotesId=null,mykosIdNotesRevision=0,mykosIdNotesSaved='',mykosIdNotesRequest=0,mykosIdNotesSaving=false;
+function mykosIdNotesBusy(busy) {
+    mykosIdNotesSaving=busy;mykosIdNotesText.disabled=busy;
+    for(const action of ['reload','close','save']) document.getElementById('mykos-id-notes-'+action).disabled=busy;
+}
+function mykosCloseIdNotes(force=false) {
+    if(!force && mykosIdNotesText.value!==mykosIdNotesSaved && !window.confirm('Discard unsaved customer notes?'))return false;
+    ++mykosIdNotesRequest;mykosIdNotesDialog.close();mykosIdNotesId=null;mykosIdNotesText.value=mykosIdNotesSaved='';return true;
+}
+async function mykosLoadIdNotes() {
+    const request=++mykosIdNotesRequest;mykosIdNotesBusy(true);
+    document.getElementById('mykos-id-notes-status').textContent='Loading…';
+    try {
+        const data=await mykosStageJSON('/mykos/api/web/id-notes/'+encodeURIComponent(mykosIdNotesId));
+        if(request!==mykosIdNotesRequest || !mykosIdNotesDialog.open)return;
+        mykosIdNotesText.value=mykosIdNotesSaved=data.text;mykosIdNotesRevision=data.revision;
+        document.getElementById('mykos-id-notes-status').textContent=data.updated_at?'Saved by '+data.updated_by+' · '+new Date(data.updated_at*1000).toLocaleString():'No customer notes yet.';
+        mykosIdNotesBusy(false);mykosIdNotesText.focus();
+    } catch(error) {
+        if(request!==mykosIdNotesRequest || !mykosIdNotesDialog.open)return;
+        mykosIdNotesBusy(false);mykosIdNotesText.disabled=document.getElementById('mykos-id-notes-save').disabled=true;
+        document.getElementById('mykos-id-notes-status').textContent='Unable to load: '+error.message;
+    }
+}
+function mykosOpenIdNotes(id) {
+    if(!/^\d{8}$/.test(id))return;
+    if(mykosIdNotesDialog.open && !mykosCloseIdNotes())return;
+    mykosIdNotesId=id;mykosIdNotesRevision=0;mykosIdNotesText.value=mykosIdNotesSaved='';
+    document.getElementById('mykos-id-notes-title').textContent=id+' · shared notes';
+    mykosIdNotesDialog.showModal();mykosLoadIdNotes();
+}
+document.addEventListener('click',event=>{
+    const button=event.target.closest('[data-id-notes]');
+    if(button){event.preventDefault();event.stopPropagation();mykosOpenIdNotes(button.dataset.idNotes);}
+});
+document.getElementById('mykos-id-notes-close').onclick=()=>mykosCloseIdNotes();
+mykosIdNotesDialog.addEventListener('cancel',event=>{event.preventDefault();mykosCloseIdNotes();});
+document.getElementById('mykos-id-notes-reload').onclick=()=>{
+    if(mykosIdNotesText.value===mykosIdNotesSaved || window.confirm('Discard your edits and load the latest customer notes?'))mykosLoadIdNotes();
+};
+document.getElementById('mykos-id-notes-form').addEventListener('submit',async event=>{
+    event.preventDefault();if(mykosIdNotesSaving || mykosIdNotesText.disabled || !mykosIdNotesId)return;
+    const request=++mykosIdNotesRequest;const text=mykosIdNotesText.value;mykosIdNotesBusy(true);
+    try {
+        const data=await mykosStageJSON('/mykos/api/web/id-notes/'+encodeURIComponent(mykosIdNotesId),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,revision:mykosIdNotesRevision})});
+        if(request!==mykosIdNotesRequest || !mykosIdNotesDialog.open)return;
+        mykosIdNotesSaved=data.text;mykosIdNotesRevision=data.revision;
+        document.getElementById('mykos-id-notes-status').textContent='Saved by '+data.updated_by+' · '+new Date(data.updated_at*1000).toLocaleString();
+    } catch(error) {
+        if(request!==mykosIdNotesRequest || !mykosIdNotesDialog.open)return;
+        document.getElementById('mykos-id-notes-status').textContent='Unable to save: '+error.message;
+    } finally { if(request===mykosIdNotesRequest && mykosIdNotesDialog.open)mykosIdNotesBusy(false); }
+});
+</script>
+
+</body></html>

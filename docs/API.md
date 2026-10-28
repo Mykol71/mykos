@@ -723,3 +723,9 @@ Coordinates that are absent remain absent; the UI omits those map points. Host
 location records are saved inventory metadata; current host health remains
 available from the host metrics endpoint. No guest execution or geolocation
 service request is needed to read this endpoint.
+
+### Shared customer notes and pane previews
+
+Browser sessions can read and update shared notes for an eight-digit customer ID at `GET/PUT /api/web/id-notes/{id}`. Every signed-in user, including read-only dashboard users, can edit these customer notes. PUT requires the same-origin header and `{ "text": "...", "revision": 0 }`; a stale revision returns 409 without replacing another user's changes. Responses include `id`, `text`, `revision`, `updated_at` and `updated_by`. Notes belong to the customer ID, not a particular login or container, and survive updates and container recreation. Private orange change-request notes remain separate and restricted to mgreen. API keys alone cannot edit customer notes.
+
+`GET /api/web/current-user` includes `preview_all_panes`. Full-access administrators (including arch/owner identities as those roles are enabled) preview all OS panes with the footer leaf; other users preview EL and utility panes. Sample actions remain disabled. Preview visibility grants no additional backend privileges.

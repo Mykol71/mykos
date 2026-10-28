@@ -37,6 +37,19 @@ from pane_notes import read_personal as read_personal_note, save_personal as sav
 
 
 
+from shared_id_notes import read as read_id_note, save as save_id_note
+
+@app.get('/api/web/id-notes/{shop}', summary='Read shared customer notes')
+def shared_id_note(shop: str, request: Request):
+    check(request)
+    return read_id_note(shop)
+
+@app.put('/api/web/id-notes/{shop}', summary='Save shared customer notes (all signed-in users)')
+def update_shared_id_note(shop: str, data: NoteUpdate, request: Request):
+    identity = mykos_current_user(request)
+    origin(request)
+    return save_id_note(shop, data, identity['username'])
+
 @app.get('/api/web/personal-notes', summary='Read personal notes (mgreen only; excluded from change requests)')
 def personal_note(request: Request):
     authorize_pane_notes(request)
@@ -207,11 +220,11 @@ def mykos_current_user(request: Request):
     token = request.cookies.get("mykos_session", "")
     with db() as c:
         row = c.execute(
-            "SELECT sessions.name FROM sessions JOIN users ON users.name=sessions.name WHERE token=? AND expires>?",
+            "SELECT sessions.name, users.role FROM sessions JOIN users ON users.name=sessions.name WHERE token=? AND expires>?",
             (hashlib.sha256(token.encode()).hexdigest(), int(time.time()))
         ).fetchone()
 
-    return {"username": row[0] if row else ""}
+    return {"username": row[0] if row else "", "preview_all_panes": bool(row and row[1] in ("admin", "arch", "owner"))}
 
 @app.post('/api/login')
 def login(data:Credentials,request:Request):

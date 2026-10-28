@@ -982,3 +982,38 @@ def test_geography_read_api_retains_optional_metadata_without_host_secrets(envir
     assert value['nodes'][0]['shop_name']=='Flower shop'
     assert value['hosts']==[{'hostname':'host.example','lat':40,'lon':-91}]
     assert calls==[]
+
+
+def test_shared_customer_notes_readers_edit_and_revision_conflicts(environment):
+    base,calls=environment
+    anonymous=TestClient(app.app,base_url='https://testserver')
+    path='/api/web/id-notes/01234567'
+    assert anonymous.get(path).status_code==401
+    reader=login('reader','reader-password-123')
+    admin=login('operator','operator-password-123')
+    assert reader.get(path).json()['revision']==0
+    update={'text':'Customer-specific setup <script> is plain text','revision':0}
+    assert reader.put(path,json=update).status_code==403
+    assert reader.put(path,headers={'Origin':'https://evil.example'},json=update).status_code==403
+    saved=reader.put(path,headers={'Origin':'https://testserver'},json=update)
+    assert saved.status_code==200,saved.text
+    assert saved.json()['updated_by']=='reader' and saved.json()['revision']==1
+    assert admin.get(path).json()['text']==update['text']
+    assert admin.put(path,headers={'Origin':'https://testserver'},json={'text':'stale overwrite','revision':0}).status_code==409
+    assert admin.get(path).json()['text']==update['text']
+    assert reader.get('/api/web/id-notes/87654321').json()['text']==''
+    for target in ('abc','123','123456789','１２３４５６７８'):
+        assert reader.get('/api/web/id-notes/'+target).status_code==422
+    assert reader.put(path,headers={'Origin':'https://testserver'},json={'text':'x'*20001,'revision':1}).status_code==422
+    key=mykos_api_keys.create('notes-read','read')
+    assert anonymous.get(path,headers={'X-MYKOS-API-Key':key}).status_code==401
+    with mykos_users.connect() as c:
+        assert c.execute('SELECT text FROM shared_id_notes WHERE shop=?',('01234567',)).fetchone()[0]==update['text']
+    assert calls==[]
+
+
+def test_full_access_account_can_preview_every_os_pane(environment):
+    reader=login('reader','reader-password-123')
+    admin=login('operator','operator-password-123')
+    assert reader.get('/api/web/current-user').json()=={'username':'reader','preview_all_panes':False}
+    assert admin.get('/api/web/current-user').json()=={'username':'operator','preview_all_panes':True}

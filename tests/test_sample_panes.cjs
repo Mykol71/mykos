@@ -11,7 +11,7 @@ const elements=new Map(), el=id=>{if(!elements.has(id))elements.set(id,new Eleme
 const nodes=[],mykosData={backups:{accounts:[]},repos:{repos:[]}};
 const context=vm.createContext({assert,el,nodes,mykosData,document:{createElement:tag=>new Element(tag)},
     mykosOsFamilies:['linux','rocky','alma','oracle','centos','fedora','ubuntu','windows','windows-server','macos','mssql'],
-    mykosPreviewOsFamilies:new Set(['linux','rocky','alma','oracle','centos']),
+    mykosPreviewOsFamilies:new Set(['linux','rocky','alma','oracle','centos']),mykosCanPreviewFamily:family=>['linux','rocky','alma','oracle','centos'].includes(family),
     mykosNodeFamily:node=>node.family,mykosOsId:(family,id)=>family+'-'+id});
 const helpers=html.slice(html.indexOf('function mykosCell('),html.indexOf('function mykosStorage('));
 const samples=html.slice(html.indexOf('function mykosSampleValues('),html.indexOf('const mykosPaneVisibility'));
@@ -43,3 +43,5 @@ run('mykosShowAllPanes=false;mykosRefreshSampleRows()');
 assert.ok([...elements.values()].every(element=>element.children.length===0));
 assert.equal(nodes.length,1);assert.equal(mykosData.backups.accounts.length,1);
 console.log('Sample pane checks passed: two labeled rows per empty pane, disabled actions, populated panes preserved, and no inventory mutation.');
+
+context.mykosCanPreviewFamily=()=>true;run('mykosShowAllPanes=true;mykosRefreshSampleRows()');assert.equal(el('windows-rows').children.length,2);assert.equal(el('macos-rows').children.length,2);assert.equal(el('ubuntu-rows').children.length,2);
