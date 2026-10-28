@@ -28,3 +28,11 @@ let stopped=false,prevented=false;
 capture({target:{closest:selector=>selector==='[data-id-notes]'?{dataset:{idNotes:'01234567'}}:selector==='tr.mykos-node-row'?{dataset:{mykosShop:'01234567'}}:null},preventDefault(){prevented=true},stopImmediatePropagation(){stopped=true}});
 assert.deepEqual(opened,['01234567']);assert.deepEqual(details,[]);assert.ok(stopped&&prevented);
 capture({target:{closest:selector=>selector==='tr.mykos-node-row'?{dataset:{mykosShop:'87654321'}}:null},stopImmediatePropagation(){}});assert.deepEqual(details,['87654321']);
+
+// VPN controls must reach their own target handlers, not row details.
+for(const selector of ['.mykos-add-vpn-button','.mykos-remove-vpn-button']) {
+    let intercepted=false;const before=details.length;
+    capture({target:{closest:s=>s===selector?{}:s==='tr.mykos-node-row'?{dataset:{mykosShop:'01234567'}}:null},stopImmediatePropagation(){intercepted=true}});
+    assert.equal(intercepted,false,selector+' must reach its button handler');
+    assert.equal(details.length,before,selector+' must not open node details');
+}
