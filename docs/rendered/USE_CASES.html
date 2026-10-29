@@ -1,0 +1,189 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MYKOS example use cases</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}
+header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px}.docs-brand{display:inline-flex;align-items:center;gap:9px}.docs-brand .mykos-brand-flower{display:block;width:22px;height:31px;flex:0 0 22px}</style><header><span class="docs-brand"><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
+<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="mykos-example-use-cases">MYKOS example use cases</h1>
+<p><a href="README.html">Documentation index</a> · <a href="ARCHITECTURE.html">Architecture</a> · <a href="DEVELOPERS_GUIDE.html">Developer’s guide</a></p>
+<p><strong>Practical examples of what you could build with MYKOS, starting with older applications on newer hardware.</strong></p>
+<p>These are illustrative workflows, not reports of completed customer migrations.
+MYKOS prepares and manages operating-system environments; you install, configure,
+and validate the application inside them. It does not automatically convert an
+old application, translate its code, or make every historical OS compatible.</p>
+<h2 id="1-keep-an-older-application-running-on-newer-hardware">1. Keep an older application running on newer hardware</h2>
+<h3 id="the-situation">The situation</h3>
+<p>A business still depends on an older inventory, accounting, scheduling, or
+order-processing application. The application works, but the physical server is
+wearing out. Replacing that server is difficult because the application expects
+particular libraries, directory layouts, accounts, or OS behavior.</p>
+<p>For example, imagine a distributor with an older Linux order-entry program. Its
+application files live under <code>/usr2</code> and <code>/usr/java</code>, customer data is under <code>/d</code>,
+and staff depend on established accounts and numeric file ownership. The goal is
+to move useful service to a newer Linux host without first rewriting the program.</p>
+<h3 id="what-you-could-build">What you could build</h3>
+<p>An application environment with the compatible OS userland, application runtime,
+configuration, accounts, and data that the program needs. MYKOS gives the running
+environment its own identity and network address and provides lifecycle controls
+and an administrative console.</p>
+<p>Here, “application container” means a managed environment containing the
+application and its dependencies. It need not be a tiny, single-process container.
+For suitable Linux workloads, MYKOS uses native Linux containers. Windows and
+other supported VM-backed workloads run a guest OS through QEMU/KVM inside a
+Podman wrapper.</p>
+<table>
+<thead>
+<tr>
+<th>Application requirement</th>
+<th>Approach to evaluate</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Older Linux libraries and userspace, compatible with the host kernel</td>
+<td>A supported native Linux image with the application’s required userspace</td>
+</tr>
+<tr>
+<td>A separate guest kernel or a supported Windows environment</td>
+<td>A supported VM-backed environment with its own installed OS</td>
+</tr>
+<tr>
+<td>A hardware dongle, proprietary board, obsolete device driver, or CPU-specific behavior</td>
+<td>Prove the device and platform requirements separately before choosing this approach</td>
+</tr>
+</tbody></table>
+<p>Native containers share the host kernel. They cannot supply an arbitrary old
+kernel simply because an old filesystem is available. A VM provides a separate
+kernel, but its OS, drivers, CPU requirements, and devices still need to work on
+the selected host. An existing physical system is not an automatic import: plan
+application installation or restoration using the supported MYKOS workflow.</p>
+<h3 id="an-example-workflow">An example workflow</h3>
+<ol>
+<li><strong>Record what the application actually needs.</strong> Identify its OS, libraries,
+Java or other runtime, database, services, accounts, permissions, printers,
+external systems, and licensing requirements. Save a known-good business
+transaction or report for comparison.</li>
+<li><strong>Prepare a compatible image.</strong> Use the appropriate supported OS workflow,
+install the required application prerequisites, and verify that they start.
+Capture useful base-image changes before ending the base console session.</li>
+<li><strong>Prepare a separate working copy of the customer backup.</strong> For supported
+native Linux restores, MYKOS can compose the environment with selected backup
+trees and reconcile accounts and numeric ownership. Those mounted trees are
+writable: use a working copy when the original backup must remain unchanged.</li>
+<li><strong>Create an ID-specific instance.</strong> Give the rehearsal its own identity and
+network plan. Install or restore the application and configure its services.
+Keep test traffic away from live ordering, email, payment, or batch endpoints
+until those connections are deliberately ready.</li>
+<li><strong>Test the business workflow.</strong> Check staff login, application startup, data
+access, an actual representative transaction, reports, printing, integrations,
+and service behavior after an explicit stop/start. Compare the result with
+the known-good system.</li>
+<li><strong>Rehearse the move.</strong> Measure the data synchronization and outage window,
+decide how to handle writes during cutover, and test the rollback procedure.
+Switch users and dependencies only after the application owner accepts the
+result.</li>
+</ol>
+<h3 id="what-success-looks-like">What success looks like</h3>
+<p>Staff can carry out the required business tasks on the new host, accounts and
+ownership behave correctly, and the application recovers through the documented
+restart and restore procedures. The old physical server can be retired after the
+agreed acceptance and rollback period.</p>
+<p>The benefit is separating the application’s environment from a failing physical
+machine. This does not itself upgrade the application or remove the maintenance
+needs of an old guest OS. Keep its network access appropriate to its role and
+maintain protected backups.</p>
+<p><strong>Read next:</strong> <a href="IMAGE_BUILDS.html">Images</a>, <a href="DESKTOPS.html">desktop and VM requirements</a>,
+<a href="INSTALL_SERVICES.html#complete-customer-backup-mounts">backup composition</a>, and
+<a href="NETWORKING.html">networking</a>.</p>
+<h2 id="2-rehearse-an-application-upgrade-before-changing-production">2. Rehearse an application upgrade before changing production</h2>
+<p><strong>The situation:</strong> You need to update an application, database, runtime, or
+configuration, but want to see the effect on a realistic environment first.</p>
+<p><strong>What you could build:</strong> A separate rehearsal instance using a compatible image
+and a working copy of representative application data.</p>
+<p><strong>How it could work:</strong> Establish a baseline, apply the proposed change in the
+rehearsal, and run the same business checks before and after. Keep its scheduled
+jobs and external connections from making unintended production changes. Record
+configuration changes and any data conversion steps. Use intentional snapshots
+where supported, together with an application-appropriate backup of the data.</p>
+<p><strong>Acceptance check:</strong> The upgrade works with representative data, restart is
+repeatable, and the team understands whether a data conversion can be reversed.
+An OS snapshot alone does not establish that an external database or directly
+mounted backup tree has been rolled back consistently.</p>
+<p><strong>Read next:</strong> <a href="DESKTOPS.html#persistent-lifecycle-and-container-snapshots">Snapshots and lifecycle</a>
+and <a href="VALIDATION.html">validation</a>.</p>
+<h2 id="3-prepare-a-recovery-environment-before-an-outage">3. Prepare a recovery environment before an outage</h2>
+<p><strong>The situation:</strong> Rebuilding the operating system and application prerequisites
+from scratch would consume too much of a recovery window.</p>
+<p><strong>What you could build:</strong> A maintained compatible image, an available protected
+customer backup, and a tested runbook for bringing the application back into use.</p>
+<p><strong>How it could work:</strong> Prepare the OS and runtime ahead of time. Periodically
+rehearse restoration against a separate working copy, verify application data,
+and test access to its required services. Record the storage, networking,
+credentials, and operator steps needed on the intended recovery host.</p>
+<p><strong>Acceptance check:</strong> Users can perform a real application task within a measured
+recovery time, and the age of the recovered data is acceptable. Record backup
+transfer and application recovery time as well as OS startup time.</p>
+<p>MYKOS guest memory/device captures are tied to compatible disks, CPU settings,
+and host assumptions; the documented VM startup captures are intended for the
+same host. Do not treat a warm capture as a portable recovery image or assume it
+will resume on a different server. Prove a cold-start or rebuild/restore path for
+replacement hardware. Automatic failover and uninterrupted service are not
+established by preparing an image.</p>
+<p><strong>Read next:</strong> <a href="INSTALL_SERVICES.html">Installation and recovery</a>,
+<a href="DESKTOPS.html">VM storage and capture requirements</a>, and <a href="NETWORKING.html">networking</a>.</p>
+<h2 id="4-reproduce-a-customer-problem-for-support">4. Reproduce a customer problem for support</h2>
+<p><strong>The situation:</strong> A fault depends on a customer’s application version,
+configuration, account permissions, or data and cannot be reproduced in a generic
+test install.</p>
+<p><strong>What you could build:</strong> A separate support instance based on a suitable copy of
+that customer’s environment, with an explicit network and data-handling plan.</p>
+<p><strong>How it could work:</strong> Reproduce one reported failing action, collect the relevant
+application evidence, apply a proposed fix, and repeat the action. Check an
+unrelated normal workflow too. Use copies or appropriately reduced data where
+possible, and prevent duplicate background jobs from contacting live services.</p>
+<p><strong>Acceptance check:</strong> Another technician can reproduce both the failure and the
+fix from the recorded steps. A fix working in the support instance is evidence
+for a controlled production change, not an automatic change to the customer’s
+running environment.</p>
+<p><strong>Read next:</strong> <a href="DEVELOPERS_GUIDE.html#debug-by-locating-the-boundary-that-failed">Developer troubleshooting</a>
+and <a href="IDENTITY.html">accounts and access</a>.</p>
+<h2 id="5-give-trainees-or-testers-repeatable-application-environments">5. Give trainees or testers repeatable application environments</h2>
+<p><strong>The situation:</strong> Several people need to learn an application or test a release
+without sharing one mutable practice system.</p>
+<p><strong>What you could build:</strong> A prepared application image and separate ID-specific
+instances containing synthetic or otherwise suitable practice data.</p>
+<p><strong>How it could work:</strong> Prepare and validate a starting environment, capture the
+base changes, and create an instance for each exercise. Give each instance the
+right hostname, network identity, accounts, and allowed connections. Document
+which reset or recreation procedure returns an exercise to its starting point;
+keep intentional snapshots separate from automatic startup state.</p>
+<p><strong>Acceptance check:</strong> Two participants can complete the exercise independently,
+and resetting one practice environment does not affect another or a real
+customer. Account for the host memory, CPU, and storage required by concurrent
+instances. The released access model does not by itself establish a fully scoped
+multi-customer self-service portal.</p>
+<p><strong>Read next:</strong> <a href="IMAGE_BUILDS.html">Image preparation</a>, <a href="IDENTITY.html">identity management</a>,
+and <a href="DESKTOPS.html">instance lifecycle</a>.</p>
+<h2 id="6-operate-related-server-and-desktop-workloads-together">6. Operate related server and desktop workloads together</h2>
+<p><strong>The situation:</strong> A small office or branch needs a server-side application plus
+supported desktop environments used to administer or access it.</p>
+<p><strong>What you could build:</strong> A native Linux application environment and, where
+appropriate, supported VM-backed desktops managed through the same MYKOS control
+surface. Use an explicit VPN/gateway mode when remote connectivity is needed.</p>
+<p><strong>How it could work:</strong> Establish the application’s server requirements, desktop
+requirements, network paths, and concurrent-user capacity. Prepare the required
+images, create instances, configure access, and verify the entire user workflow.
+Test printers, scanners, and other physical dependencies separately.</p>
+<p><strong>Acceptance check:</strong> Users can reach the application and required services, the
+intended access boundaries hold, and loss of a desktop or network path has an
+understood recovery procedure. Central hosting does not automatically replace
+physical devices, their drivers, or their validation.</p>
+<p><strong>Read next:</strong> <a href="DESKTOPS.html">Desktop environments</a>, <a href="NETWORKING.html#vpn-architecture-and-operations">VPN architecture</a>,
+and <a href="DEPLOYMENT_EFFICIENCY.html">deployment efficiency</a>.</p>
+<h2 id="turn-an-example-into-a-deployment-plan">Turn an example into a deployment plan</h2>
+<p>For any of these cases, write down:</p>
+<ul>
+<li>The application and business task you want to preserve or improve.</li>
+<li>The OS/runtime fit, devices, external services, and required data.</li>
+<li>The prepared image, instance identity, network plan, and data ownership.</li>
+<li>A representative acceptance test and the person who can approve its result.</li>
+<li>The restart, backup, recovery, cutover, and rollback procedures that apply.</li>
+</ul>
+<p>A running container is a useful starting point. A working, tested application
+with a repeatable operating procedure is the outcome.</p>
+<footer>MYKOS documentation</footer></main></html>
