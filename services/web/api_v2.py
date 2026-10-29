@@ -615,49 +615,49 @@ def openapi_v2(request: Request):
 
 # Keep the docs theme self-contained so deployments cannot omit its stylesheet.
 DOCS_THEME = """
-/* Match the dashboard while retaining Swagger's method colors. */
-:root { color-scheme: dark; }
-html, body { margin: 0; background: #0b1120; color: #e2e8f0; }
+/* Permanent light documentation theme, independent of the OS preference. */
+:root { color-scheme: only light; }
+html, body { margin: 0; background: #ffffff; color: #243e58; }
 .swagger-ui, .swagger-ui :is(.info, .info p, .info li, .info table, .opblock, .opblock-description-wrapper p, .opblock-external-docs-wrapper p, .opblock-title_normal, .model, .model-title, .parameter__name, .parameter__type, .parameter__in, .response-col_status, .response-col_links, .tab li, label, select, input, textarea, button) { font-family: monospace; }
-.swagger-ui { font-size: 12px; color: #e2e8f0; }
+.swagger-ui { font-size: 12px; color: #243e58; }
 .swagger-ui .wrapper { max-width: 1500px; padding: 0 28px; }
 .swagger-ui .info { margin: 28px 0; }
-.swagger-ui .info .title { font-size: 24px; color: #e2e8f0; }
-.swagger-ui :is(.info p, .info li, .info table, .info h1, .info h2, .info h3, .info h4, .info h5, .opblock-tag, .opblock-summary-description, .opblock-description-wrapper p, .opblock-external-docs-wrapper p, .opblock-title_normal, .model, .model-title, .parameter__name, .parameter__type, .response-col_status, .response-col_links, .responses-inner h4, .responses-inner h5, .tab li, label, table thead tr td, table thead tr th) { color: #e2e8f0; }
-.swagger-ui :is(.parameter__in, .parameter__deprecated, .prop-format, .model-hint, .opblock-summary-operation-id, .opblock-summary-path, .opblock-summary-path__deprecated, .model .property.primitive) { color: #94a3b8; }
-.swagger-ui a, .swagger-ui .info a { color: #38bdf8; }
-.swagger-ui .scheme-container { background: #111c30; box-shadow: none; border-block: 1px solid #334155; padding: 16px 0; }
-.swagger-ui :is(select, input[type=text], input[type=password], input[type=email], input[type=file], textarea) { background: #0b1120; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; }
-.swagger-ui select { color-scheme: dark; }
-.swagger-ui input::placeholder, .swagger-ui textarea::placeholder { color: #94a3b8; opacity: 1; }
-.swagger-ui .btn { color: #e2e8f0; background: #1e293b; border-color: #475569; box-shadow: none; border-radius: 7px; }
-.swagger-ui .btn.authorize { color: #4ade80; border-color: #4ade80; }
-.swagger-ui .btn.authorize svg { fill: #4ade80; }
-.swagger-ui .btn.execute { background: #075985; border-color: #38bdf8; color: #e2e8f0; }
+.swagger-ui .info .title { font-size: 24px; color: #243e58; }
+.swagger-ui :is(.info p, .info li, .info table, .info h1, .info h2, .info h3, .info h4, .info h5, .opblock-tag, .opblock-summary-description, .opblock-description-wrapper p, .opblock-external-docs-wrapper p, .opblock-title_normal, .model, .model-title, .parameter__name, .parameter__type, .response-col_status, .response-col_links, .responses-inner h4, .responses-inner h5, .tab li, label, table thead tr td, table thead tr th) { color: #243e58; }
+.swagger-ui :is(.parameter__in, .parameter__deprecated, .prop-format, .model-hint, .opblock-summary-operation-id, .opblock-summary-path, .opblock-summary-path__deprecated, .model .property.primitive) { color: #52667a; }
+.swagger-ui a, .swagger-ui .info a { color: #075dab; }
+.swagger-ui .scheme-container { background: #edf3f8; box-shadow: none; border-block: 1px solid #b6c6d6; padding: 16px 0; }
+.swagger-ui :is(select, input[type=text], input[type=password], input[type=email], input[type=file], textarea) { background: #ffffff; color: #243e58; border: 1px solid #b6c6d6; border-radius: 6px; }
+.swagger-ui select { color-scheme: only light; }
+.swagger-ui input::placeholder, .swagger-ui textarea::placeholder { color: #52667a; opacity: 1; }
+.swagger-ui .btn { color: #243e58; background: #eef3f8; border-color: #8ba3ba; box-shadow: none; border-radius: 7px; }
+.swagger-ui .btn.authorize { color: #176b47; border-color: #176b47; }
+.swagger-ui .btn.authorize svg { fill: #176b47; }
+.swagger-ui .btn.execute { background: #075dab; border-color: #075dab; color: #ffffff; }
 .swagger-ui :is(.opblock, section.models) { border-radius: 10px; box-shadow: none; }
-.swagger-ui .opblock .opblock-section-header { background: #1e293b; box-shadow: none; }
-.swagger-ui .opblock .opblock-section-header :is(h4, label) { color: #e2e8f0; }
-.swagger-ui :is(.opblock-tag, section.models, section.models h4, table thead tr td, table thead tr th) { border-color: #334155; }
-.swagger-ui section.models { background: #121d30; }
-.swagger-ui section.models h4 { color: #e2e8f0; }
-.swagger-ui section.models .model-container { background: #1e293b; }
-.swagger-ui section.models .model-container:hover { background: #29384d; }
-.swagger-ui .model-box { background: #121d30; }
-.swagger-ui :is(.model-toggle::after, .arrow, .expand-operation svg, .opblock-control-arrow svg, .authorization__btn svg, .copy-to-clipboard svg, .models-control svg, .model-box-control svg, .expand-methods svg) { filter: brightness(0) invert(.8); }
-.swagger-ui .highlight-code, .swagger-ui .highlight-code > .microlight, .swagger-ui .microlight { background: #0b1120 !important; color: #e2e8f0 !important; border-radius: 6px; }
-.swagger-ui .markdown code, .swagger-ui .renderedMarkdown code { background: #1e293b; color: #7dd3fc; }
-.swagger-ui .dialog-ux .backdrop-ux { background: #000b; }
-.swagger-ui .dialog-ux .modal-ux { background: #121d30; border: 1px solid #334155; border-radius: 10px; color: #e2e8f0; }
-.swagger-ui .dialog-ux .modal-ux :is(h3, h4, p, label) { color: #e2e8f0; }
-.swagger-ui .dialog-ux .modal-ux-header { border-color: #334155; }
-.swagger-ui .dialog-ux .modal-ux-header .close-modal svg { fill: #e2e8f0; }
-.swagger-ui .auth-container { border-color: #334155; }
-.swagger-ui :is(button, a, input, select, textarea):focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }
+.swagger-ui .opblock .opblock-section-header { background: #eef3f8; box-shadow: none; }
+.swagger-ui .opblock .opblock-section-header :is(h4, label) { color: #243e58; }
+.swagger-ui :is(.opblock-tag, section.models, section.models h4, table thead tr td, table thead tr th) { border-color: #b6c6d6; }
+.swagger-ui section.models { background: #ffffff; }
+.swagger-ui section.models h4 { color: #243e58; }
+.swagger-ui section.models .model-container { background: #eef3f8; }
+.swagger-ui section.models .model-container:hover { background: #e1eaf3; }
+.swagger-ui .model-box { background: #ffffff; }
+.swagger-ui :is(.model-toggle::after, .arrow, .expand-operation svg, .opblock-control-arrow svg, .authorization__btn svg, .copy-to-clipboard svg, .models-control svg, .model-box-control svg, .expand-methods svg) { filter: none; }
+.swagger-ui .highlight-code, .swagger-ui .highlight-code > .microlight, .swagger-ui .microlight { background: #ffffff !important; color: #243e58 !important; border-radius: 6px; }
+.swagger-ui .markdown code, .swagger-ui .renderedMarkdown code { background: #eef3f8; color: #075dab; }
+.swagger-ui .dialog-ux .backdrop-ux { background: #172d4666; }
+.swagger-ui .dialog-ux .modal-ux { background: #ffffff; border: 1px solid #b6c6d6; border-radius: 10px; color: #243e58; }
+.swagger-ui .dialog-ux .modal-ux :is(h3, h4, p, label) { color: #243e58; }
+.swagger-ui .dialog-ux .modal-ux-header { border-color: #b6c6d6; }
+.swagger-ui .dialog-ux .modal-ux-header .close-modal svg { fill: #243e58; }
+.swagger-ui .auth-container { border-color: #b6c6d6; }
+.swagger-ui :is(button, a, input, select, textarea):focus-visible { outline: 2px solid #075dab; outline-offset: 3px; }
 .swagger-ui .info .title, .swagger-ui .opblock-tag, .swagger-ui section.models h4 { font-family: monospace; }
-.swagger-ui .opblock .opblock-summary-description { color: #94a3b8; font-family: monospace; }
-.swagger-ui .opblock .opblock-summary-path, .swagger-ui .opblock .opblock-summary-path__deprecated { color: #e2e8f0; }
-.swagger-ui .opblock .opblock-summary-method { color: #0b1120; text-shadow: none; }
-.swagger-ui .response-control-media-type__accept-message { color: #4ade80; }
+.swagger-ui .opblock .opblock-summary-description { color: #52667a; font-family: monospace; }
+.swagger-ui .opblock .opblock-summary-path, .swagger-ui .opblock .opblock-summary-path__deprecated { color: #243e58; }
+.swagger-ui .opblock .opblock-summary-method { color: #102a43; text-shadow: none; }
+.swagger-ui .response-control-media-type__accept-message { color: #176b47; }
 """
 
 
@@ -667,11 +667,12 @@ def docs_v2(request: Request):
         openapi_url='/mykos/api/v2/openapi.json',
         title='MYKOS API v2 Docs',
         swagger_js_url='https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js',
-        swagger_css_url='https://unpkg.com/swagger-ui-dist@5/swagger-ui.css'
+        swagger_css_url='https://unpkg.com/swagger-ui-dist@5/swagger-ui.css',
+        swagger_ui_parameters={'syntaxHighlight': False}
     )
 
     html = response.body.decode('utf-8').replace(
-        '</head>', '<style id="mykos-api-theme">' + DOCS_THEME + '</style></head>')
+        '</head>', '<meta name="color-scheme" content="only light"><style id="mykos-api-theme">' + DOCS_THEME + '</style></head>')
     return HTMLResponse(html)
 
 

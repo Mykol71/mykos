@@ -212,7 +212,8 @@ def test_api_validation_freshness_and_openapi(environment):
     docs = client.get('/api/v2/docs')
     assert docs.status_code == 200
     assert '<style id="mykos-api-theme">' in docs.text
-    assert 'color-scheme: dark' in docs.text
+    assert 'color-scheme: only light' in docs.text
+    assert '<meta name="color-scheme" content="only light">' in docs.text
     assert '/mykos/api/v2/docs/theme.css' not in docs.text
     assert client.get('/api/v2/docs/theme.css').status_code == 200
     assert client.get('/api/v2/openapi.json').status_code==200
