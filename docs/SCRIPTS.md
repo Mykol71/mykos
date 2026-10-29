@@ -1,10 +1,25 @@
 # Operator script catalog
 
+[Documentation index](README.md)
+
 Use `sudo mykos` for the menu workflow on an installed host. Most legacy scripts are
 interactive and depend on their current working directory. The following paths are
 relative to `/usr/local/share/mykos` unless an absolute path is shown. Do not execute
 legacy administration scripts on a development desktop just to inspect their help.
 They often perform mutations immediately and have no dry-run mode.
+
+<!-- contents:start -->
+**Contents**
+
+- [Global deployment and service tools](#global-deployment-and-service-tools)
+- [Menus](#menus)
+- [Backup accounts (`cd /usr/local/share/mykos/back`)](#backup-accounts-cd-usrlocalsharemykosback)
+- [POS containers (`cd /usr/local/share/mykos/pos`)](#pos-containers-cd-usrlocalsharemykospos)
+- [Repository mirrors (`cd /usr/local/share/mykos/repo`)](#repository-mirrors-cd-usrlocalsharemykosrepo)
+- [Reports, billing, and legacy scheduled jobs](#reports-billing-and-legacy-scheduled-jobs)
+- [Host utilities](#host-utilities)
+
+<!-- contents:end -->
 
 ## Global deployment and service tools
 

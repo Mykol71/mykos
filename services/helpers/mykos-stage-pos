@@ -33,6 +33,7 @@ def _stage(shop, restore, image=None):
     vpn.mkdir(mode=0o700,parents=True,exist_ok=True)
     name=shop+'.'+socket.gethostname()
     args=[PODMAN,'run','-d','--name',name,'--hostname',name,'--privileged','--memory=2g','--pull=never','--restart=unless-stopped',
+          '--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro',
           '--label','io.mykos.persistent=true',
           '-v',str(vpn)+':/etc/ipsec.d:rw']
     private=None

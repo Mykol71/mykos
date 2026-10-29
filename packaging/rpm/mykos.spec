@@ -1,10 +1,10 @@
 %{!?mykos_target_el:%global mykos_target_el 8}
-%if 0%{mykos_target_el} == 9
+%if 0%{mykos_target_el} == 9 || 0%{mykos_target_el} == 10
 %global mykos_python /usr/bin/python3
 %global mykos_python_packages python3 python3-pip
 %else
 %if 0%{mykos_target_el} != 8
-%{error:MYKOS RPM supports mykos_target_el 8 or 9}
+%{error:MYKOS RPM supports mykos_target_el 8, 9 or 10}
 %endif
 %global mykos_python /usr/bin/python3.9
 %global mykos_python_packages python39 python39-pip
@@ -14,7 +14,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        143%{?dist}
+Release:        147%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-Proprietary AND MIT
 URL: https://mykol.com/mykos/
@@ -23,8 +23,11 @@ BuildArch: noarch
 BuildRequires: python3 >= 3.9
 AutoReqProv: no
 Requires: system-release(releasever) = %{mykos_target_el}
-Requires: %{mykos_python_packages} podman httpd mod_ssl
-Requires: openssh-server openssh-clients rsync iproute net-tools netavark containernetworking-plugins criu libreswan
+Requires: %{mykos_python_packages} podman httpd
+Requires: openssh-server openssh-clients rsync iproute net-tools netavark criu libreswan
+%if 0%{mykos_target_el} < 10
+Requires: containernetworking-plugins
+%endif
 Requires: curl wget jq util-linux tar gzip cronie chrony firewalld
 Requires: policycoreutils-python-utils ksh unzip expect nmap time ipset iptables git pykickstart
 Requires(pre): shadow-utils
@@ -63,8 +66,7 @@ getent passwd mykosweb >/dev/null || useradd --system --gid mykosweb --home-dir 
 rm -f /usr/local/bin/mykos
 %{mykos_python} /usr/local/sbin/mykos-kvm-check || :
 systemctl daemon-reload >/dev/null 2>&1 || :
-%{mykos_python} /usr/share/mykos/bin/mykos-console-proxy --apply || echo 'MYKOS console proxy setup needs attention; run mykos-setup.'
-echo 'MYKOS installed. Fresh installations automatically configure HTTPS and MYKOS after the RPM transaction.'
+echo 'MYKOS installed. Fresh installations configure IP access; domain HTTPS requires mykos-setup --configure-https.'
 
 %posttrans
 if [ -d /opt/mykos-web/data ]; then
@@ -72,8 +74,13 @@ if [ -d /opt/mykos-web/data ]; then
   systemctl restart --no-block mykos-host-history.service || :
 fi
 if [ ! -f /var/lib/mykos-installer/installed.json ]; then
-  systemctl enable --now --no-block mykos-firstboot.service || echo 'Automatic MYKOS setup needs attention: systemctl status mykos-firstboot.service'
-  echo 'MYKOS initial setup queued. Follow progress: journalctl -fu mykos-firstboot.service'
+  systemctl enable --now mykos-firstboot.service || echo 'MYKOS setup needs attention: journalctl -u mykos-firstboot.service'
+fi
+if systemctl is-active --quiet mykos-web.service && [ -f /etc/mykos/web.env ]; then
+  mykos_origin=$(sed -n 's/^MYKOS_PUBLIC_ORIGIN=//p' /etc/mykos/web.env)
+  if [ -n "$mykos_origin" ] && curl --fail --silent --max-time 5 "$mykos_origin/mykos/" >/dev/null; then
+    echo "MYKOS is running: $mykos_origin/mykos/"
+  fi
 fi
 
 %preun
@@ -94,6 +101,20 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Wed Oct 28 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-146
+- Keep documentation index redirects relative behind existing reverse proxies
+
+* Wed Oct 28 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-145
+- Publish rendered supporting documentation in a permanent light theme
+- Add navigation, Markdown administrator guide, tables and editable diagrams
+- Preserve operator text, original Word guide and release144 installer procedures
+
+* Wed Oct 28 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-144
+- Restore backup consoles and native container memory accounting
+- Exclude firmware and prevent image builds from blocking host logins
+- Default to IP access; make domain HTTPS opt-in and print the verified app URL
+- Add an EL10 RPM target using Python 3 and Netavark
+
 * Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-79
 - Retain 30 minutes of shared host metrics and expose authenticated history APIs
 - Browse five-minute graph windows without losing data on page refresh

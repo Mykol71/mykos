@@ -1,0 +1,193 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MYKOS Infrastructure Administration</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="mykos-infrastructure-administration">MYKOS Infrastructure Administration</h1>
+<p><a href="README.html">Documentation index</a></p>
+<blockquote>
+<p>Reference edition of the Word guide dated 21 October 2026. The original wording, examples, and qualifications are retained. For maintained procedures, use the <a href="README.html">documentation index</a>; this conversion does not verify historical commands against a running host.</p>
+</blockquote>
+<p>Operations and recovery guide  |  API-first deployment  |  21 October 2026</p>
+<p>Scope: deployed MYKOS web/API services on prod.mykol.com. Instructions below reflect the configuration discussed and must be checked against the running host before relying on them during a disaster recovery.</p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#1-service-overview">1. Service overview</a></li>
+<li><a href="#2-create-users-and-reset-passwords">2. Create users and reset passwords</a></li>
+<li><a href="#3-roles-and-permissions">3. Roles and permissions</a></li>
+<li><a href="#4-api-v2">4. API v2</a></li>
+<li><a href="#5-api-key-management">5. API key management</a></li>
+<li><a href="#6-collectors-and-refresh">6. Collectors and refresh</a></li>
+<li><a href="#7-complete-backup-and-recovery">7. Complete backup and recovery</a></li>
+<li><a href="#8-post-recovery-verification">8. Post-recovery verification</a></li>
+<li><a href="#9-troubleshooting-commands">9. Troubleshooting commands</a></li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="1-service-overview">1. Service overview</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Location / purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Web + API</td>
+<td>/opt/mykos-web/app.py; systemd mykos-web.service; Uvicorn on 127.0.0.1:8000</td>
+</tr>
+<tr>
+<td>Dashboard</td>
+<td>/opt/mykos-web/index.html; browser URL <a href="https://mykol.com/mykos/">https://mykol.com/mykos/</a></td>
+</tr>
+<tr>
+<td>API v2</td>
+<td>/opt/mykos-web/api_v2.py; public prefix <a href="https://mykol.com/mykos/api/v2/">https://mykol.com/mykos/api/v2/</a></td>
+</tr>
+<tr>
+<td>Identity</td>
+<td>/opt/mykos-web/data/auth.db; session cookies; salted scrypt password hashes</td>
+</tr>
+<tr>
+<td>API keys</td>
+<td>/opt/mykos-web/data/api_keys.db (when key module installed); X-MYKOS-API-Key header</td>
+</tr>
+<tr>
+<td>Collectors</td>
+<td>mykos-collector.timer and mykos-extended.timer</td>
+</tr>
+<tr>
+<td>Privileged services</td>
+<td>MYKOS container socket/helper, stage/stop workers, terminal bridge</td>
+</tr>
+</tbody></table>
+<p>Browser UI development is frozen. New functionality should be introduced through API v2. The web UI remains supported for operations.</p>
+<h2 id="2-create-users-and-reset-passwords">2. Create users and reset passwords</h2>
+<p>Use the existing account script. Run the same command to create a username or reset that user’s password:</p>
+<pre><code class="language-sh">sudo /opt/mykos-web/create-admin.sh mgreen
+sudo /opt/mykos-web/create-admin.sh kpugh
+</code></pre>
+<p>The currently verified script prompts for a password of at least 8 characters. Both app.py and create-admin.sh use salted hashlib.scrypt with n=16384, r=8, p=1. The user database stores name, salt, and hash; it does not store plaintext passwords.</p>
+<p>Confirm login at <a href="https://mykol.com/mykos/">https://mykol.com/mykos/</a> after any password reset. Password resetting does not require an application restart. Existing sessions may remain valid until they expire or are revoked.</p>
+<h2 id="3-roles-and-permissions">3. Roles and permissions</h2>
+<table>
+<thead>
+<tr>
+<th>Identity</th>
+<th>Expected permissions / limitations</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Browser user</td>
+<td>Authenticated dashboard access. Actual authorization is enforced in the installed server code.</td>
+</tr>
+<tr>
+<td>Web administrator</td>
+<td>Privileged UI operations, including the terminal and container controls, if allowed by current server authorization checks.</td>
+</tr>
+<tr>
+<td>API v2 read key</td>
+<td>GET/read-only endpoints only; cannot stage or stop containers.</td>
+</tr>
+<tr>
+<td>API v2 admin key</td>
+<td>Additional privileged API v2 operations, subject to the current endpoint checks.</td>
+</tr>
+</tbody></table>
+<p>Important: the previously installed web application used an explicit list of admin usernames. There is no independently verified general-purpose role table for browser users. Confirm current administrator membership in app.py and api_v2.py before promising a new account admin access. Do not manually edit auth.db to grant privileges.</p>
+<h2 id="4-api-v2">4. API v2</h2>
+<p>Interactive documentation: <a href="https://mykol.com/mykos/api/v2/docs">https://mykol.com/mykos/api/v2/docs</a>. The /mykos prefix is required externally because Apache proxies /mykos/ to the internal FastAPI app. The OpenAPI servers base should be /mykos so Swagger “Execute” uses the correct URL.</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Example endpoints</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Overview / host</td>
+<td>GET /overview; GET /host; GET /host/os; GET /host/storage</td>
+</tr>
+<tr>
+<td>Nodes</td>
+<td>GET /nodes; GET /nodes/{shop}; GET /nodes/{shop}/network</td>
+</tr>
+<tr>
+<td>Monitoring</td>
+<td>GET /nodes/{shop}/vpn; /ipsec; /resources; /rti; /logs; /processes; /checkit</td>
+</tr>
+<tr>
+<td>Containers and jobs</td>
+<td>GET /containers; GET /jobs/{shop}</td>
+</tr>
+<tr>
+<td>Administrative actions</td>
+<td>POST /actions/stage; POST /nodes/{shop}/stop</td>
+</tr>
+</tbody></table>
+<p>All paths in the table are relative to /mykos/api/v2. Availability is version-dependent; Swagger documentation generated by the running application is authoritative.</p>
+<pre><code class="language-sh">curl -H &quot;X-MYKOS-API-Key: YOUR_KEY&quot; \
+  https://mykol.com/mykos/api/v2/overview
+</code></pre>
+<h2 id="5-api-key-management">5. API key management</h2>
+<p>The previously prepared API key installer adds a command-line manager at /usr/local/sbin/mykos-api-keys. Confirm this file is installed before following the commands. Keys begin mykos2_, are shown only at creation, and are stored as SHA-256 digests. Use HTTPS and avoid pasting actual keys into tickets or logs.</p>
+<pre><code class="language-sh">test -x /usr/local/sbin/mykos-api-keys &amp;&amp; echo &quot;Key manager installed&quot;
+sudo runuser -u mykosweb -- /usr/bin/python3 \
+  /usr/local/sbin/mykos-api-keys create monitoring read
+sudo runuser -u mykosweb -- /usr/bin/python3 \
+  /usr/local/sbin/mykos-api-keys list
+sudo runuser -u mykosweb -- /usr/bin/python3 \
+  /usr/local/sbin/mykos-api-keys revoke KEY_ID
+</code></pre>
+<p>For integrations use read-scoped keys wherever possible. Use an admin key only for allowlisted write operations. Revocation is immediate for subsequent key checks. Keep secrets in a restricted secrets manager; rotate them after suspected exposure. API keys are not equivalent to browser/terminal session credentials.</p>
+<h2 id="6-collectors-and-refresh">6. Collectors and refresh</h2>
+<table>
+<thead>
+<tr>
+<th>Timer</th>
+<th>Current target after latest change</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>mykos-collector.timer</td>
+<td>OnUnitActiveSec=10s, node status</td>
+</tr>
+<tr>
+<td>mykos-extended.timer</td>
+<td>OnUnitActiveSec=30s, detailed metrics</td>
+</tr>
+<tr>
+<td>Dashboard</td>
+<td>Three JS polling intervals targeted to 10 seconds (index.html)</td>
+</tr>
+</tbody></table>
+<pre><code class="language-sh">sudo systemctl list-timers --all | grep mykos
+sudo systemctl cat mykos-collector.timer mykos-extended.timer
+sudo systemctl status mykos-web.service --no-pager
+</code></pre>
+<p>If the dashboard appears stale, distinguish the collector timestamp from browser polling before adjusting either. The last UI timer edits were not independently verified against a new production snapshot.</p>
+<h2 id="7-complete-backup-and-recovery">7. Complete backup and recovery</h2>
+<p>Use mykos-full-backup-restore.sh from this delivery. It captures actual production source, installed MYKOS helper files, systemd units, inventory, runtime data files, authentication/key databases, and reference copies of Apache/POS configuration. It records file checksums and Python dependency versions. The script does not silently substitute an older installer.</p>
+<pre><code class="language-sh">sudo bash mykos-full-backup-restore.sh capture /root/mykos-backups
+sudo bash mykos-full-backup-restore.sh inspect /root/mykos-backups/mykos-full-TIMESTAMP.tar.gz
+</code></pre>
+<p>Store the resulting .tar.gz and .sha256 off-host in encrypted, restricted storage. The archive can contain credentials and user information. Keep an additional independent backup of Podman images, OS package repos, TLS certificates, and POS application data: these are external dependencies, not covered by this bundle.</p>
+<p>On a compatible replacement system, install and configure the RHEL prerequisites (Python, Podman, Apache, systemd, SELinux, required Python packages). Review the archive and restore only after accepting the current-host safety backup:</p>
+<pre><code class="language-sh">sudo bash mykos-full-backup-restore.sh restore /root/mykos-backups/mykos-full-TIMESTAMP.tar.gz --confirm
+</code></pre>
+<p>Default restore preserves existing auth.db and api_keys.db. Add --restore-auth ONLY when intentionally recovering the archived identities and keys; this can replace current passwords and revoke newer API keys. Review the archived Apache virtual-host configuration manually rather than overwriting a shared ssl.conf.</p>
+<h2 id="8-post-recovery-verification">8. Post-recovery verification</h2>
+<ul>
+<li>Check systemctl status for mykos-web.service and all MYKOS timers/sockets.</li>
+<li>Verify login using an existing authorized account.</li>
+<li>Open /mykos/api/v2/docs and confirm Swagger Execute URLs include /mykos.</li>
+<li>Call a read-only API v2 endpoint using a known read-scoped key.</li>
+<li>Confirm node counts and eth1 IP values; check collector timestamps.</li>
+<li>Verify container helper socket and non-destructive API operations before testing staging/stopping.</li>
+<li>Confirm terminal access only for intended authorized users.</li>
+<li>Verify Apache proxy, TLS, firewall and SELinux labels on the target host.</li>
+</ul>
+<h2 id="9-troubleshooting-commands">9. Troubleshooting commands</h2>
+<pre><code class="language-sh">sudo journalctl -u mykos-web.service -n 80 --no-pager
+sudo systemctl list-timers --all | grep mykos
+curl -I https://mykol.com/mykos/
+curl -sS http://127.0.0.1:8000/api/v2/host/os
+</code></pre>
+<p>Never roll back the entire deployment to fix a single UI issue. Create and inspect a production bundle first, then make surgical changes with a known-good rollback point.</p>
+<footer>MYKOS documentation</footer></main></html>

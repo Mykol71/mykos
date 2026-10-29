@@ -1,0 +1,237 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unattended image builds</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="unattended-image-builds">Unattended image builds</h1>
+<p><a href="README.html">Documentation index</a></p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#start-or-resume-a-build">Start or resume a build</a></li>
+<li><a href="#instance-startup-hooks">Instance startup hooks</a></li>
+<li><a href="#build-output-and-instance-storage">Build output and instance storage</a></li>
+<li><a href="#memory-and-host-dependencies">Memory and host dependencies</a></li>
+<li><a href="#build-credentials">Build credentials</a></li>
+<li><a href="#ubuntu-provisioning">Ubuntu provisioning</a></li>
+<li><a href="#windows-provisioning">Windows provisioning</a></li>
+<li><a href="#macos-provisioning">macOS provisioning</a></li>
+<li><a href="#images-containers-and-snapshots">Images containers and snapshots</a></li>
+<li><a href="#api">API</a></li>
+<li><a href="#sql-server-on-native-linux">SQL Server on native Linux</a></li>
+<li><a href="#retrying-a-failed-image-commit">Retrying a failed image commit</a></li>
+<li><a href="#rocky-linux-and-almalinux-native-images">Rocky Linux and AlmaLinux native images</a><ul>
+<li><a href="#update-an-existing-image">Update an existing image</a></li>
+<li><a href="#base-console-sessions">Base console sessions</a></li>
+</ul>
+</li>
+<li><a href="#lifecycle-checks-and-recovery">Lifecycle checks and recovery</a></li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="start-or-resume-a-build">Start or resume a build</h2>
+<p>Run one command as root, with no account/password or Finish prompts:</p>
+<pre><code class="language-bash">sudo /usr/local/sbin/mykos-image-build ubuntu22.04
+sudo /usr/local/sbin/mykos-image-build win10
+sudo /usr/local/sbin/mykos-image-build wns2022
+sudo /usr/local/sbin/mykos-image-build mac15
+</code></pre>
+<p>From the text administration directory, <code>./vm build OS</code> and the existing
+Create Image menu use the same pipeline. Repeating the command resumes an
+unfinished unattended build using its existing disks and credentials. <code>--replace</code> explicitly archives a
+stopped previous attempt before building again. An active base builder is
+never stopped automatically by replacement. Existing ID-specific containers
+are not modified by an image build.</p>
+<h2 id="instance-startup-hooks">Instance startup hooks</h2>
+<p>Optional ID-specific host scripts live at <code>/etc/mykos/instance-hooks/OS</code>. They
+run once after the new instance restores its base state, before startup is
+reported successful. Hooks must be executable root-owned files without
+group/world write access. Arguments are SHOPCODE and SHOPCODE.hostname;
+MYKOS_SHOPCODE, MYKOS_CONTAINER_NAME and MYKOS_OS are also set in the environment.
+The running generic base is never passed to these hooks.</p>
+<h2 id="build-output-and-instance-storage">Build output and instance storage</h2>
+<p>A successful build installs and provisions the OS, verifies the installed
+system, detaches installation-only devices, captures matching RAM/device/disk
+state, commits the installed disk payload under the readable local OS image
+name, and leaves one generic base container running. The image payload is
+in <code>/opt/mykos-image/golden.tar.gz</code> as a compressed sparse archive, with an
+<code>image.json</code> manifest; it is not just the small VM wrapper. Commit temporary
+files use the VM storage filesystem instead of filling <code>/var/tmp</code>. Fast
+ID-specific startup clones the immutable prepared state into private storage
+and restores RAM. Container names remain <code>SHOPCODE.hostname</code>, for example
+<code>12345678.prod.mykol.com</code>. Changes made by an instance do not modify the base.</p>
+<h2 id="memory-and-host-dependencies">Memory and host dependencies</h2>
+<p>Runtime guests and their startup captures use 2048 MiB RAM. Unattended macOS
+installation temporarily uses 4096 MiB because Apple mounts a 2.5 GiB temporary
+filesystem during its second stage. The builder returns to 2048 MiB and verifies
+an installed boot before capture. Windows and Ubuntu use 12 GiB pagefile/swap. macOS manages its own swap. New native ID-specific containers use <code>--memory=2g</code> and a read-only
+<code>/sys/fs/cgroup</code> mount. The temporary native image-start helper uses 4 GiB;
+existing containers retain their creation-time limits. The QEMU image already supplies the ISO tools, and the
+macOS package generator uses Python&#39;s standard library. No additional helper
+containers or host package dependencies are needed for unattended installation.</p>
+<h2 id="build-credentials">Build credentials</h2>
+<p>Accounts default to <code>mykos</code> with a generated complex password. Credentials are
+stored, root-only, in <code>/var/lib/mykos/image-builds/OS/credentials.json</code> and reused
+for that OS on subsequent builds. They are not printed in progress messages.
+The authenticated API can optionally supply a different local account/password.</p>
+<h2 id="ubuntu-provisioning">Ubuntu provisioning</h2>
+<p>Ubuntu uses Canonical live-server media with autoinstall and installs the
+minimal desktop on its first installed boot, avoiding installer-chroot Snap
+setup failures. This supports 20.04, 22.04 and 24.04 consistently. Provisioning
+includes the direct <code>su - root</code> serial console, swap, Libreswan and QEMU guest
+agent. The ISO checksum is checked against Canonical&#39;s SHA256SUMS before use.</p>
+<h2 id="windows-provisioning">Windows provisioning</h2>
+<p>Windows uses the official version-specific Dockur XML asset, with MYKOS account
+settings, through its normal Autounattend.xml/media-generation pipeline.
+Driver, OEM and first-logon hooks are retained. QEMU Guest Agent is extracted
+from the <code>virtio-win</code> data RPM available in the configured RHEL repositories,
+after verifying its signature against the host RPM key database. The data RPM
+is downloaded but never installed on the host. Guest-side hashes bind the staged
+installer to that authenticated payload; there is no unsigned-download fallback. A complex Administrator
+password and non-expired local account prevent mandatory password-change
+screens. Current unattended builds support Windows 10/11/8.1 and Server
+2016/2019/2022/2025. Older Windows releases retain their legacy creation path;
+XML is not the setup format for Windows 98/ME/2000/XP.</p>
+<h2 id="macos-provisioning">macOS provisioning</h2>
+<p>macOS uses Apple&#39;s <code>startosinstall</code> from Recovery with a pinned MIT-licensed
+Dockur bootstrap (see <code>pos/install/macos/UPSTREAM</code> and <code>LICENSE</code>). Account
+packages are generated privately for each build. The bootstrap is passed through
+<code>startosinstall --installpackage</code>, so setup suppression and first-boot files are
+applied after Apple creates the final system/data volumes. A scoped, expiring completion
+token reports that the installed OS has reached WindowServer after account
+setup and again after the clean boot before capture. The one-use build daemon
+removes itself; this token grants no administrative API access. The configured
+HTTPS public origin must be reachable from the guest. For a private CA or
+self-signed endpoint, place the trusted PEM certificate in
+<code>/etc/mykos/image-build-ca.pem</code> (root-owned, not group/world writable). The guest
+uses it for certificate and hostname verification; TLS verification stays enabled.</p>
+<h2 id="images-containers-and-snapshots">Images containers and snapshots</h2>
+<p><a href="diagrams/image-lifecycle.svg" title="Open full-size diagram"><img src="diagrams/image-lifecycle.svg" alt="A generic base becomes a prepared image, which starts a private container. An intentional snapshot captures the container while it remains running."></a><a href="diagrams/image-lifecycle.svg">Open full-size diagram</a></p>
+<p><a href="diagrams/image-lifecycle.mmd">Editable Mermaid source</a></p>
+<h2 id="api">API</h2>
+<p>Use an admin API key for <code>PUT /mykos/api/v2/images/OS/build</code> with optional
+<code>username</code>, <code>password</code> and <code>replace</code> JSON fields. The request starts the build
+in <code>mykos-image-build@OS.service</code>. Read progress with an API key at
+<code>GET /mykos/api/v2/images/OS/build</code> or from the command:</p>
+<pre><code class="language-bash">sudo /usr/local/sbin/mykos-image-build OS --status
+sudo journalctl -u mykos-image-build@OS.service --no-pager
+</code></pre>
+<p>Image build workers are included in maintenance checks and explicit Purge.
+RPM upgrades do not start builds, remove stored images, or restart guests.</p>
+<h2 id="sql-server-on-native-linux">SQL Server on native Linux</h2>
+<p>Operator kickstarts such as <code>pos/ks/mssql2022.ks</code> use the existing native
+Linux image build and commit workflow in the text menu. The Microsoft SQL
+Server pane recognizes <code>mssql2022</code> and <code>mssql2025</code>, showing only available
+images by default. The pane uses native Linux lifecycle, root console and
+snapshot operations; it does not create a Windows VM. SQL product versions
+come from the image name, without probing the running guest. The show-all
+leaf includes disabled choices and sample rows when no SQL images exist.</p>
+<h2 id="retrying-a-failed-image-commit">Retrying a failed image commit</h2>
+<p>If saving or committing an image fails after its disk/RAM capture completes,
+MYKOS retains the matching capture and the existing installed builder. Resolve
+the reported storage or Podman error, then repeat the same image build command.
+The retry continues the saved commit without reinstalling, rebooting the guest,
+or capturing its memory again. A previous prepared image remains available
+until the replacement commit succeeds. Do not use <code>--replace</code> for this retry.</p>
+<p>The capture and embedded installed-disk archive need sufficient free space on
+their respective filesystems. Check both the MYKOS VM storage and Podman image
+storage when diagnosing an out-of-space error. Changing Podman storage is a
+separate operator task; an RPM update does not move existing images or disks.</p>
+<h2 id="rocky-linux-and-almalinux-native-images">Rocky Linux and AlmaLinux native images</h2>
+<p>The text menu accepts <code>rocky8</code>, <code>rocky9</code>, <code>rocky10</code>, <code>alma8</code>, <code>alma9</code>, and
+<code>alma10</code>. These use the same kickstart → livemedia-creator rootfs → Podman
+build/commit → running generic base workflow as RedHat. Recipes live in
+<code>pos/ks/OS.ks</code>; each EL vendor recipe derives from the corresponding operator
+<code>rh8.ks</code>, <code>rh9.ks</code>, or <code>rh10.ks</code>, preserving its package list and post-install
+customizations. The original RedHat kickstarts remain unchanged. Use an
+Anaconda/Lorax build environment that accepts the prepared kickstart. All native
+Linux selections follow the operator&#39;s local workflow, including RH9-on-RH8,
+without a host-major restriction. Temporary build copies adapt timesource and
+weak-dependency option spellings to the installed parser; saved kickstarts stay
+unchanged. Actual installer and repository compatibility is checked during the build.</p>
+<p>Rocky sources BaseOS and AppStream directly from
+<code>https://dl.rockylinux.org/pub/rocky/MAJOR/REPOSITORY/x86_64/os/</code>.
+AlmaLinux uses its published installation trees at
+<code>https://repo.almalinux.org/almalinux/MAJOR/REPOSITORY/x86_64/kickstart/</code>.
+Vendor release packages, repository definitions, and signing keys remain in the
+installed filesystem. These recipes do not use the private RHEL mirror or
+download its update script. No Pipework/eth1/DHCP-client dependency is added.</p>
+<p>Once built, separate Rocky Linux and AlmaLinux panes appear. They support the
+same native Linux lifecycle, root terminal, VPN and snapshot actions. The
+show-all leaf supplies disabled 8/9/10 choices and sample rows when no image
+is available. The staging API advertises the same OS identifiers; snapshot OS
+identity and full minor versions come from image metadata, without guest probes.</p>
+<p>Oracle Linux uses <code>oracle8</code>, <code>oracle9</code>, and <code>oracle10</code>, from Oracle&#39;s public
+<code>https://yum.oracle.com/repo/OracleLinux/OLMAJOR/baseos/latest/x86_64/</code> and
+<code>.../OLMAJOR/appstream/x86_64/</code> repositories. Kernel and UEK packages are
+excluded: native containers share the host kernel.</p>
+<p>CentOS uses <code>centos8</code>, <code>centos9</code>, and <code>centos10</code>, meaning CentOS <strong>Stream</strong>. Stream 9 and 10 use
+<code>https://mirror.stream.centos.org/MAJOR-stream/{BaseOS,AppStream}/x86_64/os/</code>.
+Stream 8 uses the archived official BaseOS/AppStream trees at
+<code>https://vault.centos.org/8-stream/</code>, including saved runtime repo definitions
+with RPM signature checks enabled. This archive receives no further updates.
+CentOS Linux is not included. Fedora uses
+<code>fedora43</code> and <code>fedora44</code>, the two newest stable releases in the official
+release feed when added. The beta release is excluded. Its Everything install
+tree and matching updates repository come from <code>https://dl.fedoraproject.org/</code>.
+Fedora kickstarts are prepared and validated with the installed local parser, without requiring a Fedora host. The existing Anaconda/Lorax build performs the actual repository/package compatibility checks.</p>
+<p>RedHat&#39;s <code>updateos</code> script is downloaded and syntax-checked on the build host,
+then copied into the image with executable permissions. Minimal kickstarts do
+not need a guest <code>curl</code> package for this step. Download or validation failures
+stop before Podman builds the image.</p>
+<p>In the text menu, choose <code>c</code>, then enter <code>all</code> to build the 16 EL images
+sequentially: RedHat 7–10 and Rocky Linux, AlmaLinux, Oracle Linux and CentOS
+Stream 8–10. Existing local images are reused. A failed build stops the batch
+before another installer starts; completed images remain available. Correct the
+reported error and clear any failed installer workspace before retrying <code>all</code>.
+Fedora, SQL Server and desktop VM images remain individual selections.
+Image installation runs at nice +1 (slightly below normal CPU priority); the menu and regular containers retain their
+normal priority. VM image builders reset their build-priority setting for regular
+instances.</p>
+<h3 id="update-an-existing-image">Update an existing image</h3>
+<p>Administrators can use <strong>Connect to running base image</strong> on a prepared image row.
+This connects to the generic base itself: <code>su - root</code> for native Linux, the direct
+Ubuntu guest serial terminal, PowerShell for Windows, or the macOS SSH shell.
+The base must be running; connecting does not create an instance or restart it.</p>
+<p>After making changes, keep the console connected and select <strong>f. Capture image</strong>
+in a separate text-menu session, enter the image OS, and confirm its exact name.
+Wait for capture to finish before logging out or closing the console. Native Linux commits
+the base filesystem with a brief pause and leaves it running. VM images refresh
+their paired disk/RAM startup capture, commit the installed disk, and restart the
+generic base from the saved state. Existing ID-specific containers and intentional
+snapshots retain their original state. Capture native images after package updates
+have completed; external mounted data is not part of a Podman filesystem commit.</p>
+<h3 id="base-console-sessions">Base console sessions</h3>
+<p>Base-image logins guard common shutdown and reboot commands. These are session
+safeguards against accidental power actions, not a security sandbox for an
+administrator with root access. Regular ID-specific console sessions are unchanged.
+Only one base-image console can be open for an OS at a time.</p>
+<p><strong>Capture changes before logging out or closing the console.</strong> The server queues
+a reset when the console disconnects, including browser-window closure. Reset
+recreates only the generic base from its latest captured image and, for VMs, the
+matching saved disks/RAM. It never commits uncaptured edits. Capture is serialized
+with reset, so a completed capture becomes the reset source. Existing ID-specific
+containers, intentional snapshots and OS images are preserved. Reset failures
+appear on the image row and can be retried using <strong>Reset base to captured image</strong>.</p>
+<h2 id="lifecycle-checks-and-recovery">Lifecycle checks and recovery</h2>
+<p>An <strong>image</strong> is the reusable installed OS plus startup device/memory state where
+needed. A <strong>container</strong> is an ID-specific instance with its own IP/hostname and
+private writable state. A <strong>snapshot</strong> deliberately captures live instance state
+and leaves that instance running. Automatic startup captures are required runtime
+artifacts, separate from intentional snapshots; do not prune intentional snapshots
+as though they were temporary build files.</p>
+<p>Stop/start of an existing container preserves its existing writable filesystem;
+it does not refresh it from a newly captured image. To use a changed image for a
+new instance, preserve customer data first and deliberately recreate the intended
+instance. Never delete/recreate a customer container merely to test documentation.
+A snapshot restore is an explicit state-changing operation; inspect the source ID,
+OS, capture and storage requirements before confirmation.</p>
+<p>In release146, the base resolver requires the exact generic base to be running and
+unpaused with the expected labels/image. A failed or busy base console is not a
+reason to replace an image or an ID-specific instance. Inspect the image job and
+helper errors first. Capture failures preserve the previous captured image; resolve
+the reported error and retry the intended operation. Disconnect reset failures
+remain visible on the image row and can be retried explicitly. Root-console power
+guards are accidental-operation safeguards, not an authorization boundary.</p>
+<p>Generated native build copies add <code>-linux-firmware</code>, <code>-*-firmware</code> and
+<code>-microcode_ctl</code> exclusions and add <code>--exclude-prefix=/run/nologin</code> and
+<code>--exclude-prefix=/var/run/nologin</code> to boot tmpfiles commands. Native containers share the host kernel and
+must not perform hardware firmware updates or leave root console logins blocked.
+These edits apply to generated copies in <code>pos/prepare_ks.py</code>; retain the operator&#39;s
+original kickstarts, including local repository and application fixes.</p>
+<footer>MYKOS documentation</footer></main></html>

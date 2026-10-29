@@ -1,0 +1,471 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Managed container networking</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="managed-container-networking">Managed container networking</h1>
+<p><a href="README.html">Documentation index</a></p>
+<p>Both dev and production use the rootful Podman bridge <code>mykos-lan</code> with private NAT, subnet <code>192.168.22.0/24</code>, gateway <code>192.168.22.1</code>, and container addresses <code>.2</code> through <code>.254</code>. The same subnet on two separate hosts does not connect those networks together. The host LAN addresses remain unchanged. This works through Ethernet or Wi-Fi.</p>
+<p>Set <code>native_network_driver</code> to <code>bridge</code>, <code>native_network</code> to <code>mykos-lan</code>, and <code>native_network_subnet</code> to <code>192.168.22.0/24</code> in <code>/etc/mykos/config.json</code>. Initialize with <code>sudo /usr/local/sbin/mykos-network-setup</code> or <code>mykos-setup --native-network</code>. A new network is refused if the subnet overlaps an existing host route. Existing mismatched networks are left unchanged and must be replaced explicitly while unused.</p>
+<p>New native Linux instances, native image build containers, and Windows/macOS/Ubuntu VM wrappers use this network. Each gets a fixed <code>--ip</code> address and deterministic MAC, recorded in its Podman configuration and MYKOS labels. A shared lifecycle lock serializes assignment; stopped containers retain their address claims. Addresses exclude the gateway/network/broadcast, and a full pool fails before creation. Stop/start preserves the assigned address. Deleting the container releases its claim. VM-internal guest NICs retain their QEMU-managed networking; the displayed Podman NIC belongs to the VM wrapper.</p>
+<p>There is no pipework or guest dhclient dependency. NAT guests do not have individual <code>192.168.222.x</code> LAN addresses. Direct inbound LAN services need explicit publishing or routing; MYKOS terminals, guest-agent commands and HTTP desktops remain server-proxied. IPsec tunnel configuration and NAT-T need validation for the chosen peer/subnets; existing LAN-specific VPN selectors are not automatically rewritten.</p>
+<p>Optional <code>native_network_driver: macvlan</code> retains LAN DHCP mode on a wired parent selected with <code>network_device</code>. CNI uses <code>cni-dhcp.socket</code>; Netavark uses <code>netavark-dhcp-proxy.socket</code> for that optional mode. Private bridge mode uses neither. The primary interface is eth0, selected by labels; legacy eth1 monitoring and <code>eth1_ipv4</code> API aliases remain for compatibility with old instances. API clients should use <code>network.ipv4</code> and <code>network.interface</code>.</p>
+<p>Existing running containers are not silently rewired. Recreate legacy pipework or older-network containers after preserving any needed data. New instances use the configured bridge.</p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#linux-root-terminals">Linux root terminals</a></li>
+<li><a href="#windows-powershell-action">Windows PowerShell action</a></li>
+<li><a href="#macos-shell-action">macOS shell action</a></li>
+<li><a href="#native-os-minor-versions">Native OS minor versions</a><ul>
+<li><a href="#meraki-peer-updates">Meraki peer updates</a></li>
+</ul>
+</li>
+<li><a href="#vpn-modes-and-persistence">VPN modes and persistence</a><ul>
+<li><a href="#meraki-update-checks">Meraki update checks</a></li>
+</ul>
+</li>
+<li><a href="#geographic-map">Geographic map</a></li>
+<li><a href="#vpn-architecture-and-operations">VPN architecture and operations</a><ul>
+<li><a href="#choose-the-tunnel-owner-and-traffic-scope">Choose the tunnel owner and traffic scope</a></li>
+<li><a href="#direct-native-guest-traffic">Direct native guest traffic</a></li>
+<li><a href="#shared-native-gateway-traffic">Shared native gateway traffic</a></li>
+<li><a href="#host-shared-gateway-traffic">Host shared gateway traffic</a></li>
+<li><a href="#host-only-traffic">Host-only traffic</a></li>
+<li><a href="#prerequisites-and-peer-agreement">Prerequisites and peer agreement</a></li>
+<li><a href="#persistence-and-reconnect-boundaries">Persistence and reconnect boundaries</a></li>
+<li><a href="#safe-operational-checks">Safe operational checks</a></li>
+<li><a href="#failure-and-recovery-procedure">Failure and recovery procedure</a></li>
+<li><a href="#deliberate-removal">Deliberate removal</a></li>
+<li><a href="#implementation-evidence-and-validation-limits">Implementation evidence and validation limits</a></li>
+</ul>
+</li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="linux-root-terminals">Linux root terminals</h2>
+<p>Native RedHat terminal actions execute <code>/bin/su - root</code> through Podman. Ubuntu VM terminal actions connect directly to a private QEMU serial Unix socket and its guest ttyS0 service running <code>/bin/su - root</code>. They use no SSH, LAN IP, wrapper shell, or public console port. Only one direct console may be open per Ubuntu instance. Browser graphical console remains available through the separate console-log icon.</p>
+<p>Run the Ubuntu image setup script inside the installed guest before capture; it configures both swap and the direct serial root-console service. Use <code>sudo python3 /tmp/mykos-ubuntu-setup.py --console-only</code> to configure only the terminal. The service grants root to holders of the VM serial console, matching the admin-only native root terminal. Existing images need this setup and the updated QEMU serial configuration before the new terminal works.</p>
+<h2 id="windows-powershell-action">Windows PowerShell action</h2>
+<p>The Windows/Windows Server login icon opens an admin PowerShell command console through QEMU Guest Agent, without RDP or a guest network connection. Install and start the Windows QEMU Guest Agent before capture. Each entered line runs separately under that service account, with a 120-second timeout and bounded output; interactive applications and persistent PowerShell session variables are not supported. The console-log icon remains the graphical browser desktop; existing RDP API links remain available for clients that still need them.</p>
+<h2 id="macos-shell-action">macOS shell action</h2>
+<p>The macOS login icon opens SSH through the VM&#39;s private Podman bridge address, prompts for the macOS username/password, and confirms the guest host key. Enable Remote Login for the intended user in System Settings &gt; General &gt; Sharing before capture. The account&#39;s normal shell is opened; no SSH key or password is stored by MYKOS. No additional host-public SSH ports are opened. The console-log icon opens the HTTP graphical desktop through the existing Apache-authenticated browser-console proxy, as it does for Windows and Ubuntu.</p>
+<h2 id="native-os-minor-versions">Native OS minor versions</h2>
+<p>Native image builds store full VERSION_ID (for example 8.10 or 9.8) in the <code>io.mykos.os.version</code> image label. For older images without that label, the collector reads os-release from a host-mounted immutable image once and stores a root-owned cache keyed by its image digest under <code>/var/cache/mykos/image-os</code>. Future polls use the cache, never guest execution. New image content gets a new cache key; an unavailable version is retried after one hour. Purge removes this cache. The API and container Version column use the same full image version.</p>
+<h3 id="meraki-peer-updates">Meraki peer updates</h3>
+<p>The optional Meraki upload first downloads the organization&#39;s complete third-party
+VPN peer list, then appends the new peer and sends the combined list. Existing
+peer objects and their settings are preserved. Failed downloads or invalid JSON
+stop the update. An identical named peer is a no-op; a same-name peer with different
+settings is rejected rather than overwritten. New peers do not reuse a fixed peer
+ID. API headers and downloaded configuration use private temporary files which
+are removed when the operation ends. Avoid simultaneous changes in Dashboard or
+other API clients during an update: this endpoint replaces the complete peer list.</p>
+<h2 id="vpn-modes-and-persistence">VPN modes and persistence</h2>
+<p>The detailed architecture, mode comparison, traffic paths, prerequisites and
+recovery procedure are in <a href="#vpn-architecture-and-operations">VPN architecture and operations</a>.</p>
+<p>New native Linux VPN setup offers independent guest tunnels or one shared default
+gateway. Independent mode supports multiple distinct remote site subnets, multiple
+guests to one site, and one remote site per guest. The first successfully connected
+tunnel owns that guest&#39;s default traffic. IKEv2 liveness checks run every 30 seconds with a 45-second retransmit timeout;
+host fallback waits until the local full-tunnel SA is actually removed, rather
+than assuming a peer is down from one lost packet. Rekeying does not change ownership; when
+the primary connection is removed, the earliest remaining established connection
+is promoted. Internet traffic and non-loopback DNS use that selected full tunnel.
+The DNS resolver is <code>8.8.8.8</code>. Generated configurations explicitly use <code>pfs=no</code> to match the existing Meraki
+child-SA policy. Default stanzas are rendered independently because overriding
+<code>also=</code> values is rejected by the tested Libreswan 4.x parser. See the
+<a href="https://libreswan.org/man/ipsec.conf.5.html">Libreswan configuration reference</a>.
+A separate default CHILD_SA uses <code>0.0.0.0/0</code>; a site
+SA alone is not evidence of working full-tunnel internet access.</p>
+<p>Shared mode supports either the MYKOS host or one native Linux guest as gateway.
+It routes all MYKOS guest types through that gateway and routes host internet
+traffic through it only after a matching full-tunnel SA is confirmed. Local host
+management replies and outer IKE/NAT-T/ESP transport are exempt. During an outage,
+protected guest traffic remains blocked; ordinary host WAN internet is restored.
+Only one shared default gateway may be selected. Combining this mode with other
+independent VPN configurations is currently rejected before local setup or a
+Meraki upload; existing tunnels are left unchanged.</p>
+<p>The existing customer <code>pos/.ID</code> folder remains mounted read/write at guest
+<code>/etc/ipsec.d</code>. Connection, secret, numeric endpoint, reconnect hook and default
+ownership/order files live there. Native setup checks the running guest&#39;s mount
+identity and required executables from a fixed host Python process, without
+executing guest code. The actual systemd reload/enable still runs inside the guest.
+Missing dependencies fail before the optional Meraki upload. Existing global
+IPsec configuration is preserved, with narrow include globs appended and a private
+backup before the first change. Secrets remain in mode-0600 per-connection files.</p>
+<p>The shared controller stores root-only profiles under
+<code>/var/lib/mykos/vpn-gateways</code>. Its boot guard protects configured guest routes
+before Podman automatic restart; its timer reconciles only explicitly configured
+profiles. Installing/updating MYKOS does not select a gateway, rewrite existing
+VPNs or enable these optional units. Removing the last profile disables the timer
+and guard. Uninstall deactivates owned routing/firewall changes while retaining
+operator profiles; explicit container-state purge removes profiles too.</p>
+<p>The IP address expansion shows network metadata, VPN connections and an icon
+map. <strong>Show connected guests</strong> adds shared-network members and gateway dependents.
+Green links require reported SA state; grey/dashed links are unconfirmed. A network
+membership edge does not prove connectivity. Read models use saved host metadata
+and cached kernel observations, never PSKs or extra guest polling.</p>
+<p>Ubuntu-specific new VPN/shared-folder work is deferred. Its released VM creation,
+RAM capture and existing individual VPN paths are unchanged. Shared host/native
+routing can still carry traffic from its wrapper, as for Windows and macOS.</p>
+<h3 id="meraki-update-checks">Meraki update checks</h3>
+<p>The chosen remote public endpoint must uniquely identify one network in the
+configured Meraki organization. New peers are restricted to that network; MYKOS
+does not fall back to all networks. Network-ID binding and route-based peer settings
+require MX 19.1 or newer. See Cisco&#39;s
+<a href="https://developer.cisco.com/meraki/api-v1/update-organization-appliance-vpn-third-party-vpn-peers/">third-party VPN peer API</a>.</p>
+<p>MYKOS downloads and preserves the complete peer list, rechecks for concurrent
+changes immediately before PUT, and verifies the returned public peer settings.
+An invalid/unverifiable response aborts local configuration and activation; an
+ambiguous remote result must be checked in Dashboard before retrying. There is
+no atomic compare-and-swap provided by this workflow, so avoid simultaneous
+Dashboard/API edits even with that recheck. No whole-organization rollback or blind
+retry is attempted. Router-side internet forwarding/NAT and actual MX negotiation
+still need validation for the selected site; local SA state alone does not prove
+remote internet egress.</p>
+<h2 id="geographic-map">Geographic map</h2>
+<p>Click the host IP address to expand the existing geographic map beneath the host
+row. It uses saved inventory latitude/longitude values and marks current node
+status. Nodes without valid saved coordinates are omitted rather than placed at
+an invented location. Closing the pane retains the map for reopening; no extra
+guest collection or IP geolocation lookup is performed.</p>
+<p>Map points are IDs and saved host locations. Hovering a point shows the available
+shop name, hostname, configured POS type, OS/IP/status, and saved application
+information. Green means up, red means down, and yellow means unknown. Optional
+<code>shop_name</code>, <code>pos_type</code>, and <code>app_info</code> node metadata survives collection. Host
+locations can be saved in the inventory <code>hosts</code> list with <code>hostname</code>, <code>lat</code>, and
+<code>lon</code>; the current host&#39;s cached status is joined by hostname. No saved location
+means no map pin. POS permission enforcement is separate from these display fields.</p>
+<h2 id="vpn-architecture-and-operations">VPN architecture and operations</h2>
+<p>This describes the released <strong>1.5.20261024-146</strong> implementation. Examples use the
+usual <code>192.168.22.0/24</code> private bridge; inspect the site&#39;s configuration before
+using any address. This review did not add, remove or reconnect a live VPN.</p>
+<h3 id="choose-the-tunnel-owner-and-traffic-scope">Choose the tunnel owner and traffic scope</h3>
+<table>
+<thead>
+<tr>
+<th>Selection in Add VPN</th>
+<th>IPsec process and kernel policies</th>
+<th>Local site selector</th>
+<th>Traffic included</th>
+<th>Host participation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Native guest: direct guest tunnel (1)</td>
+<td>Guest network namespace</td>
+<td>That guest&#39;s bridge IPv4 <code>/32</code></td>
+<td>Guest&#39;s site traffic; first connected site also owns a separate full tunnel</td>
+<td>Host retains ordinary WAN routing</td>
+</tr>
+<tr>
+<td>Native guest: gateway for all MYKOS guests (2)</td>
+<td>Selected native Linux guest namespace</td>
+<td>Entire MYKOS bridge subnet</td>
+<td>Bridge guests, including VM wrappers, use one full-tunnel gateway</td>
+<td>Host internet joins only after full-tunnel verification</td>
+</tr>
+<tr>
+<td>Host: host only (1)</td>
+<td>Host network namespace</td>
+<td>Legacy fixed <code>192.168.222.0/24</code></td>
+<td>Matching site-selector traffic; no managed full-tunnel default</td>
+<td>Does not enroll the MYKOS private bridge</td>
+</tr>
+<tr>
+<td>Host: shared gateway for all guests and host (2)</td>
+<td>Host network namespace</td>
+<td>Entire MYKOS bridge subnet</td>
+<td>Guest forwarding through host IPsec and selected host output</td>
+<td>Conditional host full-tunnel diversion</td>
+</tr>
+</tbody></table>
+<p>Host-only&#39;s fixed selector and IKE IDs (<code>192.168.222.0</code>) are compatibility
+behavior, not automatic LAN discovery. It must match the site&#39;s actual routing
+and peer configuration. Do not assume it protects bridge guests or offers the
+shared modes&#39; DNS redirection and fail-closed guards. The shared selection permits
+one gateway profile and rejects mixing with other saved independent connections.
+Direct mode permits multiple remote sites and multiple guests per site, but saved
+selectors must be distinct and accepted by the remote peer.</p>
+<h3 id="direct-native-guest-traffic">Direct native guest traffic</h3>
+<p><a href="diagrams/vpn-direct.svg" title="Open full-size diagram"><img src="diagrams/vpn-direct.svg" alt="Direct native VPN: encryption and output guards are inside the guest namespace."></a><a href="diagrams/vpn-direct.svg">Open full-size diagram</a></p>
+<p><a href="diagrams/vpn-direct.mmd">Editable Mermaid source</a></p>
+<p>An application packet enters the guest&#39;s IPsec policy, is encrypted there, and
+crosses the Podman veth/private bridge as outer traffic. Normal bridge NAT carries
+that outer IKE/NAT-T transport to the WAN. The host does not become the guest&#39;s
+IPsec endpoint. UDP 500/4500 to saved numeric peers is exempt from the guest guard;
+the generated connection forces encapsulation. Return traffic traverses host NAT
+and is decrypted inside the same guest namespace.</p>
+<p>Every managed native connection has a site CHILD_SA and a separate
+<code>CONNECTION-mykos-default</code> CHILD_SA with remote selector <code>0.0.0.0/0</code>. The first
+successful site connection atomically claims <code>.mykos-first-tunnel</code>; its hook
+asynchronously starts that default CHILD_SA after returning to Libreswan. A site
+SA alone therefore does not prove internet access. The hook records establishment
+order in <code>.mykos-connected-order</code>. Rekeying retains ownership. Explicitly removing
+the owner promotes the earliest remaining established site. A temporary outage is
+not documented as automatic failover to another site: the owner marker remains
+and the guard stays installed for reconnect.</p>
+<p>Non-loopback UDP/TCP port 53 output is DNATed to <code>8.8.8.8</code> and follows the full
+tunnel. A local loopback DNS stub remains local; its upstream request is subject
+to the same rule. IPv6 output is rejected except loopback, since no IPv6 tunnel
+is configured. This is port-53 handling, not a claim that arbitrary encrypted
+DNS protocols are rewritten. Other outbound packets need IPsec policy or are
+rejected once the full-tunnel guard has been installed. Do not treat Add VPN&#39;s
+success message as proof that the first SA and guard are already established.</p>
+<h3 id="shared-native-gateway-traffic">Shared native gateway traffic</h3>
+<p><a href="diagrams/vpn-native-gateway.svg" title="Open full-size diagram"><img src="diagrams/vpn-native-gateway.svg" alt="Shared native gateway: host policy routes bridge ingress back to the selected guest; IPsec is inside that guest."></a><a href="diagrams/vpn-native-gateway.svg">Open full-size diagram</a></p>
+<p><a href="diagrams/vpn-native-gateway.mmd">Editable Mermaid source</a></p>
+<p>A sibling&#39;s IPv4 packet reaches the host bridge gateway. A source-, destination-
+and ingress-scoped policy rule selects a private routing table whose default is
+via the selected native gateway address on that bridge. A higher-priority rule
+keeps the gateway&#39;s own outer transport on the main routing table. Host forwarding
+and NAT exemptions preserve the protected bridge subnet instead of masquerading
+it before encryption. Inside the gateway namespace MYKOS enables IPv4 forwarding
+and installs policy-allow then reject rules. The gateway encrypts the packet;
+outer traffic returns through the bridge and normal WAN NAT. Decrypted replies
+return to the bridge guest.</p>
+<p>The gateway profile pins the original full container ID, bridge and IPv4 address.
+A replacement guest with a reused eight-digit ID is not silently trusted. If the
+container is missing/stopped, MYKOS keeps an unreachable default in its owned
+route table; an SA outage in a running gateway is blocked by its forwarding
+IPsec-policy guard. VM traffic includes the wrapper boundary: Windows/macOS/
+Ubuntu internal guest NAT reaches the wrapper, then the common Podman bridge.
+This does not turn the VM&#39;s internal NIC into a directly routed site address.</p>
+<p>Host bridge-ingress UDP/TCP port 53 is redirected to <code>8.8.8.8</code>. Redirected DNS is
+source-translated to the host bridge address so replies return through host
+conntrack and reverse DNAT, even when the native gateway and client are siblings.
+These DNS rules remain during outages, preventing bridge DNS from escaping through
+host WAN fallback. IPv6 bridge forwarding and bridge-local port-53 input are blocked.</p>
+<h3 id="host-shared-gateway-traffic">Host shared gateway traffic</h3>
+<p><a href="diagrams/vpn-host-shared.svg" title="Open full-size diagram"><img src="diagrams/vpn-host-shared.svg" alt="Host shared gateway: guest packets are encrypted in the host namespace, with conditional host output diversion."></a><a href="diagrams/vpn-host-shared.svg">Open full-size diagram</a></p>
+<p><a href="diagrams/vpn-host-shared.mmd">Editable Mermaid source</a></p>
+<p>There is no gateway container in this mode. The host Libreswan process and host
+kernel XFRM policies encrypt bridge traffic using the whole bridge subnet as local
+selector. Owned forwarding rules allow protected IPsec traffic and reject clear
+fallback. NAT exemptions preserve the inner source subnet. Marked bridge-local
+XFRM exceptions permit local requests and decrypted replies without treating
+clear WAN packets as authenticated tunnel traffic. Guest DNS uses the bridge
+redirection/return-NAT path described above.</p>
+<p>In <strong>both shared modes</strong>, host internet diversion requires an outbound full-tunnel
+policy whose selector matches the bridge subnet, whose ESP template targets the
+saved numeric peer, and whose request ID matches an actual ESP tunnel state.
+A UI green site link or an IKE SA alone is insufficient. The controller marks
+selected host output (<code>0x4d590000/0xffff0000</code>), uses the profile&#39;s route table, and
+SNATs sources outside the bridge subnet to its bridge address to match the VPN
+selector. Incoming management replies, outer UDP 500/4500 and ESP, loopback,
+link-local, multicast and connected networks have bypasses. Non-loopback port-53
+DNS is marked before connected-network exemptions and redirected to <code>8.8.8.8</code>.
+The host IPv6 guard blocks internet/DNS escape while diversion is active, retaining
+local and management-reply exceptions. The bridge reverse-path filter temporarily
+uses loose mode and its saved setting is restored on deactivation.</p>
+<p>When the full-tunnel policy/state disappears, reconciliation removes host output
+diversion so ordinary host internet uses WAN again. <strong>Guest protection remains.</strong>
+Detection follows Libreswan SA lifetime and a periodic controller; it is not an
+instant end-to-end health check. A stale local SA can still blackhole traffic.</p>
+<h3 id="host-only-traffic">Host-only traffic</h3>
+<p><a href="diagrams/vpn-host-only.svg" title="Open full-size diagram"><img src="diagrams/vpn-host-only.svg" alt="Host-only VPN: selector-matching host traffic enters a site tunnel; ordinary host internet keeps its normal route."></a><a href="diagrams/vpn-host-only.svg">Open full-size diagram</a></p>
+<p><a href="diagrams/vpn-host-only.mmd">Editable Mermaid source</a></p>
+<p>This compatibility path writes a host site connection without the full-tunnel
+hook or shared-gateway profile. The generated connection uses <code>left=%defaultroute</code>
+and the fixed local subnet above. Normal host DNS and nonmatching traffic keep
+ordinary routing. Ensure host IPsec is available/running and selector-compatible;
+this mode does not provide the shared controller&#39;s managed all-guest behavior.</p>
+<h3 id="prerequisites-and-peer-agreement">Prerequisites and peer agreement</h3>
+<p>Before an authorized setup, establish all of the following:</p>
+<ol>
+<li>A reachable IPv4 peer endpoint, nonoverlapping remote IPv4 site subnet, agreed
+PSK and IKE identities, and WAN permission for IKE/NAT-T. Shared mode requires
+the MYKOS private NAT bridge and a started native Linux gateway when guest-owned.</li>
+<li>Native guest VPN dependencies and the correct customer folder bind-mounted at
+<code>/etc/ipsec.d</code>. <code>vpn-preflight</code> checks exact mount identity and fixed required
+executables through the host, without running arbitrary guest code. Actual
+service preparation and Libreswan commands subsequently run inside the guest.</li>
+<li>Agreement on IKEv2, the generated proposals (<code>aes128-sha1-dh21</code>, ESP
+<code>aes128-sha1</code>, <code>pfs=no</code>), selectors and IKE IDs. Native direct local IDs derive
+from <code>ID.hostname</code>; shared-host IDs derive from hostname; remote IDs derive
+from the entered endpoint. Non-IP IDs are rendered with <code>@</code>. These are the
+released interoperability settings, not an assertion that every peer accepts them.</li>
+<li>Remote support for both the site and full-tunnel CHILD_SAs where applicable,
+return routing for the local <code>/32</code> or bridge subnet, and remote internet
+forwarding/NAT for <code>0.0.0.0/0</code>, including the selected DNS resolver.</li>
+<li>If using optional Meraki upload: organization permissions, a unique network
+match for the entered public endpoint, and peer settings compatible with MX
+19.1+ network binding/route-based fields. Enter the remote network as a canonical
+CIDR; a bare address receives <code>/24</code>. MYKOS is policy/XFRM based locally even
+though its Meraki request uses <code>isRouteBased</code> for native/shared-host peers.</li>
+</ol>
+<p>The interactive Add VPN path performs public-IP discovery using <code>ifconfig.me</code>.
+That is part of setup, not a required read-only diagnostic. Do not run Add VPN
+merely to inspect architecture. Local preflight precedes optional Meraki writes;
+a successful remote upload can still be followed by a later local setup failure.
+There is no distributed rollback transaction. Reconcile actual Dashboard peer
+state before any retry after an ambiguous response or partial setup.</p>
+<h3 id="persistence-and-reconnect-boundaries">Persistence and reconnect boundaries</h3>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Location and meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Native connection/PSK/hook/peer</td>
+<td>Host <code>pos/.ID</code>, mounted at guest <code>/etc/ipsec.d</code>; per-connection files, secrets mode 0600</td>
+</tr>
+<tr>
+<td>Host connection/PSK/hook/peer</td>
+<td><code>/etc/ipsec.d/mykos-*</code>; existing global includes preserved with private backups</td>
+</tr>
+<tr>
+<td>Default owner/order</td>
+<td><code>.mykos-first-tunnel</code>, <code>.mykos-connected-order</code> and locks in the owner&#39;s IPsec directory</td>
+</tr>
+<tr>
+<td>Shared profile</td>
+<td>Root-only <code>/var/lib/mykos/vpn-gateways/*.json</code>; owner, selectors, bridge, table, address, pinned identity</td>
+</tr>
+<tr>
+<td>Shared observations</td>
+<td><code>vpn-gateways/status</code>; cached result expires after 65 seconds</td>
+</tr>
+<tr>
+<td>Host-output recovery state</td>
+<td><code>vpn-gateways/host-output</code>; previous reverse-path setting and exact owned rules</td>
+</tr>
+</tbody></table>
+<p>Connections use <code>auto=start</code>, 30-second liveness checks and a 45-second retransmit
+timeout. Hooks keep numeric peer endpoints so reconnect does not need DNS outside
+the tunnel. DNS address changes are not automatically re-resolved: review/recreate
+an affected connection deliberately. Native prepare installs an <code>ExecStartPre</code> restore helper
+in the IPsec service drop-in to reapply an existing selected-owner guard. Do not delete
+owner files or disable guards as an outage workaround.</p>
+<p>Selecting a shared profile enables <code>mykos-vpn-gateway-guard.service</code> before
+<code>podman-restart.service</code> and <code>mykos-vpn-gateway.timer</code> (20 seconds after boot,
+then 30 seconds after each reconciliation finishes). The guard blocks configured
+guest forwarding before automatic restart. Installation alone does not select a
+gateway or enable these optional units. Profiles do not establish that remote
+egress works; always assess freshness and the full data path.</p>
+<h3 id="safe-operational-checks">Safe operational checks</h3>
+<p>The following host commands inspect state. Substitute the intended <strong>native</strong>
+guest ID for <code>12345678</code>; do not use a VM wrapper as a native IPsec namespace.
+Do not copy PSKs or raw configuration files into tickets.</p>
+<pre><code class="language-bash">sudo rpm -q mykos
+sudo /usr/local/sbin/mykos-vpn-gateway --help
+sudo /usr/local/sbin/mykos-vpn-gateway list
+sudo systemctl status mykos-vpn-gateway.timer mykos-vpn-gateway-guard.service --no-pager
+sudo journalctl -u mykos-vpn-gateway.service --since &#39;-15 minutes&#39; --no-pager
+sudo podman network inspect mykos-lan
+sudo ip -4 rule show
+sudo ip -4 route show table all
+# Host-owned IPsec; nokeys is essential for kernel state inspection:
+sudo ipsec status
+sudo ip xfrm policy list
+sudo ip xfrm state list nokeys
+# Native guest dependency/mount preflight and collected VPN summary:
+sudo /usr/local/sbin/mykos-linux vpn-preflight 12345678
+sudo /usr/local/sbin/mykos-linux vpn 12345678
+</code></pre>
+<p><code>list</code> returns shared profiles and cached observations, not independent connections.
+An empty list with disabled optional units is normal when no shared gateway is
+selected. Use host IPsec status or the intended guest&#39;s VPN summary for other modes.
+For a native namespace&#39;s kernel state, an administrator can resolve its exact
+running container PID via <code>podman inspect</code> and use <code>nsenter --target PID --net --</code>
+with <code>ip xfrm policy list</code> and <code>ip xfrm state list nokeys</code>. Reconfirm identity/PID
+immediately; the controller itself pins namespace handles to avoid PID reuse.
+Do not use <code>ip xfrm state list</code> without <code>nokeys</code>.</p>
+<p>After setup or recovery, compare site and default CHILD_SAs, policy selectors,
+profile identity, rule/table ownership and status timestamps. Proving remote DNS,
+site reachability and internet egress requires separately authorized traffic from
+the intended guest; a host probe cannot prove a guest&#39;s path. A reported SA is
+not evidence of remote forwarding, DNS success or application availability.</p>
+<h3 id="failure-and-recovery-procedure">Failure and recovery procedure</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Read-only evidence</th>
+<th>Recovery decision</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Preflight rejected</td>
+<td>Exact terminal error, mount/label/dependency checks, mode conflict</td>
+<td>Correct the prerequisite in a planned change; preserve saved tunnels and remote peers</td>
+</tr>
+<tr>
+<td>Site SA up, internet/DNS down</td>
+<td>Default CHILD_SA, XFRM selector and ESP state; remote full-tunnel/NAT agreement</td>
+<td>Repair the agreed full-tunnel path; retain guards</td>
+</tr>
+<tr>
+<td>Gateway stopped or identity changed</td>
+<td>Podman state, profile&#39;s full container ID/IP, unreachable owned route</td>
+<td>Recover the original gateway; deliberately remove/reconfigure the profile before replacing it</td>
+</tr>
+<tr>
+<td>Host WAN returns but guests blocked</td>
+<td>Full-tunnel state absent, controller status and logs</td>
+<td>Expected outage split; recover tunnel and check remote forwarding</td>
+</tr>
+<tr>
+<td>Ownership conflict</td>
+<td>Exact controller error plus route table/rule/firewall observations</td>
+<td>Reconcile competing ownership before retry; helper refuses to overwrite foreign rules</td>
+</tr>
+<tr>
+<td>Remote upload uncertain</td>
+<td>Dashboard&#39;s current peer list and exact API error</td>
+<td>Resolve remote outcome first; never retry a whole-organization replacement blindly</td>
+</tr>
+<tr>
+<td>Failure after local files were saved</td>
+<td>Per-owner connection names, loaded SAs, shared profile and terminal error</td>
+<td>Treat as partial configuration; review all layers before approved removal/retry</td>
+</tr>
+</tbody></table>
+<p>Capture the exact error and intended owner/connection first. Recheck local state
+before any recovery command. <code>sync</code>, <code>guard</code>, <code>configure</code>, <code>configure-host</code>,
+<code>remove</code> and <code>deactivate</code> are <strong>mutating</strong>, even though some print JSON; they are
+not inspection commands. The existing Add Gateway failure remains deferred and
+was not investigated by this documentation review.</p>
+<p>After the diagnosed prerequisite/peer problem is resolved, an authorized operator
+can retry negotiation for the <strong>existing saved connection</strong>, avoiding a service-wide
+restart that could interrupt unrelated tunnels. For example:</p>
+<pre><code class="language-bash"># MUTATING recovery examples — choose one owner and its exact saved connection.
+# Host owner (saved host names have the mykos- prefix):
+sudo ipsec auto --up mykos-CONNECTION
+# Native owner: use the actual existing ID.hostname and connection name:
+sudo podman exec ID.hostname ipsec auto --asynchronous --up CONNECTION
+# Reconcile explicitly configured shared profiles after recovery:
+sudo /usr/local/sbin/mykos-vpn-gateway sync
+</code></pre>
+<p>These commands were not run for this review. Do not use placeholder names or
+blindly retry after uncertain Meraki updates. Confirm the site and selected
+default CHILD_SAs, controller freshness and expected rules afterward. If identity
+or table ownership is disputed, stop and reconcile it before changing routes.</p>
+<h3 id="deliberate-removal">Deliberate removal</h3>
+<p>Remove through the matching authenticated host or guest <strong>Remove VPN</strong> action,
+select the saved connection and confirm its exact name. The workflow releases its
+shared profile/owned host routing if present, removes the loaded connection and
+hook/default ownership, then deletes that connection&#39;s saved files. Removing the
+first direct connection can promote another established site; removing the last
+managed native connection releases its output/DNS hooks. A stopped native guest
+must be recovered before its interactive remove workflow can run. Do not force
+remove/recreate a shared gateway guest: the delete guard requires removing its
+profile first.</p>
+<p>Profile removal releases guest protection for that profile and returns host
+output to ordinary routing; plan this loss of VPN protection before confirming.
+Removing only a shared profile is not equivalent to removing the saved IPsec
+connection. Local removal does <strong>not</strong> delete the Meraki peer: coordinate remote
+cleanup separately and preserve unrelated organization peers. The last profile
+removal disables the optional timer/boot guard. Uninstall deactivates owned
+network changes while retaining profiles; explicit container-state purge removes
+them. Neither uninstall nor a documentation update is a VPN recovery procedure.</p>
+<h3 id="implementation-evidence-and-validation-limits">Implementation evidence and validation limits</h3>
+<p>The mode prompts and activation/removal order are in <code>pos/pos</code>; connection rendering
+and host-only behavior in <code>pos/host-vpn</code>; ownership/DNS/reconnect guards in
+<code>pos/vpn-updown</code>; mount checks in <code>services/helpers/mykos_linux.py</code>; shared
+routing and lifecycle in <code>mykos_vpn_gateway.py</code>; host marking/SA checks in
+<code>mykos_vpn_host.py</code>; startup protection in <code>services/systemd/mykos-vpn-gateway*</code>.
+These paths are relative to the released source tree, not the development PXE work.</p>
+<p>This review checked implementation and safe installed CLI/state only. Real Meraki
+negotiation, remote internet egress, DNS, reconnection after peer loss, and every
+site-specific host-only selector were not re-tested. The current production
+shared-profile list was empty; that observation cannot validate an active gateway.</p>
+<footer>MYKOS documentation</footer></main></html>

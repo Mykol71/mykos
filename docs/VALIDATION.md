@@ -1,5 +1,12 @@
 # Validation record and remaining integration work
 
+[Documentation index](README.md)
+
+## Historical source validation — 23 October 2026
+
+The following historical record describes the original source/staging delivery,
+not the current deployment status.
+
 Validated on macOS on 23 October 2026. No real systemd service, OS user, customer
 account, deployed API key, container, VPN, firewall, or reverse proxy was changed.
 The source directory contains no Git metadata, so this delivery has no commit or
@@ -80,7 +87,7 @@ service account only when its UID matches the original archived databases.
 Migration installs Python dependencies without rerunning the system package plan;
 optional mail clients are excluded from the required system package list.
 
-## Linux integration still required
+## Historical Linux integration checklist
 
 This is a source/staging validation, not a claim that a production deployment ran.
 Before activation, validate on an approved compatible Linux staging host:
@@ -102,3 +109,44 @@ based on the app's protocol and existing POS commands; their integration behavio
 must be tested. The global installer does not fabricate RTI software, backups,
 images, subscription entitlements, networks, Meraki configuration, TLS certificates,
 or in-container Checkit. Legacy billing/TSR/blacklist jobs remain manual and unscheduled.
+
+## Released baseline and this documentation review — 28 October 2026
+
+The reviewed baseline is **1.5.20261024-146**, source archive SHA-256
+`912a4ab3b98cce44b8d44ada7521215ac44cc6a03604a8d7a05e75eb43664cbb`.
+The installed production RPM was queried directly. Both production documentation
+folders were fetched, compared by relative path and SHA-256, and preserved before
+editing; their 41 files matched the clean released source. Historical Word and
+`KEY_ISSUES.md` remain byte-for-byte unchanged. The Markdown administrator reference
+also remains a historical edition; current task guides take precedence.
+
+Source review covered VPN prompts/configuration/hooks, host and guest namespace
+boundaries, shared policy/firewall ownership, DNS, SA detection, reconnect/removal,
+backup/private identity mounts, PAM/cgroup fixes, generated kickstarts, console
+capture/reset semantics, setup/bootstrap, RPM target selection and cookie behavior.
+The unpublished PXE development tree was excluded.
+
+Read-only production observations: release146 installed, shared gateway list empty,
+optional gateway timer/guard disabled, main WAN and private bridge routes present,
+no MYKOS policy-routing rules selected. Helper `--help` confirmed documented action
+names. No Add Gateway reproduction, Meraki API write, VPN/routing change, guest
+restart, snapshot operation, identity change or customer-data test was performed.
+An empty configured-gateway list does not validate active gateway traffic.
+
+Prior release validation evidence records fresh RH9/RH10 signed package installs,
+IP-only application startup and HTTP login/session checks on isolated RHEL UBI
+init systems. That evidence is not full bare-metal virtualization, NIC, CRIU or
+VM lifecycle validation. The user's vanilla RH9 server test is separate and not
+claimed complete here. Site-specific real Meraki negotiation, remote DNS/internet
+forwarding, host-only selectors and live reconnect/fail-closed behavior were not
+re-tested in this review. Local SAs are insufficient to prove remote egress.
+
+The documentation build validates portable local links/anchors, regenerates SVGs
+and light HTML from maintained inputs, and can check generated-file drift. Detailed
+commands/results belong with the review's verification artifact; do not mistake
+historical test counts above for checks rerun by this documentation task.
+
+During final review, the user separately removed the licensing page and index
+entry in production and the local drafts. Both production copies were fetched
+again and matched after that removal (39 files). This revision preserves that
+operator change; the initial 41-file snapshot remains archived as evidence.

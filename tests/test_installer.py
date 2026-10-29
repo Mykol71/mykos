@@ -27,6 +27,34 @@ def test_dry_run_has_no_side_effects(tmp_path):
     run(root,'install','--dry-run','--desktop-network','0.0.0.0/0',ok=False)
     assert not root.exists()
 
+
+def test_http_ip_origin_and_explicit_https_switch(tmp_path):
+    root=tmp_path.resolve()/'root'
+    run(root,'install','--public-origin','http://192.168.22.10')
+    env=root/'etc/mykos/web.env'
+    assert env.read_text()=='MYKOS_PUBLIC_ORIGIN=http://192.168.22.10\nMYKOS_SECURE_COOKIE=0\n'
+    run(root,'install','--public-origin','https://example.com','--set-public-origin')
+    assert env.read_text()=='MYKOS_PUBLIC_ORIGIN=https://example.com\nMYKOS_SECURE_COOKIE=1\n'
+    run(tmp_path.resolve()/'bad','install','--public-origin','http://example.com',ok=False)
+    run(tmp_path.resolve()/'staged','install','--configure-https',ok=False)
+
+
+def test_firstboot_venv_is_readable_by_service_group_without_touching_link_targets(tmp_path,monkeypatch):
+    import importlib.machinery,importlib.util,os
+    loader=importlib.machinery.SourceFileLoader('installer_venv_test',str(INSTALL))
+    spec=importlib.util.spec_from_loader(loader.name,loader);module=importlib.util.module_from_spec(spec);loader.exec_module(module)
+    root=tmp_path/'venv';(root/'bin').mkdir(parents=True,mode=0o700)
+    script=root/'bin/uvicorn';script.write_text('entrypoint');script.chmod(0o700)
+    data=root/'module.py';data.write_text('module');data.chmod(0o600)
+    external=tmp_path/'python';external.write_text('system interpreter');external.chmod(0o755)
+    (root/'bin/python').symlink_to(external)
+    owners=[];monkeypatch.setattr(module.os,'chown',lambda *args:owners.append(args))
+    module.readable_venv(root,123)
+    assert (root/'bin').stat().st_mode&0o777==0o750
+    assert script.stat().st_mode&0o777==0o750 and data.stat().st_mode&0o777==0o640
+    assert external.stat().st_mode&0o777==0o755
+    assert not any(p==root/'bin/python' or p==external for p,*rest in owners)
+
 def test_install_update_backup_restore_and_remove(tmp_path):
     root=tmp_path.resolve()/'root'
     run(root,'install')

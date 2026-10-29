@@ -1,0 +1,30 @@
+flowchart TD
+ subgraph clients["Client environments"]
+  vm["VM internal OS / Windows / macOS / Ubuntu"]
+  client["Native sibling / VM wrapper / Podman private bridge address"]
+ end
+ subgraph hostns["Host network namespace"]
+  host["Host bridge namespace / Ingress policy route; DNS DNAT + return SNAT"]
+  wan["Host WAN NAT / Gateway outer transport bypasses policy diversion"]
+  output["Host internet output / Mark + bridge-source SNAT only with verified full SA"]
+  down["Gateway unavailable / Guest route unreachable; host returns to WAN"]
+ end
+ subgraph gatewayns["Selected native gateway namespace"]
+  gateway["Selected native gateway namespace / Forward guard + Libreswan / XFRM"]
+ end
+ subgraph remote["Remote network"]
+  peer["Remote VPN peer / Site + full tunnel; remote egress NAT"]
+  site["Remote site / internet / Peer selectors, return route, DNS reachability and egress NAT"]
+ end
+ vm -->|"Internal guest NAT"| client
+ client -->|"Protected IPv4 + port-53 DNS"| host
+ host -->|"Via pinned gateway on same bridge"| gateway
+ gateway -->|"Encrypted outer packets"| wan
+ wan -->|"IKE / NAT-T"| peer
+ output -->|"Conditional policy table"| host
+ host -.->|"Stopped / identity failure"| down
+ peer -->|"Decrypt and route"| site
+ site -.->|"Return route / NAT"| peer
+ peer -.->|"Encrypted reply"| gateway
+ gateway -.->|"Decrypt; return SNAT / policy path"| host
+ host -.->|"Reply to application"| client

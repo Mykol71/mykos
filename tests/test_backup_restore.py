@@ -95,6 +95,7 @@ def test_restore_is_prepared_before_start_and_failure_removes_only_created_guest
     module.stage('01234567','yes','localhost/rh9')
     create=next(x for x in events if isinstance(x,list) and x[1]=='create')
     assert '--no-hosts' in create and '-d' not in create
+    assert '/sys/fs/cgroup:/sys/fs/cgroup:ro' in create
     assert sum('destination=/etc/NetworkManager/conf.d/90-mykos-podman.conf,' in str(arg) for arg in create)==1
     assert events.index('prepare')<events.index([module.PODMAN,'start','cid'])
     assert not any('rm' in x for x in events)
@@ -133,3 +134,22 @@ def test_private_files_live_under_existing_instance_storage(customer,tmp_path):
     assert 'destination=/etc/machine-id,ro=false' in ' '.join(args)
     assert root.stat().st_mode & 0o777==0o700
     with pytest.raises(FileExistsError):backup.private_mounts(vpn)
+
+
+@pytest.mark.parametrize('customer_limits',[None,'root soft nofile 4096\n'])
+def test_restore_preserves_customer_limits_or_image_pam_defaults(customer,tmp_path,monkeypatch,customer_limits):
+    account,cfg=customer;root=tmp_path/'guest'
+    files(root,data('',''))
+    defaults='# Image PAM defaults\n* soft nofile 1024\n'
+    (root/'etc/security').mkdir();(root/'etc/security/limits.conf').write_text(defaults)
+    if customer_limits is not None:
+        (account/'etc/security').mkdir();(account/'etc/security/limits.conf').write_text(customer_limits)
+    before={str(p.relative_to(account)):p.read_bytes() for p in account.rglob('*') if p.is_file()}
+    monkeypatch.setattr(backup.os,'chown',lambda *args:None)
+    monkeypatch.setattr(backup.identity,'apply',lambda *args:{})
+    backup.prepare('01234567',cfg,root,'01234567.test.example')
+    vpn=tmp_path/'vpn';vpn.mkdir();private,args=backup.private_mounts(vpn)
+    backup.export_private(root,private)
+    assert (private/'security/limits.conf').read_text()==(defaults if customer_limits is None else customer_limits)
+    assert 'destination=/etc/security/limits.conf,ro=false' in ' '.join(args)
+    assert before=={str(p.relative_to(account)):p.read_bytes() for p in account.rglob('*') if p.is_file()}

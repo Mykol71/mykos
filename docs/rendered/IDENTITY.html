@@ -1,0 +1,160 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Users, passwords, roles, and API keys</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="users-passwords-roles-and-api-keys">Users, passwords, roles, and API keys</h1>
+<p><a href="README.html">Documentation index</a></p>
+<p>Browser accounts, API keys, and backup SSH accounts are three independent identity
+systems. Creating one does not create the others. All examples below run on the
+installed Linux host. Passwords are prompted on the terminal; do not pass them in
+command arguments. The root wrappers switch to the <code>mykosweb</code> account internally.</p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#browser-accounts">Browser accounts</a><ul>
+<li><a href="#upgrading-an-existing-installation">Upgrading an existing installation</a></li>
+</ul>
+</li>
+<li><a href="#api-v2-keys">API v2 keys</a></li>
+<li><a href="#backup-ssh-keys">Backup SSH keys</a></li>
+<li><a href="#released-permission-boundary">Released permission boundary</a></li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="browser-accounts">Browser accounts</h2>
+<pre><code class="language-sh">sudo /usr/local/sbin/mykos-users create alice --role admin
+sudo /usr/local/sbin/mykos-users create observer --role user
+sudo /usr/local/sbin/mykos-users list
+sudo /usr/local/sbin/mykos-users passwd alice
+sudo /usr/local/sbin/mykos-users role observer admin
+sudo /usr/local/sbin/mykos-users role observer user
+sudo /usr/local/sbin/mykos-users revoke-sessions alice
+sudo /usr/local/sbin/mykos-users delete observer
+</code></pre>
+<p>Usernames are 1–64 ASCII letters, digits, underscores, or hyphens. Newly set
+passwords must contain at least 12 characters and match the confirmation. Passwords
+are salted with random 16-byte salts and hashed using scrypt (<code>n=16384</code>, <code>r=8</code>,
+<code>p=1</code>). The database stores hashes, not plaintext passwords. Sessions last eight
+hours; only SHA-256 session-token digests are stored. HttpOnly and SameSite=Strict cookies are used. The Secure flag follows
+<code>MYKOS_SECURE_COOKIE</code>: default IP-only HTTP setup sets it to <code>0</code>, while HTTPS
+setup sets it to <code>1</code>. Use the configured scheme/origin; a Secure cookie cannot
+be returned over plain HTTP.</p>
+<p><code>create</code> refuses existing users. Use <code>passwd</code> to reset a password while keeping the
+role. Password resets, role changes, deletion, and explicit revocation delete that
+user&#39;s existing sessions immediately. Existing users must log in again. Role changes
+apply to subsequent requests, but an already connected terminal is not reauthorized
+on every byte; close its session/service if immediate terminal disconnection is
+needed. Deleting the final admin is permitted: a root operator can create another.</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th><code>user</code></th>
+<th><code>admin</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dashboard, snapshots, node details</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Container list, recent logs, processes, IPsec status</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Execute Checkit diagnostic</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Stage/check job status/stop POS</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Browser terminal (when host enables it)</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>List backup accounts and repositories</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Manage backup SSH accounts/keys/subscribers and repositories</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Create browser accounts or API keys through HTTP</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody></table>
+<p>Local root or <code>mykosweb</code> access is required for browser/API identity management; no HTTP management
+endpoint is provided. Administrators have operational privileges, not OS account
+management rights. The legacy <code>/api/admin/containers</code> path name does not mean all
+its read-only operations are restricted to administrators.</p>
+<h3 id="upgrading-an-existing-installation">Upgrading an existing installation</h3>
+<p>The <code>users</code> table receives a <code>role</code> column without replacing password hashes or
+other identity files. Existing accounts default to <code>user</code>. The former name-based
+allowlist (<code>admin</code>, <code>kpugh</code>, <code>mgreen</code>) is intentionally not a source of new privileges.
+Before restarting the updated web service, explicitly promote intended operators:</p>
+<pre><code class="language-sh">sudo /usr/local/sbin/mykos-users list
+sudo /usr/local/sbin/mykos-users role YOUR_EXISTING_OPERATOR admin
+</code></pre>
+<p>The old <code>/opt/mykos-web/create-admin.sh NAME</code> entry point creates a <strong>new</strong> admin
+through the same manager. It does not reset existing accounts; use <code>mykos-users passwd</code>.
+No restart is needed for ordinary password or role changes.</p>
+<h2 id="api-v2-keys">API v2 keys</h2>
+<pre><code class="language-sh">sudo /usr/local/sbin/mykos-api-keys create monitoring read
+sudo /usr/local/sbin/mykos-api-keys create automation admin
+sudo /usr/local/sbin/mykos-api-keys list
+sudo /usr/local/sbin/mykos-api-keys revoke KEY_ID
+</code></pre>
+<p>Labels accept 1–64 ASCII letters, digits, periods, underscores, and hyphens. Scopes
+are exactly <code>read</code> or <code>admin</code>. Creation prints the complete <code>mykos2_...</code> key <strong>once</strong>.
+Keys migrated from an earlier project name retain their exact values and remain valid with the new API URL and header.
+Save newly created keys in a restricted secrets store immediately. Listing returns ID, label, scope,
+creation time, and revocation time, never the secret or its digest. Times are Unix
+seconds. Only SHA-256 key digests are stored in <code>data/api_keys.db</code>.</p>
+<p>A <code>read</code> key can inspect monitoring snapshots, logs, processes, IPsec, and inventory.
+An <code>admin</code> key also permits Checkit, stage eligibility/status, staging, and stopping.
+Keys are global to this host&#39;s API; there are no per-shop restrictions. Keys have
+no automatic expiration. API v2 operations accept only API keys; browser sessions
+do not authorize them. API keys do not authorize browser login or browser-session
+terminals. Admin keys can manage backup accounts/SSH keys/subscribers and repos,
+retrieve backed-up client keys, and open the separate API v2 terminal (when the
+host enables it). Read keys can inspect Host metrics and Backup/Repos inventories.</p>
+<p>Rotation is create–switch–verify–revoke:</p>
+<ol>
+<li>Create a replacement with the same required scope and a new label.</li>
+<li>Store it and update consumers without logging the secret.</li>
+<li>Exercise an intended read request (and authorized job behavior if required).</li>
+<li>List keys, find the old key&#39;s ID, and revoke it.</li>
+<li>Confirm the old key returns HTTP 401. Revocation affects subsequent checks.</li>
+</ol>
+<p>There is no reveal, un-revoke, or in-place secret change. Create a replacement after
+loss or exposure. Revoking a key does not cancel an already running staging job.
+Keep separate keys for integrations so revocation affects only the intended consumer.</p>
+<p>The older <code>/api/monitor/*</code> API uses a separate bearer token in <code>data/api-token</code>. It is
+retained for compatibility but fresh installations do not generate this token. Prefer
+API v2. If an existing integration requires it, create a random restricted token file
+as <code>mykosweb</code>, update that consumer, and replace the file to rotate it. Do not copy the
+historical archive&#39;s token. Legacy tokens have read-only access to monitor endpoints.</p>
+<h2 id="backup-ssh-keys">Backup SSH keys</h2>
+<p>Use <code>mykos</code> → Backup to create an account and install its client public key. This is
+separate from API keys. <code>change_account_key</code> replaces its authorized key; it does not
+rotate API credentials. The legacy <code>get_cloud_key</code> script retrieves backed-up private
+SSH key material into <code>/home/tfsupport/keys</code>; its claimed nightly cleanup is not
+configured by this installer. See the script catalog before using it.</p>
+<p>Identity backups need explicit <code>backup --include-data</code>; store them encrypted off-host.
+Restoring one can replace passwords, roles, sessions, and revocations. Ordinary
+source installs preserve identity databases and never import the original archive.</p>
+<h2 id="released-permission-boundary">Released permission boundary</h2>
+<p>The reviewed release exposes browser roles <code>user</code>/<code>admin</code> and API scopes
+<code>read</code>/<code>admin</code>. POS labels such as RTI/Dove and saved map metadata do not establish
+application-specific access enforcement. The proposed multi-role permission grid,
+MYKOS-to-MYKOS peer workflow and configurable application alert fields are future
+work, not documented released procedures. Keep browser credentials, API keys,
+backup SSH keys, guest accounts and VPN PSKs separate during backup and rotation.</p>
+<footer>MYKOS documentation</footer></main></html>

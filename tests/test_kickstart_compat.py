@@ -2,7 +2,7 @@
 from pathlib import Path
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'pos'))
-from prepare_ks import modernize,for_builder
+from prepare_ks import modernize,for_builder,container_build
 
 
 def test_update_preserves_custom_guest_changes_and_post_sections():
@@ -42,3 +42,17 @@ def test_unsupported_weak_dependencies_are_not_silently_dropped():
     import pytest
     with pytest.raises(ValueError,match='cannot exclude weak dependencies'):
         for_builder('%packages --exclude-weakdeps\n%end\n',False,None)
+
+
+def test_generated_container_build_excludes_hardware_and_host_login_marker():
+    source='%packages\n@system-tools\nbash\n%end\n%post\nsystemd-tmpfiles --create --boot\necho operator-setting\n%end\n'
+    result=container_build(source)
+    assert '@system-tools\nbash\n-linux-firmware\n-*-firmware\n-microcode_ctl\n%end' in result
+    assert 'systemd-tmpfiles --create --boot --exclude-prefix=/run/nologin --exclude-prefix=/var/run/nologin\n' in result
+    assert 'echo operator-setting\n%end' in result
+    assert container_build(result)==result
+
+
+def test_nonboot_tmpfiles_and_other_sections_stay_intact():
+    source='%post\nsystemd-tmpfiles --create\necho systemd-tmpfiles --create --boot\n%end\n'
+    assert container_build(source)==source

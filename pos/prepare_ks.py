@@ -69,11 +69,33 @@ print(json.dumps({'timesource': 'timesource' in makeVersion().commands, 'weakdep
     return data
 
 
+def container_build(text):
+    """Apply container-only build rules to a copy, preserving operator sources."""
+    def packages(match):
+        body=match[2]
+        # Containers use the host kernel and hardware; these packages can add
+        # gigabytes through package-group defaults or weak dependencies.
+        for exclusion in ('-linux-firmware','-*-firmware','-microcode_ctl'):
+            if exclusion not in body.splitlines():body+=exclusion+'\n'
+        return match[1]+body+match[3]
+    text=re.sub(r'(^%packages\b[^\n]*\n)(.*?)(^%end\b)',packages,text,flags=re.M|re.S)
+    def tmpfiles(match):
+        line=match[0]
+        if '--boot' not in line.split():return line
+        # Anaconda binds the builder's /run into its installation root. Never
+        # let an image's boot-only tmpfiles rule block logins on the builder.
+        for prefix in ('/run/nologin','/var/run/nologin'):
+            option='--exclude-prefix='+prefix
+            if option not in line.split():line+=' '+option
+        return line
+    return re.sub(r'^[ \t]*systemd-tmpfiles[ \t]+[^\n]*$',tmpfiles,text,flags=re.M)
+
+
 
 def prepare(source,destination):
     source,destination=Path(source),Path(destination)
     if source.is_symlink() or destination.is_symlink(): raise ValueError('Symlink kickstart rejected')
-    data=for_builder(source.read_text(),**builder_capabilities())
+    data=for_builder(container_build(source.read_text()),**builder_capabilities())
     fd,name=tempfile.mkstemp(prefix='.mykos-ks-',dir=destination.parent)
     try:
         with os.fdopen(fd,'w') as handle:handle.write(data)

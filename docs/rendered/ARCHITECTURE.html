@@ -1,0 +1,281 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Architecture and deployed paths</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="architecture-and-deployed-paths">Architecture and deployed paths</h1>
+<p><a href="README.html">Documentation index</a></p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#os-inventory-panes">OS inventory panes</a></li>
+<li><a href="#private-pane-notes-and-shared-customer-notes">Private pane notes and shared customer notes</a></li>
+<li><a href="#host-performance-history">Host performance history</a></li>
+<li><a href="#components-and-trust-boundaries">Components and trust boundaries</a></li>
+<li><a href="#files-and-owners">Files and owners</a></li>
+<li><a href="#systemd-inventory">systemd inventory</a></li>
+<li><a href="#staging-workflow">Staging workflow</a></li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="os-inventory-panes">OS inventory panes</h2>
+<p>The dashboard groups available images and ID-specific containers by OS family,
+including native RedHat, Rocky Linux, AlmaLinux, Oracle Linux, CentOS Stream,
+Fedora and SQL Server, plus Windows, Windows Server, Ubuntu and macOS VMs.
+The stage-images helper accepts running supported native generic bases and ready
+captured VM images; stopped unknown native bases are not treated as available.
+Existing containers remain associated with their collected OS metadata. Footer
+leaf previews can display disabled sample choices without creating an image or
+container. Preview visibility grants no operational permission.</p>
+<p>Native containers share the host kernel. Desktop images use QEMU through their
+Podman wrappers, with private disks and paired RAM/device startup captures.
+VM-backed Ubuntu VPN operations use its private guest agent, not the wrapper&#39;s
+shell. Windows/macOS do not expose direct native VPN controls; their wrapper
+traffic can participate in an explicitly selected shared gateway. See
+<a href="NETWORKING.html">networking</a> and <a href="IMAGE_BUILDS.html">image lifecycle</a>.</p>
+<h2 id="private-pane-notes-and-shared-customer-notes">Private pane notes and shared customer notes</h2>
+<p>Pane change-request notes are private to the authenticated <code>mgreen</code> browser
+session. Both browser and v2 notes routes require that named session; API keys
+identify scopes and cannot prove note ownership. Writes require the configured
+Origin and current revision; stale revisions return 409. These notes are limited
+to 20,000 characters and stored in <code>pane_notes</code> in the identity database. The
+installer clears this disposable change-request table on update. Separate
+<code>personal_notes</code> remain private and preserved, and are excluded from automated
+change-request scans.</p>
+<p>Shared customer-ID notes use <code>GET/PUT /mykos/api/web/id-notes/{id}</code> and the
+<code>shared_id_notes</code> table. Every signed-in user, including a read-only dashboard
+user, can edit them. Writes require Origin and revision; responses identify the
+last editor. They belong to an eight-digit ID and survive updates and container
+recreation. The release does not apply the proposed RTI/Dove role matrix to these
+routes; do not infer per-POS authorization from map labels or pane visibility.</p>
+<h2 id="host-performance-history">Host performance history</h2>
+<p>The dashboard plots six colored series (CPU, Memory, Load, Disk, Containers, and
+VPNs) across a five-minute window. The first
+reading starts in the middle, and readings advance to the right as time elapses.
+After two and a half minutes the graph scrolls to retain the most recent five minutes.
+Host resource readings refresh every three seconds, independently of the heavier
+inventory polling. The timeline uses animation frames capped at 20 redraws per
+second while visible. New line readings ease into place over one second; recorded
+samples, tooltips, count bars and alerts retain their actual values. Reduced-motion
+preferences disable easing and limit timeline redraws to once per second.
+Dashboard reloads share the same sampling limit, so they cannot add extra host polls.
+Only one host-metrics request runs at a time; requests time out after five seconds.
+History is collected independently of an open browser and retained for 30 minutes
+in the host SQLite history store. Reloading or logging out does not clear it;
+no synthetic readings are backfilled before collection began. CPU, memory and root disk use percentage values.
+Load is normalized by CPU count. Containers and VPNs use downward bars from the
+100% line: all running/up reaches 50%, half reaches 75%, and none reaches 100%.
+Actual counts remain in the legend. No bar is drawn when there are no eligible
+configured resources or their totals are unavailable. Graph denominators come
+from the installed <code>/usr/local/share/mykos/pos</code> folder: top-level
+<code>.[eight-digit shopcode].container</code> regular files for Containers, and all regular
+<code>*.conn.conf</code> files recursively for VPNs. Symlink files and directories are ignored.
+The root node collector publishes these counts in <code>status.json</code>; host metrics
+exposes them as <code>graph_totals</code> while the collector snapshot is at most 120 seconds
+old. Neither inventory nor pane visibility uses these file totals. Running/up
+numerators retain their existing container-status source (VPN up counts containers
+with an up VPN, not individual established tunnels).
+CPU, Memory, Load, and Disk remain line series.
+Labels toggle individual lines, and pointer or keyboard inspection shows samples.</p>
+<p>CPU, memory, disk and normalized load receive amber emphasis at 75% and red at
+90%, including legend highlights, point rings and a textual status message. Healthy
+100% availability counts do not trigger resource alerts. Gaps and unavailable
+readings remain visible instead of being interpolated across missing polls.
+Chart readings expire after 25 seconds. Backups and Repos remain in their own
+management panes and are excluded from the performance chart.</p>
+<p>The chart consumes the existing browser endpoints. API clients can retrieve the
+same current readings through <code>/mykos/api/v2/host/metrics</code>, <code>/backups</code>, <code>/repos</code>
+and <code>/nodes</code> under the API v2 prefix. <code>/host/history</code> exposes the retained
+30-minute history through read/admin API keys.</p>
+<p>The host row below the graph uses the container row&#39;s typography, columns and icon
+sizes. Its Host field is the hostname. Version is the host OS version, IP is the host&#39;s
+internal IPv4, memory/uptime use host metrics, and VPN status comes from the root
+collector&#39;s host <code>ipsec status</code> check. The hostname opens host details, memory opens host
+processes, VPN opens host IPsec status, and the green log icon opens the host
+journal. The blue terminal opens <code>su - root</code> on the host and retains the existing
+admin/session/Origin/terminal-enabled checks. The red reboot icon requires a user
+confirmation and administrator authorization, then a helper exact-hostname check
+before scheduling reboot after five seconds. Reboot and terminal tests use mocks;
+verification never reboots the host. These host actions have API v2 equivalents.</p>
+<p>The footer&#39;s green leaf link previews the EL OS panes (RedHat, Rocky Linux,
+AlmaLinux, Oracle Linux and CentOS Stream) and utility panes, including their
+navigation links. Fedora, Ubuntu, Windows, Windows Server, macOS and SQL Server
+retain support and normal visibility when images, builds or containers are
+available; the leaf does not reveal their empty preview panes. The preference is
+stored locally in the browser; turning it off restores automatic visibility.
+It does not change permissions or enable staging when images are unavailable.
+Empty preview panes show disabled example choices and two labeled sample rows.
+Samples exist only in the browser, never enter inventory/graph/API counts, and
+disappear when real rows arrive or the preview is turned off.</p>
+<p>Vendor pane icons use recognizable brand silhouettes in the dashboard&#39;s blue.
+Red Hat, Ubuntu and Apple SVG outlines are inlined from the Simple Icons project
+(CC0): <a href="https://github.com/simple-icons/simple-icons/tree/develop/icons">https://github.com/simple-icons/simple-icons/tree/develop/icons</a>. Windows
+uses the modern four-equal-pane mark. Assets are bundled in the HTML and require
+no external icon requests at runtime.</p>
+<h2 id="components-and-trust-boundaries">Components and trust boundaries</h2>
+<p><a href="diagrams/architecture.svg" title="Open full-size diagram"><img src="diagrams/architecture.svg" alt="Service boundaries between clients, Apache, the web application, collectors, root helpers, and Podman."></a><a href="diagrams/architecture.svg">Open full-size diagram</a></p>
+<p><a href="diagrams/architecture.mmd">Editable Mermaid source</a></p>
+<p>The operator CLI (<code>mykos</code>) changes directory into <code>/usr/local/share/mykos</code> and opens
+<code>MENU</code>. The <code>back</code>, <code>pos</code>, <code>repo</code>, and <code>data</code> submenus invoke the legacy scripts.
+The scripts assume Linux administration rights and conventional host directories;
+they are not a portable desktop application.</p>
+<p>The web service is a separate, unprivileged FastAPI/Uvicorn application. Apache
+terminates HTTPS and proxies <code>/mykos/</code> to <code>127.0.0.1:8000/</code>. Internal route paths omit
+<code>/mykos</code>; FastAPI advertises <code>/mykos</code> as its public root. The supplied Apache file is a
+VirtualHost <strong>example</strong>, deliberately not installed into an existing shared server.</p>
+<p>Root collectors discover Podman containers named eight-digit shopcodes, optionally
+followed by a hostname. They write JSON snapshots. The web application reads those
+snapshots and joins inventory, node state, network, VPN, resources, and RTI metadata.
+Snapshots older than 120 seconds are marked stale and their observations are omitted
+from API v2 data. Unknown values do not prove a node is healthy or unhealthy.</p>
+<p>Privileged actions use two separate Unix sockets. The app authenticates sessions,
+API keys, and roles before contacting them. systemd owns socket permissions and
+starts one root helper per connection; helpers check the peer UID, validate ASCII
+shopcodes, enumerate real Podman targets, and execute fixed argument arrays.
+The separate scheduled-command API accepts admin-key-authorized root shell and
+Windows guest PowerShell scripts. Its queue and results are root-private, and a
+30-second systemd timer dispatches isolated workers. The <code>mykosweb</code> service identity is nevertheless
+trusted to invoke privileged operations: do not grant interactive access to it.</p>
+<p>The terminal socket additionally requires <code>terminal_enabled: true</code>. It opens a PTY
+inside the selected container as its default user (normally container root). Browser
+access requires an administrator role, a valid session, and the configured Origin.
+API keys cannot open terminals. A terminal grants powerful access to a privileged
+container and its mounts; enable it only when that access is intended.</p>
+<h2 id="files-and-owners">Files and owners</h2>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Owner / purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/usr/local/share/mykos/</code></td>
+<td>root; menus, toolkit, maintained source copy, docs</td>
+</tr>
+<tr>
+<td><code>/usr/bin/mykos</code> (also <code>/bin/mykos</code> on RHEL)</td>
+<td>root; executable operator launcher</td>
+</tr>
+<tr>
+<td><code>/opt/mykos-web/</code></td>
+<td>root:<code>mykosweb</code>; application code, inventory, venv</td>
+</tr>
+<tr>
+<td><code>/opt/mykos-web/data/</code></td>
+<td><code>mykosweb</code>:<code>mykosweb</code>, 0700; identities and snapshots</td>
+</tr>
+<tr>
+<td><code>/etc/mykos/web.env</code></td>
+<td>root:<code>mykosweb</code>, 0640; Origin and cookie settings</td>
+</tr>
+<tr>
+<td><code>/etc/mykos/config.json</code></td>
+<td>root, 0600; staging image, host NIC, terminal toggle</td>
+</tr>
+<tr>
+<td><code>/etc/mykos/pos.env</code></td>
+<td>root, 0600; legacy POS repo and VPN credentials</td>
+</tr>
+<tr>
+<td><code>/usr/local/sbin/mykos-*</code>, <code>mykos_runtime.py</code></td>
+<td>root; managers and fixed-operation helpers</td>
+</tr>
+<tr>
+<td><code>/run/mykos-container-admin.sock</code></td>
+<td>root:<code>mykosweb</code>, 0660; JSON request/reply</td>
+</tr>
+<tr>
+<td><code>/run/mykos-terminal.sock</code></td>
+<td>root:<code>mykosweb</code>, 0660; JSON shop handshake then raw PTY bytes</td>
+</tr>
+<tr>
+<td><code>/var/lib/mykos/jobs/</code></td>
+<td>root, 0700; per-shop staging locks and job state</td>
+</tr>
+<tr>
+<td><code>/var/lib/mykos-installer/installed.json</code></td>
+<td>root, 0600; managed file manifest</td>
+</tr>
+<tr>
+<td><code>/var/backups/mykos-installer/</code></td>
+<td>root, 0700; rollback snapshots, archives 0600</td>
+</tr>
+<tr>
+<td><code>/backups/tfrsync-SHOP/</code></td>
+<td>backup account; POS data, SSH access, subscriber marker</td>
+</tr>
+<tr>
+<td><code>/var/www/html/</code></td>
+<td>host Apache content; repository mirrors and optional TSR copies</td>
+</tr>
+</tbody></table>
+<p>Application files are not writable by the web user. Only its data directory is
+writable in <code>mykos-web.service</code>. Collectors and privileged helpers run as host root
+and inspect <strong>rootful</strong> Podman storage. Rootless containers belonging to other
+accounts are outside their inventory. The old POS README&#39;s rootless claims do not
+describe the current privileged launch commands.</p>
+<h2 id="systemd-inventory">systemd inventory</h2>
+<table>
+<thead>
+<tr>
+<th>Unit</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>mykos-web.service</code></td>
+<td>Unprivileged Uvicorn, loopback port 8000, automatic failure restart</td>
+</tr>
+<tr>
+<td><code>mykos-collector.service</code> / <code>.timer</code></td>
+<td><code>collect-nodes.py</code>; inventory/status; 15 seconds after prior completion</td>
+</tr>
+<tr>
+<td><code>mykos-details.service</code> / <code>.timer</code></td>
+<td><code>collect-details.py</code>; inspection, IPs, RTI version; 30 seconds after completion</td>
+</tr>
+<tr>
+<td><code>mykos-extended.service</code> / <code>.timer</code></td>
+<td><code>collect-extended.py</code>; CPU/memory, eth1 IP, VPN, RTI; 30 seconds after completion</td>
+</tr>
+<tr>
+<td><code>mykos-container-admin.socket</code> / <code>mykos-container-admin@.service</code></td>
+<td>Per-connection JSON operations</td>
+</tr>
+<tr>
+<td><code>mykos-terminal.socket</code> / <code>mykos-terminal@.service</code></td>
+<td>Per-connection PTY bridge, maximum eight-hour lifetime</td>
+</tr>
+<tr>
+<td><code>mykos-repo-sync.service</code></td>
+<td>On-demand background repository sync via the existing toolkit script; not enabled automatically</td>
+</tr>
+<tr>
+<td><code>mykos-stage@SHOP.service</code></td>
+<td>Asynchronous per-shop worker; 31-minute systemd timeout</td>
+</tr>
+</tbody></table>
+<p>Timers start about 20 seconds after boot and do not overlap their own service.
+Their effective refresh rate includes execution time, which grows with node count.
+No repository sync, billing email, TSR publication, blacklist, or backup-account cron
+job is enabled by the global installer.</p>
+<p>Canonical service names remain <code>mykos-*</code> because the extracted app and deployed
+socket paths use them. Toolkit files remain under <code>mykos</code>. Legacy <code>mykos-*</code> unit files
+are preserved by deployment; inspect and disable any site-specific duplicates
+manually rather than blindly renaming unrelated units.</p>
+<h2 id="staging-workflow">Staging workflow</h2>
+<p><code>POST /api/v2/actions/stage</code> validates an administrator, eight-digit shopcode,
+absence of an existing container, configured image/NIC, and optional RTI backup.
+It queues <code>mykos-stage@SHOP.service</code>; the request returns promptly. The worker runs
+<code>mykos-stage-pos</code>, records <code>queued</code>, <code>running</code>, <code>done</code>, or <code>failed</code>, and stores bounded
+output for <code>/jobs/SHOP</code>. Per-shop locks serialize start/stop requests.</p>
+<p>The supplied launcher creates a privileged, rootful system container with <code>/sbin/init</code>,
+mounts per-shop IPsec configuration, attaches <code>eth1</code> with the existing <code>pipework</code> and
+<code>dhclient</code>, and restarts IPsec. With restore enabled it mounts available legacy RTI
+backup paths read/write and restarts <code>tfremote</code>, Samba, CUPS, and RTI. This uses the
+backup as live storage; it does not copy or make a new backup. The created container
+is removed if a later setup step fails; existing customer data and VPN files remain.
+Successful containers persist when stopped, unlike the old CLI&#39;s <code>--rm</code> launch.
+The new helper refuses staging if a stopped container already exists.</p>
+<p>Prepared images, the RTI payload, valid backup content, network topology, working
+VPN configuration, subscription access, and in-container <code>/usr/bin/checkit</code> are
+external dependencies. The historical helper implementation was absent; these
+helpers are compatible replacements based on the extracted application&#39;s protocol,
+not recovered production binaries. Validate them in staging before enabling writes.</p>
+<footer>MYKOS documentation</footer></main></html>

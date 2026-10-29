@@ -1,5 +1,37 @@
 # API usage
 
+[Documentation index](README.md)
+
+<!-- contents:start -->
+**Contents**
+
+- [Base URLs and authentication](#base-urls-and-authentication)
+- [Interactive reference](#interactive-reference)
+- [Endpoint inventory](#endpoint-inventory)
+  - [Read examples and response shapes](#read-examples-and-response-shapes)
+  - [Administrative examples](#administrative-examples)
+- [Host metrics, Backup, Repos and terminal integrations](#host-metrics-backup-repos-and-terminal-integrations)
+- [Legacy routes](#legacy-routes)
+- [Common errors](#common-errors)
+- [Dashboard Backup and Repos panes](#dashboard-backup-and-repos-panes)
+  - [Add a VPN from the container pane](#add-a-vpn-from-the-container-pane)
+- [Persistent containers and live snapshots](#persistent-containers-and-live-snapshots)
+- [Scheduled commands (admin API keys only)](#scheduled-commands-admin-api-keys-only)
+- [Delete a container and its private data](#delete-a-container-and-its-private-data)
+- [Explicit container-state purge](#explicit-container-state-purge)
+- [Authenticated HTTPS desktop consoles](#authenticated-https-desktop-consoles)
+  - [Host-side monitoring and RAM allocation](#host-side-monitoring-and-ram-allocation)
+- [Retained host performance history](#retained-host-performance-history)
+  - [Update 81](#update-81)
+- [Shared VPN gateways and topology](#shared-vpn-gateways-and-topology)
+- [Separate browser terminal windows](#separate-browser-terminal-windows)
+  - [Compact dashboard clock](#compact-dashboard-clock)
+  - [Saved geographic metadata](#saved-geographic-metadata)
+  - [Shared customer notes and pane previews](#shared-customer-notes-and-pane-previews)
+- [Monitoring interpretation and released scope](#monitoring-interpretation-and-released-scope)
+
+<!-- contents:end -->
+
 ## Base URLs and authentication
 
 Use `https://YOUR_HOST/mykos/api/v2` publicly. Uvicorn listens on
@@ -74,7 +106,7 @@ including leading zeros. The read column includes both `read` and `admin` keys.
 | `GET /nodes/{shop}/processes` | Read | Live `podman top` output |
 | `GET /nodes/{shop}/checkit` | Admin | Runs `/usr/bin/checkit` inside the selected container |
 | `GET /containers` | Read | Managed rootful container list |
-| `GET /images` | Read | OS choices from running supported template containers; returns `os` and the local source `image` |
+| `GET /images` | Read | OS choices from running supported image containers; returns `os` and the local source `image` |
 | `GET /notes/{pane}` | mgreen session | Private plain-text pane notes (mgreen session only), revision, and last-saved timestamp |
 | `PUT /notes/{pane}` | mgreen session | Save notes with JSON `text` (up to 20,000 characters) and current `revision`; stale revisions return 409 |
 | `GET /personal-notes` | mgreen session | Read personal notes; separate from change requests and retained through updates |
@@ -342,17 +374,17 @@ use fixed privileged helper commands; interactive legacy menus are not executed 
 HTTP requests. Deployment must include the new helper module and sync unit and
 reload systemd before Sync can run.
 
-The dashboard requires an OS selection when adding a container. The helper validates the selection against running supported OS templates and records the source image in the queued job. Existing API clients that omit `os` use the configured `stage_image` fallback. No image is pulled from a registry. Backup creation accepts the ID and SSH public key directly in the pane.
+The dashboard requires an OS selection when adding a container. The helper validates the selection against running supported OS images and records the source image in the queued job. Existing API clients that omit `os` use the configured `stage_image` fallback. No image is pulled from a registry. Backup creation accepts the ID and SSH public key directly in the pane.
 
 ### Add a VPN from the container pane
 
-For a running container with VPN status `not_configured`, administrators can use the blue plus in its VPN column. It opens the existing POS `add_vpn` prompts in the popup terminal. Enable terminal access in `/etc/mykos/config.json`. The prompts collect the remote name, public IP/hostname, IPv4 network (without `/24`), and a hidden PSK entry, then ask for confirmation and whether to push to Meraki. The entered PSK is written to its customer folder’s per-connection `.secrets` file with mode `0600`; no preconfigured `VPN_PSK` is required. The host runs the fixed `pos --add-vpn SHOP CONTAINER` entry point, not an arbitrary host shell.
+For a running container with VPN status `not_configured`, administrators can use the blue plus in its VPN column. It opens the existing POS `add_vpn` prompts in the popup terminal. Enable terminal access in `/etc/mykos/config.json`. The prompts collect the remote name, public IP/hostname, IPv4 network (canonical CIDR, or a bare network address treated as `/24`), and a hidden PSK entry, then ask for confirmation and whether to push to Meraki. The entered PSK is written to its customer folder’s per-connection `.secrets` file with mode `0600`; no preconfigured `VPN_PSK` is required. The host runs the fixed `pos --add-vpn SHOP CONTAINER` entry point, not an arbitrary host shell.
 
 API clients use `WS /api/v2/terminal/{shop}?action=add-vpn` with an admin API key in the handshake header. The browser uses the authenticated, Origin-checked `/api/terminal/{shop}?action=add-vpn` route. Standard root container terminals retain the default `action=shell`.
 
 Host responses include `internal_ip`, the host source IPv4 address selected by the route to `8.8.8.8`, or `null` when unavailable. The dashboard footer shows this address; the header continues to show the hostname.
 
-Supported OS template names are `rh7`, `rh8`, `rh9`, `rh10`, `win10`, `wns2025`, `wns2022`, `wns2019`, `wns2016`, `win11`, `win8e`, `win7u`, `winxp`, `winme`, `win2k`, `win98`, `mac15`, `mac14`, `mac13`, `mac12`. Only running templates appear in the dropdown and `/api/v2/images`; each selection uses that template’s local image.
+Supported OS image names are `rh7`, `rh8`, `rh9`, `rh10`, `win10`, `wns2025`, `wns2022`, `wns2019`, `wns2016`, `win11`, `win8e`, `win7u`, `winxp`, `winme`, `win2k`, `win98`, `mac15`, `mac14`, `mac13`, `mac12`. Only running images appear in the dropdown and `/api/v2/images`; each selection uses that image’s local image.
 
 
 ## Persistent containers and live snapshots
@@ -729,3 +761,18 @@ service request is needed to read this endpoint.
 Browser sessions can read and update shared notes for an eight-digit customer ID at `GET/PUT /api/web/id-notes/{id}`. Every signed-in user, including read-only dashboard users, can edit these customer notes. PUT requires the same-origin header and `{ "text": "...", "revision": 0 }`; a stale revision returns 409 without replacing another user's changes. Responses include `id`, `text`, `revision`, `updated_at` and `updated_by`. Notes belong to the customer ID, not a particular login or container, and survive updates and container recreation. Private orange change-request notes remain separate and restricted to mgreen. API keys alone cannot edit customer notes.
 
 `GET /api/web/current-user` includes `preview_all_panes`. Full-access administrators (including arch/owner identities as those roles are enabled) preview all OS panes with the footer leaf; other users preview EL and utility panes. Sample actions remain disabled. Preview visibility grants no additional backend privileges.
+
+## Monitoring interpretation and released scope
+
+Use `/mykos/api/v2/overview` freshness flags and timestamps together with node
+status. A successful HTTP response or cached green VPN edge is not an end-to-end
+application health test. Resource values come from Podman; VM wrapper measurements
+and in-guest memory are different observations. Host history is retained from
+actual samples and may be missing/stale after a collector interruption.
+
+Use separate least-privilege `read` keys for monitoring. An `admin` API key grants
+operations beyond observation and does not establish a browser session. Keep keys
+out of URLs, logs and shell history. Use the live allowlisted OpenAPI endpoint for
+route details. The current API does not implement the requested configurable
+host/guest and RTI/Dove application alert-field system. Native VPN/shared routes
+are detailed in [VPN architecture and operations](NETWORKING.md#vpn-architecture-and-operations).

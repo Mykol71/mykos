@@ -4,10 +4,12 @@ import argparse
 import datetime
 import hashlib
 import io
+import ipaddress
 import json
 import os
 from pathlib import Path
 import pwd
+import re
 import grp
 import shutil
 import sqlite3
@@ -30,7 +32,7 @@ OPTIONAL_UNITS = ['mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service',
 EXACT = {'/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
          '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
          '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
-PACKAGES = ['podman','httpd','mod_ssl','python3','python3-pip','openssh-server','openssh-clients','rsync',
+PACKAGES = ['podman','httpd','python3','python3-pip','openssh-server','openssh-clients','rsync',
             'iproute','net-tools','netavark','containernetworking-plugins','libreswan','curl','wget','jq','util-linux','tar','gzip',
             'cronie','chrony','firewalld','policycoreutils-python-utils','ksh','unzip',
             'expect','nmap','time','ipset','iptables','git','criu','pykickstart']
@@ -43,6 +45,15 @@ def allowed(path):
 def command(args):
     print('+', ' '.join(map(str,args)), flush=True)
     return subprocess.run(list(map(str,args)), check=True, text=True)
+
+
+def readable_venv(root,gid):
+    # firstboot runs with umask 0077. Give only the service group access to
+    # its root-owned environment; never chmod/chown linked system interpreters.
+    for path in [root,*root.rglob('*')]:
+        if path.is_symlink():continue
+        mode=0o750 if path.is_dir() or path.stat().st_mode&0o111 else 0o640
+        os.chmod(path,mode);os.chown(path,0,gid)
 
 class Installer:
     def __init__(self, args):
@@ -62,7 +73,7 @@ class Installer:
 
     def mutation(self):
         if self.live and os.geteuid()!=0: fail('Live mutations require root; use --root for staging')
-        if not self.live and (getattr(self.args,'install_deps',False) or getattr(self.args,'python_deps',False) or getattr(self.args,'enable',False) or getattr(self.args,'desktop_network',None)):
+        if not self.live and (getattr(self.args,'install_deps',False) or getattr(self.args,'python_deps',False) or getattr(self.args,'enable',False) or getattr(self.args,'configure_https',False) or getattr(self.args,'desktop_network',None)):
             fail('--root staging never installs dependencies or changes host services')
 
     def prepare_backups(self, create=False):
@@ -115,9 +126,7 @@ class Installer:
                 if not src.is_file() or any(part.startswith('.') or part=='__pycache__' for part in rel.parts):continue
                 if src.name in ('mykos-web.img','install-legacy','cloud_pricing_previous','cloud_pricing_changed') or src.suffix=='.pyc':continue
                 # The docs page is served by mykosweb; keep guides root-owned but group-readable.
-                docs_readable = directory == 'docs' and src.name in (
-                    'BOOTSTRAP.md', 'IMAGE_BUILDS.md', 'INSTALL_SERVICES.md', 'ARCHITECTURE.md', 'IDENTITY.md',
-                    'API.md', 'SCRIPTS.md', 'VALIDATION.md', 'DESKTOPS.md', 'RPM.md', 'KEY_ISSUES.md', 'BALLOONING.md', 'HOST_SIDE_REVIEW.md', 'NETWORKING.md')
+                docs_readable = directory == 'docs'
                 add('/usr/local/share/mykos/'+str(rel),src.read_bytes(),
                     0o750 if os.access(src,os.X_OK) or directory=='bin' else 0o640,
                     'web-read' if docs_readable else 'root')
@@ -142,10 +151,14 @@ class Installer:
             add('/usr/local/bin/'+name,(SOURCE/'back/bin'/name).read_bytes(),0o750)
         origin=self.args.public_origin
         parsed=urlsplit(origin)
-        if parsed.scheme!='https' or not parsed.hostname or parsed.path not in ('','/') or parsed.query or parsed.fragment or parsed.username:
-            fail('--public-origin must be an HTTPS origin such as https://mykos.example.com')
+        http_ip=False
+        if parsed.scheme=='http' and parsed.hostname:
+            try:http_ip=not ipaddress.ip_address(parsed.hostname).is_unspecified
+            except ValueError:pass
+        if (parsed.scheme!='https' and not http_ip) or not parsed.hostname or parsed.path not in ('','/') or parsed.query or parsed.fragment or parsed.username:
+            fail('--public-origin must be HTTPS or an HTTP origin with a literal server IP')
         if any(c.isspace() for c in origin):fail('Invalid origin whitespace')
-        add('/etc/mykos/web.env',('MYKOS_PUBLIC_ORIGIN='+origin.rstrip('/')+'\nMYKOS_SECURE_COOKIE=1\n').encode(),0o640,'web-read',True)
+        add('/etc/mykos/web.env',('MYKOS_PUBLIC_ORIGIN='+origin.rstrip('/')+'\nMYKOS_SECURE_COOKIE='+('0' if http_ip else '1')+'\n').encode(),0o640,'web-read',True)
         add('/etc/mykos/config.json',(SOURCE/'services/config.example.json').read_bytes(),0o600,'root',True)
         add('/etc/mykos/pos.env',(SOURCE/'services/pos.env.example').read_bytes(),0o600,'root',True)
         add('/opt/mykos-web/inventory.json',b'{"nodes": []}\n',0o640,'web-read',True)
@@ -183,9 +196,17 @@ class Installer:
         return output
 
     def install(self):
+        if getattr(self.args,'configure_https',False):
+            self.mutation()
+            args=[self.args.python,str(SOURCE/'bin/mykos-bootstrap'),'--installed-rpm','--configure-https']
+            if self.args.domain:args+=['--domain',self.args.domain]
+            if self.args.email:args+=['--email',self.args.email]
+            if self.args.dry_run:args+=['--plan']
+            command(args);return
         entries=self.entries()
         self.prepare_backups()
         selected={p:e for p,e in entries.items() if not e['mutable'] or not self.path(p).exists()}
+        if getattr(self.args,'set_public_origin',False):selected['/etc/mykos/web.env']=entries['/etc/mykos/web.env']
         print(('Live' if self.live else 'Staging')+' installation: %d files; %d preserved settings/data files' % (len(selected),len(entries)-len(selected)))
         if self.args.dry_run:
             print(json.dumps({'root':str(self.root),'write':sorted(selected),'preserve':sorted(set(entries)-set(selected)),
@@ -195,7 +216,11 @@ class Installer:
         self.root.mkdir(parents=True,exist_ok=True)
         if self.live:
             if self.args.install_deps:
-                command(['dnf','install','-y',*PACKAGES])
+                packages=PACKAGES
+                release=Path('/etc/os-release').read_text()
+                if re.search(r'^VERSION_ID=[\"\']?10(?:[.\"\']|$)',release,re.M):
+                    packages=[name for name in PACKAGES if name != 'containernetworking-plugins']
+                command(['dnf','install','-y',*packages])
                 # Image building tools are optional because repository availability varies.
                 if self.args.image_build_deps:command(['dnf','install','-y','lorax','anaconda-tui','pykickstart'])
             result=subprocess.run([self.args.python,'-c','import sys,hashlib; assert sys.version_info >= (3,9), "Python 3.9+ required"; assert hasattr(hashlib, "scrypt"), "Python needs hashlib.scrypt/OpenSSL"'],check=False)
@@ -212,6 +237,9 @@ class Installer:
             os.chmod(dest,0o700 if name.endswith(('data','jobs')) else 0o750)
             if self.live:os.chown(dest,self.uid if name.endswith('/data') else 0,self.gid if not name.endswith('/jobs') else 0)
         for path,entry in selected.items():self.write(path,**{k:entry[k] for k in ('data','mode','owner')})
+        docs=self.path('/usr/local/share/mykos/docs')
+        for path in [docs,*docs.rglob('*')]:
+            if path.is_dir() and not path.is_symlink():path.chmod(0o755)
         notes_db=self.path('/opt/mykos-web/data/auth.db')
         if notes_db.is_file() and not notes_db.is_symlink():
             with notes_db.open('rb') as source: sqlite_header=source.read(16)
@@ -231,13 +259,12 @@ class Installer:
                 command([venv/'bin/python','-m','pip','install','-r',SOURCE/'services/requirements.txt'])
                 frozen=subprocess.check_output([str(venv/'bin/python'),'-m','pip','freeze'])
                 self.write('/opt/mykos-web/installed-requirements.txt',frozen,0o640,'web-read')
+            readable_venv(venv,self.gid)
             command([venv/'bin/python','-c','import fastapi,pydantic,uvicorn'])
             # Empty schema only; no archived accounts, passwords or API keys are imported.
             command(['runuser','-u','mykosweb','--',venv/'bin/python','/opt/mykos-web/manage.py','users','list'])
             command(['runuser','-u','mykosweb','--',venv/'bin/python','/opt/mykos-web/manage.py','keys','list'])
             command(['systemctl','daemon-reload'])
-            if shutil.which('apachectl'):
-                command([self.args.python, self.path('/usr/local/share/mykos/bin/mykos-console-proxy'), '--apply'])
         manifest={'format':1,'python':self.args.python,'staging':not self.live,'snapshot':str(snap),'files':[]}
         for path,entry in entries.items():
             manifest['files'].append({'path':path,'sha256':sha(self.path(path).read_bytes()),
@@ -397,6 +424,10 @@ def main():
         p.add_argument('--root',default='/',help='Alternate staging filesystem; never runs host operations')
         p.add_argument('--dry-run',action='store_true')
         if action=='install':
+            p.add_argument('--configure-https',action='store_true',help='Opt in to Apache domain and Certbot HTTPS setup')
+            p.add_argument('--domain',help='Domain for --configure-https')
+            p.add_argument('--email',help='Certbot account email for --configure-https')
+            p.add_argument('--set-public-origin',action='store_true',help='Explicitly replace the saved browser origin during web setup')
             p.add_argument('--public-origin',default='https://mykos.example.com')
             p.add_argument('--python',default='/usr/bin/python3',help='Target Python 3.9+ interpreter')
             p.add_argument('--install-deps',action='store_true')
@@ -410,6 +441,7 @@ def main():
         if action=='restore':
             p.add_argument('--snapshot',required=True);p.add_argument('--include-data',action='store_true')
     args=parser.parse_args()
+    if (getattr(args,'domain',None) or getattr(args,'email',None)) and not getattr(args,'configure_https',False):parser.error('--domain and --email require --configure-https')
     if getattr(args,'desktop_network',None):
         import ipaddress
         network=ipaddress.IPv4Network(args.desktop_network,strict=True)

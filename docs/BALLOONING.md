@@ -1,5 +1,7 @@
 # Guest ballooning
 
+[Documentation index](README.md)
+
 Native RedHat containers share the host kernel and do not use VM ballooning.
 The operator-selected VM policy is now **2048 MiB RAM per guest**. Removing a
 Podman memory limit alone does not reclaim guest RAM. Existing 4096 MiB RAM

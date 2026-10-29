@@ -7,6 +7,6 @@ if [ -z "$bootstrap_python" ] && [ -x /usr/libexec/platform-python ]; then
 fi
 case "${1:-bootstrap}" in
   bootstrap) if [ "$#" -gt 0 ]; then shift; fi; exec "${bootstrap_python:-python3}" "$base/mykos-bootstrap" "$@" ;;
-  --email|--plan) exec "${bootstrap_python:-python3}" "$base/mykos-bootstrap" "$@" ;;
+  --configure-https|--domain|--address|--email|--plan) exec "${bootstrap_python:-python3}" "$base/mykos-bootstrap" "$@" ;;
   *) exec python3 "$base/mykos-install" "$@" ;;
 esac

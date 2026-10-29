@@ -1,0 +1,43 @@
+flowchart TD
+ subgraph clients["Operator and automation"]
+  browser["Browser / Session authentication"]
+  client["API client / Scoped API key"]
+ end
+ subgraph service["HTTP service boundary"]
+  apache["Apache / HTTP or HTTPS and /mykos proxy"]
+  web["Web and API application / Unprivileged mykosweb service"]
+ end
+ subgraph host["Trusted host control plane"]
+  helpers["Root helpers / Validated operations over Unix sockets"]
+  collectors["Root collectors / Observe host and containers"]
+  podman["Rootful Podman / Containers and VM wrappers"]
+ end
+ subgraph runtime["Execution engines"]
+  native["Native Linux instances / Host kernel; privileged Podman containers"]
+  vms["VM-backed instances / QEMU/KVM; Windows, macOS, Ubuntu"]
+ end
+ subgraph state_group["Persistent and observed state"]
+  identity["Identity and configuration / Browser sessions, scoped API keys, local settings"]
+  state["JSON snapshots / Collected inventory and metrics"]
+  storage["Per-ID persistent state / VM disks, instance files, intentional snapshots"]
+  backup["Customer backup trees / Optional writable mounts for native restores"]
+ end
+ subgraph network_group["Connectivity policy"]
+  network["Managed private network / Per-ID address and MAC; selectable VPN gateway"]
+ end
+ browser -->|"HTTP or HTTPS"| apache
+ client -->|"HTTP or HTTPS"| apache
+ apache -->|"Loopback proxy"| web
+ collectors -.->|"Write"| state
+ state -.->|"Read"| web
+ web -->|"Authorized requests"| helpers
+ helpers -->|"Fixed operations"| podman
+ podman -.->|"Observed state"| collectors
+ identity -->|"Validate session / key"| web
+ podman -->|"Start / stop / console"| native
+ podman -->|"Start wrapper and QEMU"| vms
+ vms -->|"Private disk and paired startup state"| storage
+ native -->|"Compose approved customer paths"| backup
+ native -->|"Instance namespace"| network
+ vms -->|"VM NAT through wrapper"| network
+ collectors -.->|"Read metadata; no guest polling commands"| storage

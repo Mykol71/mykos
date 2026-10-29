@@ -1,0 +1,369 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Global installation, updates, verification, and recovery</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="global-installation-updates-verification-and-recovery">Global installation, updates, verification, and recovery</h1>
+<p><a href="README.html">Documentation index</a></p>
+<p>This guide replaces the earlier capture/inspect instructions. <code>bin/install</code> is the
+canonical global installer. It deploys the full operator toolkit plus maintained
+web/API sources, collectors, systemd units, helpers, and local identity managers.
+It does not read the historical archive during installation.</p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#prerequisites-and-scope">Prerequisites and scope</a></li>
+<li><a href="#new-installation">New installation</a></li>
+<li><a href="#updating">Updating</a></li>
+<li><a href="#verification-and-troubleshooting">Verification and troubleshooting</a></li>
+<li><a href="#file-snapshots-backup-and-restore">File snapshots, backup, and restore</a><ul>
+<li><a href="#legacy-format-1-archives">Legacy format-1 archives</a></li>
+</ul>
+</li>
+<li><a href="#staging-without-host-side-effects">Staging without host side effects</a></li>
+<li><a href="#removal">Removal</a></li>
+<li><a href="#rename-an-existing-installation">Rename an existing installation</a></li>
+<li><a href="#scheduled-command-collector">Scheduled-command collector</a><ul>
+<li><a href="#completed-action-refreshes-and-saved-image-retries">Completed action refreshes and saved-image retries</a></li>
+</ul>
+</li>
+<li><a href="#native-image-builder-prerequisite">Native image builder prerequisite</a></li>
+<li><a href="#complete-customer-backup-mounts">Complete customer backup mounts</a></li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="prerequisites-and-scope">Prerequisites and scope</h2>
+<p>Use a RHEL-compatible <strong>Linux</strong> server with systemd and Python 3.9 or newer with <code>hashlib.scrypt</code>/OpenSSL; RHEL 9
+is the reference target. RHEL 8 needs a newer Python interpreter installed first.
+For example, where your enabled subscription provides it, install Python 3.11 and
+invoke <code>python3.11 bin/mykos-install install --python /usr/bin/python3.11</code> if the
+default <code>python3</code> is older than 3.9. RHEL 10 image kickstarts are included, but DHCP
+client/image-building package availability must be checked on that host. The
+installer does not silently add external repositories to obtain missing packages.</p>
+<p>Run <code>install --dry-run</code> to inspect the exact file plan and package list.
+<code>--install-deps</code> invokes <code>dnf</code>, creates a venv, installs <code>services/requirements.txt</code>,
+and records exact resolved packages in <code>/opt/mykos-web/installed-requirements.txt</code>.
+Direct dependency versions are pinned in source; use the recorded full list to
+reproduce a tested site environment. Dependencies are not downloaded during staging-root installs.</p>
+<p>Without <code>--install-deps</code>, required OS packages must already exist and the installer
+creates the venv if needed, then checks imports. On an offline host populate it
+from your approved wheelhouse before running install, for example:</p>
+<pre><code class="language-sh">sudo /usr/bin/python3 -m venv /opt/mykos-web/.venv
+sudo /opt/mykos-web/.venv/bin/pip install --no-index --find-links /srv/wheels -r services/requirements.txt
+</code></pre>
+<p><code>--image-build-deps</code> additionally requests Lorax, Anaconda TUI, and pykickstart;
+it requires <code>--install-deps</code>. Building POS images remains a separate operator
+workflow and needs working repository URLs and actual RTI software. Apache TLS,
+firewall policy, SELinux policy, subscription registration, image content, backup
+clients, Meraki configuration, DNS, and outbound email must be configured for the
+site. The installer does not disable SELinux or change global firewall/TLS policy.</p>
+<h2 id="new-installation">New installation</h2>
+<p>For default <code>http://SERVER_IP/mykos/</code> access, use the signed-package
+<a href="BOOTSTRAP.html">bootstrap procedure</a>. The direct source examples below configure
+the application origin; a <code>--public-origin https://...</code> argument alone does not
+provision an Apache domain or request a certificate. Domain/Certbot setup needs
+<code>mykos-setup --configure-https</code> (optionally <code>--domain</code> and <code>--email</code>).</p>
+<p>Windows, Windows Server, macOS and Ubuntu desktop lifecycle helpers are included
+in every installation. See <a href="DESKTOPS.html">DESKTOPS.md</a> for image creation and
+capture. To initialize KVM/storage checks and allow desktop ports from an
+explicit trusted LAN, add <code>--desktop-network 192.168.222.0/24</code> to <code>install</code>
+(replace that network for the target host). It creates source-restricted
+runtime/permanent firewalld rules after backing up the firewall configuration.
+Without the flag, installation does not change desktop firewall access. Guest
+disks and images are created separately and are preserved during updates.</p>
+<p>Create a new source-only installation bundle after changes with:</p>
+<pre><code class="language-sh">python3 bin/mykos-package --output releases/mykos-rhel9-desktops.tar.gz
+</code></pre>
+<p>The bundle follows the installer&#39;s current file list, includes per-file and
+archive SHA-256 checksums, and excludes runtime guest disks, hidden POS metadata,
+credentials and web identity databases.</p>
+<p>From any working directory, using the source copy&#39;s absolute installer path:</p>
+<pre><code class="language-sh">sudo /path/to/mykos/bin/install install --dry-run --public-origin https://mykos.example.com
+sudo /path/to/mykos/bin/install install --public-origin https://mykos.example.com --install-deps
+sudo mykos-users create alice --role admin
+sudo mykos-users create observer --role user
+sudo /path/to/mykos/bin/install verify
+</code></pre>
+<p>Replace the example hostname with your actual HTTPS origin. Do not include <code>/mykos</code>
+in the origin. New live activation refuses the placeholder hostname unless you
+explicitly supply a real origin. The account <code>mykosweb</code> is created as a system user
+with a nologin shell. There is no default password, browser user, API key, or bearer
+token. Existing settings and identity files are preserved.</p>
+<p>Edit these files before enabling operations:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Settings</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/etc/mykos/web.env</code></td>
+<td><code>MYKOS_PUBLIC_ORIGIN=https://your-host</code>; <code>MYKOS_SECURE_COOKIE=1</code></td>
+</tr>
+<tr>
+<td><code>/etc/mykos/config.json</code></td>
+<td><code>stage_image</code>: optional default for older API clients; the dashboard selects an image from running supported OS image containers; <code>network_device</code>: optional host interface override (otherwise detected using <code>ip route get 8.8.8.8</code>); <code>terminal_enabled</code>: boolean</td>
+</tr>
+<tr>
+<td><code>/etc/mykos/pos.env</code></td>
+<td>Root-only shell assignments: <code>REPOSERVER</code>, <code>MERAKI_API_KEY</code>, <code>MERAKI_ORG_ID</code>, <code>VPN_PSK</code></td>
+</tr>
+</tbody></table>
+<p>For unattended image callbacks, <code>MYKOS_IMAGE_BUILD_ORIGIN=https://certificate-name</code>
+can select a certificate-matching DNS name separately from a browser origin that
+uses a LAN IP. The callback resolves that name to this host and verifies TLS
+against the configured image-build CA; certificate checks remain enabled.</p>
+<p>macOS first boot creates its administrator through native <code>sysadminctl</code> and
+initializes the home directory. The private installer package supplies the
+password through a hidden prompt, never a process argument. Its temporary
+credential and staging files are removed before the installed image is captured.</p>
+<p>For example, after validating the image and host NIC:</p>
+<pre><code class="language-json">{&quot;stage_image&quot;:&quot;localhost/rti-production:approved&quot;,&quot;network_device&quot;:&quot;ens192&quot;,&quot;terminal_enabled&quot;:false}
+</code></pre>
+<p>No image is pulled during API staging (<code>--pull=never</code>). A blank image/NIC rejects
+staging. Terminal access is disabled by default. Keep config and POS secret files
+root-owned with mode 0600, and <code>web.env</code> root:<code>mykosweb</code> 0640. POS secrets are shell
+configuration: quote values safely, and never paste untrusted shell code into it.
+Existing VPN secrets are preserved. The source kickstarts lock default accounts;
+provision access explicitly after image building rather than using old passwords.</p>
+<p>Configure an HTTPS VirtualHost using <code>services/apache-mykos.conf.example</code> as a starting
+point. Enable proxy, HTTP proxy, WebSocket proxy, and headers modules as needed;
+validate with <code>apachectl configtest</code>. The example strips <code>/mykos</code> for the backend and
+handles <code>/mykos/api/terminal/</code> WebSocket upgrades. Older Apache versions may require
+<code>mod_proxy_wstunnel</code>. Configure SELinux proxy-network permissions and labels for
+this site&#39;s service access; inspect audit logs rather than making SELinux permissive.
+Port 8000 remains bound to loopback. Check proxy headers and keep direct backend
+access private.</p>
+<p>Then activate deliberately:</p>
+<pre><code class="language-sh">sudo /path/to/mykos/bin/install install --public-origin https://mykos.example.com --enable
+sudo /path/to/mykos/bin/install status
+sudo systemctl list-timers --all | grep mykos-
+</code></pre>
+<p><code>--enable</code> enables sockets, collectors, and the web service and restarts the web
+service. It does not activate Apache, SSH, firewall changes, billing, repository
+sync, blacklisting, TSR publication, or actual customer backups. Existing installed
+<code>web.env</code> is preserved; changing <code>--public-origin</code> on later installs does not rewrite
+it. Edit that file directly and restart <code>mykos-web.service</code> to change the origin.</p>
+<h2 id="updating">Updating</h2>
+<p>Use a maintenance window for source or privileged-helper updates. First back up,
+stop web/collector activity, and ensure no staging job or terminal is active:</p>
+<pre><code class="language-sh">sudo /path/to/new-mykos/bin/install backup --output /secure/mykos-before-update.tar.gz --include-data
+sudo systemctl stop mykos-web.service mykos-collector.timer mykos-details.timer mykos-extended.timer
+sudo systemctl stop mykos-collector.service mykos-details.service mykos-extended.service
+sudo /path/to/new-mykos/bin/install install --public-origin https://mykos.example.com --install-deps
+sudo mykos-users list
+sudo mykos-users role alice admin
+sudo /path/to/new-mykos/bin/install verify
+sudo /path/to/new-mykos/bin/install install --public-origin https://mykos.example.com --enable
+</code></pre>
+<p>Do not run two installers concurrently. Each installation snapshots replaced files
+and previously absent destinations before changing code. Existing config, inventory,
+identity databases, POS state, customer backup data, and unrelated files are not
+replaced. An existing <code>/backups</code> symlink to a directory (for example,
+<code>/backups -&gt; /home/backups</code>) is preserved without changing its destination,
+ownership, or permissions. Broken links are rejected. The Backup pane allows this
+root-controlled alias when its target and parents are trusted directories, while
+continuing to reject symlinks beneath individual backup accounts. The old
+installer’s recursive deletion behavior is not used. Duplicate
+site-specific <code>mykos-*</code> collectors are not automatically disabled: inspect them and
+resolve duplicates explicitly. Existing accounts migrating from the old application
+default to nonadmin; promote intended admins before restarting it.</p>
+<p>Installation is not a fully transactional package-manager operation. A dependency
+failure can occur after code files have been copied; the reported snapshot is the
+rollback point. OS package changes, venv dependency upgrades, created system users,
+and service enablement are not rolled back by a file snapshot. Keep the dependency
+freeze and machine/image backups needed to reverse those changes.</p>
+<h2 id="verification-and-troubleshooting">Verification and troubleshooting</h2>
+<pre><code class="language-sh">sudo /usr/local/share/mykos/bin/install verify
+sudo /usr/local/share/mykos/bin/install status
+sudo systemctl status mykos-web.service mykos-container-admin.socket mykos-terminal.socket --no-pager
+sudo journalctl -u mykos-web.service -n 100 --no-pager
+sudo journalctl -u mykos-collector.service -u mykos-details.service -u mykos-extended.service -n 100 --no-pager
+sudo journalctl -u mykos-stage@01234567.service -n 100 --no-pager
+sudo systemctl cat mykos-web.service mykos-collector.timer
+</code></pre>
+<p><code>verify</code> checks managed file presence, code hashes, permissions, root ownership,
+Python imports, and unit syntax on Linux. Settings/inventory are mutable and are
+not hash-compared. It does not prove VPN reachability or successful POS staging.
+<code>status</code> reports the manifest and systemd state; inactive units can make it exit
+nonzero. <code>/mykos/api/v2/docs</code>, authenticated read requests, browser login, fresh collector
+timestamps, host storage, and nonadmin denial should be checked through HTTPS.
+Perform staging/stop/terminal integration tests on approved staging containers.</p>
+<p>The web user must be able to read snapshot files but not write application code.
+Socket mode/group and the helper service interpreter must match this installation.
+Collectors run in rootful Podman&#39;s context. Duplicate eight-digit container prefixes
+are rejected for helper targeting; resolve ambiguity instead of guessing a target.</p>
+<h2 id="file-snapshots-backup-and-restore">File snapshots, backup, and restore</h2>
+<pre><code class="language-sh">sudo ./bin/install backup --output /secure/mykos-code-settings.tar.gz
+sudo ./bin/install backup --output /secure/mykos-with-identities.tar.gz --include-data
+sudo ./bin/install restore --snapshot /secure/mykos-with-identities.tar.gz --include-data --dry-run
+sudo ./bin/install restore --snapshot /secure/mykos-with-identities.tar.gz --include-data
+</code></pre>
+<p>Snapshots use manifest format 2 with SHA-256 file checksums, original file modes and
+numeric ownership, plus paths absent before installation. Restores validate paths,
+regular archive members, duplicates, sizes, checksums, and symlink destinations
+before writes. They create another pre-change snapshot. Restoration removes only
+files marked previously absent. Services are stopped for a live restore and remain
+stopped; verify before enabling again. Close active terminals/staging workers first.
+SQLite databases are captured through SQLite&#39;s online backup API, including committed
+WAL transactions, rather than by copying a potentially inconsistent live DB file.
+A data-bearing restore requires explicit <code>--include-data</code>; it can replace identities,
+sessions, and revocations. The two identity DBs are individually consistent, not a
+cross-database transaction. Freeze identity changes for a coordinated backup.</p>
+<p>Default backups contain managed code, settings, and inventory; <code>--include-data</code> adds
+<code>/opt/mykos-web/data/</code>. Snapshots and their parent directory have restrictive permissions.
+They can still contain secrets, so encrypt and move them to restricted off-host
+storage. File ownership is numeric: same-host rollback is the primary use. On a
+replacement server, create the service account first and reconcile UID/GID ownership
+before activation.</p>
+<p>Snapshots do not capture Podman images/storage, <code>/backups</code>, custom Apache/TLS files,
+OS packages, venv contents, site-specific units, or the entire POS runtime state.
+Back those up independently. Never describe this file backup as a whole-host DR image.</p>
+<h3 id="legacy-format-1-archives">Legacy format-1 archives</h3>
+<p>Explicit legacy operations remain available:</p>
+<pre><code class="language-sh">sudo ./bin/install-services package --output /secure/legacy-bundle.tar.gz
+sudo ./bin/install-services verify --bundle /secure/legacy-bundle.tar.gz
+sudo ./bin/install-services install --bundle /secure/legacy-bundle.tar.gz
+sudo ./bin/install-services restore --snapshot /secure/legacy-prechange.tar.gz
+</code></pre>
+<p><code>--with-data</code> is the old format&#39;s explicit data inclusion option. Use this only for
+intentional recovery: installing an old bundle may overwrite maintained code with
+its historical version. Run the global installer afterward to return to maintained
+sources and explicit role handling. The old <code>capture</code>, <code>inspect</code>, <code>--confirm</code>,
+<code>--restore-auth</code>, and <code>status</code> archive commands from historical documents are not
+implemented; global <code>status</code> is a host installation status operation.</p>
+<h2 id="staging-without-host-side-effects">Staging without host side effects</h2>
+<p>On macOS use a real path under <code>/private/tmp</code> (not its <code>/tmp</code> symlink):</p>
+<pre><code class="language-sh">./bin/install install --root /private/tmp/mykos-stage --public-origin https://mykos.example.com
+./bin/install verify --root /private/tmp/mykos-stage
+./bin/install uninstall --root /private/tmp/mykos-stage --dry-run
+</code></pre>
+<p><code>--root</code> performs file-layout operations only: no dnf/pip, chown, system users,
+service activation, collectors, or containers. <code>--enable</code> and <code>--install-deps</code> are
+rejected with staging roots. <code>--dry-run</code> writes nothing. Staged scripts contain
+production absolute paths and must not be executed as an emulated live installation.</p>
+<h2 id="removal">Removal</h2>
+<pre><code class="language-sh">sudo ./bin/install uninstall --dry-run
+sudo ./bin/install uninstall
+</code></pre>
+<p>Removal first checks hashes and refuses modified managed code, creates a recovery
+snapshot, disables/stops managed long-running units and timers, and removes managed
+code/unit files only. Stop active per-connection terminals and staging workers first.
+It preserves settings, identities, snapshots, inventory, venv, OS accounts, customer
+backup storage, POS state, images, and unrelated files. It does not remove Apache
+proxy configuration or undo installed packages. Retained directories can be reviewed
+and removed separately according to your site&#39;s data-retention requirements.</p>
+<h2 id="rename-an-existing-installation">Rename an existing installation</h2>
+<p>Use <code>bin/mykos-migrate</code> once when upgrading an installation with a previous project
+name. Run it from the new source checkout during a maintenance window. Finish
+container staging and close terminals first. The command does not modify running
+containers, repository contents, backup account names, or customer backup storage.
+A working system Python 3.9+ with scrypt support, access to the Python package
+index, and root access are required. Migration retains existing system packages
+and installs only the Python dependencies for the new virtual environment.
+The interpreter running the migration is used unless <code>--python</code> selects another.</p>
+<p>The migration finds the single previous manifest under
+<code>/var/lib/*-installer/installed.json</code>. If there are multiple candidates, pass its
+absolute filename with <code>--from-manifest</code>. It derives the previous names and paths
+from that manifest and installed service definitions.</p>
+<pre><code class="language-sh">sudo python3 bin/mykos-migrate --dry-run --public-origin https://mykol.com
+sudo python3 bin/mykos-migrate --public-origin https://mykol.com
+sudo python3 bin/mykos-install verify
+sudo systemctl status mykos-web.service --no-pager -l
+</code></pre>
+<p>Before changing settings, the command stops previous services and writes a mode
+0600 archive at <code>/var/backups/mykos-installer/before-migration-TIMESTAMP.tar.gz</code>.
+It preserves original file paths and includes identity databases, previous
+configuration, inventory, POS metadata, service drop-ins and affected Apache
+configuration. Keep this archive private. The new virtual environment is created
+under <code>/opt/mykos-web/.venv</code>; the previous environment is retained for recovery.
+The web account is renamed to <code>mykosweb</code> with its numeric UID retained. Its primary
+group is renamed to match. Previous files and units remain on disk but disabled;
+they are recovery material, not an active compatibility layer.</p>
+<p>After success, open <code>https://mykol.com/mykos/</code>. Browser users sign in again with
+their existing credentials. API keys keep their original values and scopes, but
+clients must use <code>/mykos/api/v2</code> and <code>X-MYKOS-API-Key</code>. New keys start with
+<code>mykos2_</code>. Update bookmarks, external monitors, automation, cron entries and any
+custom proxy rules outside the standard Apache configuration directories.
+The migration updates configured Apache proxy paths while preserving the hostname
+and certificate settings; it runs <code>apachectl configtest</code> before reloading Apache.</p>
+<p>A failure leaves the previous files and the recovery archive available. Do not
+rerun blindly over a partially installed destination. Preserve the error and the
+archive. After fixing the reported problem, resume using that original archive:</p>
+<pre><code class="language-sh">sudo python3 bin/mykos-migrate --resume-from /var/backups/mykos-installer/before-migration-TIMESTAMP.tar.gz --dry-run --public-origin https://mykol.com
+sudo python3 bin/mykos-migrate --resume-from /var/backups/mykos-installer/before-migration-TIMESTAMP.tar.gz --public-origin https://mykol.com
+</code></pre>
+<p>Resume validates the archived predecessor manifest, original service definition,
+and identity UID before accepting an account already renamed to <code>mykosweb</code>.
+It keeps the original recovery archive and preserves copied settings and databases.
+It also accepts a partial destination manifest from a later verification failure.</p>
+<p>For rollback instead, stop the new units, restore the archived files to their
+original absolute paths as root, rename <code>mykosweb</code> and its group back to the names
+recorded by the original web unit and archived ownership, reload systemd, validate
+Apache, and re-enable the previous sockets, web service and timers. The archive
+contains sensitive configuration and identities; extract it only onto the original
+trusted host. Running containers and customer backup storage are outside this
+archive and are not rolled back by it.</p>
+<p>For subsequent mykos updates:</p>
+<pre><code class="language-sh">sudo python3 bin/mykos-install backup --include-data --output /var/backups/mykos-before-update.tar.gz
+sudo python3 bin/mykos-install install --public-origin https://mykol.com
+sudo python3 bin/mykos-install verify
+sudo systemctl --no-block restart mykos-web.service
+</code></pre>
+<h2 id="scheduled-command-collector">Scheduled-command collector</h2>
+<p>Installation initializes <code>/var/lib/mykos/commands</code> as root mode 0700. Activation
+with <code>--enable</code> enables <code>mykos-command-collector.timer</code>, which dispatches due jobs
+every 30 seconds. It does not change the performance collector interval.
+For an existing source installation updated without <code>--enable</code>, activate it with:</p>
+<pre><code class="language-bash">sudo systemctl enable --now mykos-command-collector.timer
+</code></pre>
+<p>The queue is mutable data outside the RPM and survives updates. Finish active
+jobs before removal/rollback. See API.md for admin-key submission, result access,
+at-most-once behavior and Windows guest-agent prerequisites.</p>
+<h3 id="completed-action-refreshes-and-saved-image-retries">Completed action refreshes and saved-image retries</h3>
+<p>Container actions refresh only the affected ID&#39;s inventory, details and resource
+rows at nice -5. VM startup publishes that row as soon as Podman is running,
+before memory restoration and ID-specific hooks finish. Host terminal/VPN completion refreshes host data without probing
+containers. Backup/repository actions reload only their own pane; privileged
+listing work also runs at nice -5. Routine collector intervals are unchanged.</p>
+<p>After image capture and commit, builder removal allows up to five minutes for
+Podman storage cleanup. If only the generic base restart fails, the committed
+image remains ready. Rerun the same Build command to retry that base restart;
+installation and memory capture are not repeated. An unusable builder requiring
+manual cleanup is reported explicitly, without deleting its disks or image.</p>
+<p>The performance chart draws running container and VPN connection counts as translucent paired columns behind the resource lines. Container and VPN columns alternate beside each other in five-second buckets without overlap. Both count series rise from zero; 15 running containers or active VPN connections equals 100%. Historical counts use the same scale, and missing or stale readings leave gaps. The history slider uses a grey accent.</p>
+<p>Host has an orange personal-notes icon beside its white change-request icon. Both use the same icon shape and a larger notes dialog. Personal notes persist across updates and are excluded from change-request processing. Changed container/VPN count bars receive a brighter fill and bold edge at the time of the change; other bars remain faint. A subtle diagonal texture overlays the dashboard background.</p>
+<h2 id="native-image-builder-prerequisite">Native image builder prerequisite</h2>
+<p>The standard installer dependency set and RPM require <code>pykickstart</code>, which
+provides <code>ksvalidator</code>. <code>python3-kickstart</code> alone supplies only its Python
+library on EL8/EL9 and does not provide that command. Existing installations
+missing the CLI can install it with <code>sudo dnf install -y pykickstart</code>.</p>
+<p>All native Linux builds use the existing local Anaconda/Lorax workflow, including
+the operator&#39;s established RH9-on-RH8 method. The menu validates the prepared
+kickstart against the installed parser without imposing a matching host release.
+Temporary copies adapt timesource and weak-dependency option spellings to that
+parser; saved kickstarts remain unchanged. Repository/package compatibility
+still has to succeed during the actual build. Changing repository URLs does not
+upgrade the local installer. Using an already built image is a separate path.</p>
+<h2 id="complete-customer-backup-mounts">Complete customer backup mounts</h2>
+<p>When native staging explicitly selects backup restore, available directories under
+<code>/backups/tfrsync-ID</code> (or configured <code>backup_root</code>) bind directly read/write at
+<code>/usr2</code>, <code>/d</code>, <code>/etc</code>, <code>/home</code> and <code>/usr/java</code>. This is live access to the backup
+set, not a copied restore. Application writes change that mounted data; preserve
+a separate recoverable backup before starting it. Missing paths are omitted;
+unsafe symlinks or paths outside the account directory are rejected.</p>
+<p>The helper creates the new stopped container, prepares only its mounted image
+root, then attaches the backup binds at start. Nested instance-private binds stored
+in <code>pos/.ID/.mykos-restore</code> keep <code>passwd</code>, <code>group</code>, <code>shadow</code>, <code>gshadow</code>, hostname,
+hosts, machine-id, fstab, crypttab, NetworkManager interface ownership and
+<code>security/limits.conf</code> separate from the complete backup <code>/etc</code>. Account and
+UID/GID reconciliation is confined to the new guest; it does not rewrite the
+host account databases or chown the backup. The old backup transport account&#39;s
+guest home/cron are removed from the prepared guest, not the source backup.</p>
+<p>Customer PAM limits are retained when supplied. Otherwise image defaults, or an
+empty valid limits file, remain available through the private bind so <code>su - root</code>
+can open a session. New native instances use <code>--memory=2g</code> and the read-only native
+cgroup mount. Check actual Podman limits for older instances rather than assuming
+an upgrade retroactively changes them. Native root terminals use <code>su - root</code>;
+VM consoles have their separate prerequisites in <a href="NETWORKING.html">networking</a>.</p>
+<p>Do not confuse these customer-data mounts with the installer&#39;s code/settings
+backup archive. A filesystem image commit does not include external mounted
+customer data. Preserve the backup set, instance-private identity files, VPN state,
+disks and intentional snapshots according to the intended recovery operation.</p>
+<footer>MYKOS documentation</footer></main></html>

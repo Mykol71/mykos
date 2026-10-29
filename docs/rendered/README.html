@@ -1,0 +1,140 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MYKOS documentation</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="mykos-documentation">MYKOS documentation</h1>
+<p>Documentation release <strong>1.5.20261024-147</strong>. Technical procedures are reviewed against the unchanged release146 runtime implementation.</p>
+<p>Use these guides to install, operate, integrate, and recover MYKOS. Start with the
+guide for your task, then follow its prerequisites and verification steps.</p>
+<h2 id="project-design-and-business-value">Project design and business value</h2>
+<table>
+<thead>
+<tr>
+<th>Guide</th>
+<th>Use it for</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="KEY_INNOVATIONS.html">Key innovations</a></td>
+<td>Technical leadership overview of the design contributions</td>
+</tr>
+<tr>
+<td><a href="ENGINEERING_LESSONS.html">Performance by design</a></td>
+<td>Engineering milestones, difficult problems, and the whole-instance design rationale</td>
+</tr>
+<tr>
+<td><a href="DEPLOYMENT_EFFICIENCY.html">Deployment efficiency and business value</a></td>
+<td>Business scenarios, customer self-service, cost-saving mechanisms, and an illustrative savings model</td>
+</tr>
+</tbody></table>
+<p>Each guide includes a downloadable PDF. Capability statements retain their reviewed release146 implementation baseline; planned compliance scanning and alerts remain clearly marked as future work.</p>
+<h2 id="installation-and-recovery">Installation and recovery</h2>
+<table>
+<thead>
+<tr>
+<th>Guide</th>
+<th>Use it for</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="BOOTSTRAP.html">IP installation and optional domain HTTPS</a></td>
+<td>IP access, optional HTTPS, and bootstrap retries</td>
+</tr>
+<tr>
+<td><a href="INSTALL_SERVICES.html">Installation updates and recovery</a></td>
+<td>Source installation, updates, verification, backup, and restore</td>
+</tr>
+<tr>
+<td><a href="RPM.html">RHEL RPM packages</a></td>
+<td>Signed EL8, EL9, and EL10 packages and repositories</td>
+</tr>
+<tr>
+<td><a href="IDENTITY.html">Identity management</a></td>
+<td>Browser accounts, permissions, passwords, and API keys</td>
+</tr>
+</tbody></table>
+<h2 id="images-containers-and-networking">Images containers and networking</h2>
+<table>
+<thead>
+<tr>
+<th>Guide</th>
+<th>Use it for</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="IMAGE_BUILDS.html">Unattended image builds</a></td>
+<td>Build and capture reusable OS images and manage base console sessions</td>
+</tr>
+<tr>
+<td><a href="DESKTOPS.html">Windows macOS and Ubuntu desktops</a></td>
+<td>VM requirements, private storage, consoles, and snapshots</td>
+</tr>
+<tr>
+<td><a href="NETWORKING.html">Managed networking</a></td>
+<td>Container interfaces, VPN modes, persistence, and topology</td>
+</tr>
+<tr>
+<td><a href="BALLOONING.html">Guest ballooning</a></td>
+<td>Memory behavior and native snapshot compatibility</td>
+</tr>
+</tbody></table>
+<h2 id="integration-and-reference">Integration and reference</h2>
+<table>
+<thead>
+<tr>
+<th>Guide</th>
+<th>Use it for</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="API.html">API usage</a></td>
+<td>Authentication, endpoints, examples, and errors</td>
+</tr>
+<tr>
+<td><a href="openapi.json">OpenAPI specification</a></td>
+<td>Machine-readable API schema</td>
+</tr>
+<tr>
+<td><a href="ARCHITECTURE.html">Architecture and deployed paths</a></td>
+<td>Components, trust boundaries, ownership, and systemd units</td>
+</tr>
+<tr>
+<td><a href="SCRIPTS.html">Operator script catalog</a></td>
+<td>Commands, menus, helper protocols, and legacy limitations</td>
+</tr>
+<tr>
+<td><a href="VALIDATION.html">Validation record</a></td>
+<td>Recorded checks and remaining integration work</td>
+</tr>
+<tr>
+<td><a href="HOST_SIDE_REVIEW.html">Host monitoring review</a></td>
+<td>Observations, findings, and implemented optimizations</td>
+</tr>
+<tr>
+<td><a href="THIRD_PARTY_ICONS.txt">Third-party icon credits</a></td>
+<td>Bundled icon attribution</td>
+</tr>
+</tbody></table>
+<h2 id="administrator-guide-and-operator-notes">Administrator guide and operator notes</h2>
+<p>The <a href="MYKOS_Administrator_Guide.html">Markdown administrator guide</a> is a reference
+edition of the guide dated 21 October 2026. Its historical commands and caveats
+are retained. Use the maintained task guides above for current source procedures.
+The <a href="MYKOS_Administrator_Guide.docx">original Word guide</a> is preserved.</p>
+<p><a href="KEY_ISSUES.html">Operator notes</a> retain the author&#39;s original text verbatim.
+They record context and proposals; they do not establish verified deployment behavior.</p>
+<h2 id="documentation-build">Documentation build</h2>
+<p>See <a href="DOCUMENTATION_BUILD.html">the maintained build workflow</a> for dependencies,
+rendering, link checks and the production operator-edit guard. Generated HTML
+keeps the permanent light theme.</p>
+<h2 id="diagrams">Diagrams</h2>
+<ul>
+<li><a href="diagrams/architecture.svg">Service boundaries</a> · <a href="diagrams/architecture.mmd">Mermaid source</a></li>
+<li><a href="diagrams/image-lifecycle.svg">Images containers and snapshots</a> · <a href="diagrams/image-lifecycle.mmd">Mermaid source</a></li>
+</ul>
+<p>SVG images display the diagrams without requiring a Mermaid renderer. The editable
+Mermaid files describe the same nodes and connections. Relative links, Markdown
+tables, and language-tagged command blocks keep the guides portable across GitHub
+and Azure Repos.</p>
+<ul>
+<li><a href="diagrams/vpn-direct.svg">Direct native VPN</a> · <a href="diagrams/vpn-direct.mmd">Mermaid</a></li>
+<li><a href="diagrams/vpn-native-gateway.svg">Shared native gateway</a> · <a href="diagrams/vpn-native-gateway.mmd">Mermaid</a></li>
+<li><a href="diagrams/vpn-host-shared.svg">Host shared gateway</a> · <a href="diagrams/vpn-host-shared.mmd">Mermaid</a></li>
+<li><a href="diagrams/vpn-host-only.svg">Host-only VPN</a> · <a href="diagrams/vpn-host-only.mmd">Mermaid</a></li>
+</ul>
+<footer>MYKOS documentation</footer></main></html>

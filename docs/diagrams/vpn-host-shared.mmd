@@ -1,0 +1,28 @@
+flowchart TD
+ subgraph clients["Guest / wrapper namespaces"]
+  guest["Bridge guests / VM wrappers / Internal VM NAT precedes bridge"]
+ end
+ subgraph hostns["MYKOS host namespace"]
+  bridge["Host bridge ingress / DNS redirect; IPsec allow / clear reject"]
+  xfrm["Host Libreswan + kernel XFRM / Whole bridge subnet → site and full tunnel"]
+  wan["Host WAN / Outer IKE / NAT-T transport"]
+  output["Host internet + DNS output / Verified full SA → mark + bridge-source SNAT"]
+  bypass["Management replies / local / transport / Exempt output uses ordinary main routing"]
+  loss["Full-tunnel SA removed / Guest guard stays; host WAN fallback restored"]
+ end
+ subgraph remote["Remote network"]
+  peer["Remote VPN peer / Return routing and remote internet NAT"]
+  site["Remote site / internet / Site selectors, DNS access and remote internet NAT"]
+ end
+ guest -->|"Inner IPv4"| bridge
+ bridge -->|"NAT exemption preserves selector"| xfrm
+ xfrm -->|"Encryption in host namespace"| wan
+ wan -->|"Encapsulated IPsec"| peer
+ output -->|"Profile route table"| xfrm
+ output -->|"Explicit exceptions"| bypass
+ xfrm -.->|"Reconciled after SA loss"| loss
+ peer -->|"Decrypt and route"| site
+ site -.->|"Return route / NAT"| peer
+ peer -.->|"Encrypted reply"| xfrm
+ xfrm -.->|"Decrypted reply"| bridge
+ bridge -.->|"Reply to application"| guest

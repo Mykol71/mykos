@@ -12,7 +12,7 @@ from mykos_runtime import shopcode
 
 BACKUPS=Path('/backups')
 DATA_PATHS=('usr2','d','etc','home','usr/java')
-PRIVATE_FILES=('passwd','group','shadow','gshadow','hostname','hosts','machine-id','fstab','crypttab','NetworkManager/conf.d/90-mykos-podman.conf')
+PRIVATE_FILES=('passwd','group','shadow','gshadow','hostname','hosts','machine-id','fstab','crypttab','NetworkManager/conf.d/90-mykos-podman.conf','security/limits.conf')
 
 
 def directory(shop,settings):
@@ -124,6 +124,16 @@ def prepare(shop,settings,root,hostname,address=None):
         guest_path(root,home.lstrip('/'))
     plan=identity.merge(image,adjusted)
     summary=identity.apply(root,plan)
+    # Older backup sets may omit this required pam_limits session file. Keep
+    # customer limits when present, otherwise retain the image's defaults in
+    # the instance-private mount rather than changing the backup's contents.
+    limits=source(backup,'etc/security/limits.conf')
+    if limits:
+        if not limits.is_file() or limits.stat().st_size>1024*1024:
+            raise ValueError('Invalid backup limits configuration')
+        write_guest(root,'etc/security/limits.conf',limits.read_text())
+    elif not guest_path(root,'etc/security/limits.conf').is_file():
+        write_guest(root,'etc/security/limits.conf','# No additional per-user resource limits.\n')
     # These paths refer only to the created guest root, before backup bind mounts
     # are attached. No deletion or ownership operation ever targets the backup.
     for home in homes:

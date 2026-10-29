@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Noninteractive RHEL 8/9 HTTPS-first RPM bootstrap (Python 3.6 compatible)."""
+"""RHEL 8/9/10 setup: IP access by default, optional domain HTTPS."""
 import argparse
 import fcntl
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -12,12 +13,15 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 
 STATE = '/var/lib/mykos-installer/bootstrap.json'
+IP_STATE = '/var/lib/mykos-installer/ip-bootstrap.json'
 KEY_HASHES = {
     '8': 'cd1db21a863185127f2e3b264c97fb1c6c44c316385707999041ea475c110d1c',
     '9': 'fcf0eab4f05a1c0de6363ac4b707600a27a9d774e9b491059e59e6921b255a84',
+    '10': 'de390fc168eae5ab2852e9e93d34a0b9ddf05cf9ce90ee28d97de26a4b1f6b93',
     'mykos': '8efb66fd6c7900cc8d232a25c3318be2bc1b402a7d1cdd2c0d99a0f4a90694a9',
 }
 
@@ -37,12 +41,20 @@ def run(args, check=True):
                           stderr=subprocess.STDOUT, universal_newlines=True)
 
 
+def host_address():
+    rows=json.loads(subprocess.check_output(['ip','-j','route','get','1.1.1.1'],universal_newlines=True))
+    address=ipaddress.ip_address(rows[0].get('prefsrc') or rows[0].get('src',''))
+    if address.is_loopback or address.is_unspecified:raise ValueError('Cannot select a usable server IP; provide --address')
+    return str(address)
+
+
 class Bootstrap:
-    def __init__(self, domain, root=Path('/'), runner=run):
-        self.domain = domain_name(domain)
+    def __init__(self, domain, root=Path('/'), runner=run, ip_only=False):
+        self.ip_only=ip_only
+        self.domain = str(ipaddress.ip_address(domain)) if ip_only else domain_name(domain)
         self.root = Path(root)
         self.run = runner
-        self.state_path = self.path(STATE)
+        self.state_path = self.path(IP_STATE if ip_only else STATE)
         self.state = json.loads(self.state_path.read_text()) if self.state_path.exists() else {
             'version': 1, 'domain': self.domain, 'files': {}, 'firewall': [], 'complete': False,
         }
@@ -117,10 +129,15 @@ class Bootstrap:
                 and self.tls_ready())
 
     def release(self):
-        text = self.path('/etc/os-release').read_text()
-        match = re.search(r'^VERSION_ID=["\']?([89])(?:[.\"\']|$)', text, re.M)
+        # os-release is normally a symlink into /usr/lib on stock RHEL. This
+        # is a read-only input; retain strict symlink rejection for writes.
+        path=(self.root/'etc/os-release').resolve(strict=True)
+        if self.root.resolve()!=Path('/') and self.root.resolve() not in path.parents:
+            raise ValueError('OS release file escapes the selected root')
+        text = path.read_text()
+        match = re.search(r'^VERSION_ID=["\']?(10|[89])(?:[.\"\']|$)', text, re.M)
         if not match or not re.search(r'^ID(?:_LIKE)?=.*(?:rhel|rocky|almalinux|centos)', text, re.M):
-            raise ValueError('This bootstrap supports RHEL-compatible 8 and 9')
+            raise ValueError('This bootstrap supports RHEL-compatible 8, 9 and 10')
         return match.group(1)
 
     def key(self, name, url):
@@ -137,6 +154,8 @@ class Bootstrap:
 
     def prerequisites(self, el):
         self.run(['dnf', '-y', 'install', 'httpd', 'mod_ssl', 'curl'])
+        if (self.root/'usr/lib/systemd/system/httpd-init.service').is_file():
+            self.run(['systemctl','start','httpd-init.service'])
         if shutil.which('certbot'): return
         key = self.key(el, 'https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-' + el)
         self.managed('/etc/yum.repos.d/mykos-bootstrap-epel.repo',
@@ -145,10 +164,10 @@ class Bootstrap:
                      'enabled=0\ngpgcheck=1\ngpgkey=file://' + key + '\n')
         self.run(['dnf', '-y', '--enablerepo=mykos-bootstrap-epel', 'install', 'certbot', 'policycoreutils'])
 
-    def firewall(self):
+    def firewall(self, https=True):
         if not shutil.which('firewall-cmd'): return
         if self.run(['firewall-cmd', '--state'], check=False).returncode: return
-        for service in ('http', 'https'):
+        for service in (('http', 'https') if https else ('http',)):
             for permanent in (False, True):
                 flags = ['--permanent'] if permanent else []
                 query = ['firewall-cmd'] + flags + ['--query-service=' + service]
@@ -171,7 +190,8 @@ class Bootstrap:
             else: self.atomic(p, old, 0o644)
             self.state['files'] = previous; self.save()
             raise
-        self.run(['systemctl', 'reload', 'httpd'])
+        if self.run(['systemctl','is-active','--quiet','httpd'],check=False).returncode==0:
+            self.run(['systemctl', 'reload', 'httpd'])
 
     def https(self, email):
         if self.tls_ready():
@@ -272,13 +292,48 @@ class Bootstrap:
             self.run(['dnf', '-y', '--setopt=gpgcheck=1', 'install', 'mykos'])
         installed = self.run(['rpm', '-q', '--qf', '%{VERSION}-%{RELEASE}', 'mykos']).stdout.strip()
         if self.state.get('setup_rpm') != installed or self.run(['systemctl', 'is-active', '--quiet', 'mykos-web.service'], check=False).returncode != 0:
-            self.run(['/usr/sbin/mykos-setup', '--public-origin', 'https://' + self.domain, '--enable'])
+            self.run(['/usr/sbin/mykos-setup', '--public-origin', 'https://' + self.domain, '--set-public-origin', '--enable'])
             self.state['setup_rpm'] = installed; self.save()
         self.run(['httpd', '-t'])
         self.run(['systemctl', 'reload', 'httpd'])
         if not self.tls_ready(): raise ValueError('Final HTTPS check failed')
+        self.ready('https://' + self.domain)
         self.state['complete'] = True; self.save()
-        print('Ready: https://' + self.domain + '/mykos/', flush=True)
+
+    def ready(self, origin):
+        for attempt in range(30):
+            active=self.run(['systemctl','is-active','--quiet','mykos-web.service'],check=False).returncode==0
+            response=self.run(['curl','--fail','--silent','--show-error','--max-time','5',origin+'/mykos/'],check=False) if active else None
+            if response is not None and response.returncode==0:
+                self.state['app_url']=origin+'/mykos/';self.save()
+                print('MYKOS is running: '+origin+'/mykos/',flush=True)
+                return
+            if attempt<29:time.sleep(1)
+        raise ValueError('MYKOS did not become reachable at '+origin+'/mykos/; inspect mykos-web.service and Apache logs')
+
+    def install_ip(self, installed_rpm=False):
+        el=self.release()
+        host='['+self.domain+']' if ':' in self.domain else self.domain
+        origin='http://'+host
+        if not installed_rpm:
+            self.repository(el)
+            self.run(['dnf','-y','--setopt=gpgcheck=1','install','mykos'])
+        self.firewall(False)
+        site=('<VirtualHost *:80>\nServerName '+host+'\nProxyPreserveHost On\n'
+              'RequestHeader set X-Forwarded-Proto "http"\n'
+              'RewriteEngine On\nRewriteCond %{HTTP:Upgrade} =websocket [NC]\n'
+              'RewriteRule ^/mykos/(.*)$ ws://127.0.0.1:8000/$1 [P,L]\n'
+              'ProxyPass /mykos/ http://127.0.0.1:8000/\n'
+              'ProxyPassReverse /mykos/ http://127.0.0.1:8000/\n'
+              'RedirectMatch ^/mykos$ /mykos/\n</VirtualHost>\n')
+        self.apache_write('/etc/httpd/conf.d/00-mykos-ip.conf',site)
+        if shutil.which('getenforce') and self.run(['getenforce']).stdout.strip()!='Disabled':
+            self.run(['setsebool','-P','httpd_can_network_connect','on'])
+        self.run(['systemctl','enable','--now','httpd'])
+        self.run(['/usr/sbin/mykos-setup','--public-origin',origin,'--set-public-origin','--enable'])
+        self.run(['systemctl','reload','httpd'])
+        self.ready(origin)
+        self.state['complete']=True;self.save()
 
     def cleanup(self):
         if not self.state_path.exists(): return
@@ -340,32 +395,45 @@ class Bootstrap:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--configure-https',action='store_true',help='Opt in to Apache domain and Certbot HTTPS setup')
+    parser.add_argument('--domain',help='Domain for --configure-https; defaults to the server hostname domain')
+    parser.add_argument('--address',help='Server IP for default HTTP access; defaults to the primary route address')
     parser.add_argument('--installed-rpm', action='store_true', help='Configure an installed RPM; used by the automatic setup service')
     parser.add_argument('--email', help='Optional Certbot account email; otherwise register without email')
     parser.add_argument('--uninstall', action='store_true', help='Remove only bootstrap-owned settings/certificate; called on final RPM removal')
     parser.add_argument('--plan', action='store_true', help='Print derived domain and sequence without changing anything')
     args = parser.parse_args()
-    if args.installed_rpm and Path('/var/lib/mykos-installer/installed.json').is_file():
+    if (args.domain or args.email) and not args.configure_https and not args.uninstall:
+        parser.error('--domain and --email require --configure-https')
+    if args.installed_rpm and not args.configure_https and not args.uninstall and Path('/var/lib/mykos-installer/installed.json').is_file():
         print('Existing MYKOS setup preserved; automatic configuration skipped.')
         return
     if args.uninstall:
         state = Path(STATE)
-        if not state.exists(): return
+        if not state.exists():
+            state=Path(IP_STATE)
+            if not state.exists():return
         domain = json.loads(state.read_text())['domain']
+        ip_only=state==Path(IP_STATE)
     else:
-        domain = domain_name(socket.getfqdn())
+        ip_only=not args.configure_https
+        domain=(args.address or host_address()) if ip_only else domain_name(args.domain or socket.getfqdn())
     if args.plan:
-        print('Domain: ' + domain + '\nApache HTTP -> Certbot HTTPS -> signed MYKOS RPM -> mykos-setup --public-origin https://' + domain + ' --enable')
+        print(('IP access: http://'+domain+'/mykos/' if ip_only else 'Domain: '+domain+'\nApache HTTP -> Certbot HTTPS -> MYKOS setup'))
         return
     if os.geteuid() != 0: parser.error('Run as root')
     Path('/run/lock').mkdir(parents=True, exist_ok=True)
     fd = os.open('/run/lock/mykos-bootstrap.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, 'a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        app = Bootstrap(domain)
-        if args.installed_rpm and Path('/var/lib/mykos-installer/installed.json').is_file():
+        app = Bootstrap(domain,ip_only=ip_only)
+        if args.installed_rpm and not args.configure_https and not args.uninstall and Path('/var/lib/mykos-installer/installed.json').is_file():
             print('MYKOS setup completed by another installer; no changes needed.')
-        elif args.uninstall: app.cleanup()
+        elif args.uninstall:
+            for state_name in (IP_STATE,STATE):
+                state=Path(state_name)
+                if state.exists():Bootstrap(json.loads(state.read_text())['domain'],ip_only=state_name==IP_STATE).cleanup()
+        elif ip_only:app.install_ip(installed_rpm=args.installed_rpm)
         else: app.install(args.email, installed_rpm=args.installed_rpm)
 
 

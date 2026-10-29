@@ -1,4 +1,20 @@
-# Automatic HTTPS and RPM installation
+# IP installation and optional domain HTTPS
+
+[Documentation index](README.md)
+
+<!-- contents:start -->
+**Contents**
+
+- [Install from the signed repository](#install-from-the-signed-repository)
+- [Optional domain prerequisites](#optional-domain-prerequisites)
+- [Bootstrap from a source bundle](#bootstrap-from-a-source-bundle)
+- [Create the first administrator](#create-the-first-administrator)
+- [Repeated runs and removal](#repeated-runs-and-removal)
+- [Native container image fixes](#native-container-image-fixes)
+
+<!-- contents:end -->
+
+## Install from the signed repository
 
 With the signed MYKOS repository configured, a fresh installation needs only:
 
@@ -6,30 +22,33 @@ With the signed MYKOS repository configured, a fresh installation needs only:
 sudo dnf install mykos
 ```
 
-The RPM queues `mykos-firstboot.service` after its package transaction. It
-automatically derives the domain, obtains/configures HTTPS, and runs MYKOS
-setup. Running setup outside the RPM transaction lets Certbot dependencies
-install without a nested DNF lock. The service is skipped when an existing
-MYKOS installation manifest is present, including prod/dev upgrades.
+The RPM starts `mykos-firstboot.service` after its package transaction to
+configure an IP-only Apache proxy and the application. It verifies that MYKOS
+is running, then prints `MYKOS is running: http://SERVER_IP/mykos/` in the install
+output. This default needs no public domain or Certbot certificate. Existing
+configured deployments are preserved during upgrades.
 
 ```bash
 sudo systemctl status mykos-firstboot.service --no-pager
 sudo journalctl -u mykos-firstboot.service --no-pager
-# Retry after correcting DNS/network/repository problems:
 sudo systemctl restart mykos-firstboot.service
 ```
 
-The service also retries on a subsequent boot until setup completes. Package
-installation can finish before HTTPS/setup does; use its status/log to check
-completion. Normal updates preserve existing configuration.
+To enable domain HTTPS explicitly after installation:
 
-On a new RHEL 8 or RHEL 9 host, set its fully qualified hostname, make the
-public domain point to this host, and allow incoming public TCP 80 and 443.
-The bootstrap takes exactly the last two hostname labels: `prod.mykol.com`
-becomes `mykol.com`. This is intentional; it does not calculate public suffixes
-such as `co.uk`. The resulting domain must be the domain you control and want
-on the certificate. A private dev host cannot obtain the production domain's
-certificate while that domain points to production.
+```bash
+sudo mykos-setup --configure-https
+sudo mykos-setup --configure-https --domain example.com --email admin@example.com
+```
+
+## Optional domain prerequisites
+
+For this optional mode, public DNS must point to this host and incoming TCP 80
+and 443 must be reachable. Without `--domain`, the domain is derived from the
+last two server hostname labels, preserving the existing domain selection rule.
+The final HTTPS URL is printed only after the application responds.
+
+## Bootstrap from a source bundle
 
 From a trusted MYKOS source bundle:
 
@@ -37,13 +56,16 @@ From a trusted MYKOS source bundle:
 # Read-only preview; no sudo required:
 python3 bin/mykos-bootstrap --plan
 
-# HTTPS, certificate, signed RPM and setup, in that order:
+# Default IP access and signed RPM setup:
 sudo bash bin/install bootstrap
+# Optional domain HTTPS, certificate, signed RPM and setup:
+sudo bash bin/install bootstrap --configure-https
 # Optional certificate account email:
-sudo bash bin/install bootstrap --email admin@example.com
+sudo bash bin/install bootstrap --configure-https --email admin@example.com
 ```
 
-No domain prompt or Expect session is used. Certbot runs noninteractively,
+With `--configure-https`, no domain prompt or Expect session is used.
+Certbot runs noninteractively,
 agrees to the ACME subscriber agreement, and registers without an email unless
 `--email` is supplied. The bootstrap uses Certbot's webroot authenticator and
 writes a dedicated Apache HTTP/HTTPS virtual host. Public HTTP validation must
@@ -52,11 +74,12 @@ virtual hosts are preserved. If a conflicting existing site needs HTTPS repair,
 it stops and reports that instead of replacing the site's configuration.
 Existing trusted Certbot HTTPS sites with the MYKOS proxy can be reused.
 
-It installs Apache/Certbot prerequisites, opens HTTP/HTTPS in an active
+In this optional HTTPS mode, it installs Apache/Certbot prerequisites and opens
+HTTP/HTTPS in an active
 firewalld default zone when needed, obtains the certificate, configures an HTTP
 redirect and authenticated `/mykos/` HTTP/WebSocket proxy, then verifies HTTPS
 locally with domain and CA validation. In the standalone bootstrap flow, only after this succeeds does it install
-the signed `mykos` RPM from the matching EL8/EL9 repository and invoke:
+the signed `mykos` RPM from the matching EL8/EL9/EL10 repository and invoke:
 
 ```bash
 mykos-setup --public-origin https://DOMAIN --enable
@@ -69,6 +92,8 @@ RHEL BaseOS/AppStream repositories must be available; the bootstrap does not
 change subscription registration. On SELinux hosts it enables Apache's network
 connection permission for the local application proxy.
 
+## Create the first administrator
+
 Create the first administrator after setup:
 
 ```bash
@@ -77,7 +102,8 @@ sudo /usr/local/sbin/mykos-users create NAME --role admin
 
 ## Repeated runs and removal
 
-State and ownership hashes live in `/var/lib/mykos-installer/bootstrap.json`.
+Domain HTTPS ownership hashes live in `/var/lib/mykos-installer/bootstrap.json`;
+IP-only setup uses `/var/lib/mykos-installer/ip-bootstrap.json`.
 Completed installations are checked and left unchanged: no repeat certificate
 request, package reinstall or setup. An interrupted installation resumes at
 its unfinished stage and retains an already-issued certificate. A twice-daily
@@ -104,3 +130,10 @@ sudo python3 bin/mykos-bootstrap --uninstall
 
 Never delete `/etc/letsencrypt` wholesale: certificates and accounts can be
 shared with other sites.
+
+## Native container image fixes
+
+Generated build copies exclude firmware and microcode packages and prevent boot
+tmpfiles from writing `/run/nologin` on the builder. Original kickstarts are
+preserved. Restored containers retain an instance-private PAM limits file and
+use the native read-only cgroup mount so consoles and memory limits work.

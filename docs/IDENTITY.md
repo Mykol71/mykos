@@ -1,9 +1,22 @@
 # Users, passwords, roles, and API keys
 
+[Documentation index](README.md)
+
 Browser accounts, API keys, and backup SSH accounts are three independent identity
 systems. Creating one does not create the others. All examples below run on the
 installed Linux host. Passwords are prompted on the terminal; do not pass them in
 command arguments. The root wrappers switch to the `mykosweb` account internally.
+
+<!-- contents:start -->
+**Contents**
+
+- [Browser accounts](#browser-accounts)
+  - [Upgrading an existing installation](#upgrading-an-existing-installation)
+- [API v2 keys](#api-v2-keys)
+- [Backup SSH keys](#backup-ssh-keys)
+- [Released permission boundary](#released-permission-boundary)
+
+<!-- contents:end -->
 
 ## Browser accounts
 
@@ -22,8 +35,10 @@ Usernames are 1–64 ASCII letters, digits, underscores, or hyphens. Newly set
 passwords must contain at least 12 characters and match the confirmation. Passwords
 are salted with random 16-byte salts and hashed using scrypt (`n=16384`, `r=8`,
 `p=1`). The database stores hashes, not plaintext passwords. Sessions last eight
-hours; only SHA-256 session-token digests are stored. HTTPS-only, HttpOnly,
-SameSite=Strict cookies are enabled by the installed configuration.
+hours; only SHA-256 session-token digests are stored. HttpOnly and SameSite=Strict cookies are used. The Secure flag follows
+`MYKOS_SECURE_COOKIE`: default IP-only HTTP setup sets it to `0`, while HTTPS
+setup sets it to `1`. Use the configured scheme/origin; a Secure cookie cannot
+be returned over plain HTTP.
 
 `create` refuses existing users. Use `passwd` to reset a password while keeping the
 role. Password resets, role changes, deletion, and explicit revocation delete that
@@ -118,3 +133,12 @@ configured by this installer. See the script catalog before using it.
 Identity backups need explicit `backup --include-data`; store them encrypted off-host.
 Restoring one can replace passwords, roles, sessions, and revocations. Ordinary
 source installs preserve identity databases and never import the original archive.
+
+## Released permission boundary
+
+The reviewed release exposes browser roles `user`/`admin` and API scopes
+`read`/`admin`. POS labels such as RTI/Dove and saved map metadata do not establish
+application-specific access enforcement. The proposed multi-role permission grid,
+MYKOS-to-MYKOS peer workflow and configurable application alert fields are future
+work, not documented released procedures. Keep browser credentials, API keys,
+backup SSH keys, guest accounts and VPN PSKs separate during backup and rotation.

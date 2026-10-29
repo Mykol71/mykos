@@ -1,5 +1,7 @@
 # Windows, macOS and Ubuntu desktops
 
+[Documentation index](README.md)
+
 MYKOS runs KVM virtual machines inside rootful Podman containers. Windows uses
 `docker.io/dockurr/windows`, macOS uses `docker.io/dockurr/macos`, and Ubuntu uses
 `docker.io/qemux/qemu`. Upstream instructions:
@@ -32,6 +34,23 @@ Existing network connections may need to reconnect after restoring a clone.
 Each new instance uses the checkpoint once. Later explicit stop/start operations
 boot its current disks normally, preventing stale RAM from being applied to
 changed disks. `podman commit` alone does not save this QEMU execution state.
+
+<!-- contents:start -->
+**Contents**
+
+- [Requirements and networking](#requirements-and-networking)
+- [Text admin workflow](#text-admin-workflow)
+- [Web and API](#web-and-api)
+- [Storage, backups and installation](#storage-backups-and-installation)
+- [Persistent lifecycle and container snapshots](#persistent-lifecycle-and-container-snapshots)
+- [Ubuntu networking packages](#ubuntu-networking-packages)
+- [Permanent container deletion](#permanent-container-deletion)
+- [Public HTTPS browser consoles](#public-https-browser-consoles)
+  - [Native snapshot compatibility](#native-snapshot-compatibility)
+  - [Host Add VPN](#host-add-vpn)
+- [Current memory policy](#current-memory-policy)
+
+<!-- contents:end -->
 
 ## Requirements and networking
 

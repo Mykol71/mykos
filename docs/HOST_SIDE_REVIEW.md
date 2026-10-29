@@ -1,9 +1,24 @@
 # Host-side monitoring review
 
+[Documentation index](README.md)
+
 Reviewed collectors, web/API handlers, native/VM lifecycle, snapshots, POS menu,
 pipework, scheduled commands, backup helpers, repository synchronization, and WSL
 VPN scripts. Existing container state was inspected through host Podman metadata;
 this review did not execute diagnostic commands inside guests.
+
+<!-- contents:start -->
+**Contents**
+
+- [Production observations](#production-observations)
+- [Prioritized findings](#prioritized-findings)
+- [VPN replacement requires protocol validation](#vpn-replacement-requires-protocol-validation)
+- [Calls that remain intentional](#calls-that-remain-intentional)
+- [Changes completed with this review](#changes-completed-with-this-review)
+- [Implemented optimizations (release 51)](#implemented-optimizations-release-51)
+- [Memory and networking follow-up](#memory-and-networking-follow-up)
+
+<!-- contents:end -->
 
 ## Production observations
 

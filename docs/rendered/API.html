@@ -1,0 +1,947 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>API usage</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="api-usage">API usage</h1>
+<p><a href="README.html">Documentation index</a></p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#base-urls-and-authentication">Base URLs and authentication</a></li>
+<li><a href="#interactive-reference">Interactive reference</a></li>
+<li><a href="#endpoint-inventory">Endpoint inventory</a><ul>
+<li><a href="#read-examples-and-response-shapes">Read examples and response shapes</a></li>
+<li><a href="#administrative-examples">Administrative examples</a></li>
+</ul>
+</li>
+<li><a href="#host-metrics-backup-repos-and-terminal-integrations">Host metrics, Backup, Repos and terminal integrations</a></li>
+<li><a href="#legacy-routes">Legacy routes</a></li>
+<li><a href="#common-errors">Common errors</a></li>
+<li><a href="#dashboard-backup-and-repos-panes">Dashboard Backup and Repos panes</a><ul>
+<li><a href="#add-a-vpn-from-the-container-pane">Add a VPN from the container pane</a></li>
+</ul>
+</li>
+<li><a href="#persistent-containers-and-live-snapshots">Persistent containers and live snapshots</a></li>
+<li><a href="#scheduled-commands-admin-api-keys-only">Scheduled commands (admin API keys only)</a></li>
+<li><a href="#delete-a-container-and-its-private-data">Delete a container and its private data</a></li>
+<li><a href="#explicit-container-state-purge">Explicit container-state purge</a></li>
+<li><a href="#authenticated-https-desktop-consoles">Authenticated HTTPS desktop consoles</a><ul>
+<li><a href="#host-side-monitoring-and-ram-allocation">Host-side monitoring and RAM allocation</a></li>
+</ul>
+</li>
+<li><a href="#retained-host-performance-history">Retained host performance history</a><ul>
+<li><a href="#update-81">Update 81</a></li>
+</ul>
+</li>
+<li><a href="#shared-vpn-gateways-and-topology">Shared VPN gateways and topology</a></li>
+<li><a href="#separate-browser-terminal-windows">Separate browser terminal windows</a><ul>
+<li><a href="#compact-dashboard-clock">Compact dashboard clock</a></li>
+<li><a href="#saved-geographic-metadata">Saved geographic metadata</a></li>
+<li><a href="#shared-customer-notes-and-pane-previews">Shared customer notes and pane previews</a></li>
+</ul>
+</li>
+<li><a href="#monitoring-interpretation-and-released-scope">Monitoring interpretation and released scope</a></li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="base-urls-and-authentication">Base URLs and authentication</h2>
+<p>Use <code>https://YOUR_HOST/mykos/api/v2</code> publicly. Uvicorn listens on
+<code>http://127.0.0.1:8000</code> internally and its route paths start <code>/api/v2</code>; Apache strips
+the external <code>/mykos</code> prefix. The supported integration interface is API v2.</p>
+<p>Create a read key using <code>sudo /usr/local/sbin/mykos-api-keys create my-monitor read</code>. Set it in your
+client&#39;s secret store. For an interactive shell, avoid placing the key literally
+in command history:</p>
+<pre><code class="language-sh">read -rs -p &#39;API key: &#39; MYKOS_KEY; echo
+export MYKOS_KEY
+BASE=https://mykos.example.com/mykos/api/v2
+curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/overview&quot;
+unset MYKOS_KEY
+</code></pre>
+<p>The examples use an environment variable for readability; take care with process
+visibility on shared systems. TLS is required for credentials. An invalid supplied
+key returns 401 even if a browser session is otherwise valid. API keys are not
+accepted by legacy browser endpoints or the browser-session terminal WebSocket.
+An admin key can use the separate API terminal at <code>/api/v2/terminal/{shop}</code>.</p>
+<p>API v2 operations require an <code>X-MYKOS-API-Key</code> header with a valid <code>read</code> or <code>admin</code>
+key. Browser cookies do not authorize API v2 requests. No login, cookie jar, or
+Origin header is required for API clients. Dashboard session routes retain their
+browser authentication and Origin checks.</p>
+<h2 id="interactive-reference">Interactive reference</h2>
+<p>Open <code>/mykos/api/v2/docs</code> and enter your key in Swagger&#39;s <strong>Authorize</strong> control.
+The documentation and OpenAPI schema are public so the reference can load without
+a browser login or cookies; all operational endpoints still require a key.
+Swagger sends <code>X-MYKOS-API-Key</code> on Execute requests, using <code>/mykos</code> as the public proxy
+prefix. Swagger assets load from unpkg.com and require browser network access to
+that host.</p>
+<pre><code class="language-sh">curl --fail-with-body -sS &quot;$BASE/openapi.json&quot;
+</code></pre>
+<p>A generated offline schema is also available in <a href="openapi.json">openapi.json</a>.
+Regenerate it when routes change; the running service remains authoritative.</p>
+<h2 id="endpoint-inventory">Endpoint inventory</h2>
+<p>All paths below are relative to <code>/mykos/api/v2</code>. <code>shop</code> is exactly eight ASCII digits,
+including leading zeros. The read column includes both <code>read</code> and <code>admin</code> keys.</p>
+<table>
+<thead>
+<tr>
+<th>Method and path</th>
+<th>Permission</th>
+<th>Result / notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET /overview</code></td>
+<td>Read</td>
+<td>Host, counts, snapshot ages/freshness, joined nodes</td>
+</tr>
+<tr>
+<td><code>GET /host</code></td>
+<td>Read</td>
+<td>Hostname, OS, kernel, uptime, backup storage, live <code>metrics</code></td>
+</tr>
+<tr>
+<td><code>GET /host/metrics</code></td>
+<td>Read</td>
+<td>CPU, logical CPU count, memory, swap, load averages, root disk, uptime and <code>graph_totals</code> (<code>containers</code>, <code>vpns</code>) counted from installed POS metadata files; null if unavailable/stale</td>
+</tr>
+<tr>
+<td><code>GET /host/status</code></td>
+<td>Read</td>
+<td>Host row data: <code>host</code> contains hostname, status, OS/version/kernel, internal IP and collected VPN status; memory and uptime are top-level fields</td>
+</tr>
+<tr>
+<td><code>GET /host/diagnostics/{action}</code></td>
+<td>Read</td>
+<td>Host <code>logs</code> (last 200 journal entries), <code>top</code> (processes), or <code>ipsec</code> status; fixed commands, no container execution</td>
+</tr>
+<tr>
+<td><code>POST /host/reboot</code></td>
+<td>Admin</td>
+<td>JSON <code>hostname</code> must exactly match the server hostname; schedules a reboot in five seconds; interrupts all containers/users</td>
+</tr>
+<tr>
+<td><code>WS /terminal/host</code></td>
+<td>Admin</td>
+<td>Interactive host root shell, or host VPN setup with <code>?action=add-vpn</code>; host <code>terminal_enabled</code> setting must be enabled; API key in handshake header</td>
+</tr>
+<tr>
+<td><code>GET /host/os</code></td>
+<td>Read</td>
+<td>Hostname, OS, kernel</td>
+</tr>
+<tr>
+<td><code>GET /host/kernel</code></td>
+<td>Read</td>
+<td>Kernel string</td>
+</tr>
+<tr>
+<td><code>GET /host/storage</code></td>
+<td>Read</td>
+<td>Backup storage free/used/total bytes and readable free value</td>
+</tr>
+<tr>
+<td><code>GET /nodes</code></td>
+<td>Read</td>
+<td><code>count</code>, <code>fresh</code>, <code>nodes</code>; optional filters below</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}</code></td>
+<td>Read</td>
+<td>Full joined node</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/status</code></td>
+<td>Read</td>
+<td>Status, running flag, VPN state, start epoch/time, image, OS type/version</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/network</code></td>
+<td>Read</td>
+<td><code>eth1_ipv4</code>, collected address list</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/resources</code></td>
+<td>Read</td>
+<td>CPU/memory display values from Podman</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/vpn</code></td>
+<td>Read</td>
+<td>VPN status, Libreswan counters/connections when available</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/details</code></td>
+<td>Read</td>
+<td>Container inspection details</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/ipsec</code></td>
+<td>Read</td>
+<td>Live <code>ipsec status</code> output</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/logs</code></td>
+<td>Read</td>
+<td>Last 200 Podman log lines; bounded output</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/processes</code></td>
+<td>Read</td>
+<td>Live <code>podman top</code> output</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/checkit</code></td>
+<td>Admin</td>
+<td>Runs <code>/usr/bin/checkit</code> inside the selected container</td>
+</tr>
+<tr>
+<td><code>GET /containers</code></td>
+<td>Read</td>
+<td>Managed rootful container list</td>
+</tr>
+<tr>
+<td><code>GET /images</code></td>
+<td>Read</td>
+<td>OS choices from running supported image containers; returns <code>os</code> and the local source <code>image</code></td>
+</tr>
+<tr>
+<td><code>GET /notes/{pane}</code></td>
+<td>mgreen session</td>
+<td>Private plain-text pane notes (mgreen session only), revision, and last-saved timestamp</td>
+</tr>
+<tr>
+<td><code>PUT /notes/{pane}</code></td>
+<td>mgreen session</td>
+<td>Save notes with JSON <code>text</code> (up to 20,000 characters) and current <code>revision</code>; stale revisions return 409</td>
+</tr>
+<tr>
+<td><code>GET /personal-notes</code></td>
+<td>mgreen session</td>
+<td>Read personal notes; separate from change requests and retained through updates</td>
+</tr>
+<tr>
+<td><code>PUT /personal-notes</code></td>
+<td>mgreen session</td>
+<td>Save personal notes with <code>text</code> and <code>revision</code>; stale revisions return 409</td>
+</tr>
+<tr>
+<td><code>GET /actions</code></td>
+<td>Read</td>
+<td>Supported administrative operations and permissions</td>
+</tr>
+<tr>
+<td><code>GET /actions/stage/{shop}/check</code></td>
+<td>Admin</td>
+<td>Container existence, active job, RTI backup presence, host configuration readiness</td>
+</tr>
+<tr>
+<td><code>GET /jobs/{shop}</code></td>
+<td>Admin</td>
+<td>Staging state and bounded output; <code>idle</code> if no recorded job</td>
+</tr>
+<tr>
+<td><code>POST /actions/stage</code></td>
+<td>Admin</td>
+<td>Queue staging; JSON <code>shop</code>, <code>os</code> from <code>/images</code>, and optional <code>restore</code> boolean</td>
+</tr>
+<tr>
+<td><code>POST /nodes/{shop}/stop</code></td>
+<td>Admin</td>
+<td>Stop the unique selected managed container</td>
+</tr>
+<tr>
+<td><code>GET /backups</code></td>
+<td>Read</td>
+<td>Backup accounts, POS/OS, disk use, subscriber state and storage; optional <code>refresh=true</code></td>
+</tr>
+<tr>
+<td><code>GET /backups/{code}</code></td>
+<td>Read</td>
+<td>One backup account; optional <code>refresh=true</code></td>
+</tr>
+<tr>
+<td><code>POST /backups</code></td>
+<td>Admin</td>
+<td>Account creation/deletion, SSH key changes, subscriber updates and key retrieval</td>
+</tr>
+<tr>
+<td><code>GET /backups/{code}/keys</code></td>
+<td>Admin</td>
+<td>Backed-up public and private RSA keys; response is not cached</td>
+</tr>
+<tr>
+<td><code>GET /repos</code></td>
+<td>Read</td>
+<td>Repositories, disk use, modification times, Apache and sync state; optional <code>refresh=true</code></td>
+</tr>
+<tr>
+<td><code>GET /repos/{name}</code></td>
+<td>Read</td>
+<td>One repository; optional <code>refresh=true</code></td>
+</tr>
+<tr>
+<td><code>POST /repos</code></td>
+<td>Admin</td>
+<td>Delete, enable, disable or start repository sync</td>
+</tr>
+<tr>
+<td><code>WS /terminal/{shop}</code></td>
+<td>Admin</td>
+<td>Interactive terminal; key in WebSocket handshake header, host terminal setting must be enabled</td>
+</tr>
+<tr>
+<td><code>GET /openapi.json</code>, <code>GET /docs</code></td>
+<td>Public</td>
+<td>Machine/browser API reference; use Authorize for operations</td>
+</tr>
+</tbody></table>
+<p><code>GET /nodes</code> filters: <code>status=online|offline|unknown</code>,
+<code>vpn=up|down|unknown|not_configured</code>, and <code>running=true|false</code>.
+<code>include</code> is <code>all</code> or a comma-separated selection of
+<code>observation,details,extended,network,resources,vpn</code>; base identity/status fields
+remain present. Status/vpn filters are exact string comparisons. Unknown filter
+values simply match nothing. Missing collected values can be <code>null</code>, empty objects,
+<code>Unknown</code>, or <code>unknown</code> depending on the field.</p>
+<p>Container <code>details</code> include <code>image</code> (the image reference), <code>os_type</code> (distribution
+name), and <code>os_version</code> (distribution version). These fields are also available on
+joined nodes and <code>/nodes/{shop}/status</code>. The details collector reads the
+container&#39;s <code>/etc/os-release</code>, falling back to <code>/usr/lib/os-release</code>, including for
+stopped containers. Missing metadata displays as <code>Unknown</code> in the dashboard.</p>
+<h3 id="read-examples-and-response-shapes">Read examples and response shapes</h3>
+<pre><code class="language-sh">curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; \
+  &quot;$BASE/nodes?status=online&amp;include=network,resources&quot;
+curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; \
+  &quot;$BASE/nodes/01234567/network&quot;
+curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; \
+  &quot;$BASE/nodes/01234567/logs&quot;
+</code></pre>
+<p>Illustrative network result (addresses and node are examples, not production data):</p>
+<pre><code class="language-json">{&quot;shopcode&quot;:&quot;01234567&quot;,&quot;eth1_ipv4&quot;:&quot;192.0.2.10&quot;,&quot;addresses&quot;:[{&quot;network&quot;:&quot;podman&quot;,&quot;address&quot;:&quot;10.88.0.2&quot;}]}
+</code></pre>
+<p>Live diagnostic responses have this shape:</p>
+<pre><code class="language-json">{&quot;shop&quot;:&quot;01234567&quot;,&quot;container&quot;:&quot;01234567.host.example&quot;,&quot;output&quot;:&quot;diagnostic text&quot;}
+</code></pre>
+<p><code>/nodes</code> returns <code>{&quot;count&quot;:0,&quot;fresh&quot;:{&quot;status&quot;:false,&quot;details&quot;:false,&quot;extended&quot;:false},&quot;nodes&quot;:[]}</code>
+on a fresh installation without collected nodes. A 200 response alone does not mean
+collectors are fresh. Inspect freshness and timestamps in <code>/overview</code>. Podman resource
+values are display strings, not uniformly normalized numeric metrics. Helper failures
+can produce <code>Unknown</code> backup storage in <code>/host</code> while the rest of the response works.</p>
+<h3 id="administrative-examples">Administrative examples</h3>
+<p>Use an admin-scoped key and a staging shop approved for these operations. Staging
+creates a privileged container. For native Linux images, <code>restore: true</code> mounts
+available <code>/backups/tfrsync-ID</code> trees <code>/usr2</code>, <code>/d</code>, <code>/etc</code>, <code>/home</code>, and
+<code>/usr/java</code> directly
+read/write; guest writes change the original backup. The application adapter need
+not be enabled. VM images do not support this restore option.</p>
+<p>Before the new instance starts, its private account files are reconciled with the
+backup IDs. Conflicting image account ownership and POSIX ACLs are adjusted only
+inside that instance; backup ownership and saved account files stay unchanged.
+The image root password is retained, missing customer password hashes produce
+locked accounts, and the old <code>tfrsync-ID</code> login account is omitted. The entire backup home tree
+is mounted, including any old backup-client home; its source is never deleted.
+Private per-instance bind mounts retain reconciled account files, hostname/hosts,
+machine ID, image fstab/crypttab and Podman interface ownership settings inside
+the complete <code>/etc</code> mount. Other saved customer configuration and service
+definitions are visible directly; files absent from the backup cannot be restored. The host
+backup account is untouched; use the existing <strong>Backups</strong> text menu to configure
+backup accounts afterward. Existing instances are not restored again on restart.</p>
+<p>Root configuration can explicitly map receiver-owned files to customer identities:
+<code>&quot;backup_identity_overrides&quot;: {&quot;01234567&quot;: {&quot;users&quot;: {&quot;appuser&quot;: 1011}, &quot;groups&quot;: {&quot;appgroup&quot;: 1012}}}</code>. Only use IDs confirmed for that backup; mappings
+never change the backup files. An optional <code>backup_root</code> changes the host search
+root from <code>/backups</code>.
+Stopping affects the selected running POS instance.</p>
+<pre><code class="language-sh">curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; \
+  &quot;$BASE/actions/stage/01234567/check&quot;
+curl --fail-with-body -sS -X POST \
+  -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; -H &#39;Content-Type: application/json&#39; \
+  --data &#39;{&quot;shop&quot;:&quot;01234567&quot;,&quot;os&quot;:&quot;rh9&quot;,&quot;restore&quot;:false}&#39; &quot;$BASE/actions/stage&quot;
+curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/jobs/01234567&quot;
+curl --fail-with-body -sS -X POST -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; \
+  &quot;$BASE/nodes/01234567/stop&quot;
+</code></pre>
+<p>A staging submission returns HTTP 200 with a queued job, for example:</p>
+<pre><code class="language-json">{&quot;shop&quot;:&quot;01234567&quot;,&quot;state&quot;:&quot;queued&quot;,&quot;restore&quot;:false,&quot;output&quot;:&quot;&quot;,&quot;updated_at&quot;:1792690000}
+</code></pre>
+<p>Poll until <code>state</code> is <code>done</code> or <code>failed</code>; <code>queued</code>/<code>running</code> are nonterminal. The
+submission is not proof of completed staging. A lost/failed worker produces failed
+status when polled. Jobs are not automatically retried. Repeated start requests
+while a worker is active or a container exists are rejected. Stopping a successfully
+staged container keeps it present; removal/restart is an explicit operator task.</p>
+<h2 id="host-metrics-backup-repos-and-terminal-integrations">Host metrics, Backup, Repos and terminal integrations</h2>
+<p>API v2 now exposes the same data and operations as all dashboard panes. Use
+<code>X-MYKOS-API-Key</code> for each request; neither browser login nor Origin is required.
+<code>/host/metrics</code> returns the same raw readings used by the Host gauges and footer.
+CPU/memory/disk percentages are 0–100. Load averages are the raw 1/5/15-minute
+values; the gauge normalizes one-minute load by <code>cpu_count</code>. Uptime is seconds.
+When Apache uses a Certbot certificate, <code>host.certificate_domain</code> identifies
+the certified dashboard domain used for the Host pane heading. <code>host.hostname</code>
+continues to identify the actual server. Certificate metadata is collected on
+the host and does not add guest calls.
+Swap remains available in the API even though its gauge is hidden in the UI.
+Unavailable counters are <code>null</code>, rather than a fabricated zero.</p>
+<pre><code class="language-sh">curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/host/metrics&quot;
+curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/backups&quot;
+curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/repos?refresh=true&quot;
+</code></pre>
+<p>Backup account responses include <code>updated_at</code>, the Unix modification timestamp of the newest backed-up RTI/Daisy <code>tfrsync-summary.log</code>, or <code>null</code> when unavailable. This is the dashboard’s Last updated value, not a guarantee of a successful backup.</p>
+<p>Backup POST bodies share the dashboard&#39;s schema:</p>
+<table>
+<thead>
+<tr>
+<th><code>action</code></th>
+<th>Fields in addition to <code>action</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>create</code></td>
+<td><code>code</code>, SSH public <code>key</code>, optional boolean <code>subscriber</code></td>
+</tr>
+<tr>
+<td><code>key</code></td>
+<td><code>code</code>, replacement public <code>key</code></td>
+</tr>
+<tr>
+<td><code>subscriber</code></td>
+<td><code>code</code>, boolean <code>subscriber</code></td>
+</tr>
+<tr>
+<td><code>delete</code></td>
+<td><code>code</code>, boolean <code>remove_data</code> (default false preserves data)</td>
+</tr>
+<tr>
+<td><code>keys</code></td>
+<td><code>code</code>; returns backed-up public/private client keys</td>
+</tr>
+</tbody></table>
+<p>The equivalent key read is <code>GET /backups/{code}/keys</code>. Key material is restricted
+to admin keys and uses <code>Cache-Control: no-store</code>. It is never included in listings.
+The account&#39;s currently authorized public key and the backed-up client&#39;s own RSA
+keys are different: <code>key</code> updates authorized access; <code>keys</code> reads the client backup.</p>
+<p>Repository POST bodies use <code>action: delete|enable|disable|sync</code> and <code>name</code>.
+Deletion requires an existing repository name. Other actions use <code>name: &quot;all&quot;</code>
+(the default). Actions use the same helper validation and locks as the dashboard,
+and invalidate the shared listing cache. Enable/disable operates on all of Apache;
+disable can interrupt the API itself. Sync queues the same background systemd job;
+read <code>/repos</code> to monitor its state.</p>
+<p>The terminal URL is <code>wss://YOUR_HOST/mykos/api/v2/terminal/01234567</code>. Supply an admin
+key in the <code>X-MYKOS-API-Key</code> <strong>handshake header</strong>, never the URL. Standard browser
+WebSocket objects cannot set that header; use a programmatic WebSocket client.
+The existing browser terminal remains on its separate session-authenticated route.
+Both use the same PTY helper, honor <code>terminal_enabled</code>, and reject invalid codes
+before opening the helper. Missing/invalid/read-scoped keys close with code 1008;
+an unavailable/disabled helper closes with 1011. Authorization is checked at the
+handshake; revoking a key does not terminate an already connected terminal.
+WebSocket routes are documented here and in <code>/actions</code>, since OpenAPI does not
+model the WebSocket transport.</p>
+<p>For deployments using the explicit Apache WebSocket proxy rules, add these <strong>before</strong>
+the general <code>/mykos/</code> HTTP proxy rule in the existing HTTPS VirtualHost:</p>
+<pre><code class="language-apache">ProxyPass /mykos/api/v2/terminal/ ws://127.0.0.1:8000/api/v2/terminal/
+ProxyPassReverse /mykos/api/v2/terminal/ ws://127.0.0.1:8000/api/v2/terminal/
+</code></pre>
+<p>Validate with <code>apachectl configtest</code> before reloading Apache. The installer updates
+the example file but preserves the site&#39;s actual Apache configuration.</p>
+<h2 id="legacy-routes">Legacy routes</h2>
+<p>The dashboard uses browser-session routes: <code>POST /api/login</code> with JSON
+<code>username/password</code>, <code>POST /api/logout</code>, <code>GET /api/nodes</code>, <code>/api/nodes/{shop}/details</code>,
+<code>/api/web/current-user</code>, <code>/api/web/host-version</code>, <code>/api/web/host-uptime</code>,
+<code>/api/web/extended</code>, <code>/api/web/host-metrics</code>, <code>/api/terminal/permission</code>, <code>/api/admin/containers</code>, and
+<code>/api/admin/containers/{shop}/{logs|top|ipsec|checkit}</code>. Checkit requires admin.
+The Host pane reads <code>/api/web/host-metrics</code> every ten seconds for aggregate CPU
+usage, memory and swap usage, 1/5/15-minute load averages, root filesystem usage,
+and host uptime. CPU usage is sampled over 100 ms; memory usage excludes available
+reclaimable memory. Unavailable counters return <code>null</code>.</p>
+<p>Browser-only admin staging routes are <code>/api/web/stage/{shop}/{check|status}</code>,
+<code>POST /api/web/stage</code>, and <code>POST /api/web/containers/{shop}/stop</code>.
+The terminal WebSocket is <code>/api/terminal/{shop}</code> and requires an admin browser
+session plus matching Origin. Prefix all these paths with <code>/mykos</code> externally.</p>
+<p>Legacy <code>/api/monitor/summary</code>, <code>/api/monitor/nodes</code>, <code>/api/monitor/nodes/{shop}</code>,
+<code>/api/monitor/extended</code>, and <code>/api/monitor/extended/{shop}</code> require
+<code>Authorization: Bearer LEGACY_TOKEN</code>; API v2 keys are not interchangeable with it.
+Do not build new integrations against these compatibility routes.</p>
+<h2 id="common-errors">Common errors</h2>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning / next action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>400</td>
+<td>Invalid eight-digit shopcode, invalid include fields, or bad route-level input</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Missing/expired browser session or missing, invalid, or revoked API key</td>
+</tr>
+<tr>
+<td>403</td>
+<td>Admin privilege required, or missing/mismatched browser Origin</td>
+</tr>
+<tr>
+<td>404</td>
+<td>Shop absent from collected inventory, or details unavailable</td>
+</tr>
+<tr>
+<td>422</td>
+<td>JSON/query validation failed; inspect FastAPI&#39;s <code>detail</code> array</td>
+</tr>
+<tr>
+<td>500</td>
+<td>Helper rejected operation or a host command failed; inspect <code>detail</code> and unit journal</td>
+</tr>
+<tr>
+<td>503</td>
+<td>Helper socket unavailable/timeout/bad response, legacy token unavailable, or snapshot unavailable on a legacy route</td>
+</tr>
+</tbody></table>
+<p>The current helper bridge maps helper-side errors (including a container conflict
+or unconfigured image) to 500, not 409. Do not automatically retry a mutating request
+after a timeout; inspect its job/container state first. The helper limits diagnostic
+output and command duration; long operations belong to the staging job workflow.</p>
+<h2 id="dashboard-backup-and-repos-panes">Dashboard Backup and Repos panes</h2>
+<p>The dashboard orders its panes as Host, Backups, Repos, Containers. Header section
+links update the breadcrumb location. Container status includes the collected OS
+type and version; missing or stale details show <code>OS unknown</code>.</p>
+<p>These browser-session endpoints sit outside API v2:</p>
+<table>
+<thead>
+<tr>
+<th>Method and path</th>
+<th>Permission</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET /api/web/mykos/backups</code></td>
+<td>Browser user</td>
+<td>Backup accounts, POS/OS, disk use, subscriber state and storage</td>
+</tr>
+<tr>
+<td><code>GET /api/web/mykos/repos</code></td>
+<td>Browser user</td>
+<td>Repository directories, disk use, modification times, Apache and sync state</td>
+</tr>
+<tr>
+<td><code>POST /api/web/mykos/backups</code></td>
+<td>Browser admin + Origin</td>
+<td>JSON <code>action</code>, eight-digit <code>code</code>, and action fields below</td>
+</tr>
+<tr>
+<td><code>POST /api/web/mykos/repos</code></td>
+<td>Browser admin + Origin</td>
+<td>JSON <code>action</code> and optional <code>name</code> (default <code>all</code>)</td>
+</tr>
+</tbody></table>
+<p>Backup actions: <code>create</code> (SSH public <code>key</code>, <code>subscriber</code>), <code>key</code> (replacement public
+<code>key</code>), <code>subscriber</code> (boolean <code>subscriber</code>), <code>delete</code> (boolean <code>remove_data</code>), and
+<code>keys</code> (read the backed-up client&#39;s public/private RSA keys). Account creation uses
+<code>useradd</code>, the existing forced-command <code>back/bin/tfrsync</code>, and restricted SSH key
+permissions. Delete can retain backup data while removing the account and SSH
+access. Retained directories appear only when an OS backup account exists and
+must be resolved by an operator before reusing that code. View/get keys opens a
+private-key dialog and supports browser download; it does not copy keys into the
+server&#39;s <code>/home/tfsupport/keys</code> directory. Closing the dialog or logging out clears
+its displayed key material.</p>
+<p>Repository storage may use a root-controlled symlink, such as
+<code>/var/www/html -&gt; /home/html</code>, when its target and parent directories are trusted.
+Symlinks inside the repository root are excluded from listing and deletion.</p>
+<p>Repo actions: <code>delete</code> requires an existing immediate directory <code>name</code>; <code>enable</code>,
+<code>disable</code>, and <code>sync</code> use <code>name: &quot;all&quot;</code>. Enable/disable starts/stops <strong>all of Apache</strong>,
+matching the CLI menu, and may interrupt this UI and other sites. Sync starts
+<code>mykos-repo-sync.service</code> asynchronously using the toolkit&#39;s existing sync script;
+it installs dependencies and runs privileged mirror containers as that script
+specifies. Sync state is the systemd ActiveState (<code>activating</code> while the oneshot
+runs, <code>inactive</code> after exit, <code>failed</code> after a unit failure). Delete is rejected
+while sync is active. Service output is available via
+<code>journalctl -u mykos-repo-sync.service</code>.</p>
+<p>Lists refresh every minute and are cached for up to 60 seconds. The Refresh button
+passes <code>refresh=true</code> to collect immediately. Disk usage collection is limited to
+20 seconds per pane; unavailable size values display <code>Unknown</code>. No account, key,
+subscriber, repository, or service changes occur on page load. These operations
+use fixed privileged helper commands; interactive legacy menus are not executed by
+HTTP requests. Deployment must include the new helper module and sync unit and
+reload systemd before Sync can run.</p>
+<p>The dashboard requires an OS selection when adding a container. The helper validates the selection against running supported OS images and records the source image in the queued job. Existing API clients that omit <code>os</code> use the configured <code>stage_image</code> fallback. No image is pulled from a registry. Backup creation accepts the ID and SSH public key directly in the pane.</p>
+<h3 id="add-a-vpn-from-the-container-pane">Add a VPN from the container pane</h3>
+<p>For a running container with VPN status <code>not_configured</code>, administrators can use the blue plus in its VPN column. It opens the existing POS <code>add_vpn</code> prompts in the popup terminal. Enable terminal access in <code>/etc/mykos/config.json</code>. The prompts collect the remote name, public IP/hostname, IPv4 network (canonical CIDR, or a bare network address treated as <code>/24</code>), and a hidden PSK entry, then ask for confirmation and whether to push to Meraki. The entered PSK is written to its customer folder’s per-connection <code>.secrets</code> file with mode <code>0600</code>; no preconfigured <code>VPN_PSK</code> is required. The host runs the fixed <code>pos --add-vpn SHOP CONTAINER</code> entry point, not an arbitrary host shell.</p>
+<p>API clients use <code>WS /api/v2/terminal/{shop}?action=add-vpn</code> with an admin API key in the handshake header. The browser uses the authenticated, Origin-checked <code>/api/terminal/{shop}?action=add-vpn</code> route. Standard root container terminals retain the default <code>action=shell</code>.</p>
+<p>Host responses include <code>internal_ip</code>, the host source IPv4 address selected by the route to <code>8.8.8.8</code>, or <code>null</code> when unavailable. The dashboard footer shows this address; the header continues to show the hostname.</p>
+<p>Supported OS image names are <code>rh7</code>, <code>rh8</code>, <code>rh9</code>, <code>rh10</code>, <code>win10</code>, <code>wns2025</code>, <code>wns2022</code>, <code>wns2019</code>, <code>wns2016</code>, <code>win11</code>, <code>win8e</code>, <code>win7u</code>, <code>winxp</code>, <code>winme</code>, <code>win2k</code>, <code>win98</code>, <code>mac15</code>, <code>mac14</code>, <code>mac13</code>, <code>mac12</code>. Only running images appear in the dropdown and <code>/api/v2/images</code>; each selection uses that image’s local image.</p>
+<h2 id="persistent-containers-and-live-snapshots">Persistent containers and live snapshots</h2>
+<p>The following key-authenticated v2 routes use the same backend jobs as the web buttons:</p>
+<table>
+<thead>
+<tr>
+<th>Route (under <code>/mykos/api/v2</code>)</th>
+<th>Scope</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>POST /nodes/{shop}/start</code></td>
+<td>Admin</td>
+<td>Start the existing persistent container and current disks</td>
+</tr>
+<tr>
+<td><code>POST /nodes/{shop}/stop</code></td>
+<td>Admin</td>
+<td>Stop it while retaining writable storage, code and ports</td>
+</tr>
+<tr>
+<td><code>POST /nodes/{shop}/snapshot</code></td>
+<td>Admin</td>
+<td>Capture live state; leave the source running</td>
+</tr>
+<tr>
+<td><code>GET /snapshots</code></td>
+<td>Read</td>
+<td>List all saved snapshots, grouped by <code>code</code> in the UI</td>
+</tr>
+<tr>
+<td><code>GET /nodes/{shop}/snapshots</code></td>
+<td>Read</td>
+<td>List one container&#39;s available snapshots</td>
+</tr>
+<tr>
+<td><code>POST /nodes/{shop}/snapshots/{identifier}/restore</code></td>
+<td>Admin</td>
+<td>Replace the original container&#39;s disk/live state with the selection</td>
+</tr>
+</tbody></table>
+<p>POST responses return a queued job. Poll <code>GET /jobs/{shop}</code> until <code>state</code> is
+<code>done</code> or <code>failed</code>; the job&#39;s <code>output</code> contains the result JSON or failure detail.
+The helper permits one job per code. Restore interrupts that container and replaces
+current state; API callers must explicitly choose the original code and snapshot
+identifier. There is no cross-container restore. API authentication remains
+<code>X-MYKOS-API-Key</code> or Bearer key, without browser cookies or an Origin requirement.</p>
+<p>Browser equivalents are <code>GET /api/web/snapshots</code>,
+<code>GET /api/web/containers/{shop}/snapshots</code>, and POST routes under
+<code>/api/web/containers/{shop}</code> ending in <code>/start</code>, <code>/stop</code>, <code>/snapshot</code>, or
+<code>/snapshots/{identifier}/restore</code>. Browser writes require an admin session and the
+configured Origin; list routes require a signed-in session. Private configuration,
+guest credentials and mounted source paths are excluded from snapshot list payloads.</p>
+<p>Snapshot notes use pane name <code>snapshots</code> through the existing notes endpoints.</p>
+<p><code>DELETE /mykos/api/v2/nodes/{shop}/snapshots/{identifier}</code> permanently removes
+only that selected saved state (admin key required), through the same queued-job
+protocol. It does not stop, reboot or delete the live container. Other saved states
+remain. The browser equivalent is
+<code>DELETE /mykos/api/web/containers/{shop}/snapshots/{identifier}</code>, requiring an admin
+session and the configured Origin. Both restore and delete operate on the selected
+snapshot ID; list responses include its original <code>os</code> and <code>created_at</code> epoch time.
+The Snapshots table displays a full OS name and a Taken date/time for that selection.</p>
+<h2 id="scheduled-commands-admin-api-keys-only">Scheduled commands (admin API keys only)</h2>
+<p><code>PUT /mykos/api/v2/commands/{id}</code> queues one command. The local
+<code>mykos-command-collector.timer</code> checks due work every 30 seconds. <code>run_at</code> is
+an ISO 8601 date/time with timezone; omit it to run on the next check. A busy
+target waits for its earlier job. Up to four different targets can run concurrently.
+A command may start later when a target is busy or the host is offline.</p>
+<pre><code class="language-json">{
+  &quot;target&quot;: &quot;01234567&quot;,
+  &quot;command&quot;: &quot;Get-Date; Get-Service -Name Spooler&quot;,
+  &quot;run_at&quot;: &quot;2026-10-25T14:30:00-05:00&quot;,
+  &quot;timeout_seconds&quot;: 300
+}
+</code></pre>
+<p>Use an eight-digit container ID or <code>host</code>. Windows and Windows Server jobs
+run Windows PowerShell <strong>inside the guest</strong>, through QEMU Guest Agent. They
+never execute PowerShell text in the Linux Dockurr wrapper. Host and native
+RedHat/Linux jobs use Bash as root. macOS and VM-based Ubuntu scheduled commands
+are currently rejected. Native Linux requires <code>/usr/bin/timeout</code> in the guest.</p>
+<p>Windows requires a working QEMU Guest Agent service with <code>guest-exec</code> enabled
+and the MYKOS private QGA channel. New Windows images created by this release
+include <code>QGA=/dev/shm/mykos-qga.sock</code>; install the signed QEMU Guest Agent from
+the VirtIO Windows driver distribution inside Windows and start its service
+before capturing the image. Older images/running instances are not automatically
+restarted or changed: without the channel/agent the job fails with an explicit
+prerequisite error. Adding a device to an older RAM capture requires a compatible
+recapture; do not edit its launch topology and restore the old capture. No public
+QGA port, guest password, SSH service, or WinRM listener is used.</p>
+<p>Use a unique ID (1–64 ASCII letters/digits/underscores/hyphens, beginning with
+an alphanumeric). Repeating an identical PUT returns the existing record without
+rerunning it. A pending record may be rescheduled with a changed PUT; changing a
+claimed/completed/cancelled record returns 409. Use a new ID to run again.</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET /mykos/api/v2/commands</code></td>
+<td>Latest 100 records, excluding scripts/output</td>
+</tr>
+<tr>
+<td><code>GET /mykos/api/v2/commands/{id}</code></td>
+<td>Full record, state, timestamps, exit code and bounded combined output</td>
+</tr>
+<tr>
+<td><code>POST /mykos/api/v2/commands/{id}/cancel</code></td>
+<td>Cancel only a pending job; 409 once claimed</td>
+</tr>
+</tbody></table>
+<p>All endpoints require <code>X-MYKOS-API-Key</code> with <strong>admin</strong> scope; browser cookies and
+read keys cannot access them. The command limit is 16000 UTF-8 bytes and timeout
+is 1–3600 seconds. Output retains up to 64 KiB and reports truncation. Results
+and scripts are stored root-only under <code>/var/lib/mykos/commands</code>, retained across
+updates. Treat admin keys as root-equivalent credentials.</p>
+<p>States are <code>pending</code>, <code>starting</code>, <code>running</code>, <code>succeeded</code>, <code>failed</code>, <code>timed_out</code>,
+<code>cancelled</code>, and <code>interrupted</code>. Dispatch is at most once: a worker lost during a
+reboot or service failure is marked interrupted and is not automatically retried.
+It may have executed some or all of the script; inspect the result before choosing
+a new ID. Timeouts kill the host process group or invoke guest timeout/taskkill;
+a disconnected Windows agent can prevent confirmation of termination. Detached
+processes or services deliberately started by a command can outlive the job.</p>
+<p>Transport references: <a href="https://github.com/dockur/windows/blob/master/docs/environment.html">Dockur QGA configuration</a>
+and <a href="https://www.qemu.org/docs/master/interop/qemu-ga-ref.html">QEMU guest execution protocol</a>.</p>
+<p>The authenticated <code>GET /api/v2/images</code> response includes <code>images</code> (startable OS choices)
+and <code>builds</code> (active unfinished images with <code>os</code>, <code>name</code>, and <code>console_url</code>).
+Builds expose the installation console but cannot be selected for starting a container
+until capture completes. The browser endpoint <code>/api/web/stage-images</code> returns the same data.</p>
+<h2 id="delete-a-container-and-its-private-data">Delete a container and its private data</h2>
+<p><code>DELETE /api/v2/nodes/{shop}</code> requires an <strong>admin API key</strong> and JSON
+<code>{&quot;confirmation&quot;:&quot;01234567&quot;}</code> matching the path ID exactly. The browser equivalent
+is <code>DELETE /api/web/containers/{shop}</code>, with an administrator session and same-origin
+request. The trash action appears beside start, stop and snapshot in every OS pane.
+It asks you to type the ID. Stop still preserves the container and its data.</p>
+<pre><code class="language-bash">curl --fail-with-body -X DELETE &quot;$BASE/nodes/01234567&quot; \
+  -H &quot;X-MYKOS-API-Key: $MYKOS_API_KEY&quot; -H &#39;Content-Type: application/json&#39; \
+  --data &#39;{&quot;confirmation&quot;:&quot;01234567&quot;}&#39;
+</code></pre>
+<p>Deletion queues a per-ID worker; poll <code>GET /jobs/{shop}</code> for its result
+(the existing staging job status endpoint). It pins the selected Podman container
+identity, stops it if necessary, removes it without force-removing an image or
+volume, and removes its MYKOS-managed VM disk directory, private VPN directory,
+and per-ID lifecycle metadata. Writable native container layers are removed by
+Podman. It refuses unsafe/symlink cleanup paths and storage also mounted by another
+container. Unmanaged/external bind mounts, named volumes, rsync backups, OS images,
+and intentional snapshots are retained. <code>retained_mounts</code> lists untouched mounts.</p>
+<p>Snapshots are retained as separate archives; deletion does not automatically
+recreate a container for restore. VM restore needs an existing compatible container
+with the same ID. The current native Linux CRIU restore requires its <strong>original</strong>
+container identity, so deleting that container prevents that restore method. The
+web confirmation warns when such native memory snapshots are present.</p>
+<h2 id="explicit-container-state-purge">Explicit container-state purge</h2>
+<p>Administrator only: <code>GET /api/v2/system/purge</code> previews the host-wide reset and
+returns the exact <code>confirmation</code> phrase, <code>PURGE hostname</code>. Send that exact phrase
+as <code>{&quot;confirmation&quot;:&quot;PURGE hostname&quot;}</code> to <code>POST /api/v2/system/purge</code> to queue
+it. Poll <code>GET /api/v2/system/purge/status</code> after the dashboard restarts. These
+routes require an admin API key. Browser equivalents live under
+<code>/api/web/system/purge</code>; browser execution additionally checks the request origin.</p>
+<p>This is irreversible: it removes <strong>all rootful Podman containers and images</strong>,
+including non-MYKOS resources, pods, volumes, custom networks, build cache, VM
+disks, startup captures, intentional snapshots, recovery disks, per-ID VPN data,
+MYKOS build files, queued commands, runtime inventory, and pane notes. Active
+MYKOS lifecycle/command workers and recognized kickstart builders are cancelled.
+Rootless containers belonging to other Unix users are outside this scope.</p>
+<p>MYKOS browser users/password hashes/roles, sessions and API key records remain.
+Rsync backup accounts/data, synced repos, application files, settings, docs and
+installer/RPM recovery packages remain. The operation refuses unsafe storage
+paths, storage overlapping preserved data, and nested host mounts. It does not
+remove application packages or run automatically during install/update.</p>
+<p>Local text menu: POS <strong>Purge</strong>, or <code>sudo /usr/local/sbin/mykos-prune purge</code>.
+Preview without changes: <code>sudo /usr/local/sbin/mykos-prune --dry-run</code>.
+Status: <code>sudo /usr/local/sbin/mykos-prune status</code>.
+The interactive command requires typing the exact host confirmation, waits for
+the worker, and reports success/failure. Stop/start of MYKOS web/collector/socket
+services is temporary; only infrastructure that was active is resumed. Guest
+containers and cancelled jobs are never restarted by the purge.</p>
+<h2 id="authenticated-https-desktop-consoles">Authenticated HTTPS desktop consoles</h2>
+<p><code>GET /console/{selection}/{path}</code> under API v2 serves verified image/container
+console assets with an admin API key. WebSocket upgrades to
+<code>/api/v2/console/{selection}/websockify</code> require the same admin key header and
+are rechecked while connected. Human browser links use
+<code>/mykos/console/{selection}/</code> with a current admin browser session; the WebSocket
+also checks the configured public Origin. Selection is a supported VM OS name
+for an image build, or an eight-digit container ID. Clients cannot supply a
+backend host or port. Upstream requests never receive MYKOS credentials.</p>
+<p>Image/desktop metadata <code>console_url</code> now names the authenticated public proxy
+path. <code>direct_console_url</code> supplies the former LAN URL for diagnostics. Native
+RDP/VNC <code>login_url</code> values retain their LAN/VPN semantics.</p>
+<p>Host Add VPN (<code>WS /mykos/api/v2/terminal/host?action=add-vpn</code>, admin key required)
+uses the same interactive workflow as container Add VPN: remote name, public
+address, IPv4 network without <code>/24</code>, hidden PSK entry, confirmation, optional
+Meraki push, and remote-peer instructions. Browser sessions use the equivalent
+authenticated host terminal action. The fixed workflow writes new host connection
+files and loads only the selected tunnel into host IPsec.</p>
+<h3 id="host-side-monitoring-and-ram-allocation">Host-side monitoring and RAM allocation</h3>
+<p>Periodic OS identity, container state, resource statistics and native network
+addresses now come from host Podman metadata and host iproute tools. Image OS
+identity is not a report of changes made by an in-guest OS upgrade. Native VPN
+results are sampled by the basic collector through the Libreswan control socket;
+details/extended reuse the same sample, rejecting samples older than 60 seconds
+or belonging to an earlier container start. VM wrappers are not queried for Linux
+VPN state or a pipework interface. Unsupported control protocols report unknown.</p>
+<p><code>PUT /mykos/api/v2/nodes/{id}/memory/allocation</code> (admin API key) accepts
+<code>{&quot;target_mib&quot;:2048,&quot;confirmation&quot;:&quot;12345678&quot;}</code> with confirmation matching the
+path ID. It queues a cold restart and returns a systemd unit name. Existing disks,
+OS images, snapshots and console/desktop ports are retained; the previous stopped
+wrapper is retained for recovery, explicitly stopped under unless-stopped policy. Running VMs also receive a quiesced reflink disk recovery copy; mismatched live storage paths are rejected before stopping. Windows instances use manual installation mode to prevent unattended reinstallation. Check its
+journal for completion and use <code>GET /mykos/api/v2/nodes/{id}/memory</code> to inspect
+<code>configured_mib</code>. The existing <code>PUT .../memory</code> is a guarded live balloon request.
+Both setters enforce the current 2048 MiB policy. Cold resizing is available for
+Windows, Ubuntu and macOS. Old 4096 MiB RAM captures cannot resume at 2048 MiB;
+existing instances are cold-booted and old captures/snapshots remain untouched.</p>
+<p>Equivalent root CLI:</p>
+<pre><code class="language-bash">sudo /usr/local/share/mykos/pos/vm memory-configure 12345678 --target-mib 2048 --confirm 12345678
+</code></pre>
+<p>All new VM image builds use 2048 MiB RAM. The interactive menu displays the
+allocation; <code>./vm create OS --ram-mib 2048</code> makes it explicit. Captures and derived
+instances inherit this setting. Old images captured with larger allocations must
+be rebuilt at 2048 MiB before creating new instances. Windows 11 at 2048 MiB is
+below Microsoft&#39;s supported minimum; successful installation is not guaranteed.</p>
+<p>The pagefile/swap target is 12 GiB. For Ubuntu, the public fixed download
+<code>/mykos/image-setup/ubuntu.py</code> contains no credentials. Download and run it with
+<code>sudo python3 mykos-ubuntu-setup.py</code> <strong>inside the installed Ubuntu VM</strong>, reboot and
+verify <code>swapon --show</code> before capture. The menu prints these steps and asks for
+confirmation. The script enables new swap before disabling recognized older
+installer swap files, preserves old files, backs up fstab and rejects unknown
+swap devices/symlinks. New supported Windows installations receive a fixed
+12288 MiB pagefile provisioner through Dockur&#39;s OEM hook. Reboot and verify
+Win32_PageFileUsage before capture. Existing guests without a functioning agent
+need the same setup through their console; the host cannot infer their pagefile
+configuration. Legacy Windows without CIM/PowerShell is not automatically
+provisioned. macOS uses kernel-managed swap; a fixed total is unavailable in the
+stock guest. Its RAM allocation is still 2048 MiB.</p>
+<h2 id="retained-host-performance-history">Retained host performance history</h2>
+<p><code>GET /mykos/api/v2/host/history</code> accepts a read/admin API key and returns up to
+30 minutes of real host samples. Browser sessions use
+<code>GET /mykos/api/web/host-history</code>. An optional <code>since</code> query parameter is a
+nonnegative Unix timestamp in seconds; timestamps remain UTC Unix time.
+Responses include <code>retention_seconds: 1800</code>, <code>sample_interval_seconds: 3</code>,
+<code>collected_at</code>, and <code>samples</code>, ordered oldest first. Each sample contains
+<code>collected_at</code>, CPU percentage/count, load averages, memory/disk measurements,
+and cached <code>graph_counts</code>/<code>graph_totals</code> for containers and VPNs.</p>
+<p><code>mykos-host-history.service</code> collects without a browser open and performs no
+container commands. It reads host counters and the existing collector&#39;s cached
+status, storing a rolling SQLite history under <code>/opt/mykos-web/data</code>.
+A fresh latest sample is shared by the live metrics endpoints. Missing or stale
+container observations remain unknown. History survives browser/web-service
+reloads; old readings expire after 30 minutes. On initial deployment there is no
+synthetic historical data: the retained interval grows as samples are collected.
+The dashboard shows a trailing five-minute window with a history slider and
+Live control; horizontal/Shift-wheel scrolling also moves the selected window.</p>
+<h3 id="update-81">Update 81</h3>
+<p>Repository responses include <code>latest_rpm</code>, the filename (without directories), plus <code>latest_rpm_path</code>, the relative path of the most recently modified RPM. Snapshot responses include <code>size_bytes</code>, allocated disk bytes for that snapshot&#39;s private storage (sparse holes are excluded). Container detail responses include <code>os_codename</code> beside the unchanged numeric <code>os_version</code>.</p>
+<p><code>DELETE /api/v2/images/{os_name}/build</code> removes only a failed, unfinished image builder and its private disks. Send <code>{&quot;confirmation&quot;:&quot;ubuntu22.04&quot;}</code> with the matching OS; administrator authorization is required. Published images and intentional snapshots are retained. The host terminal also accepts <code>?action=remove-vpn</code>, with interactive selection and confirmation of a MYKOS host connection.</p>
+<p>The terminal title bar uses pane name <code>terminal</code> for its notes. Opening or closing
+the notes dialog leaves the active terminal connection running.</p>
+<p>Pane notes are disposable change requests and are cleared by each installation/update. User accounts, password hashes and API key digests are preserved.</p>
+<p>Pane notes are private to the <code>mgreen</code> browser account. Both web and v2 notes endpoints require its authenticated session cookie; scope-only API keys cannot read or write these notes. PUT also requires the configured Origin header.</p>
+<p>The orange Host notes icon opens personal notes. The equivalent web endpoints are <code>GET/PUT /api/web/personal-notes</code>. These use the separate <code>personal_notes</code> table and must never be included in automated change-request scans. Installation clears only disposable <code>pane_notes</code>; personal text remains private to mgreen and is preserved.</p>
+<p>Prepared images stay visible to administrators in their OS panes.
+<code>GET /api/v2/images</code> also returns <code>captured_images</code> with image ID, size, version
+and removal state. <code>DELETE /api/v2/images/{os_name}</code> accepts an exact OS
+<code>confirmation</code>, queues guarded removal, and requires an administrator.
+<code>GET /api/v2/images/{os_name}/delete</code> reports removal progress. Other containers,
+saved instances, intentional snapshots, and active builds block removal. The
+generic base and its private startup capture are removed only after dependency
+checks; Podman image removal never uses force.</p>
+<p>Container terminals now accept <code>?action=remove-vpn</code> for native Linux and Ubuntu.
+The action opens the existing interactive connection selection and confirmation
+workflow. Native VPN setup advertises the actual Podman IPv4 address as a /32,
+which must match the router peer&#39;s private-subnet selector. IKE identities are
+independent of this traffic selector and remain unchanged.</p>
+<p>Prepared-image catalog entries include <code>size_bytes</code> and <code>created_at</code> (Unix
+seconds, or null when unavailable). Production time comes from Podman&#39;s image
+creation metadata, without probing a guest. Admin image rows show both size
+and the production date/time in the browser&#39;s local timezone, including when
+removal is blocked by a dependency.</p>
+<h2 id="shared-vpn-gateways-and-topology">Shared VPN gateways and topology</h2>
+<p>The existing admin terminal VPN prompts select independent or shared mode. A
+shared gateway must use a newly managed full-tunnel-capable host/native Linux
+connection; legacy site-only configurations are rejected before routing changes.
+Independent configurations and shared-default profiles cannot be mixed in this
+release. Ubuntu-specific new VPN storage support is deferred.</p>
+<table>
+<thead>
+<tr>
+<th>Method/path under <code>/mykos/api/v2</code></th>
+<th>Permission</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET /vpn/gateways</code></td>
+<td>Read</td>
+<td>Configured profiles and cached full-tunnel/controller status; no credentials</td>
+</tr>
+<tr>
+<td><code>PUT /nodes/{shop}/vpn/gateway</code></td>
+<td>Admin</td>
+<td>Select an existing managed native Linux VPN as shared gateway</td>
+</tr>
+<tr>
+<td><code>PUT /host/vpn/gateway</code></td>
+<td>Admin</td>
+<td>Select an existing managed host VPN as shared gateway</td>
+</tr>
+<tr>
+<td><code>DELETE /nodes/{shop}/vpn/gateway/{connection}</code></td>
+<td>Admin</td>
+<td>Remove only that guest gateway routing profile</td>
+</tr>
+<tr>
+<td><code>DELETE /host/vpn/gateway/{connection}</code></td>
+<td>Admin</td>
+<td>Remove only that host gateway routing profile</td>
+</tr>
+</tbody></table>
+<p>PUT body is <code>{&quot;connection&quot;:&quot;office&quot;,&quot;remote&quot;:&quot;10.77.0.0/24&quot;,&quot;confirmation&quot;:&quot;01234567&quot;}</code>
+for a guest gateway; host confirmation is <code>&quot;host&quot;</code>. <code>remote</code> identifies the
+specific site subnet while the selected default CHILD_SA carries <code>0.0.0.0/0</code>.
+The host connection name includes its <code>mykos-</code> prefix. Profile removal retains the
+underlying tunnel files; use the existing interactive remove-VPN workflow to
+remove the tunnel as well. Deleting a gateway container is refused until its
+shared profiles are removed.</p>
+<p>Collected extended node data includes <code>vpn_topology</code> with <code>guest</code>, <code>links</code>,
+<code>via_gateways</code> and <code>primary</code>, plus network membership metadata. Connection links
+contain only name, peer, local/remote subnets and mode. Shared links include gateway
+ID (<code>host</code> for the host option), site subnet and cached <code>full_tunnel_sa</code>. Stale
+state is unconfirmed, not connected. <code>host_internet_via_vpn</code> indicates installed
+routing through a confirmed local full-tunnel SA, not a successful remote internet
+probe. All guest types can use a shared gateway. No new per-guest polling or PSK
+fields are introduced.</p>
+<h2 id="separate-browser-terminal-windows">Separate browser terminal windows</h2>
+<p><code>GET /api/terminal/window/{shop}</code> serves a standalone terminal page to an
+administrator with an active browser session. <code>{shop}</code> is an eight-digit ID or
+<code>host</code>; <code>action=image-shell</code> instead accepts a validated prepared-image OS name.
+Login buttons open separate windows in the same browser, sharing its existing
+MYKOS cookie. The URL carries only the target and display/action options, never a
+session token or password. If the browser blocks the window, the inline dialog
+remains available.</p>
+<p>Each window has its own authenticated <code>WS /api/terminal/{shop}</code> connection.
+Closing one window does not close another container&#39;s shell. Existing direct-serial
+and base-image session limits still apply. Base-image shutdown protection and
+reset-on-close use the existing server-side lifecycle. Terminal notes retain their
+mgreen-only authorization and optimistic revision checks.</p>
+<p><code>GET /api/terminal/permission?include_user=true</code> adds the current <code>username</code> to the
+existing <code>allowed</code> result. Standalone terminals recheck it every five seconds and
+close their transport when the session expires, is revoked, or changes identity.
+They do not run dashboard collectors. These are browser-session endpoints; an API
+key alone does not open an interactive terminal.</p>
+<h3 id="compact-dashboard-clock">Compact dashboard clock</h3>
+<p><code>GET /api/web/host-version</code> retains the detailed <code>server_time</code> value and adds
+<code>server_time_display</code>, for example <code>Oct 27 · 7:42 PM</code>. Both come from the same
+server-local clock sample. The dashboard uses the compact value and keeps the
+full timestamp, including timezone, in the header clock tooltip.</p>
+<h3 id="saved-geographic-metadata">Saved geographic metadata</h3>
+<p><code>GET /api/v2/geography</code> accepts a read or admin API key and returns saved <code>nodes</code>
+and <code>hosts</code> location records plus the available non-secret system display fields.
+Node metadata can include <code>shop_name</code>, configured <code>pos_type</code>, and <code>app_info</code>.
+Coordinates that are absent remain absent; the UI omits those map points. Host
+location records are saved inventory metadata; current host health remains
+available from the host metrics endpoint. No guest execution or geolocation
+service request is needed to read this endpoint.</p>
+<h3 id="shared-customer-notes-and-pane-previews">Shared customer notes and pane previews</h3>
+<p>Browser sessions can read and update shared notes for an eight-digit customer ID at <code>GET/PUT /api/web/id-notes/{id}</code>. Every signed-in user, including read-only dashboard users, can edit these customer notes. PUT requires the same-origin header and <code>{ &quot;text&quot;: &quot;...&quot;, &quot;revision&quot;: 0 }</code>; a stale revision returns 409 without replacing another user&#39;s changes. Responses include <code>id</code>, <code>text</code>, <code>revision</code>, <code>updated_at</code> and <code>updated_by</code>. Notes belong to the customer ID, not a particular login or container, and survive updates and container recreation. Private orange change-request notes remain separate and restricted to mgreen. API keys alone cannot edit customer notes.</p>
+<p><code>GET /api/web/current-user</code> includes <code>preview_all_panes</code>. Full-access administrators (including arch/owner identities as those roles are enabled) preview all OS panes with the footer leaf; other users preview EL and utility panes. Sample actions remain disabled. Preview visibility grants no additional backend privileges.</p>
+<h2 id="monitoring-interpretation-and-released-scope">Monitoring interpretation and released scope</h2>
+<p>Use <code>/mykos/api/v2/overview</code> freshness flags and timestamps together with node
+status. A successful HTTP response or cached green VPN edge is not an end-to-end
+application health test. Resource values come from Podman; VM wrapper measurements
+and in-guest memory are different observations. Host history is retained from
+actual samples and may be missing/stale after a collector interruption.</p>
+<p>Use separate least-privilege <code>read</code> keys for monitoring. An <code>admin</code> API key grants
+operations beyond observation and does not establish a browser session. Keep keys
+out of URLs, logs and shell history. Use the live allowlisted OpenAPI endpoint for
+route details. The current API does not implement the requested configurable
+host/guest and RTI/Dove application alert-field system. Native VPN/shared routes
+are detailed in <a href="NETWORKING.html#vpn-architecture-and-operations">VPN architecture and operations</a>.</p>
+<footer>MYKOS documentation</footer></main></html>

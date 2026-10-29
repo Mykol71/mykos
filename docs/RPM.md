@@ -1,133 +1,132 @@
-# RHEL 8 and RHEL 9 RPMs
+# Signed RHEL 8, RHEL 9 and RHEL 10 packages
 
-The RPM owns runtime code, text menus, helpers, units, and installer sources
-under `/usr/share/mykos`. Configuration, identities, inventory, venv and guest
-disks are excluded from the payload and retained on package removal.
+[Documentation index](README.md)
 
-## Install or upgrade
+The released baseline reviewed here is **1.5.20261024-146**. Each supported major
+has its own signed binary RPM, source RPM and repository. Choose the repository
+matching the **host**, not the OS you want to run inside a guest.
 
-Fresh `dnf install mykos` installations now queue automatic HTTPS and MYKOS
-setup through `mykos-firstboot.service`. The domain is the final two hostname
-labels. Existing configured installations are skipped. Public DNS and TCP
-80/443 must reach this host. See [BOOTSTRAP.md](BOOTSTRAP.md) for prerequisites,
-progress, retries and cleanup.
+## Install from the matching repository
 
-```bash
-sudo rpm --import ./RPM-GPG-KEY-MYKOS
-rpm -Kv ./mykos-1.5.20261024-46.el8.noarch.rpm
-sudo dnf --setopt=localpkg_gpgcheck=1 install ./mykos-1.5.20261024-46.el8.noarch.rpm
-sudo mykos-setup --public-origin https://YOUR_HOST --enable
-# Optional trusted-LAN desktop setup:
-sudo mykos-setup --public-origin https://YOUR_HOST --desktop-network 192.168.222.0/24 --enable
-sudo python3.9 /usr/share/mykos/bin/mykos-install verify
-```
+| Host | Repository configuration |
+| --- | --- |
+| RHEL 8 | `https://mykol.com/mykos-1.5-for-x86_64-el8/mykos-el8.repo` |
+| RHEL 9 | `https://mykol.com/mykos-1.5-for-x86_64-el9/mykos-el9.repo` |
+| RHEL 10 | `https://mykol.com/mykos-1.5-for-x86_64-el10/mykos-el10.repo` |
 
-Replace the hostname and network. `mykos-setup` installs the pinned Python
-requirements into the Python 3.9 venv, so PyPI or a configured pip mirror must
-be reachable. Fresh RPM installation automatically starts HTTPS/setup after the package transaction;
-that setup downloads Python requirements, configures Apache, and opens HTTP/HTTPS
-when necessary. It creates no guests and provisions no user passwords. Existing
-configured deployments skip this automatic setup. Installation and upgrades
-also verify KVM by opening `/dev/kvm` and creating an empty VM (no guest starts).
-If unavailable, RPM prints a warning and continues for RedHat-only use. Rerun
-`sudo /usr/local/sbin/mykos-kvm-check` after enabling host virtualization. Create browser users
-with `sudo /usr/local/sbin/mykos-users create NAME --role admin`.
-
-Rerun `mykos-setup` after an RPM upgrade to snapshot/configure the deployment
-and restart services. Existing settings and identities are preserved. See
-[DESKTOPS.md](DESKTOPS.md) for template creation/capture. The RHEL 8 release RPM and source RPM are signed. Import the supplied
-`RPM-GPG-KEY-MYKOS` public key and verify the package before installation.
-The signing fingerprint is `BC14191DE284100A246DD552F4384FD1AD974308`.
-SHA-256 checksums reflect the signed files. The dedicated signing key is kept
-in `/home/mgreen/.mykos-signing` on the dev build host, outside source and packages;
-keep that private directory protected and backed up. Ordinary builds and installs
-do not create signing keys.
-
-## Build
-
-On RHEL 8 with `rpm-build`, `python39` and `python39-pip` installed:
-
-```bash
-python3.9 bin/mykos-package --output /tmp/mykos-1.5.20261024.tar.gz
-mkdir -p ~/rpmbuild/{SOURCES,SPECS}
-cp /tmp/mykos-1.5.20261024.tar.gz ~/rpmbuild/SOURCES/
-cp packaging/rpm/mykos.spec ~/rpmbuild/SPECS/
-rpmbuild -ba --define 'dist .el8' ~/rpmbuild/SPECS/mykos.spec
-```
-
-## Independent custom repository
-
-Publish custom RPMs under `/var/www/html/mykos-rpms/el8/`, served at
-`https://mykol.com/mykos-rpms/el8/`. Generate metadata only for this directory
-with `createrepo_c --update`. The sync script names only Red Hat mirror
-directories, so this sibling repository remains independent. Do not add RPMs
-inside a downloaded Red Hat mirror: upstream metadata will not list them and
-sync can replace local metadata. The `/mykos/` URL is reserved for the app proxy.
-
-The RHEL 8 package uses the existing pipework networking implementation. It does
-not replace pipework or migrate container networking. Runtime file timestamps
-are excluded from RPM verification because host setup regenerates those files;
-content, permissions and ownership remain verified.
-
-
-Release 17 adds the single `/usr/bin/mykos` launcher (also `/bin/mykos` on
-RHEL), mode 0755. It runs `MENU` from `/usr/share/mykos`; upgrades remove
-`/usr/local/bin/mykos`. `MENU` is installed executable. It includes current timezone/NTP syntax and removes obsolete Anaconda sections
-from RHEL 8/9 kickstarts. Staging detects the local builder parser and uses the
-legacy NTP spelling only in build copies when timesource is unsupported. Kickstart files in both the RPM source and
-runtime directories use `%config(noreplace)`, preserving local edits during
-upgrades; changed package defaults may be installed as `.rpmnew`. Release 16 adds a private scheduled-command API and 30-second dispatcher, with
-Windows PowerShell through QEMU Guest Agent (see API.md for prerequisites). It includes persistent native lifecycle controls and the live Snapshots pane/API.
-CRIU is an RPM dependency; `mykos-setup` initializes private snapshot storage and its
-scoped native capture hook. Stored guest images, container disks and snapshots are
-runtime data outside the RPM payload and remain across upgrades. The current RPM
-still targets RHEL 8; a separate RHEL 9 build and Pipework validation are pending.
-
-
-## RHEL 9 repository
-
-The RHEL 9 build uses the distribution's `python3`/`python3-pip` packages and
-requires `system-release(releasever) = 9`. It retains `dhcp-client` for pipework
-networking. RHEL 8 continues to use `python39`/`python39-pip` and releasever 8.
-Build the same source/spec for RHEL 9 with:
-
-```bash
-rpmbuild -ba --define 'mykos_target_el 9' --define 'dist .el9' ~/rpmbuild/SPECS/mykos.spec
-```
-
-The signed RHEL 9 repository is `/home/html/mykos-1.5-for-x86_64-el9` on prod,
-served at `https://mykol.com/mykos-1.5-for-x86_64-el9/`. Refresh its metadata
-with `createrepo_c --update /home/html/mykos-1.5-for-x86_64-el9`.
-Keep it separate from Red Hat synced repositories.
-
-Install the repository configuration on a RHEL 9 client:
+For example, on RHEL 9:
 
 ```bash
 sudo curl -fsSL https://mykol.com/mykos-1.5-for-x86_64-el9/mykos-el9.repo -o /etc/yum.repos.d/mykos-el9.repo
 sudo dnf install mykos
-sudo mykos-setup --public-origin https://YOUR_HOST --enable
+rpm -q mykos
+sudo systemctl status mykos-firstboot.service --no-pager
 ```
 
-The client configuration uses the existing MYKOS signing key with `gpgcheck=1`.
-The RHEL 9 repo is disabled in production's local repo configuration while that
-host runs RHEL 8. Enable it only on RHEL 9 clients.
+Use `el8` or `el10` in both URL and destination filename on those hosts. Keep
+`gpgcheck=1`; confirm the signing fingerprint before accepting an imported key:
+`BC14191DE284100A246DD552F4384FD1AD974308`. The repository supplies
+`RPM-GPG-KEY-MYKOS`. Source and binary RPMs are signed; checksums describe the
+signed files. Repository-metadata signing is not asserted by `gpgcheck=1`.
 
+Fresh installation queues `mykos-firstboot.service` after the RPM transaction.
+It configures Apache IP access and the application, checks application readiness,
+then prints `MYKOS is running: http://SERVER_IP/mykos/`. Check the service journal
+if the terminal returns before firstboot finishes. It creates no guest, browser
+password or API key. Existing configured deployments skip automatic firstboot.
+Create the first browser administrator with:
 
-Release 18 applies full-width aesthetic glyphs to the environment name on the
-dashboard and login page. The `.envtype` file, browser title, accessible name
-and API data retain the original text.
+```bash
+sudo /usr/local/sbin/mykos-users create NAME --role admin
+```
 
+RHEL BaseOS/AppStream access and a Python package source are needed. EL8 uses
+`python39`; EL9/EL10 use distribution `python3`. The package has distinct host
+release requirements. KVM checks open `/dev/kvm` and create an empty VM without
+starting a guest; unavailable KVM produces a warning and retains native Linux use.
+See [desktop prerequisites](DESKTOPS.md) before attempting VM lifecycle operations.
 
-Release 19 restores vendor icon colors: Red Hat red, Ubuntu orange, Windows
-blue and Apple white. Existing icon sizes and alignment remain unchanged.
+## Default HTTP and optional HTTPS
 
+Default access is `http://SERVER_IP/mykos/`; it needs no domain or Certbot.
+Domain virtual hosts and Certbot are configured only by explicit opt-in:
 
-Release 20 changes visible container/account labels from Code to ID, including
-forms, column headings, confirmation dialogs, API error text and text menus.
-Existing API field names, endpoints and stored identifiers remain compatible.
+```bash
+sudo mykos-setup --configure-https
+# Or choose the domain and ACME account email explicitly:
+sudo mykos-setup --configure-https --domain example.com --email admin@example.com
+```
 
-The signed MYKOS repositories use `mykos-1.5-for-x86_64-el8` and
-`mykos-1.5-for-x86_64-el9` under `/home/html` on production. The bootstrap
-installer selects the matching repository for the host release. Legacy MYKOS
-repository URLs redirect to these paths so existing clients can still download
-metadata, packages and the unchanged signing key.
+Public DNS and incoming TCP 80/443 must be ready for that domain. The URL is
+printed only after app readiness. `--public-origin` alone configures the app's
+origin; it does not request a certificate or provision a domain virtual host.
+See [bootstrap details and renewal/removal behavior](BOOTSTRAP.md).
+
+## Upgrade and verify
+
+Back up deployment settings and identity data according to
+[installation recovery](INSTALL_SERVICES.md#file-snapshots-backup-and-restore),
+and back up guest disks and customer backup data separately. Then:
+
+```bash
+sudo dnf upgrade mykos
+sudo mykos-setup --enable
+sudo python3 /usr/share/mykos/bin/mykos-install verify
+# On EL8, use python3.9 instead of python3 for this verification command.
+rpm -q mykos
+```
+
+`mykos-setup` uses the installed interpreter, pinned Python dependencies and
+existing settings. Rerun it after an upgrade to snapshot/configure deployed files
+and restart the MYKOS services. It does not select a VPN gateway or create images.
+Use the existing public origin; do not replace a working domain with an example.
+If verify reports local edits, reconcile them rather than overwriting them.
+Kickstarts use `%config(noreplace)`; review `.rpmnew` alongside operator files.
+
+The package owns code under `/usr/share/mykos`; setup deploys runtime sources and
+helpers under `/usr/local/share/mykos`, `/usr/local/sbin` and `/opt/mykos-web`.
+Configuration, identities, inventory, VM disks, intentional snapshots and saved
+VPNs are runtime state, outside the RPM payload. Updates preserve existing guests
+and do not migrate older networking automatically. New guests use the configured
+private bridge; old pipework/macvlan instances need a separately planned migration.
+
+## Install a downloaded signed RPM
+
+Example for the reviewed EL9 baseline, after downloading the RPM and public key
+from the matching trusted repository and verifying the key fingerprint:
+
+```bash
+sudo rpm --import ./RPM-GPG-KEY-MYKOS
+rpm -Kv ./mykos-1.5.20261024-146.el9.noarch.rpm
+sudo dnf --setopt=localpkg_gpgcheck=1 install ./mykos-1.5.20261024-146.el9.noarch.rpm
+```
+
+Use the matching `.el8` or `.el10` filename on those hosts. A checksum alone does
+not authenticate the signer. Do not disable signature checks to bypass a failure.
+
+## Build and repository maintenance
+
+Build from the released source, excluding runtime identities/disks and unpublished
+work. With the target's build prerequisites installed:
+
+```bash
+python3 bin/mykos-package --output /tmp/mykos-1.5.20261024.tar.gz
+mkdir -p ~/rpmbuild/{SOURCES,SPECS}
+cp /tmp/mykos-1.5.20261024.tar.gz ~/rpmbuild/SOURCES/
+cp packaging/rpm/mykos.spec ~/rpmbuild/SPECS/
+rpmbuild -ba --define 'mykos_target_el 9' --define 'dist .el9' ~/rpmbuild/SPECS/mykos.spec
+```
+
+Use the appropriate target major and approved signing workflow. A local build is
+not automatically signed or published. Signing keys are maintained outside source
+and packages. Keep MYKOS repositories separate from synchronized Red Hat mirrors;
+refresh only the intended custom repository's metadata after approved publication.
+Never add arbitrary RPMs to a mirrored upstream tree whose metadata omits them.
+
+## Validation scope
+
+Release package/application/login checks on fresh RH9 and RH10 used isolated RHEL
+UBI init systems with repositories available. These checks cover installation,
+IP-first setup and authenticated HTTP sessions, not full bare-metal virtualization,
+physical NIC routing, CRIU compatibility or VM lifecycle validation. The user's
+vanilla RH9 server testing remains independent. See [validation record](VALIDATION.md).

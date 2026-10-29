@@ -1,0 +1,309 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Windows, macOS and Ubuntu desktops</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="windows-macos-and-ubuntu-desktops">Windows, macOS and Ubuntu desktops</h1>
+<p><a href="README.html">Documentation index</a></p>
+<p>MYKOS runs KVM virtual machines inside rootful Podman containers. Windows uses
+<code>docker.io/dockurr/windows</code>, macOS uses <code>docker.io/dockurr/macos</code>, and Ubuntu uses
+<code>docker.io/qemux/qemu</code>. Upstream instructions:</p>
+<ul>
+<li><a href="https://github.com/dockur/windows">https://github.com/dockur/windows</a></li>
+<li><a href="https://github.com/dockur/macos">https://github.com/dockur/macos</a></li>
+<li><a href="https://github.com/qemus/qemu">https://github.com/qemus/qemu</a></li>
+<li><a href="https://releases.ubuntu.com/">https://releases.ubuntu.com/</a></li>
+</ul>
+<p>For new images, use the <a href="IMAGE_BUILDS.html">unattended image build</a> pipeline.
+One command installs and provisions the guest, verifies a clean installed boot,
+captures RAM/device state with matching disks, commits the installed payload
+under the named local OS image, and leaves one generic base running. The
+compressed sparse payload is stored in <code>/opt/mykos-image/golden.tar.gz</code>;
+external immutable state provides fast reflink-based instance starts.
+Manual Finish remains available when updating older installed images.
+The memory checkpoint remains paired with its captured disks; the commit updates
+the image metadata. The unified build also embeds the compressed installed disk/state payload.
+A new instance restores that checkpoint rather than performing a guest boot.
+The loader verifies the saved CPU instruction pointer and page-table register
+before resuming the instance. The pinned image, CPU profile, RAM and vCPU count
+must remain unchanged; memory checkpoints are intended for this same host.</p>
+<p>Live capture requires a reflink-capable filesystem such as XFS with reflink
+or Btrfs. A memory image contains private guest data: its directory is root-only
+and it is excluded from RPMs and installer bundles. The capture saves Windows
+and macOS at the actual desktop/login/session state present during Finish.
+Existing network connections may need to reconnect after restoring a clone.</p>
+<p>Each new instance uses the checkpoint once. Later explicit stop/start operations
+boot its current disks normally, preventing stale RAM from being applied to
+changed disks. <code>podman commit</code> alone does not save this QEMU execution state.</p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#requirements-and-networking">Requirements and networking</a></li>
+<li><a href="#text-admin-workflow">Text admin workflow</a></li>
+<li><a href="#web-and-api">Web and API</a></li>
+<li><a href="#storage-backups-and-installation">Storage, backups and installation</a></li>
+<li><a href="#persistent-lifecycle-and-container-snapshots">Persistent lifecycle and container snapshots</a></li>
+<li><a href="#ubuntu-networking-packages">Ubuntu networking packages</a></li>
+<li><a href="#permanent-container-deletion">Permanent container deletion</a></li>
+<li><a href="#public-https-browser-consoles">Public HTTPS browser consoles</a><ul>
+<li><a href="#native-snapshot-compatibility">Native snapshot compatibility</a></li>
+<li><a href="#host-add-vpn">Host Add VPN</a></li>
+</ul>
+</li>
+<li><a href="#current-memory-policy">Current memory policy</a></li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="requirements-and-networking">Requirements and networking</h2>
+<p>Use a Linux x86-64 host with usable <code>/dev/kvm</code> and <code>/dev/net/tun</code>, sufficient
+memory for each running guest (2048 MiB policy and 2 vCPUs), and at least 32 GiB of
+free storage for creation. Guest disks default to 64 GiB sparse disks. macOS
+also requires AVX2. Guest installation and licensing remain the operator&#39;s
+responsibility. Supported current builds run unattended; legacy Windows releases
+retain their manual setup path.</p>
+<p>Each image and instance reserves its own browser-console TCP port in
+18006–19005 and native desktop TCP/UDP port in 23000–23999. Reservations persist
+while stopped. Existing Podman mappings and active TCP/UDP sockets are checked
+before allocating ports. Guest creation does not alter firewall or router rules.
+Production requires explicit approval to permit these ranges from its local
+<code>192.168.222.0/24</code> network. The code installer does not open them.
+On another host, explicitly allow the chosen administrative network before
+opening the browser console or native login. For example, in its active
+firewalld zone (replace the source network for that host):</p>
+<pre><code class="language-bash">sudo firewall-cmd --add-rich-rule=&#39;rule family=&quot;ipv4&quot; source address=&quot;192.168.222.0/24&quot; port port=&quot;18006-19005&quot; protocol=&quot;tcp&quot; accept&#39;
+sudo firewall-cmd --add-rich-rule=&#39;rule family=&quot;ipv4&quot; source address=&quot;192.168.222.0/24&quot; port port=&quot;23000-23999&quot; protocol=&quot;tcp&quot; accept&#39;
+sudo firewall-cmd --add-rich-rule=&#39;rule family=&quot;ipv4&quot; source address=&quot;192.168.222.0/24&quot; port port=&quot;23000-23999&quot; protocol=&quot;udp&quot; accept&#39;
+</code></pre>
+<p>Use the same commands with <code>--permanent</code> to retain the rules across restarts.
+These examples use the default zone; specify <code>--zone</code> if the LAN interface
+belongs to a different zone.</p>
+<p>By default, ports bind to the host&#39;s route-selected LAN IPv4 address, and links
+use that address. Optional <code>/etc/mykos/config.json</code> settings <code>desktop_bind</code> and
+<code>desktop_host</code> are IPv4 addresses for binding and connecting respectively.
+Only use reachable addresses on a trusted administrative network; the upstream
+browser/VNC consoles provide interactive machine control. Do not expose them
+to the public Internet without a separately configured access gateway.</p>
+<h2 id="text-admin-workflow">Text admin workflow</h2>
+<p>In the POS menu:</p>
+<ul>
+<li><code>c</code>: create an OS image (RHEL keeps its existing build workflow).</li>
+<li><code>v</code>: list desktop image/instance metadata and assigned console/login URLs.</li>
+<li><code>f</code>: finish/capture an installed desktop image, then stopping and committing it.</li>
+<li><code>t</code>: resume or stop a desktop image.</li>
+<li><code>s</code>: select the eight-digit ID and OS.</li>
+<li><code>2</code>: start/stop that code&#39;s instance, retaining its disk and ports.</li>
+<li><code>3</code>: show desktop connection URLs; native RHEL still opens its root shell.</li>
+</ul>
+<p>Equivalent commands from either production toolkit&#39;s <code>pos</code> directory:</p>
+<pre><code class="language-bash">sudo python3 ./vm create win11
+sudo python3 ./vm create wns2025
+sudo python3 ./vm create mac15
+sudo python3 ./vm create ubuntu24.04
+# Create only the images you need; each is a running VM consuming RAM.
+sudo python3 ./vm list
+</code></pre>
+<p>These commands now run unattended for current Windows/Windows Server, macOS,
+and Ubuntu versions. No separate Finish step is required. Generated credentials
+are root-only in <code>/var/lib/mykos/image-builds/OS/credentials.json</code>. Builds and
+runtime VMs use 2 GiB RAM; Windows/Ubuntu use 12 GiB paging. For details,
+resuming a failed build and API operations, see <a href="IMAGE_BUILDS.html">Image builds</a>.</p>
+<p>For existing images installed manually, Finish and compatibility commands remain:</p>
+<p>Update an existing installed image or start an ID-specific instance:</p>
+<pre><code class="language-bash"># Existing Windows images require one restart with migratable CPU settings:
+sudo python3 ./vm checkpoint-enable win11
+sudo python3 ./vm prepare win11
+# Upgrade an old disk-only macOS capture without restarting its guest:
+sudo python3 ./vm prepare mac15
+# Explicitly replace an already prepared memory checkpoint after changes:
+# sudo python3 ./vm prepare win11 --replace
+sudo python3 ./vm start 01234567 win11
+sudo python3 ./vm info 01234567
+sudo python3 ./vm stop 01234567
+sudo python3 ./vm start 01234567 win11
+</code></pre>
+<p>Supported names: <code>win11</code>, <code>win10</code>, <code>win8e</code>, <code>win7u</code>, <code>winxp</code>, <code>winme</code>, <code>win2k</code>,
+<code>win98</code>, <code>wns2025</code>, <code>wns2022</code>, <code>wns2019</code>, <code>wns2016</code>, <code>mac15</code>, <code>mac14</code>, <code>mac13</code>,
+<code>mac12</code>, <code>ubuntu20.04</code>, <code>ubuntu22.04</code>, <code>ubuntu24.04</code>.</p>
+<p>Do not mark an installer or recovery screen as a completed guest. Images
+become available to web staging after capture, including while stopped. Capture
+requires a running image; successful capture stops and commits it. A failed capture
+resumes the guest and preserves any previous prepared snapshot. Successful
+replacement deletes superseded <code>.golden-previous-*</code> snapshots after validating
+the newly published checkpoint. Only the latest image RAM/disk checkpoint
+is retained for starting new instances. Each instance discards its copied RAM
+checkpoint after a successful first restore; later starts use its current disks.
+New Windows images use <code>CPU_MODEL=host</code>, <code>migratable=on,-invtsc</code> and <code>HV=N</code>
+with KVM acceleration. The <code>checkpoint-enable</code> operation applies that profile
+to existing Windows images by restarting their wrapper on the same disks;
+it retains the stopped original container as <code>*.before-checkpoint-*</code> and rolls
+back if launching the replacement fails. Never start that retained container
+while its replacement is running: they reference the same persistent disk.
+Use <code>resume</code> to start a retained image after an intentional shutdown.</p>
+<h2 id="web-and-api">Web and API</h2>
+<p>The green console-log icon opens that instance&#39;s saved <code>console_url</code>. The blue
+login icon downloads a Windows <code>.rdp</code> connection file, or opens the macOS/Ubuntu
+<code>vnc://</code> endpoint. Guest services must be enabled and reachable. Windows 98, ME,
+and 2000 have no built-in RDP server; use their browser console. No guest
+credentials are embedded in URLs or RDP files. Desktop access requires an
+administrator account; Linux shell/VPN operations are not applied to VM wrappers.</p>
+<p>The pane ID/Ver plus action starts or resumes an instance. The red trash icon
+stops it with a two-minute graceful timeout; it does not delete its disk.</p>
+<p>API-key clients with admin scope can retrieve endpoints using
+<code>GET /mykos/api/v2/nodes/{code}/desktop</code> and download the RDP file from
+<code>GET /mykos/api/v2/nodes/{code}/desktop/rdp</code>. Existing staging and stop APIs
+dispatch to the desktop worker for these OS names.</p>
+<h2 id="storage-backups-and-installation">Storage, backups and installation</h2>
+<p>Both toolkit folders use the canonical private registry under
+<code>/usr/local/share/mykos/pos/.vm/</code>. Guest storage, golden disks and Windows
+environment files live under <code>/home/mykos-vms/</code>, on production&#39;s larger home
+filesystem. Set <code>desktop_storage</code> in <code>/etc/mykos/config.json</code> before creating
+images to choose another absolute directory. Do not change this setting
+after creation without relocating the storage while all guests are stopped.
+Do not copy live guest disks for backups. Shut down the relevant guests cleanly
+and back up both directories together with the POS metadata files. Routine code
+installation preserves these hidden runtime files. Installer code snapshots
+are not a backup of guest storage.</p>
+<p>Install code changes using the usual installer and restart the web service:</p>
+<pre><code class="language-bash">sudo python3 /home/mgreen/mykos/bin/mykos-install install --public-origin https://mykol.com
+sudo python3 /home/mgreen/mykos/bin/mykos-install verify
+sudo systemctl restart mykos-web.service
+</code></pre>
+<p>Installation does not create guests or accept OS license agreements. Start a
+chosen image explicitly through the menu, complete its installer, capture
+it, and test one instance before using it for production workloads.</p>
+<p>For initial desktop host setup, the installer also provides an explicit network
+option. It verifies KVM access and storage capacity, creates the private storage
+directory, snapshots firewalld configuration, and applies only source-restricted
+runtime and persistent desktop rules. It never opens these ports by default:</p>
+<pre><code class="language-bash">sudo python3 /home/mgreen/mykos/bin/mykos-install install --public-origin https://mykol.com --desktop-network 192.168.222.0/24
+</code></pre>
+<p>Preview the plan by adding <code>--dry-run</code>. The option is rejected for actual
+<code>--root</code> staging installs so tests cannot change the host firewall.</p>
+<h2 id="persistent-lifecycle-and-container-snapshots">Persistent lifecycle and container snapshots</h2>
+<p>Start and Stop retain each container&#39;s current writable disks, identity and desktop
+ports. New native RedHat/Linux containers no longer use <code>--rm</code>; the Podman writable
+layer persists, and Pipework reattaches the saved eth1 MAC on restart. Mounted VPN
+and backup data remain in place. Existing legacy <code>--rm</code> containers are protected:
+MYKOS refuses to stop them through these controls until they have been deliberately
+converted, because stopping them would destroy their writable layer.</p>
+<p>Snapshot uses QEMU RAM/device migration plus matching disk copies for Windows,
+Windows Server, macOS and VM-based Ubuntu. Native Linux uses CRIU with
+<code>--leave-running</code>, captures its writable layer and mounted data at post-dump while
+source processes are frozen, and then resumes them. CRIU, the OCI runtime, kernel
+and workload must support checkpointing. Unsupported workloads fail explicitly;
+MYKOS does not publish a disk-only snapshot as a successful memory capture.</p>
+<p>The installer creates a private <code>snapshots</code> directory under <code>desktop_storage</code>
+(default <code>/home/mykos-vms/snapshots</code>). Each code has timestamp/random-ID directories
+containing private metadata and captured state. Intentional snapshots survive RPM
+updates and automatic image/checkpoint cleanup. Required runtime images are pinned.
+Native capture adds a scoped action callback to <code>/etc/criu/runc.conf</code>, preserving
+existing lines; the callback is inert unless MYKOS has a matching live request for
+that process ID. Runtimes that do not support this callback fail safely. Native
+restores require the original persistent container, image, and mount configuration.
+Shared mounted data may have external writers: those writers must be quiesced by
+the operator for application-level consistency across containers.</p>
+<p>The Snapshots pane lists one row per container with its saved states in a dropdown.
+It hides when empty; the footer leaf override shows two sample rows whose dropdowns
+and restore actions are disabled. Restore requires confirmation, retains temporary
+recovery files until verification, and keeps the intentional snapshot available.
+If recovery itself fails, the job reports the retained recovery location for inspection.</p>
+<p>CLI equivalents:</p>
+<pre><code class="language-bash">sudo mykos-linux start 01234567
+sudo mykos-linux stop 01234567
+sudo mykos-snapshot capture 01234567
+sudo mykos-snapshot list
+sudo mykos-snapshot list 01234567
+sudo mykos-snapshot restore 01234567 TIMESTAMP-SNAPSHOT_ID
+</code></pre>
+<p>Each snapshot row also has a red trash icon beside Restore. Delete requires an
+explicit confirmation, permanently removes only the selected saved state, and
+leaves the current container and its disks running unchanged. The private snapshot
+image reference is untagged only after deleting the saved files; other images and
+snapshots retain their references. CLI: <code>sudo mykos-snapshot delete CODE SNAPSHOT_ID</code>.
+The OS column shows labels such as macOS 15; Taken follows the chosen saved state.</p>
+<p>Snapshots appears immediately after the OS container panes, above rsync Backups.</p>
+<p>Host and native Linux root terminals open in a centered popup dialog. Close or Escape disconnects the terminal; the dashboard continues refreshing behind it. VM desktop console/login URLs retain their existing behavior.</p>
+<p>Ubuntu image builds use a migratable CPU profile for live-state capture.
+For an older Ubuntu build blocked by <code>invtsc</code>, run <code>./vm checkpoint-enable ubuntu22.04</code>
+from the installed <code>pos</code> directory (substitute the selected Ubuntu version).
+The command asks before restarting the build, keeps its installed disk and previous
+container, and applies <code>CPU_MODEL=host</code> with <code>CPU_FLAGS=migratable=on,-invtsc</code>.
+After Ubuntu is running normally again, finish the image capture.</p>
+<h2 id="ubuntu-networking-packages">Ubuntu networking packages</h2>
+<p>Before capturing an Ubuntu image, run this in a terminal <strong>inside Ubuntu</strong>:</p>
+<pre><code class="language-bash">sudo apt-get update
+sudo apt-get install -y isc-dhcp-client iproute2 net-tools
+</code></pre>
+<p><code>isc-dhcp-client</code> supplies <code>dhclient</code>. Its runtime dependencies are resolved by
+APT. Ubuntu 24.04 supplies it in <code>universe</code>; enable that repository first if APT
+reports no installation candidate. The packaged <code>pos/ubuntu-deps</code> script performs
+the same setup, validates that it is running inside Ubuntu, and checks availability.
+Copy it into the guest and run it with <code>sudo bash ubuntu-deps</code> if using the script.
+The text admin image creation/Finish steps also display the direct APT command.</p>
+<p>MYKOS&#39;s RHEL host installs its own <code>dhcp-client</code> for pipework. Ubuntu runs as a VM
+inside a QEMU container: <code>podman exec</code> operates on that wrapper, not Ubuntu.
+These guest packages do not configure or replace the VM&#39;s networking.</p>
+<p>For an already captured image, resume its builder with <code>sudo python3.9 ./vm resume ubuntu22.04</code>,
+install the packages through its console, then recapture with
+<code>sudo python3.9 ./vm prepare ubuntu22.04 --replace</code>. Substitute the chosen Ubuntu
+version. Updating an RPM does not modify an existing guest disk; existing instances
+need the same guest package installation separately. Saved snapshots retain their
+original software state.</p>
+<p>Package references: <a href="https://packages.ubuntu.com/en/jammy/isc-dhcp-client">https://packages.ubuntu.com/en/jammy/isc-dhcp-client</a>
+and <a href="https://packages.ubuntu.com/noble/amd64/isc-dhcp-client">https://packages.ubuntu.com/noble/amd64/isc-dhcp-client</a>.</p>
+<h2 id="permanent-container-deletion">Permanent container deletion</h2>
+<p>The red trash icon is separate from start, stop, and snapshot. Type the container
+ID to permanently remove the selected container and its own MYKOS-managed disks,
+writable layer and VPN settings. Images, rsync backups, external/shared mounts and
+intentional snapshots stay in place. Shared storage or unsafe paths block deletion
+before shutdown. Only administrators can use this operation; API details are in
+<a href="API.html#delete-a-container-and-its-private-data">API.md</a>. Stop keeps saved data.</p>
+<h2 id="public-https-browser-consoles">Public HTTPS browser consoles</h2>
+<p>Image-build and running-container browser console links use
+<code>/mykos/console/&lt;OS-or-ID&gt;/</code> on the dashboard&#39;s public HTTPS origin. Assets and
+WebSocket traffic are forwarded by MYKOS to the verified container&#39;s published
+console port. A current administrator browser session is required for every
+asset and connection; revocation/logout is checked during an open connection.
+NoVNC settings force the public hostname, TLS and the per-image/per-container
+WebSocket path, overriding remembered LAN/dev connection settings.</p>
+<p>Apache forwards console WebSocket upgrades to MYKOS, where authentication stays
+in force. Never configure an unauthenticated public proxy straight to VM ports.
+RPM upgrades and <code>mykos-setup</code> install the WebSocket rule in existing MYKOS TLS
+vhosts, validate Apache configuration and reload the active service. Configuration
+backups are saved under <code>/var/backups/mykos-installer/apache-consoles-*</code>.
+New vhosts should use <code>services/apache-mykos.conf.example</code>, including the console
+rewrite block. Apache needs proxy, proxy_http, proxy_wstunnel, rewrite and headers.</p>
+<p>The API reports the public proxy path as <code>console_url</code>; <code>direct_console_url</code>
+retains the LAN endpoint for diagnostics. Native RDP/VNC login addresses still
+require LAN/VPN access; browser consoles need only public HTTPS access and a
+MYKOS admin session. Guests and their assigned ports are not restarted or changed.</p>
+<h3 id="native-snapshot-compatibility">Native snapshot compatibility</h3>
+<p>MYKOS uses a private CRIU RPC relay for each native snapshot. The filesystem copy
+runs at the post-dump notification before CRIU resumes source tasks. It does not
+install shell action scripts in <code>/etc/criu/runc.conf</code>; upgrades remove only the
+old MYKOS hook line and preserve other operator settings.</p>
+<p>RHEL CRIU 3.x cannot capture every systemd workload. MYKOS checks for BPF program
+descriptors and nested hostname namespaces before seizing processes. Unsupported
+workloads return a clear error and remain running; no disk-only fallback is
+published as a memory snapshot. Privileged containers may also expose host kernel
+mounts that CRIU cannot capture. Do not remove arbitrary sandbox protections to
+work around these restrictions. A checkpoint-compatible image/runtime is required.</p>
+<h3 id="host-add-vpn">Host Add VPN</h3>
+<p>The host VPN plus action opens the same <code>pos</code> Add VPN workflow as native
+containers. Enter the remote name, public address, IPv4 network without <code>/24</code>,
+and PSK. Confirm creation, then choose whether to push the peer to Meraki using
+credentials from <code>/etc/mykos/pos.env</code>. The workflow displays the same remote-peer
+setup instructions and VPN policy as container setup. Host connections are stored
+under <code>/etc/ipsec.d/mykos-NAME.*</code>; existing names are rejected. New host tunnels
+are loaded individually, preserving existing tunnels. After creation is confirmed, missing MYKOS-only
+config/secret includes are appended to the global files with private backups.</p>
+<h2 id="current-memory-policy">Current memory policy</h2>
+<p>All finished VM images and their instances use 2048 MiB RAM. Unattended macOS
+installation temporarily requires 4096 MiB for Apple’s second-stage temporary
+filesystem; it returns to 2048 MiB before the installed-boot check and capture.
+The image creation menu records the allocation so live state captures remain compatible. Existing
+4096 MiB captures require recapturing at 2048 MiB before new instances can resume
+that state. Existing instances can be cold-resized through <code>vm memory-configure</code>;
+see BALLOONING.md for recovery, driver and API details.</p>
+<p>The Windows/Ubuntu pagefile or swap target is 12 GiB, configured inside the
+installed guest before capture. The Ubuntu helper rejects the live installer;
+finish installation, boot the installed OS, apply setup, reboot and verify first.
+macOS swap stays kernel-managed because a fixed total is not exposed by the
+stock OS. Its RAM allocation is 2048 MiB. Windows 11 at this allocation is below
+Microsoft&#39;s supported minimum.</p>
+<footer>MYKOS documentation</footer></main></html>

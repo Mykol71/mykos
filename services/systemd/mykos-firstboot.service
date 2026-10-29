@@ -1,5 +1,5 @@
 [Unit]
-Description=MYKOS automatic HTTPS and initial setup
+Description=MYKOS initial setup with IP access
 Wants=network-online.target
 After=network-online.target
 ConditionPathExists=!/var/lib/mykos-installer/installed.json

@@ -1,42 +1,55 @@
 # Architecture and deployed paths
 
+[Documentation index](README.md)
+
+<!-- contents:start -->
+**Contents**
+
+- [OS inventory panes](#os-inventory-panes)
+- [Private pane notes and shared customer notes](#private-pane-notes-and-shared-customer-notes)
+- [Host performance history](#host-performance-history)
+- [Components and trust boundaries](#components-and-trust-boundaries)
+- [Files and owners](#files-and-owners)
+- [systemd inventory](#systemd-inventory)
+- [Staging workflow](#staging-workflow)
+
+<!-- contents:end -->
+
 ## OS inventory panes
 
-The dashboard groups containers into RedHat, Ubuntu, Windows, Windows Server, and MacOS panes. Each pane
-and its header navigation link appear only when the existing stage-images
-endpoint reports a running template for that OS family. RedHat uses rh7–rh10,
-Windows uses win templates, Windows Server uses wns templates, and MacOS uses mac12–mac15. Each
-dropdown contains only matching available templates. Stopped and unknown
-containers remain listed in their OS pane when that pane is available. Ubuntu
-templates use names such as `ubuntu`, `ubuntu22`, `ubuntu24`, or `ubuntu24.04`;
-discovery accepts `ubuntu` followed by an optional two-digit release and optional
-two-digit minor version. Ubuntu retains the Linux VPN controls. Pane navigation
-links use grey pipe separators and disappear along with unavailable OS panes.
+The dashboard groups available images and ID-specific containers by OS family,
+including native RedHat, Rocky Linux, AlmaLinux, Oracle Linux, CentOS Stream,
+Fedora and SQL Server, plus Windows, Windows Server, Ubuntu and macOS VMs.
+The stage-images helper accepts running supported native generic bases and ready
+captured VM images; stopped unknown native bases are not treated as available.
+Existing containers remain associated with their collected OS metadata. Footer
+leaf previews can display disabled sample choices without creating an image or
+container. Preview visibility grants no operational permission.
 
-OS metadata and image names identify the family; legacy containers with unknown
-OS metadata default to RedHat until fresh details identify them. Windows, Windows
-Server, and MacOS panes omit VPN columns, VPN actions, and VPN details. The host VPN metric
-counts Linux containers only. Desktop VM templates use Dockur Windows/macOS and
-QEMU Ubuntu with persistent guest storage, unique browser/native ports, and
-cold-captured golden disks. VM-backed Ubuntu does not run Linux VPN commands
-in its wrapper. See [DESKTOPS.md](DESKTOPS.md) for creation and lifecycle details.
-API clients continue to use the existing
-`/mykos/api/v2/images` and node inventory endpoints.
+Native containers share the host kernel. Desktop images use QEMU through their
+Podman wrappers, with private disks and paired RAM/device startup captures.
+VM-backed Ubuntu VPN operations use its private guest agent, not the wrapper's
+shell. Windows/macOS do not expose direct native VPN controls; their wrapper
+traffic can participate in an explicitly selected shared gateway. See
+[networking](NETWORKING.md) and [image lifecycle](IMAGE_BUILDS.md).
 
-## Shared pane notes
+## Private pane notes and shared customer notes
 
-White document buttons at the top right of each pane open a small notes dialog.
-They align with the row trash-can actions. Upper-right manual refresh buttons
-are removed; the dashboard continues to refresh automatically.
-The Host performance pane has its own notes button at the top right. Notes are
-shared by signed-in users on the host and stored in the `pane_notes` table of the
-existing `data/auth.db`, which the installer preserves. Each pane has independent
-plain-text notes: `host`, `linux` (RedHat), `ubuntu`, `windows`, `windows-server`,
-`macos`, `backups`, and `repos`. Save and Reload are explicit; closing with unsaved
-edits asks before discarding them. Concurrent edits use revisions and return 409
-instead of overwriting a newer note. The browser endpoints require a signed-in
-session and enforce Origin on writes; API v2 permits read keys to read and admin
-keys to write `/notes/{pane}`. Notes are limited to 20,000 characters.
+Pane change-request notes are private to the authenticated `mgreen` browser
+session. Both browser and v2 notes routes require that named session; API keys
+identify scopes and cannot prove note ownership. Writes require the configured
+Origin and current revision; stale revisions return 409. These notes are limited
+to 20,000 characters and stored in `pane_notes` in the identity database. The
+installer clears this disposable change-request table on update. Separate
+`personal_notes` remain private and preserved, and are excluded from automated
+change-request scans.
+
+Shared customer-ID notes use `GET/PUT /mykos/api/web/id-notes/{id}` and the
+`shared_id_notes` table. Every signed-in user, including a read-only dashboard
+user, can edit them. Writes require Origin and revision; responses identify the
+last editor. They belong to an eight-digit ID and survive updates and container
+recreation. The release does not apply the proposed RTI/Dove role matrix to these
+routes; do not infer per-POS authorization from map labels or pane visibility.
 
 ## Host performance history
 
@@ -51,8 +64,9 @@ samples, tooltips, count bars and alerts retain their actual values. Reduced-mot
 preferences disable easing and limit timeline redraws to once per second.
 Dashboard reloads share the same sampling limit, so they cannot add extra host polls.
 Only one host-metrics request runs at a time; requests time out after five seconds.
-History contains readings observed while the page is open and resets on reload or
-logout; no history is backfilled. CPU, memory and root disk use percentage values.
+History is collected independently of an open browser and retained for 30 minutes
+in the host SQLite history store. Reloading or logging out does not clear it;
+no synthetic readings are backfilled before collection began. CPU, memory and root disk use percentage values.
 Load is normalized by CPU count. Containers and VPNs use downward bars from the
 100% line: all running/up reaches 50%, half reaches 75%, and none reaches 100%.
 Actual counts remain in the legend. No bar is drawn when there are no eligible
@@ -77,7 +91,8 @@ management panes and are excluded from the performance chart.
 
 The chart consumes the existing browser endpoints. API clients can retrieve the
 same current readings through `/mykos/api/v2/host/metrics`, `/backups`, `/repos`
-and `/nodes` under the API v2 prefix; browser history is not a persisted API store.
+and `/nodes` under the API v2 prefix. `/host/history` exposes the retained
+30-minute history through read/admin API keys.
 
 The host row below the graph uses the container row's typography, columns and icon
 sizes. Its Host field is the hostname. Version is the host OS version, IP is the host's
@@ -108,6 +123,10 @@ uses the modern four-equal-pane mark. Assets are bundled in the HTML and require
 no external icon requests at runtime.
 
 ## Components and trust boundaries
+
+![Service boundaries between clients, Apache, the web application, collectors, root helpers, and Podman.](diagrams/architecture.svg)
+
+[Editable Mermaid source](diagrams/architecture.mmd)
 
 The operator CLI (`mykos`) changes directory into `/usr/local/share/mykos` and opens
 `MENU`. The `back`, `pos`, `repo`, and `data` submenus invoke the legacy scripts.

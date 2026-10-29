@@ -1,5 +1,4 @@
-# mykos
-Multi-OS OS
+# MYKOS
 
 MYKOS is a virtualization and host-management solution for RHEL 8 and RHEL 9.
 It combines a web control center, authenticated API, and text administration

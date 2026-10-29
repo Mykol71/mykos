@@ -1,0 +1,946 @@
+[
+  {
+    "name": "architecture",
+    "title": "MYKOS architecture: control, observation, and execution boundaries",
+    "nodes": [
+      [
+        "browser",
+        "Browser",
+        "Session authentication"
+      ],
+      [
+        "client",
+        "API client",
+        "Scoped API key"
+      ],
+      [
+        "apache",
+        "Apache",
+        "HTTP or HTTPS and /mykos proxy"
+      ],
+      [
+        "web",
+        "Web and API application",
+        "Unprivileged mykosweb service"
+      ],
+      [
+        "collectors",
+        "Root collectors",
+        "Observe host and containers"
+      ],
+      [
+        "state",
+        "JSON snapshots",
+        "Collected inventory and metrics"
+      ],
+      [
+        "helpers",
+        "Root helpers",
+        "Validated operations over Unix sockets"
+      ],
+      [
+        "podman",
+        "Rootful Podman",
+        "Containers and VM wrappers"
+      ],
+      [
+        "native",
+        "Native Linux instances",
+        "Host kernel; privileged Podman containers"
+      ],
+      [
+        "vms",
+        "VM-backed instances",
+        "QEMU/KVM; Windows, macOS, Ubuntu"
+      ],
+      [
+        "storage",
+        "Per-ID persistent state",
+        "VM disks, instance files, intentional snapshots"
+      ],
+      [
+        "backup",
+        "Customer backup trees",
+        "Optional writable mounts for native restores"
+      ],
+      [
+        "network",
+        "Managed private network",
+        "Per-ID address and MAC; selectable VPN gateway"
+      ],
+      [
+        "identity",
+        "Identity and configuration",
+        "Browser sessions, scoped API keys, local settings"
+      ]
+    ],
+    "edges": [
+      [
+        "browser",
+        "apache",
+        "HTTP or HTTPS"
+      ],
+      [
+        "client",
+        "apache",
+        "HTTP or HTTPS"
+      ],
+      [
+        "apache",
+        "web",
+        "Loopback proxy"
+      ],
+      [
+        "collectors",
+        "state",
+        "Write"
+      ],
+      [
+        "state",
+        "web",
+        "Read"
+      ],
+      [
+        "web",
+        "helpers",
+        "Authorized requests"
+      ],
+      [
+        "helpers",
+        "podman",
+        "Fixed operations"
+      ],
+      [
+        "podman",
+        "collectors",
+        "Observed state"
+      ],
+      [
+        "identity",
+        "web",
+        "Validate session / key"
+      ],
+      [
+        "podman",
+        "native",
+        "Start / stop / console"
+      ],
+      [
+        "podman",
+        "vms",
+        "Start wrapper and QEMU"
+      ],
+      [
+        "vms",
+        "storage",
+        "Private disk and paired startup state"
+      ],
+      [
+        "native",
+        "backup",
+        "Compose approved customer paths"
+      ],
+      [
+        "native",
+        "network",
+        "Instance namespace"
+      ],
+      [
+        "vms",
+        "network",
+        "VM NAT through wrapper"
+      ],
+      [
+        "collectors",
+        "storage",
+        "Read metadata; no guest polling commands"
+      ]
+    ],
+    "groups": [
+      [
+        "clients",
+        "Operator and automation",
+        [
+          "browser",
+          "client"
+        ]
+      ],
+      [
+        "service",
+        "HTTP service boundary",
+        [
+          "apache",
+          "web"
+        ]
+      ],
+      [
+        "host",
+        "Trusted host control plane",
+        [
+          "helpers",
+          "collectors",
+          "podman"
+        ]
+      ],
+      [
+        "runtime",
+        "Execution engines",
+        [
+          "native",
+          "vms"
+        ]
+      ],
+      [
+        "state_group",
+        "Persistent and observed state",
+        [
+          "identity",
+          "state",
+          "storage",
+          "backup"
+        ]
+      ],
+      [
+        "network_group",
+        "Connectivity policy",
+        [
+          "network"
+        ]
+      ]
+    ],
+    "edgeStyles": {
+      "collectors->state": "observe",
+      "state->web": "observe",
+      "podman->collectors": "observe",
+      "collectors->storage": "observe",
+      "native->backup": "data",
+      "vms->storage": "data",
+      "native->network": "data",
+      "vms->network": "data"
+    },
+    "note": "Blue: requests/actions   Green: data/traffic   Dashed: observations   Native containers use a trusted administrative host model"
+  },
+  {
+    "name": "image-lifecycle",
+    "title": "Image and instance lifecycle: preparation, reuse, capture, and recovery",
+    "nodes": [
+      [
+        "base",
+        "Generic base installation",
+        "OS install, provisioning, console validation"
+      ],
+      [
+        "capture",
+        "Capture startup state",
+        "VM: disk flush + paired RAM/device state; native: image filesystem"
+      ],
+      [
+        "check",
+        "Compatibility manifest",
+        "CPU, QEMU, memory, and host prerequisites where applicable"
+      ],
+      [
+        "image",
+        "Prepared OS image",
+        "Reusable OS plus required startup state"
+      ],
+      [
+        "clone",
+        "Create ID-specific instance",
+        "Private storage, hostname, machine ID, and network identity"
+      ],
+      [
+        "backup",
+        "Optional native restore input",
+        "Customer trees + numeric account reconciliation"
+      ],
+      [
+        "instance",
+        "Running container",
+        "Native Linux or VM-backed OS instance"
+      ],
+      [
+        "snapshot",
+        "Intentional snapshot",
+        "Explicit retained recovery point; source resumes / stays running"
+      ],
+      [
+        "restore",
+        "Restore selected snapshot",
+        "Controlled recovery into supported compatible runtime"
+      ],
+      [
+        "reset",
+        "Base console disconnect",
+        "Reset generic base to last captured image"
+      ],
+      [
+        "protect",
+        "Reference and retention checks",
+        "No forced removal of an in-use image; no auto-pruning intentional snapshots"
+      ]
+    ],
+    "edges": [
+      [
+        "base",
+        "capture",
+        "Operator captures before logout"
+      ],
+      [
+        "capture",
+        "check",
+        "Record matching payload metadata"
+      ],
+      [
+        "check",
+        "image",
+        "Commit prepared image"
+      ],
+      [
+        "image",
+        "clone",
+        "Reuse for each ID"
+      ],
+      [
+        "backup",
+        "clone",
+        "Native-only composition; writable data"
+      ],
+      [
+        "clone",
+        "instance",
+        "Start; verify restore when required"
+      ],
+      [
+        "instance",
+        "snapshot",
+        "Capture supported live state"
+      ],
+      [
+        "snapshot",
+        "restore",
+        "Operator selects recovery point"
+      ],
+      [
+        "restore",
+        "instance",
+        "Resume recovered state"
+      ],
+      [
+        "base",
+        "reset",
+        "Logout / disconnect"
+      ],
+      [
+        "reset",
+        "image",
+        "Reset uses latest captured image"
+      ],
+      [
+        "image",
+        "protect",
+        "Before removal"
+      ],
+      [
+        "snapshot",
+        "protect",
+        "Retain until explicit removal"
+      ]
+    ],
+    "groups": [
+      [
+        "prep",
+        "Image preparation",
+        [
+          "base",
+          "capture",
+          "check",
+          "image",
+          "reset"
+        ]
+      ],
+      [
+        "run",
+        "Instance lifetime",
+        [
+          "backup",
+          "clone",
+          "instance"
+        ]
+      ],
+      [
+        "recovery",
+        "Deliberate recovery and retention",
+        [
+          "snapshot",
+          "restore",
+          "protect"
+        ]
+      ]
+    ],
+    "edgeStyles": {
+      "snapshot->restore": "data",
+      "restore->instance": "data",
+      "backup->clone": "data",
+      "base->reset": "failure",
+      "reset->image": "failure"
+    },
+    "note": "Startup captures support launch; intentional snapshots are separate. Mounted application data needs coordinated protection."
+  },
+  {
+    "name": "vpn-direct",
+    "title": "Direct native guest VPN",
+    "nodes": [
+      [
+        "app",
+        "Guest application",
+        "Native guest namespace"
+      ],
+      [
+        "dns",
+        "Guest output guard + DNS",
+        "Non-loopback port 53 \u2192 8.8.8.8; IPv6 blocked"
+      ],
+      [
+        "xfrm",
+        "Guest Libreswan / XFRM",
+        "Site SA + selected full-tunnel CHILD_SA"
+      ],
+      [
+        "bridge",
+        "Host private bridge / WAN NAT",
+        "Outer traffic only; host is not IPsec endpoint"
+      ],
+      [
+        "peer",
+        "Remote VPN peer",
+        "Site routing + internet NAT + DNS access"
+      ],
+      [
+        "internet",
+        "Remote site / internet",
+        "Return path decrypts in native guest"
+      ],
+      [
+        "loss",
+        "Tunnel unavailable",
+        "Guest output guard rejects protected clear-text fallback"
+      ]
+    ],
+    "edges": [
+      [
+        "app",
+        "dns",
+        "IPv4 / DNS"
+      ],
+      [
+        "dns",
+        "xfrm",
+        "Policy required; reject clear fallback"
+      ],
+      [
+        "xfrm",
+        "bridge",
+        "Encapsulated IPsec / UDP 4500"
+      ],
+      [
+        "bridge",
+        "peer",
+        "WAN"
+      ],
+      [
+        "peer",
+        "internet",
+        "Decrypted inner traffic"
+      ],
+      [
+        "internet",
+        "peer",
+        "Reply through remote routes / NAT"
+      ],
+      [
+        "peer",
+        "xfrm",
+        "Encrypted reply"
+      ],
+      [
+        "xfrm",
+        "app",
+        "Reply to application"
+      ],
+      [
+        "xfrm",
+        "loss",
+        "SA unavailable"
+      ]
+    ],
+    "groups": [
+      [
+        "guest",
+        "Native guest namespace",
+        [
+          "app",
+          "dns",
+          "xfrm",
+          "loss"
+        ]
+      ],
+      [
+        "host",
+        "MYKOS host namespace",
+        [
+          "bridge"
+        ]
+      ],
+      [
+        "remote",
+        "Remote network",
+        [
+          "peer",
+          "internet"
+        ]
+      ]
+    ],
+    "edgeStyles": {
+      "app->dns": "data",
+      "dns->xfrm": "data",
+      "xfrm->bridge": "data",
+      "bridge->peer": "data",
+      "peer->internet": "data",
+      "internet->peer": "return",
+      "peer->xfrm": "return",
+      "xfrm->app": "return",
+      "xfrm->loss": "failure"
+    },
+    "note": "Solid green: outbound traffic   Dashed green: return traffic   Red: loss / protection   Boundaries identify where routing and IPsec execute"
+  },
+  {
+    "name": "vpn-native-gateway",
+    "title": "Shared native gateway VPN",
+    "nodes": [
+      [
+        "vm",
+        "VM internal OS",
+        "Windows / macOS / Ubuntu"
+      ],
+      [
+        "client",
+        "Native sibling / VM wrapper",
+        "Podman private bridge address"
+      ],
+      [
+        "host",
+        "Host bridge namespace",
+        "Ingress policy route; DNS DNAT + return SNAT"
+      ],
+      [
+        "gateway",
+        "Selected native gateway namespace",
+        "Forward guard + Libreswan / XFRM"
+      ],
+      [
+        "wan",
+        "Host WAN NAT",
+        "Gateway outer transport bypasses policy diversion"
+      ],
+      [
+        "peer",
+        "Remote VPN peer",
+        "Site + full tunnel; remote egress NAT"
+      ],
+      [
+        "output",
+        "Host internet output",
+        "Mark + bridge-source SNAT only with verified full SA"
+      ],
+      [
+        "down",
+        "Gateway unavailable",
+        "Guest route unreachable; host returns to WAN"
+      ],
+      [
+        "site",
+        "Remote site / internet",
+        "Peer selectors, return route, DNS reachability and egress NAT"
+      ]
+    ],
+    "edges": [
+      [
+        "vm",
+        "client",
+        "Internal guest NAT"
+      ],
+      [
+        "client",
+        "host",
+        "Protected IPv4 + port-53 DNS"
+      ],
+      [
+        "host",
+        "gateway",
+        "Via pinned gateway on same bridge"
+      ],
+      [
+        "gateway",
+        "wan",
+        "Encrypted outer packets"
+      ],
+      [
+        "wan",
+        "peer",
+        "IKE / NAT-T"
+      ],
+      [
+        "output",
+        "host",
+        "Conditional policy table"
+      ],
+      [
+        "host",
+        "down",
+        "Stopped / identity failure"
+      ],
+      [
+        "peer",
+        "site",
+        "Decrypt and route"
+      ],
+      [
+        "site",
+        "peer",
+        "Return route / NAT"
+      ],
+      [
+        "peer",
+        "gateway",
+        "Encrypted reply"
+      ],
+      [
+        "gateway",
+        "host",
+        "Decrypt; return SNAT / policy path"
+      ],
+      [
+        "host",
+        "client",
+        "Reply to application"
+      ]
+    ],
+    "groups": [
+      [
+        "clients",
+        "Client environments",
+        [
+          "vm",
+          "client"
+        ]
+      ],
+      [
+        "hostns",
+        "Host network namespace",
+        [
+          "host",
+          "wan",
+          "output",
+          "down"
+        ]
+      ],
+      [
+        "gatewayns",
+        "Selected native gateway namespace",
+        [
+          "gateway"
+        ]
+      ],
+      [
+        "remote",
+        "Remote network",
+        [
+          "peer",
+          "site"
+        ]
+      ]
+    ],
+    "edgeStyles": {
+      "vm->client": "data",
+      "client->host": "data",
+      "host->gateway": "data",
+      "gateway->wan": "data",
+      "wan->peer": "data",
+      "output->host": "data",
+      "host->down": "failure",
+      "peer->site": "data",
+      "site->peer": "return",
+      "peer->gateway": "return",
+      "gateway->host": "return",
+      "host->client": "return"
+    },
+    "note": "Solid green: outbound traffic   Dashed green: return traffic   Red: loss / protection   Boundaries identify where routing and IPsec execute"
+  },
+  {
+    "name": "vpn-host-shared",
+    "title": "Shared host gateway VPN",
+    "nodes": [
+      [
+        "guest",
+        "Bridge guests / VM wrappers",
+        "Internal VM NAT precedes bridge"
+      ],
+      [
+        "bridge",
+        "Host bridge ingress",
+        "DNS redirect; IPsec allow / clear reject"
+      ],
+      [
+        "xfrm",
+        "Host Libreswan + kernel XFRM",
+        "Whole bridge subnet \u2192 site and full tunnel"
+      ],
+      [
+        "wan",
+        "Host WAN",
+        "Outer IKE / NAT-T transport"
+      ],
+      [
+        "peer",
+        "Remote VPN peer",
+        "Return routing and remote internet NAT"
+      ],
+      [
+        "output",
+        "Host internet + DNS output",
+        "Verified full SA \u2192 mark + bridge-source SNAT"
+      ],
+      [
+        "bypass",
+        "Management replies / local / transport",
+        "Exempt output uses ordinary main routing"
+      ],
+      [
+        "loss",
+        "Full-tunnel SA removed",
+        "Guest guard stays; host WAN fallback restored"
+      ],
+      [
+        "site",
+        "Remote site / internet",
+        "Site selectors, DNS access and remote internet NAT"
+      ]
+    ],
+    "edges": [
+      [
+        "guest",
+        "bridge",
+        "Inner IPv4"
+      ],
+      [
+        "bridge",
+        "xfrm",
+        "NAT exemption preserves selector"
+      ],
+      [
+        "xfrm",
+        "wan",
+        "Encryption in host namespace"
+      ],
+      [
+        "wan",
+        "peer",
+        "Encapsulated IPsec"
+      ],
+      [
+        "output",
+        "xfrm",
+        "Profile route table"
+      ],
+      [
+        "output",
+        "bypass",
+        "Explicit exceptions"
+      ],
+      [
+        "xfrm",
+        "loss",
+        "Reconciled after SA loss"
+      ],
+      [
+        "peer",
+        "site",
+        "Decrypt and route"
+      ],
+      [
+        "site",
+        "peer",
+        "Return route / NAT"
+      ],
+      [
+        "peer",
+        "xfrm",
+        "Encrypted reply"
+      ],
+      [
+        "xfrm",
+        "bridge",
+        "Decrypted reply"
+      ],
+      [
+        "bridge",
+        "guest",
+        "Reply to application"
+      ]
+    ],
+    "groups": [
+      [
+        "clients",
+        "Guest / wrapper namespaces",
+        [
+          "guest"
+        ]
+      ],
+      [
+        "hostns",
+        "MYKOS host namespace",
+        [
+          "bridge",
+          "xfrm",
+          "wan",
+          "output",
+          "bypass",
+          "loss"
+        ]
+      ],
+      [
+        "remote",
+        "Remote network",
+        [
+          "peer",
+          "site"
+        ]
+      ]
+    ],
+    "edgeStyles": {
+      "guest->bridge": "data",
+      "bridge->xfrm": "data",
+      "xfrm->wan": "data",
+      "wan->peer": "data",
+      "output->xfrm": "data",
+      "output->bypass": "data",
+      "xfrm->loss": "failure",
+      "peer->site": "data",
+      "site->peer": "return",
+      "peer->xfrm": "return",
+      "xfrm->bridge": "return",
+      "bridge->guest": "return"
+    },
+    "note": "Solid green: outbound traffic   Dashed green: return traffic   Red: loss / protection   Boundaries identify where routing and IPsec execute"
+  },
+  {
+    "name": "vpn-host-only",
+    "title": "Host-only site VPN (compatibility mode)",
+    "nodes": [
+      [
+        "app",
+        "Host traffic",
+        "Host network namespace"
+      ],
+      [
+        "select",
+        "Site selector match",
+        "Fixed local 192.168.222.0/24 \u2192 entered remote subnet"
+      ],
+      [
+        "xfrm",
+        "Host Libreswan / XFRM",
+        "One site connection; no managed default hook"
+      ],
+      [
+        "peer",
+        "Remote peer / site",
+        "Agreed selectors and return routing"
+      ],
+      [
+        "wan",
+        "Ordinary WAN / DNS",
+        "Nonmatching traffic retains normal routing"
+      ],
+      [
+        "guests",
+        "MYKOS private bridge guests",
+        "Not enrolled by this mode"
+      ]
+    ],
+    "edges": [
+      [
+        "app",
+        "select",
+        "Route + policy lookup"
+      ],
+      [
+        "select",
+        "xfrm",
+        "Matching source / destination"
+      ],
+      [
+        "xfrm",
+        "peer",
+        "Encrypted site traffic"
+      ],
+      [
+        "app",
+        "wan",
+        "Nonmatching output"
+      ],
+      [
+        "guests",
+        "wan",
+        "Existing bridge NAT; no shared profile"
+      ],
+      [
+        "peer",
+        "xfrm",
+        "Encrypted reply"
+      ],
+      [
+        "xfrm",
+        "app",
+        "Reply to application"
+      ]
+    ],
+    "groups": [
+      [
+        "hostns",
+        "MYKOS host namespace",
+        [
+          "app",
+          "select",
+          "xfrm",
+          "wan"
+        ]
+      ],
+      [
+        "guestsns",
+        "Private bridge namespaces",
+        [
+          "guests"
+        ]
+      ],
+      [
+        "remote",
+        "Remote network",
+        [
+          "peer"
+        ]
+      ]
+    ],
+    "edgeStyles": {
+      "app->select": "data",
+      "select->xfrm": "data",
+      "xfrm->peer": "data",
+      "app->wan": "data",
+      "guests->wan": "data",
+      "peer->xfrm": "return",
+      "xfrm->app": "return"
+    },
+    "note": "Solid green: outbound traffic   Dashed green: return traffic   Red: loss / protection   Boundaries identify where routing and IPsec execute"
+  }
+]

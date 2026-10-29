@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Guest ballooning</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="guest-ballooning">Guest ballooning</h1>
+<p><a href="README.html">Documentation index</a></p>
+<p>Native RedHat containers share the host kernel and do not use VM ballooning.
+The operator-selected VM policy is now <strong>2048 MiB RAM per guest</strong>. Removing a
+Podman memory limit alone does not reclaim guest RAM. Existing 4096 MiB RAM
+captures cannot resume at 2048 MiB; published images must be recaptured at the new
+size before creating instances from their RAM state.</p>
+<p>Inspect driver support from the installed pos directory:</p>
+<pre><code class="language-bash">sudo ./vm memory 22222222
+</code></pre>
+<p>The operation enables five-second guest statistics polling. Statistics may take
+five seconds to arrive. Windows needs a working VirtIO balloon driver/statistics
+service; macOS live balloon adjustment remains unverified. Unknown/unsupported
+statistics do not cause automatic RAM changes. Live requests are constrained to
+the 2048 MiB policy, at most 128 MiB per reduction and at least 1 GiB guest memory
+headroom. A larger reduction therefore requires a cold restart.</p>
+<p>Cold-resize an existing Windows, Ubuntu or macOS instance, confirming its exact ID:</p>
+<pre><code class="language-bash">sudo ./vm memory-configure 22222222 --target-mib 2048 --confirm 22222222
+</code></pre>
+<p>The operation verifies its live storage mount, quiesces disk writes for a reflink
+recovery copy, then restarts the wrapper against its current disks at 2048 MiB.
+It preserves ports, OS images, intentional snapshots and a stopped recovery
+wrapper. It rejects paused VMs and active migrations. Recovery copies are under
+the instance&#39;s <code>.memory-recovery-*</code> directory. Windows instances use manual
+installation mode to avoid unattended reinstallation during restart.</p>
+<p>Admin-key API controls:</p>
+<ul>
+<li><code>GET /mykos/api/v2/nodes/{id}/memory</code> reports configured RAM and driver status.</li>
+<li><code>PUT .../memory</code> with <code>{&quot;target_mib&quot;:2048}</code> requests a guarded live balloon target.</li>
+<li><code>PUT .../memory/allocation</code> with <code>{&quot;target_mib&quot;:2048,&quot;confirmation&quot;:&quot;ID&quot;}</code> queues a cold restart.</li>
+</ul>
+<p>The pagefile/swap provisioning target is <strong>12 GiB</strong>. New supported Windows builds
+receive an OEM PowerShell setup script. Ubuntu creation/capture instructions
+include the fixed setup download <code>/mykos/image-setup/ubuntu.py</code>; run it inside the
+installed Ubuntu OS, reboot and verify swap before capture. It rejects live
+installers and RAM-backed roots and checks free disk space. These settings are
+not proof that an unfinished or unavailable guest has applied its pagefile/swap.
+Stock macOS manages swap in its kernel and does not expose a fixed-total setting.
+Its configured RAM is still 2048 MiB. Windows 11 at 2048 MiB is below Microsoft&#39;s
+published supported minimum; installation success is not guaranteed.</p>
+<h2 id="native-snapshot-compatibility">Native snapshot compatibility</h2>
+<p>Before a native live snapshot, MYKOS removes <code>/dev/hugepages</code> (hugetlbfs) and
+<code>/sys/kernel/config</code> (configfs) only when they are empty mounts and the kernel permits an ordinary unmount. This includes
+private mount copies held by services in the same container PID namespace. Host
+and unrelated container namespaces are excluded. It then masks
+the corresponding systemd mount units in that container so the optional mount stays absent across
+restarts. Nonempty or busy mounts stop capture; no force/lazy unmount is used.
+Existing workload services and the container stay running.</p>
+<p>The per-capture CRIU RPC request supplies the D-Bus policy-directory inode scan hint
+for overlay-backed file watches, including NetworkManager plugin/firmware and polkit policy directories. Global CRIU configuration remains unchanged.</p>
+<p>A headless native container may also run systemd-logind with an open input-event
+device. CRIU cannot save these device handles. MYKOS reports the process/device
+before capture instead of stopping services automatically. An operator must
+review active sessions and approve stopping/masking that service if appropriate.</p>
+<footer>MYKOS documentation</footer></main></html>

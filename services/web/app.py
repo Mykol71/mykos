@@ -84,7 +84,7 @@ async def headers(request,call_next):
     response.headers['X-Content-Type-Options']='nosniff'
     response.headers['X-Frame-Options']='DENY'
     response.headers['Cache-Control']='no-store'
-    response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://tile.openstreetmap.org; connect-src 'self'; object-src 'none'; frame-ancestors 'none'"
+    response.headers.setdefault('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://tile.openstreetmap.org; connect-src 'self'; object-src 'none'; frame-ancestors 'none'")
     return response
 
 
@@ -158,59 +158,11 @@ def page():
     return HTMLResponse(html.replace("__MYKOS_BRAND_DISPLAY__", display_html)
                         .replace("__MYKOS_BRAND_NAME__", html_escape(name)))
 
-# Public supporting documentation, limited to the maintained operator guides.
+# Supporting guides are pre-rendered and independently keep their light theme.
 _DOCS_ROOT = (_SOURCE_ROOT / 'docs' if (_SOURCE_ROOT / 'MENU').is_file()
               else Path('/usr/local/share/mykos/docs'))
-_SUPPORTING_DOCS = {
-    'INSTALL_SERVICES.md': 'Installation, updates, and recovery',
-    'ARCHITECTURE.md': 'Architecture and components',
-    'NETWORKING.md': 'Native LAN networking and Linux root terminals',
-    'DESKTOPS.md': 'Windows, macOS and Ubuntu desktop templates',
-    'RPM.md': 'RPM installation and custom repository',
-    'BOOTSTRAP.md': 'Automatic HTTPS and RPM installation',
-    'IMAGE_BUILDS.md': 'Unattended image builds',
-    'BALLOONING.md': 'Guest memory ballooning and snapshot compatibility',
-    'HOST_SIDE_REVIEW.md': 'Host-side monitoring and container-call review',
-    'KEY_ISSUES.md': 'Deployment design and key issues',
-    'IDENTITY.md': 'Users, roles, passwords, and API keys',
-    'API.md': 'API usage',
-    'SCRIPTS.md': 'Operator scripts',
-    'VALIDATION.md': 'Validation and integration checks',
-}
-
-
-def _documentation_page(title, content):
-    return HTMLResponse(
-        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        '<title>' + html_escape(title) + '</title><style>'
-        'body{margin:0;background:#0b1120;color:#e2e8f0;font:14px/1.6 monospace}'
-        'main{max-width:1000px;margin:32px auto;padding:0 24px}'
-        'a{color:#38bdf8}pre{white-space:pre-wrap;overflow-wrap:anywhere}'
-        'a:focus-visible{outline:2px solid #38bdf8;outline-offset:3px}'
-        '</style></head><body><main><nav><a href="/mykos/">Login</a> | '
-        '<a href="/mykos/api/v2/docs">API</a> | '
-        '<a href="/mykos/docs">Supporting Docs</a></nav><h1>'
-        + html_escape(title) + '</h1>' + content + '</main></body></html>')
-
-
-@app.get('/docs', include_in_schema=False)
-def supporting_docs():
-    links = ''.join('<li><a href="/mykos/docs/' + name + '">'
-                    + html_escape(title) + '</a></li>'
-                    for name, title in _SUPPORTING_DOCS.items())
-    return _documentation_page('Supporting Docs', '<ul>' + links + '</ul>')
-
-
-@app.get('/docs/{name}', include_in_schema=False)
-def supporting_document(name: str):
-    if name not in _SUPPORTING_DOCS:
-        raise HTTPException(404, 'Document not found')
-    try:
-        text = (_DOCS_ROOT / name).read_text()
-    except OSError:
-        raise HTTPException(404, 'Document not installed')
-    return _documentation_page(_SUPPORTING_DOCS[name], '<pre>' + html_escape(text) + '</pre>')
+from supporting_docs import router as supporting_docs_router
+app.include_router(supporting_docs_router(_DOCS_ROOT))
 
 
 @app.get("/api/web/current-user")

@@ -1,0 +1,325 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Operator script catalog</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="operator-script-catalog">Operator script catalog</h1>
+<p><a href="README.html">Documentation index</a></p>
+<p>Use <code>sudo mykos</code> for the menu workflow on an installed host. Most legacy scripts are
+interactive and depend on their current working directory. The following paths are
+relative to <code>/usr/local/share/mykos</code> unless an absolute path is shown. Do not execute
+legacy administration scripts on a development desktop just to inspect their help.
+They often perform mutations immediately and have no dry-run mode.</p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#global-deployment-and-service-tools">Global deployment and service tools</a></li>
+<li><a href="#menus">Menus</a></li>
+<li><a href="#backup-accounts-cd-usrlocalsharemykosback">Backup accounts (<code>cd /usr/local/share/mykos/back</code>)</a></li>
+<li><a href="#pos-containers-cd-usrlocalsharemykospos">POS containers (<code>cd /usr/local/share/mykos/pos</code>)</a></li>
+<li><a href="#repository-mirrors-cd-usrlocalsharemykosrepo">Repository mirrors (<code>cd /usr/local/share/mykos/repo</code>)</a></li>
+<li><a href="#reports-billing-and-legacy-scheduled-jobs">Reports, billing, and legacy scheduled jobs</a></li>
+<li><a href="#host-utilities">Host utilities</a></li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="global-deployment-and-service-tools">Global deployment and service tools</h2>
+<table>
+<thead>
+<tr>
+<th>Script / invocation</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>bin/install install [--install-deps] [--enable]</code></td>
+<td>Install/update all maintained components; see installation guide</td>
+</tr>
+<tr>
+<td><code>bin/install verify</code></td>
+<td>Check managed files, permissions, imports, Linux unit syntax</td>
+</tr>
+<tr>
+<td><code>bin/install status</code></td>
+<td>Print manifest and managed systemd states</td>
+</tr>
+<tr>
+<td><code>bin/install backup --output FILE [--include-data]</code></td>
+<td>Snapshot managed code/settings; optionally runtime data and identities</td>
+</tr>
+<tr>
+<td><code>bin/install restore --snapshot FILE [--include-data]</code></td>
+<td>Validate and restore format-2 snapshot with another pre-change snapshot</td>
+</tr>
+<tr>
+<td><code>bin/install uninstall [--dry-run]</code></td>
+<td>Remove unchanged managed code/units, retain settings/data</td>
+</tr>
+<tr>
+<td><code>bin/install-services</code></td>
+<td>Forward to global installer; explicit format-1 bundle flags use <code>install-bundle</code></td>
+</tr>
+<tr>
+<td><code>bin/install-bundle package --output FILE [--with-data]</code></td>
+<td>Legacy deployed-host packaging; not a fresh source install</td>
+</tr>
+<tr>
+<td><code>bin/install-bundle verify --bundle FILE</code></td>
+<td>Validate legacy archive paths and file checksums</td>
+</tr>
+<tr>
+<td><code>bin/install-bundle install --bundle FILE [--with-data]</code></td>
+<td>Historical archive recovery; can replace current code</td>
+</tr>
+<tr>
+<td><code>bin/install-bundle restore --snapshot FILE [--with-data]</code></td>
+<td>Restore a format-1 pre-install snapshot</td>
+</tr>
+<tr>
+<td><code>bin/install-legacy</code></td>
+<td>Historical installer retained for reference; do not run (recursive replacement, old dependency/config handling)</td>
+</tr>
+<tr>
+<td><code>/usr/local/sbin/mykos-users</code></td>
+<td><code>create</code>, <code>passwd</code>, <code>role</code>, <code>list</code>, <code>revoke-sessions</code>, <code>delete</code>; see identity guide</td>
+</tr>
+<tr>
+<td><code>/usr/local/sbin/mykos-api-keys</code></td>
+<td><code>create LABEL read|admin</code>, <code>list</code>, <code>revoke ID</code></td>
+</tr>
+<tr>
+<td><code>/opt/mykos-web/create-admin.sh NAME</code></td>
+<td>Compatibility command to create a new browser admin</td>
+</tr>
+<tr>
+<td><code>/opt/mykos-web/manage.py users|keys ...</code></td>
+<td>Underlying manager; normally use root wrappers so files belong to <code>mykosweb</code></td>
+</tr>
+<tr>
+<td><code>/opt/mykos-web/.venv/bin/python /opt/mykos-web/monitor.py</code></td>
+<td>Legacy interactive console over snapshots; run on the installed host, not as a collector</td>
+</tr>
+</tbody></table>
+<p>All global installer actions accept <code>--root DIR</code> for isolated file staging.
+Mutating actions accept <code>--dry-run</code>; no external changes are performed by that flag.
+The old bundle utility does not have the global installer&#39;s staging-root mode.</p>
+<h2 id="menus">Menus</h2>
+<p><code>MENU</code> routes to <code>back/MENU</code>, <code>pos/pos</code>, <code>repo/MENU</code>, and <code>data/MENU</code>. Root is expected
+for operational use. <code>MENU</code> creates <code>/backups</code> if absent. <code>.envtype</code> in the toolkit
+root supplies its display name; create it manually as root when desired. Submenus
+return to the launcher directory so relative support paths resolve.</p>
+<p>The repository menu advertises Create/Delete, but <code>create_repos</code> and <code>delete_repos</code>
+are absent. The data menu displays Pricing, Insights, and Dell TSR items without
+handlers. Only Summary/Detail are implemented there. These are existing product
+gaps, not hidden features supplied by the installer.</p>
+<h2 id="backup-accounts-cd-usrlocalsharemykosback">Backup accounts (<code>cd /usr/local/share/mykos/back</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Script</th>
+<th>Actual behavior / usage</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>./bin/list_cloud_account</code></td>
+<td>Lists backup accounts, detected POS type/OS, disk usage</td>
+</tr>
+<tr>
+<td><code>./bin/create_cloud_account</code></td>
+<td>Prompts for shopcode, client public SSH key, and subscriber flag; creates Linux user/home under <code>/backups/tfrsync-SHOP</code> and restricted authorized key</td>
+</tr>
+<tr>
+<td><code>./bin/change_account_key</code></td>
+<td>Prompts for shopcode and public key; replaces that account&#39;s authorized key</td>
+</tr>
+<tr>
+<td><code>./bin/view_cloud_key</code></td>
+<td>Prompts for shopcode; displays its authorized key</td>
+</tr>
+<tr>
+<td><code>./bin/get_cloud_key</code></td>
+<td>Copies backed-up client public <strong>and private</strong> SSH keys to <code>/home/tfsupport/keys</code>; requires that account/directory; automatic nightly cleanup is not installed</td>
+</tr>
+<tr>
+<td><code>./bin/delete_cloud_account</code></td>
+<td>Prompts for shopcode and whether to delete data; removes Linux user and optionally its home/data</td>
+</tr>
+<tr>
+<td><code>./bin/is_subscriber</code></td>
+<td>Prompts for shopcode; reads/toggles <code>paying_customer</code> marker</td>
+</tr>
+<tr>
+<td><code>./bin/tfrsync</code></td>
+<td>SSH forced-command wrapper; invoked by authorized_keys, accepts an rsync server command and rejects several shell metacharacters; not the backup client</td>
+</tr>
+<tr>
+<td><code>./bin/install</code></td>
+<td>Compatibility forwarder to global installer; no longer changes SELinux or installs the old cron file</td>
+</tr>
+</tbody></table>
+<p>The legacy scripts have limited input validation and should be operated only by
+trusted host administrators. The account restriction is a legacy shell wrapper,
+not a general SSH sandbox. Review SSH restrictions and backup-user permissions for
+your environment. <code>tfrsync.pl</code> client software is external (<code>ostools</code>). A typical
+client backup command documented by the old project is:</p>
+<pre><code class="language-sh">tfrsync.pl --cloud --backup=all --rsync-account=tfrsync-01234567 --cloud-server=YOUR_HOST --force-rsync-account
+</code></pre>
+<p>This command runs on the client with its own prepared SSH keys and software, not
+inside the installer. Scheduler setup and a tested restore are separate operations.</p>
+<h2 id="pos-containers-cd-usrlocalsharemykospos">POS containers (<code>cd /usr/local/share/mykos/pos</code>)</h2>
+<p><code>./pos</code> is interactive: choose shopcode/image, build images, start/stop containers,
+connect as container root, and add/remove VPNs. It uses hidden files <code>.shopcode</code>,
+<code>.SHOP.postype</code>, <code>.SHOP.imagetype</code>, <code>.SHOP.container</code>, and <code>.SHOP/</code> VPN data. Preserve
+those files during upgrades. Image creation uses <code>livemedia-creator</code>, kickstarts in
+<code>ks/rh7.ks</code> through <code>ks/rh10.ks</code>, Podman build/commit, and site repositories.</p>
+<p>The legacy menu&#39;s default <code>OS</code> is RH8 and its staging logic uses that global value;
+selecting another image does not comprehensively update all launch logic. Use the
+new configured API launcher for controlled, noninteractive staging, and validate
+legacy image workflows before relying on them across OS versions.</p>
+<p><code>./get_peers</code> reads Meraki configuration from <code>/etc/mykos/pos.env</code> and prints the
+organization&#39;s third-party VPN peers through <code>jq</code>. Configure credentials first.
+The legacy VPN update performs a PUT of a single constructed peers list; it can
+replace other configured organization peers. Review the intended full peer list
+and Meraki API behavior before using that menu option. Secrets are no longer embedded
+in maintained code, but legacy per-shop generated files may still contain them.</p>
+<p><code>./pipework HOST_INTERFACE -i eth1 CONTAINER dhclient</code> adds the container interface
+and obtains DHCP. It changes host/container networking and requires root and Linux
+network tooling. The new staging helper calls this exact form. Check interface,
+DHCP client availability, routes, and VPN policies in your staging environment.</p>
+<p>The legacy Purge action stops <strong>all</strong> rootful Podman containers, prunes images, and
+removes hidden state. It is broad and destructive; it is not part of installation,
+update, removal, or the API&#39;s single-shop stop operation.</p>
+<table>
+<thead>
+<tr>
+<th>Installed privileged helper</th>
+<th>Invocation / role</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>mykos-container-helper</code></td>
+<td>systemd socket request <code>{ &quot;args&quot;: [&quot;ACTION&quot;, ...] }</code>; actions <code>list</code>, <code>diskfree</code>, <code>logs</code>, <code>top</code>, <code>ipsec</code>, <code>checkit</code>, <code>stage-check</code>, <code>stage-status</code>, <code>stage-start</code>, <code>stop-pos</code></td>
+</tr>
+<tr>
+<td><code>mykos-container-helper --stage-worker SHOP</code></td>
+<td>Invoked by <code>mykos-stage@SHOP.service</code>; consumes queued job and writes result</td>
+</tr>
+<tr>
+<td><code>mykos-stage-pos SHOP yes|no</code></td>
+<td>Root-only noninteractive configured staging; normally invoked only by worker</td>
+</tr>
+<tr>
+<td><code>mykos-terminal-helper</code></td>
+<td>systemd socket: <code>{ &quot;shop&quot;:&quot;01234567&quot; }</code>, readiness line, then PTY bytes</td>
+</tr>
+<tr>
+<td><code>mykos_runtime.py</code></td>
+<td>Shared validation, root config checks, Podman targeting, bounded command output, job storage</td>
+</tr>
+</tbody></table>
+<p>Do not expose helper sockets over TCP or make them world-writable. They are internal
+protocols; integrations should use authenticated HTTP API v2.</p>
+<h2 id="repository-mirrors-cd-usrlocalsharemykosrepo">Repository mirrors (<code>cd /usr/local/share/mykos/repo</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Script</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>./bin/list_repos</code></td>
+<td>Lists Apache-hosted repository URLs</td>
+</tr>
+<tr>
+<td><code>./bin/repos_status</code></td>
+<td>Prints Apache active status</td>
+</tr>
+<tr>
+<td><code>./bin/disable_repos</code></td>
+<td>Toggles the entire host Apache service, affecting more than mirrors if the host also proxies the dashboard</td>
+</tr>
+<tr>
+<td><code>./bin/sync_repos</code></td>
+<td>Installs httpd/Podman as needed, enables Apache, creates privileged temporary UBI containers for RHEL 7–10, runs reposync/createrepo, removes containers</td>
+</tr>
+</tbody></table>
+<p>Synchronization needs working registry/network/subscription access and enough disk.
+Pinned historical UBI tags may need review. The script is not invoked or scheduled
+by the global installer. Review its failure handling and target repositories before
+running it against production mirrors.</p>
+<h2 id="reports-billing-and-legacy-scheduled-jobs">Reports, billing, and legacy scheduled jobs</h2>
+<table>
+<thead>
+<tr>
+<th>Script</th>
+<th>Inputs / outputs / effects</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>data/bin/tfcloudaccountstats.sh</code></td>
+<td>Parses per-shop <code>tfrsync-summary.log</code>, writes <code>/tmp/TU_STATS_LINUX_Cloud_Backups.txt</code>; status, counts, size, subscriber flag</td>
+</tr>
+<tr>
+<td><code>data/bin/tfcloudaccountdetail.sh</code></td>
+<td>Writes <code>/tmp/TU_STATS_LINUX_Cloud_Backup_Detail.txt</code>; yearly monthly success/failure counts; needs installed <code>monthname.sh</code></td>
+</tr>
+<tr>
+<td><code>data/bin/tfcloudauthkeys.sh</code></td>
+<td>Collects backed-up client public keys and certificate dates into <code>/tmp/TU_STATS_LINUX_Cloud_Auth_Keys.txt</code>; treat report as restricted</td>
+</tr>
+<tr>
+<td><code>back/bin/tfcloud*.sh</code></td>
+<td>Older duplicates; prefer the <code>data/bin</code> copies for report work; they are not identical</td>
+</tr>
+<tr>
+<td><code>back/bin/cloud_pricing</code></td>
+<td>Computes subscriber storage pricing tiers, updates <code>/usr/local/bin/cloud_pricing_previous</code>, writes change report, sends mail to hard-coded recipients</td>
+</tr>
+<tr>
+<td><code>back/bin/cloud_pricing_previous</code>, <code>cloud_pricing_changed</code></td>
+<td>Historical output/state files; intentionally excluded from installation</td>
+</tr>
+<tr>
+<td><code>back/bin/backup_perf.sh</code></td>
+<td>Samples load, connections, free space into <code>/tmp/backup_perf.txt</code>; eventually emails hard-coded recipients</td>
+</tr>
+<tr>
+<td><code>back/bin/recon.sh</code></td>
+<td>Writes <code>/tmp/recon.txt</code> and emails account/space totals to hard-coded recipients</td>
+</tr>
+<tr>
+<td><code>back/bin/monthname.sh NN</code></td>
+<td>Prints English month name for 01–12</td>
+</tr>
+<tr>
+<td><code>back/bin/strip.sh</code></td>
+<td><code>strip.sh FILENAME</code> prints a cleaned <code>/var/log/session/FILENAME</code> stream with terminal control sequences removed; does not edit the original</td>
+</tr>
+<tr>
+<td><code>back/bin/tsrs_batch</code></td>
+<td>Publishes backed-up Dell TSR files into Apache docroot, replacing shop folders, with permissive modes</td>
+</tr>
+<tr>
+<td><code>back/bin/tsrs</code></td>
+<td>CGI HTML index linking published TSR reports; hostname is hard-coded</td>
+</tr>
+<tr>
+<td><code>back/bin/crontab</code></td>
+<td>Historical schedule reference; first two entries lack the user field required by <code>/etc/cron.d</code>; not installed or enabled</td>
+</tr>
+</tbody></table>
+<p>Review report scripts before using them for billing decisions: the summary script
+can overwrite Daisy detection with Unknown, and success matching/counts have legacy
+assumptions. Reports use shared <code>/tmp</code> names. No guarantee of billing accuracy or
+secure publication is implied by copying these scripts. Email scripts must be
+reviewed for recipients, credentials, transport, and approvals before scheduling.
+The installer supplies support scripts at <code>/usr/local/bin</code> for compatibility but
+never executes them, publishes TSR content, or sends email.</p>
+<h2 id="host-utilities">Host utilities</h2>
+<p><code>bin/updateos [groupname|scriptname|help] [dry]</code> is a legacy root script downloader
+and executor. It defaults to a historical HTTP backend, caches scripts under
+<code>/usr/bin/.updateos</code>, and uses MD5 comparison. Its <code>dry</code> behavior is specific to
+individual commands and may still perform downloads. It is not used by the new
+installer; audit and configure trusted delivery before operational use.</p>
+<p><code>bin/blacklist.sh</code> downloads IP lists and modifies iptables/ipset rules; it reads
+<code>/etc/ip-blacklist.conf</code> and related manual-blacklist state. <code>bin/blacklist_login_attempts</code>
+follows <code>/var/log/secure</code> and appends invalid-login source IPs to a manual blacklist.
+These are third-party/legacy tools, not enabled services. They can block legitimate
+administrators and conflict with firewalld policy; inspect them before enabling.</p>
+<footer>MYKOS documentation</footer></main></html>

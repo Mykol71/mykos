@@ -30,6 +30,9 @@ def main():
     for path in sorted((source/'packaging/rpm').glob('*')):
         if path.is_file() and path.suffix in ('.py','.spec','.md'):
             files[str(path.relative_to(source))] = (path.read_bytes(),0o644)
+    for path in sorted((source/'tools/docs').glob('*')):
+        if path.is_file() and path.suffix in ('.py','.mjs','.json','.css'):
+            files[str(path.relative_to(source))] = (path.read_bytes(),0o644)
     for name in files:
         if name.startswith('/') or '..' in Path(name).parts or any(part.startswith('.') for part in Path(name).parts):
             raise ValueError('Unsafe bundle name')

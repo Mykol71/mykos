@@ -1,0 +1,31 @@
+flowchart TD
+ subgraph prep["Image preparation"]
+  base["Generic base installation / OS install, provisioning, console validation"]
+  capture["Capture startup state / VM: disk flush + paired RAM/device state; native: image filesystem"]
+  check["Compatibility manifest / CPU, QEMU, memory, and host prerequisites where applicable"]
+  image["Prepared OS image / Reusable OS plus required startup state"]
+  reset["Base console disconnect / Reset generic base to last captured image"]
+ end
+ subgraph run["Instance lifetime"]
+  backup["Optional native restore input / Customer trees + numeric account reconciliation"]
+  clone["Create ID-specific instance / Private storage, hostname, machine ID, and network identity"]
+  instance["Running container / Native Linux or VM-backed OS instance"]
+ end
+ subgraph recovery["Deliberate recovery and retention"]
+  snapshot["Intentional snapshot / Explicit retained recovery point; source resumes / stays running"]
+  restore["Restore selected snapshot / Controlled recovery into supported compatible runtime"]
+  protect["Reference and retention checks / No forced removal of an in-use image; no auto-pruning intentional snapshots"]
+ end
+ base -->|"Operator captures before logout"| capture
+ capture -->|"Record matching payload metadata"| check
+ check -->|"Commit prepared image"| image
+ image -->|"Reuse for each ID"| clone
+ backup -->|"Native-only composition; writable data"| clone
+ clone -->|"Start; verify restore when required"| instance
+ instance -->|"Capture supported live state"| snapshot
+ snapshot -->|"Operator selects recovery point"| restore
+ restore -->|"Resume recovered state"| instance
+ base -.->|"Logout / disconnect"| reset
+ reset -.->|"Reset uses latest captured image"| image
+ image -->|"Before removal"| protect
+ snapshot -->|"Retain until explicit removal"| protect

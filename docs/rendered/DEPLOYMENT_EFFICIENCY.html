@@ -1,0 +1,192 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MYKOS: deployment efficiency and business value</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="mykos-deployment-efficiency-and-business-value">MYKOS: deployment efficiency and business value</h1>
+<p><a href="README.html">Documentation index</a> · <a href="MYKOS_Deployment_Efficiency.pdf">Download PDF</a></p>
+<p><strong>Where complete customer environments can save time, reduce rework, and lower operating costs</strong></p>
+<p>For business operators, deployment teams, and service providers<br>Capability baseline: MYKOS 1.5.20261024-146</p>
+<p>MYKOS is designed to make a complete customer environment available quickly and keep it responsive. Its business value comes from reducing repeated preparation, shortening the path from an available backup to a usable system, and making multiple environments easier to operate from one management model.</p>
+<p>The opportunity is independent of the customer&#39;s industry: spend less time rebuilding, configuring, diagnosing, and recovering the same computing environment. A store, remote office, professional-services business, workshop, or administrative team may use different applications, but can share those infrastructure needs. Fit depends on the workload, devices, connectivity, and access model rather than the business label.</p>
+<p>A customer may also handle suitable routine functions themselves, reducing waiting and provider effort. Stores provide a concrete deployment example in this document; the same cost mechanisms can apply to other supported business environments.</p>
+<p>These are savings mechanisms grounded in the implementation, not a measured return-on-investment claim. Actual dollar savings depend on the customer&#39;s existing process, deployment volume, compatibility, staffing, and operating model. Some gains free engineering capacity; they reduce cash spending only when paid hours, contractor charges, travel, or other actual costs decrease.</p>
+<h2 id="where-a-normal-customer-deployment-becomes-more-efficient">Where a normal customer deployment becomes more efficient</h2>
+<table>
+<thead>
+<tr>
+<th>Deployment area</th>
+<th>Work MYKOS can reduce and the associated cost</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OS and application-environment preparation</td>
+<td>Reuse installed images and supported warm state instead of repeating installation and boot preparation. Reduce staging labor and elapsed lead time.</td>
+</tr>
+<tr>
+<td>Customer setup and migration</td>
+<td>Compose a compatible available Linux backup with accounts, password hashes, ownership, data, and configuration. Reduce manual reconstruction and mandatory full-copy work.</td>
+</tr>
+<tr>
+<td>Image customization</td>
+<td>Edit a prepared image through the GUI, capture useful changes, and reset the working base. Reduce reinstall cycles and accidental configuration drift.</td>
+</tr>
+<tr>
+<td>Unattended staging</td>
+<td>Pipeline installation, provisioning, validation, and capture; retain completed work on supported retries. Reduce technician supervision and repeated failed stages.</td>
+</tr>
+<tr>
+<td>Pre-opening testing</td>
+<td>Create ID-specific environments for rehearsal and support. Find compatibility and configuration problems before they consume a live store&#39;s deployment window.</td>
+</tr>
+<tr>
+<td>Connectivity and shared services</td>
+<td>Use explicit VPN/gateway modes to connect supported store or office workloads. Reduce repeated per-VM tunnel setup where a shared gateway fits.</td>
+</tr>
+<tr>
+<td>Server and desktop provisioning</td>
+<td>Manage supported native and VM-backed environments through common lifecycle controls. Reduce tool switching and repeated administration.</td>
+</tr>
+<tr>
+<td>Cutover and recovery</td>
+<td>Start from prepared state and retain intentional recovery points. Reduce rebuilding and diagnosis time; shorten downtime where application recovery succeeds.</td>
+</tr>
+<tr>
+<td>Customer self-service</td>
+<td>Give authorized customers a guided way to view status, perform checks, and use permitted lifecycle controls. Reduce routine tickets and waiting where the access model supports it.</td>
+</tr>
+<tr>
+<td>Remote support</td>
+<td>Reproduce a customer&#39;s environment from a suitable backup and use remote consoles. Reduce repeated information gathering and some avoidable visits.</td>
+</tr>
+<tr>
+<td>Monitoring and integration</td>
+<td>Publish shared host-side observations through the dashboard and API. Reduce repeated guest polling and custom integration work for each environment.</td>
+</tr>
+<tr>
+<td>Updates and maintenance</td>
+<td>Use signed control-plane packages while preserving customer runtime state. Reduce custom update steps and unnecessary environment recreation.</td>
+</tr>
+<tr>
+<td>Repeated rollout and expansion</td>
+<td>Reuse the preparation, image, and operating process for subsequent stores or branches. Reduce per-site engineering effort while retaining explicit customer identity.</td>
+</tr>
+</tbody></table>
+<h2 id="before-a-location-or-environment-goes-live">Before a location or environment goes live</h2>
+<p><strong>Prepare once, reuse many times.</strong> Unattended preparation creates a reusable installed environment. Supported VM captures also preserve matching memory and device state, allowing subsequent instances to avoid repeating the complete guest boot path. The financial benefit is less repeated work on each deployment. Preparing, refreshing, and validating the reference images still has a cost that should be spread over the deployments that use them.</p>
+<p><strong>Bring the customer&#39;s setup forward.</strong> For compatible native Linux restores, MYKOS reconciles customer accounts and numeric ownership, prepares private runtime settings, and mounts the available customer trees. Existing customer password hashes can remain usable under the account policy; root credentials follow the image policy. This can avoid rebuilding accounts, permissions, and application setup by hand. Operator-observed restore workflows became usable in seconds when the OS and backup were already prepared. Backup transfer, compatibility work, and application checks are separate activities.</p>
+<p><strong>Shorten the customization loop.</strong> An engineer can open a prepared image in the GUI, make a change, capture it before exit, and let disconnect reset uncaptured edits. New instances use the captured image; existing customer instances retain their own disks. The saving is a shorter test-and-refine cycle with less accidental carryover. The workflow still needs release discipline and a way to reproduce important changes later.</p>
+<p><strong>Reduce supervised installation time.</strong> Build workers carry out OS-specific preparation and use callback/readiness stages before capture and commit. Supported retries preserve completed capture/commit work instead of starting everything again. Count hands-on technician time separately from unattended elapsed time: a build running for an hour without supervision is not an hour of labor saved unless the old workflow required that labor.</p>
+<p><strong>Move failure discovery earlier.</strong> A customer-specific rehearsal can test application startup, logins, data permissions, connectivity, and a recovery procedure before the store depends on them. The potential saving is avoided cutover rework. Use an appropriate working copy: directly mounted backup trees are writable, so a rehearsal must not accidentally modify the source that must be preserved.</p>
+<h2 id="during-rollout-and-ongoing-operation">During rollout and ongoing operation</h2>
+<p><strong>Make connectivity a repeatable choice.</strong> A shared native or host gateway can provide a common VPN path for supported environments instead of configuring a tunnel inside every desktop OS. Host participation, selectors, DNS, return routes, and failure behavior remain explicit. This can reduce configuration effort once a site&#39;s pattern is validated. Physical cabling, router changes, peer configuration, and remote-DHCP requirements remain site work; the tool does not automatically solve them.</p>
+<p><strong>Operate server and desktop environments together.</strong> Where centrally hosted desktops fit the applications and devices, MYKOS can manage server and supported desktop instances from one host and control surface. That may reduce separate staging and management effort. Browser-based access can simplify some access arrangements. It does not make local POS terminals, payment devices, scanners, printers, network links, or their validation disappear.</p>
+<p><strong>Recover useful service sooner.</strong> Warm restoration and customer-backup composition can reduce OS reconstruction work. Intentional snapshots provide retained recovery points for supported state. Downtime savings depend on the application and its data becoming usable, including external dependencies and any data reconciliation. A running container is not by itself a recovered store. Routine backups, protected copies, capacity, and restore testing remain necessary.</p>
+<p><strong>Give support a reproducible environment.</strong> A compatible customer backup can become a support or migration instance rather than a collection of files an engineer must interpret manually. That can reduce time spent rebuilding the same issue, improve handoffs, and make remote diagnosis practical. Count fewer visits only where the incident can actually be resolved remotely; hardware faults and physical-device work still need local action.</p>
+<p><strong>Collect once and share the result.</strong> Host-side collectors feed the dashboard and API without normal polling repeatedly executing commands in the guests. Integrations can reuse those observations rather than each developing their own guest interrogation. The potential saving is both integration labor and lower operational interference. API output still needs a consuming workflow, and stale or unavailable observations need appropriate handling.</p>
+<p><strong>Update the management layer predictably.</strong> Signed MYKOS packages and managed-file installation preserve customer disks, identities, and local state rather than requiring instance recreation for a control-plane update. This can reduce bespoke patch procedures. It does not automatically patch every guest OS or customer application. Image maintenance, guest patching, and customer-data migration remain separate responsibilities.</p>
+<h2 id="customer-self-service-less-waiting-and-fewer-routine-tickets">Customer self-service: less waiting and fewer routine tickets</h2>
+<p>A business does not always need an engineer to perform every routine action. With appropriate permissions, a suitable deployment, and a clear runbook, an authorized customer could view environment status, gather information for support, perform a guided application check, or start/stop an environment when that action is permitted. A trained customer administrator may take on additional responsibilities that the provider deliberately assigns.</p>
+<p>This can reduce the round trip of opening a ticket, waiting for a technician, explaining the issue, and arranging access. The provider spends less time repeating simple actions and more time on changes and faults that require engineering judgment. The business may get back to useful work sooner. Measure both effects: fewer provider minutes and less customer waiting.</p>
+<p>The web interface and API provide the operational foundation; a complete industry-specific self-service portal is not claimed. The released access model is not a fully scoped multi-customer delegation system. A shared hosting deployment must establish the required customer boundaries before exposing functions. Assign permitted tasks deliberately, train users, document when to escalate, and record actions through the chosen operating process. Do not grant broad administrative access merely to remove a support call.</p>
+<p>There is an enabling cost: account setup, customer training, runbooks, access review, and support for mistakes. Count the net reduction in routine tickets and handling time after those costs. In a fixed-fee support model, fewer avoidable calls can improve service capacity and margin; under other billing arrangements, the provider and customer should agree how the benefit is shared.</p>
+<h2 id="business-scenarios-this-supports">Business scenarios this supports</h2>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Operating model and efficiency opportunity</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>One customer store</td>
+<td>Host compatible customer server workloads, and optionally suitable desktop environments, on a managed platform. Reduce preparation, administration, and recovery effort for that store.</td>
+</tr>
+<tr>
+<td>New stores in a repeated rollout</td>
+<td>Reuse validated images and a consistent staging process while applying each store&#39;s identity and customer data. Amortize engineering preparation across deployments.</td>
+</tr>
+<tr>
+<td>Remote or satellite office</td>
+<td>Connect office workloads and shared services through a validated VPN pattern. Reduce repeated tunnel/client administration and support some management remotely.</td>
+</tr>
+<tr>
+<td>Central hosting for several stores or offices</td>
+<td>Maintain separate ID-specific environments on appropriately sized hosts and connect each to its intended site. Potentially consolidate administration and compatible infrastructure; validate network separation and capacity for the actual tenancy model.</td>
+</tr>
+<tr>
+<td>Industry-independent business systems</td>
+<td>Apply the same preparation, lifecycle, remote-support, and recovery process to compatible business applications in different sectors. Validate each workload instead of assuming every industry application is interchangeable.</td>
+</tr>
+<tr>
+<td>A server plus several related desktops</td>
+<td>Prepare a related environment centrally and operate it through common lifecycle controls. Reduce repeated OS preparation where peripheral support and network responsiveness make hosted desktops practical.</td>
+</tr>
+<tr>
+<td>Physical-to-managed Linux migration</td>
+<td>Use an available compatible backup to rehearse the customer system before cutover. Reduce manual reconstruction of accounts, ownership, configuration, and application data.</td>
+</tr>
+<tr>
+<td>Customer-specific support or reproduction lab</td>
+<td>Create an environment matching the customer&#39;s supported OS and backup data. Reduce diagnosis setup time and repeated manual recreation by successive engineers.</td>
+</tr>
+<tr>
+<td>Upgrade, application-change, or training environment</td>
+<td>Use a separate instance or working copy to test a change or rehearse an operating procedure. Reduce the need to experiment on the live store; protect sensitive customer data and licensing appropriately.</td>
+</tr>
+<tr>
+<td>Recovery rehearsal or incident recovery</td>
+<td>Restore supported state and verify the actual customer service. Reduce rebuild effort and discover recovery gaps before a live incident. This is not automatic high availability or site failover.</td>
+</tr>
+<tr>
+<td>Customer-operated routine functions</td>
+<td>Enable suitable customers to handle authorized checks and lifecycle tasks through a guided process. Reduce waiting and routine support demand without assigning engineering tasks indiscriminately.</td>
+</tr>
+<tr>
+<td>Managed service delivery</td>
+<td>Use common web/API operations and ID-specific environments for repeated customer workflows. Reduce per-customer tooling duplication; service processes, access design, and capacity still determine the outcome.</td>
+</tr>
+</tbody></table>
+<p>These are deployment patterns enabled by combinations of the released capabilities. They are not a claim that every listed topology, POS peripheral, customer application, or large multi-tenant installation has been validated. Remote-office connectivity here refers to the released VPN modes and a compatible configured peer; broader MYKOS-to-MYKOS endpoint automation is future work.</p>
+<h2 id="translate-the-efficiencies-into-a-business-case">Translate the efficiencies into a business case</h2>
+<p>Start with the customer&#39;s current deployment process. For each activity, record the baseline paid labor, the MYKOS-assisted labor, and what actually changed. Keep elapsed lead time, labor cost, and service interruption as distinct measures.</p>
+<table>
+<thead>
+<tr>
+<th>Cost category</th>
+<th>How to calculate a defensible saving</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Deployment labor</td>
+<td>Add the hours actually avoided across preparation, customer setup, testing, connectivity, and cutover; multiply by the applicable loaded hourly rates.</td>
+</tr>
+<tr>
+<td>Support and rework</td>
+<td>Compare incident counts and paid handling time over a stated period, including failed staging attempts and repeat escalations.</td>
+</tr>
+<tr>
+<td>Travel and visits</td>
+<td>Count visits actually avoided and their travel time, mileage, fares, or contractor charges. Do not also count the same travel labor in deployment savings.</td>
+</tr>
+<tr>
+<td>Infrastructure</td>
+<td>Compare total hardware, hosting, storage, backup, power, and management costs for the selected design. Shared hosting is a potential consolidation opportunity, not an automatic saving.</td>
+</tr>
+<tr>
+<td>Store interruption</td>
+<td>Estimate the reduction in unavailable trading time using a customer-supplied business-impact measure. Keep this estimate separate from verified labor savings.</td>
+</tr>
+<tr>
+<td>Added MYKOS operating cost</td>
+<td>Include host capacity, image upkeep, storage for captures/snapshots, administration, training, backup protection, and relevant licenses or support.</td>
+</tr>
+</tbody></table>
+<p>For an evaluation period, <strong>net operating benefit = verified avoided operating costs - incremental MYKOS operating costs</strong>. To evaluate the first rollout, also subtract one-time preparation, integration, training, and validation costs. Add estimated avoided business interruption only as a separately identified estimate, with its assumptions visible.</p>
+<p><strong>Illustration only, not a MYKOS benchmark.</strong> Assume a rollout avoids six paid technician hours per store at an assumed loaded rate of $100/hour. That is $600 of labor capacity per store. If that capacity is realizable as reduced spending, and incremental MYKOS costs are assumed to be $150 per store for the same evaluation period, the net operating benefit is $450 per store. Across 20 stores that is $9,000; subtracting an assumed $2,000 of one-time rollout preparation gives $7,000 for that rollout. Every input is hypothetical. If payroll and contractor spending stay unchanged, describe the six hours as freed capacity rather than a $600 cash reduction.</p>
+<p>Do not assign savings to a license simply because an environment runs inside a container or VM. Guest operating systems, applications, remote-access rights, backup, and support can still carry their own costs.</p>
+<h2 id="what-remains-a-future-efficiency-opportunity">What remains a future efficiency opportunity</h2>
+<p>Automated security compliance scans, visible pass/fail status, and alerts when a system falls out of compliance are planned. Once implemented and validated, they may reduce repetitive compliance checks and the delay in noticing drift. Their scanning cost, policy coverage, false positives, remediation workload, and actual labor savings still need measurement. They are not counted as delivered capability or savings in this document.</p>
+<p>Unpublished physical Windows PXE work and broader MYKOS-to-MYKOS VPN endpoint automation are also excluded from delivered deployment benefits. Centralized control does not currently mean automatic fleet failover or automatic remediation.</p>
+<h2 id="a-practical-pilot">A practical pilot</h2>
+<p>Choose a representative customer environment and a suitable remote-office or repeated-deployment pattern. Include a small set of customer self-service tasks if that is part of the proposed model. Record the current workflow first, including the steps that consume paid technician time and customer time spent waiting for support. Use equivalent customer data, application versions, readiness checks, and network conditions when comparing the MYKOS workflow.</p>
+<p>Capture four results: hands-on time, elapsed time to usable customer service, first-pass success/rework, and ongoing resource/support cost. Include a delayed address/connectivity check, a customer login, an application transaction or equivalent service check, and a tested restore. Where local devices or industry-specific applications matter, include them in acceptance. Keep transfer time and unattended build time visible rather than hiding them inside an attractive startup figure.</p>
+<p>For self-service, also record task completion, escalations, mistakes/rework, and customer training time. Repeat the pilot across enough deployments to reveal exceptions. Use the measured results to decide which preparation steps become standard, which sites fit centralized desktops or shared VPNs, and where the existing deployment model remains preferable.</p>
+<h2 id="basis-for-the-claims">Basis for the claims</h2>
+<p>The efficiency mechanisms come from the released image/capture lifecycle, GUI base-session controls, backup identity/configuration composition, build workers, networking/VPN helpers, host-side collectors, API, and signed installation/update workflow. The accompanying engineering document explains the underlying roadblocks and tradeoffs. No customer-specific pricing, time study, deployment-wide cost baseline, or guaranteed saving is asserted here.</p>
+<footer>MYKOS documentation</footer></main></html>

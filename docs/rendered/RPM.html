@@ -1,0 +1,113 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signed RHEL 8, RHEL 9 and RHEL 10 packages</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="signed-rhel-8-rhel-9-and-rhel-10-packages">Signed RHEL 8, RHEL 9 and RHEL 10 packages</h1>
+<p><a href="README.html">Documentation index</a></p>
+<p>The released baseline reviewed here is <strong>1.5.20261024-146</strong>. Each supported major
+has its own signed binary RPM, source RPM and repository. Choose the repository
+matching the <strong>host</strong>, not the OS you want to run inside a guest.</p>
+<h2 id="install-from-the-matching-repository">Install from the matching repository</h2>
+<table>
+<thead>
+<tr>
+<th>Host</th>
+<th>Repository configuration</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>RHEL 8</td>
+<td><code>https://mykol.com/mykos-1.5-for-x86_64-el8/mykos-el8.repo</code></td>
+</tr>
+<tr>
+<td>RHEL 9</td>
+<td><code>https://mykol.com/mykos-1.5-for-x86_64-el9/mykos-el9.repo</code></td>
+</tr>
+<tr>
+<td>RHEL 10</td>
+<td><code>https://mykol.com/mykos-1.5-for-x86_64-el10/mykos-el10.repo</code></td>
+</tr>
+</tbody></table>
+<p>For example, on RHEL 9:</p>
+<pre><code class="language-bash">sudo curl -fsSL https://mykol.com/mykos-1.5-for-x86_64-el9/mykos-el9.repo -o /etc/yum.repos.d/mykos-el9.repo
+sudo dnf install mykos
+rpm -q mykos
+sudo systemctl status mykos-firstboot.service --no-pager
+</code></pre>
+<p>Use <code>el8</code> or <code>el10</code> in both URL and destination filename on those hosts. Keep
+<code>gpgcheck=1</code>; confirm the signing fingerprint before accepting an imported key:
+<code>BC14191DE284100A246DD552F4384FD1AD974308</code>. The repository supplies
+<code>RPM-GPG-KEY-MYKOS</code>. Source and binary RPMs are signed; checksums describe the
+signed files. Repository-metadata signing is not asserted by <code>gpgcheck=1</code>.</p>
+<p>Fresh installation queues <code>mykos-firstboot.service</code> after the RPM transaction.
+It configures Apache IP access and the application, checks application readiness,
+then prints <code>MYKOS is running: http://SERVER_IP/mykos/</code>. Check the service journal
+if the terminal returns before firstboot finishes. It creates no guest, browser
+password or API key. Existing configured deployments skip automatic firstboot.
+Create the first browser administrator with:</p>
+<pre><code class="language-bash">sudo /usr/local/sbin/mykos-users create NAME --role admin
+</code></pre>
+<p>RHEL BaseOS/AppStream access and a Python package source are needed. EL8 uses
+<code>python39</code>; EL9/EL10 use distribution <code>python3</code>. The package has distinct host
+release requirements. KVM checks open <code>/dev/kvm</code> and create an empty VM without
+starting a guest; unavailable KVM produces a warning and retains native Linux use.
+See <a href="DESKTOPS.html">desktop prerequisites</a> before attempting VM lifecycle operations.</p>
+<h2 id="default-http-and-optional-https">Default HTTP and optional HTTPS</h2>
+<p>Default access is <code>http://SERVER_IP/mykos/</code>; it needs no domain or Certbot.
+Domain virtual hosts and Certbot are configured only by explicit opt-in:</p>
+<pre><code class="language-bash">sudo mykos-setup --configure-https
+# Or choose the domain and ACME account email explicitly:
+sudo mykos-setup --configure-https --domain example.com --email admin@example.com
+</code></pre>
+<p>Public DNS and incoming TCP 80/443 must be ready for that domain. The URL is
+printed only after app readiness. <code>--public-origin</code> alone configures the app&#39;s
+origin; it does not request a certificate or provision a domain virtual host.
+See <a href="BOOTSTRAP.html">bootstrap details and renewal/removal behavior</a>.</p>
+<h2 id="upgrade-and-verify">Upgrade and verify</h2>
+<p>Back up deployment settings and identity data according to
+<a href="INSTALL_SERVICES.html#file-snapshots-backup-and-restore">installation recovery</a>,
+and back up guest disks and customer backup data separately. Then:</p>
+<pre><code class="language-bash">sudo dnf upgrade mykos
+sudo mykos-setup --enable
+sudo python3 /usr/share/mykos/bin/mykos-install verify
+# On EL8, use python3.9 instead of python3 for this verification command.
+rpm -q mykos
+</code></pre>
+<p><code>mykos-setup</code> uses the installed interpreter, pinned Python dependencies and
+existing settings. Rerun it after an upgrade to snapshot/configure deployed files
+and restart the MYKOS services. It does not select a VPN gateway or create images.
+Use the existing public origin; do not replace a working domain with an example.
+If verify reports local edits, reconcile them rather than overwriting them.
+Kickstarts use <code>%config(noreplace)</code>; review <code>.rpmnew</code> alongside operator files.</p>
+<p>The package owns code under <code>/usr/share/mykos</code>; setup deploys runtime sources and
+helpers under <code>/usr/local/share/mykos</code>, <code>/usr/local/sbin</code> and <code>/opt/mykos-web</code>.
+Configuration, identities, inventory, VM disks, intentional snapshots and saved
+VPNs are runtime state, outside the RPM payload. Updates preserve existing guests
+and do not migrate older networking automatically. New guests use the configured
+private bridge; old pipework/macvlan instances need a separately planned migration.</p>
+<h2 id="install-a-downloaded-signed-rpm">Install a downloaded signed RPM</h2>
+<p>Example for the reviewed EL9 baseline, after downloading the RPM and public key
+from the matching trusted repository and verifying the key fingerprint:</p>
+<pre><code class="language-bash">sudo rpm --import ./RPM-GPG-KEY-MYKOS
+rpm -Kv ./mykos-1.5.20261024-146.el9.noarch.rpm
+sudo dnf --setopt=localpkg_gpgcheck=1 install ./mykos-1.5.20261024-146.el9.noarch.rpm
+</code></pre>
+<p>Use the matching <code>.el8</code> or <code>.el10</code> filename on those hosts. A checksum alone does
+not authenticate the signer. Do not disable signature checks to bypass a failure.</p>
+<h2 id="build-and-repository-maintenance">Build and repository maintenance</h2>
+<p>Build from the released source, excluding runtime identities/disks and unpublished
+work. With the target&#39;s build prerequisites installed:</p>
+<pre><code class="language-bash">python3 bin/mykos-package --output /tmp/mykos-1.5.20261024.tar.gz
+mkdir -p ~/rpmbuild/{SOURCES,SPECS}
+cp /tmp/mykos-1.5.20261024.tar.gz ~/rpmbuild/SOURCES/
+cp packaging/rpm/mykos.spec ~/rpmbuild/SPECS/
+rpmbuild -ba --define &#39;mykos_target_el 9&#39; --define &#39;dist .el9&#39; ~/rpmbuild/SPECS/mykos.spec
+</code></pre>
+<p>Use the appropriate target major and approved signing workflow. A local build is
+not automatically signed or published. Signing keys are maintained outside source
+and packages. Keep MYKOS repositories separate from synchronized Red Hat mirrors;
+refresh only the intended custom repository&#39;s metadata after approved publication.
+Never add arbitrary RPMs to a mirrored upstream tree whose metadata omits them.</p>
+<h2 id="validation-scope">Validation scope</h2>
+<p>Release package/application/login checks on fresh RH9 and RH10 used isolated RHEL
+UBI init systems with repositories available. These checks cover installation,
+IP-first setup and authenticated HTTP sessions, not full bare-metal virtualization,
+physical NIC routing, CRIU compatibility or VM lifecycle validation. The user&#39;s
+vanilla RH9 server testing remains independent. See <a href="VALIDATION.html">validation record</a>.</p>
+<footer>MYKOS documentation</footer></main></html>

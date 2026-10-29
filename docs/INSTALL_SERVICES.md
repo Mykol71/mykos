@@ -1,9 +1,30 @@
 # Global installation, updates, verification, and recovery
 
+[Documentation index](README.md)
+
 This guide replaces the earlier capture/inspect instructions. `bin/install` is the
 canonical global installer. It deploys the full operator toolkit plus maintained
 web/API sources, collectors, systemd units, helpers, and local identity managers.
 It does not read the historical archive during installation.
+
+<!-- contents:start -->
+**Contents**
+
+- [Prerequisites and scope](#prerequisites-and-scope)
+- [New installation](#new-installation)
+- [Updating](#updating)
+- [Verification and troubleshooting](#verification-and-troubleshooting)
+- [File snapshots, backup, and restore](#file-snapshots-backup-and-restore)
+  - [Legacy format-1 archives](#legacy-format-1-archives)
+- [Staging without host side effects](#staging-without-host-side-effects)
+- [Removal](#removal)
+- [Rename an existing installation](#rename-an-existing-installation)
+- [Scheduled-command collector](#scheduled-command-collector)
+  - [Completed action refreshes and saved-image retries](#completed-action-refreshes-and-saved-image-retries)
+- [Native image builder prerequisite](#native-image-builder-prerequisite)
+- [Complete customer backup mounts](#complete-customer-backup-mounts)
+
+<!-- contents:end -->
 
 ## Prerequisites and scope
 
@@ -39,14 +60,20 @@ site. The installer does not disable SELinux or change global firewall/TLS polic
 
 ## New installation
 
+For default `http://SERVER_IP/mykos/` access, use the signed-package
+[bootstrap procedure](BOOTSTRAP.md). The direct source examples below configure
+the application origin; a `--public-origin https://...` argument alone does not
+provision an Apache domain or request a certificate. Domain/Certbot setup needs
+`mykos-setup --configure-https` (optionally `--domain` and `--email`).
+
 Windows, Windows Server, macOS and Ubuntu desktop lifecycle helpers are included
-in every installation. See [DESKTOPS.md](DESKTOPS.md) for template creation and
+in every installation. See [DESKTOPS.md](DESKTOPS.md) for image creation and
 capture. To initialize KVM/storage checks and allow desktop ports from an
 explicit trusted LAN, add `--desktop-network 192.168.222.0/24` to `install`
 (replace that network for the target host). It creates source-restricted
 runtime/permanent firewalld rules after backing up the firewall configuration.
 Without the flag, installation does not change desktop firewall access. Guest
-disks and templates are created separately and are preserved during updates.
+disks and images are created separately and are preserved during updates.
 
 Create a new source-only installation bundle after changes with:
 
@@ -79,7 +106,7 @@ Edit these files before enabling operations:
 | File | Settings |
 |---|---|
 | `/etc/mykos/web.env` | `MYKOS_PUBLIC_ORIGIN=https://your-host`; `MYKOS_SECURE_COOKIE=1` |
-| `/etc/mykos/config.json` | `stage_image`: optional default for older API clients; the dashboard selects an image from running supported OS template containers; `network_device`: optional host interface override (otherwise detected using `ip route get 8.8.8.8`); `terminal_enabled`: boolean |
+| `/etc/mykos/config.json` | `stage_image`: optional default for older API clients; the dashboard selects an image from running supported OS image containers; `network_device`: optional host interface override (otherwise detected using `ip route get 8.8.8.8`); `terminal_enabled`: boolean |
 | `/etc/mykos/pos.env` | Root-only shell assignments: `REPOSERVER`, `MERAKI_API_KEY`, `MERAKI_ORG_ID`, `VPN_PSK` |
 
 For unattended image callbacks, `MYKOS_IMAGE_BUILD_ORIGIN=https://certificate-name`
@@ -390,3 +417,32 @@ parser; saved kickstarts remain unchanged. Repository/package compatibility
 still has to succeed during the actual build. Changing repository URLs does not
 upgrade the local installer. Using an already built image is a separate path.
 
+## Complete customer backup mounts
+
+When native staging explicitly selects backup restore, available directories under
+`/backups/tfrsync-ID` (or configured `backup_root`) bind directly read/write at
+`/usr2`, `/d`, `/etc`, `/home` and `/usr/java`. This is live access to the backup
+set, not a copied restore. Application writes change that mounted data; preserve
+a separate recoverable backup before starting it. Missing paths are omitted;
+unsafe symlinks or paths outside the account directory are rejected.
+
+The helper creates the new stopped container, prepares only its mounted image
+root, then attaches the backup binds at start. Nested instance-private binds stored
+in `pos/.ID/.mykos-restore` keep `passwd`, `group`, `shadow`, `gshadow`, hostname,
+hosts, machine-id, fstab, crypttab, NetworkManager interface ownership and
+`security/limits.conf` separate from the complete backup `/etc`. Account and
+UID/GID reconciliation is confined to the new guest; it does not rewrite the
+host account databases or chown the backup. The old backup transport account's
+guest home/cron are removed from the prepared guest, not the source backup.
+
+Customer PAM limits are retained when supplied. Otherwise image defaults, or an
+empty valid limits file, remain available through the private bind so `su - root`
+can open a session. New native instances use `--memory=2g` and the read-only native
+cgroup mount. Check actual Podman limits for older instances rather than assuming
+an upgrade retroactively changes them. Native root terminals use `su - root`;
+VM consoles have their separate prerequisites in [networking](NETWORKING.md).
+
+Do not confuse these customer-data mounts with the installer's code/settings
+backup archive. A filesystem image commit does not include external mounted
+customer data. Preserve the backup set, instance-private identity files, VPN state,
+disks and intentional snapshots according to the intended recovery operation.

@@ -1,0 +1,137 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MYKOS key innovations</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="mykos-key-innovations">MYKOS key innovations</h1>
+<p><a href="README.html">Documentation index</a> · <a href="MYKOS_Key_Innovations.pdf">Download PDF</a></p>
+<p><strong>A technical leadership overview</strong><br>Released design baseline: MYKOS 1.5.20261024-146</p>
+<p>MYKOS brings prepared operating systems, customer application data, instance identity, networking, and controlled operations into one management model. Its central contribution is making those pieces work together as repeatable, ID-specific environments across native Linux containers and VM-backed operating systems.</p>
+<p>This design is useful when a team needs to recreate a customer environment, investigate a problem, preserve working state, or operate several OS families without building a separate administration process for each one. MYKOS builds on Podman, QEMU/KVM, CRIU, Libreswan, Apache, FastAPI, and systemd; its design contributions are the lifecycle contracts and operational workflows that connect them.</p>
+<p><a href="diagrams/image-lifecycle.svg" title="Open full-size diagram"><img src="diagrams/image-lifecycle.svg" alt="Prepared images, ID-specific instances, snapshots, and recovery"></a><a href="diagrams/image-lifecycle.svg">Open full-size diagram</a></p>
+<h2 id="the-six-design-contributions">The six design contributions</h2>
+<table>
+<thead>
+<tr>
+<th>Design contribution</th>
+<th>Operational value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A shared model across different OS engines</td>
+<td>Teams manage images, ID-specific instances, and snapshots through common web, API, and command-line surfaces.</td>
+</tr>
+<tr>
+<td>Reusable installed state</td>
+<td>Prepared VM images can include matching disk, memory, and device state, reducing repeated installation and boot preparation.</td>
+</tr>
+<tr>
+<td>Customer backups composed into a runtime</td>
+<td>Compatible native Linux environments can use customer application trees while keeping instance identity and host configuration explicit.</td>
+</tr>
+<tr>
+<td>Selectable VPN participation</td>
+<td>Direct tunnels and shared gateways support different connectivity needs through explicit routing and policy choices.</td>
+</tr>
+<tr>
+<td>Host-side observation and controlled operations</td>
+<td>Collected state supports the dashboard and API, while authorization and privileged helpers govern changes.</td>
+</tr>
+<tr>
+<td>Delivery separated from customer state</td>
+<td>Signed packages and managed-file installation allow control-plane updates while retaining guest storage, identities, and operator settings.</td>
+</tr>
+</tbody></table>
+<h2 id="a-shared-model-across-different-os-engines">A shared model across different OS engines</h2>
+<p>MYKOS gives native Linux containers and QEMU-backed Windows, Windows Server, macOS, and Ubuntu environments the same high-level lifecycle vocabulary. An image is a prepared OS and its required startup state. A container is an ID-specific running instance with its own operational identity. An intentional snapshot preserves instance state for a later restore.</p>
+<p>The implementation retains OS-specific mechanisms beneath that model. Native Linux uses Podman processes and filesystems; VM-backed environments use QEMU and persistent guest storage. Console access follows the appropriate path: native PTYs, Ubuntu serial consoles, Windows guest-agent commands, or macOS SSH and graphical access.</p>
+<p>For technical leadership, the value is a common operating contract. Automation and support procedures can organize work around environment identity and lifecycle while retaining the capabilities and constraints of each OS engine.</p>
+<h2 id="reusable-installed-state">Reusable installed state</h2>
+<p>A prepared VM image can contain more than an installed disk. MYKOS captures matching memory and device state, flushes the corresponding disks, and records a manifest describing the capture. Creating an instance copies the prepared storage, requests a one-time restore when appropriate, and checks that restoration completed.</p>
+<p>This shifts repeated work into image preparation. Installation, provisioning, and selected startup work can be completed once and reused for subsequent instances. Captures remain tied to compatible CPU, QEMU, memory, and host conditions; they are operational artifacts with explicit prerequisites.</p>
+<p>MYKOS also separates startup captures from intentional snapshots. Startup captures serve image and instance launch. Intentional snapshots represent operator decisions and remain protected from automatic startup-capture pruning. That distinction gives teams a clearer retention and recovery model.</p>
+<h2 id="customer-backups-composed-into-a-runtime">Customer backups composed into a runtime</h2>
+<p>For compatible native Linux restores, MYKOS combines a prepared OS with customer application trees from an existing backup set. Available paths can include <code>/etc</code>, <code>/home</code>, <code>/usr2</code>, <code>/d</code>, and <code>/usr/java</code>. The data is mounted into the instance, avoiding a mandatory full copy before the environment can start.</p>
+<p>The difficult part is identity reconciliation. MYKOS preserves customer numeric account identities and relocates conflicting image accounts within the instance. It prepares private account files and machine-specific settings before startup, including hostname, machine ID, hosts entries, and selected boot and PAM configuration. This lets customer context and the base OS coexist without treating their configuration as interchangeable.</p>
+<p>The operational benefit is a more faithful support environment with fewer manual reconstruction steps. These mounts are writable live storage. Teams that need an unchanged recovery source should provide a separate working copy and coordinate protection for application data and external writers.</p>
+<h2 id="selectable-vpn-participation">Selectable VPN participation</h2>
+<p>MYKOS combines ID-based environment management with explicit network participation. Its managed private bridge provides per-instance addresses and deterministic MAC identities. Connection setup can use independent guest tunnels or a selected shared gateway, with the gateway hosted by the MYKOS host or a native Linux guest.</p>
+<p>Shared routing can give different guest types access through a common VPN path, reducing the need to configure a tunnel inside each VM operating system. Host participation is also an explicit policy choice. Saved gateway profiles, routing ownership checks, boot guards, and reconciliation keep the intended topology visible and recoverable.</p>
+<p>The implementation rejects conflicting shared-default and independent-tunnel scenarios. Shared routing includes scoped fail-closed protections and checks for the expected tunnel state. Correct operation still depends on the selected peer, selectors, return routes, and DNS path. Those details belong in an architecture and validation plan for each deployment.</p>
+<h2 id="host-side-observation-and-controlled-operations">Host-side observation and controlled operations</h2>
+<p>MYKOS separates ordinary observation from actions that change an environment. Host-side collectors inspect Podman metadata, resource statistics, files, and control sockets, then publish timestamped state for the web application and API. Normal host-monitoring code avoids executing guest programs during polling. Stale or unavailable observations can remain unknown instead of being interpreted as healthy.</p>
+<p>Changes pass through authenticated interfaces and privileged helpers. The web application runs as an unprivileged service; root helpers validate callers, targets, and operation arguments through systemd-managed sockets. Browser sessions and scoped API keys are separate identities, and interactive terminals have their own authorization requirements. Explicit administrator command execution is a separate, powerful workflow.</p>
+<p>This structure supports both operators and automation while making trust boundaries inspectable. Native containers are privileged, and the web service is a trusted control-plane component. Storage and network separation therefore operate within a trusted administrative host model.</p>
+<h2 id="delivery-separated-from-customer-state">Delivery separated from customer state</h2>
+<p>MYKOS packages its control plane independently of guest disks, snapshots, browser accounts, API credentials, and local configuration. Signed RH8, RH9, and RH10 RPMs provide a consistent delivery path. Managed-file manifests, rollback snapshots, lifecycle locks, and reference checks support deliberate updates and cleanup.</p>
+<p>Operator customizations are also treated as inputs. Generated build copies adapt maintained kickstarts without replacing the originals. Image removal checks references and active use; existing instance storage is retained when an operation cannot safely finish.</p>
+<p>The installer applies the same principle to adoption. Fresh installation provides IP-based application access and prints the URL after a readiness check. Domain and Certbot setup are enabled explicitly with <code>--configure-https</code>. This separates getting the application running from adopting a particular public-domain and certificate configuration.</p>
+<h2 id="the-combined-operating-workflow">The combined operating workflow</h2>
+<ol>
+<li>Prepare and validate an OS image suitable for the required workload.</li>
+<li>Create an ID-specific instance with its own storage and identity.</li>
+<li>Attach compatible customer data when needed, using a working copy when preservation is required.</li>
+<li>Select the intended connectivity model and verify its traffic paths.</li>
+<li>Observe and operate the environment through the web interface, CLI, or API.</li>
+<li>Capture supported runtime state deliberately and coordinate protection for mounted application data.</li>
+</ol>
+<p>The value comes from the connections between these steps. Image preparation becomes reusable. Customer context becomes an explicit composition input. Networking becomes a managed policy. Observation and automation share an operational model. Updates can be evaluated separately from the lifetime of customer environments.</p>
+<h2 id="how-technical-leaders-can-evaluate-the-value">How technical leaders can evaluate the value</h2>
+<table>
+<thead>
+<tr>
+<th>Outcome to evaluate</th>
+<th>Useful measurement</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Faster environment preparation</td>
+<td>Time from a request to a usable environment, including data and network validation.</td>
+</tr>
+<tr>
+<td>Less repeated installation and copying</td>
+<td>Installation steps repeated per case, bytes copied, and image or restore preparation time.</td>
+</tr>
+<tr>
+<td>More consistent operations</td>
+<td>Manual steps and configuration differences across OS families and repeated support cases.</td>
+</tr>
+<tr>
+<td>Lower operational interference</td>
+<td>Guest executions caused by monitoring, host collection cost, and freshness of reported state.</td>
+</tr>
+<tr>
+<td>More predictable updates and recovery</td>
+<td>Preserved guest identities and start times across updates, plus tested rollback and restore outcomes.</td>
+</tr>
+</tbody></table>
+<p>These measures turn the design into an assessable operating capability. Compatibility tests and deployment-specific results establish the performance, recovery, and scale characteristics for a particular environment.</p>
+<h2 id="implementation-foundations">Implementation foundations</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Principal implementation components</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VM images and paired state</td>
+<td><code>mykos_vm.py</code>, <code>mykos_image_build.py</code></td>
+</tr>
+<tr>
+<td>Intentional snapshots</td>
+<td><code>mykos_snapshots.py</code>, <code>mykos_criu.py</code></td>
+</tr>
+<tr>
+<td>Backup composition and account reconciliation</td>
+<td><code>mykos-stage-pos</code>, <code>mykos_backup_restore.py</code>, <code>mykos_backup_identity.py</code></td>
+</tr>
+<tr>
+<td>Network identity and VPN policy</td>
+<td><code>mykos_network.py</code>, <code>mykos_vpn_gateway.py</code>, <code>mykos_vpn_host.py</code></td>
+</tr>
+<tr>
+<td>Observation and controlled actions</td>
+<td><code>mykos_host_monitoring.py</code>, <code>mykos_runtime.py</code>, systemd socket units</td>
+</tr>
+<tr>
+<td>Delivery and local state preservation</td>
+<td><code>mykos-install</code>, <code>mykos-bootstrap</code>, RPM specification</td>
+</tr>
+</tbody></table>
+<footer>MYKOS documentation</footer></main></html>

@@ -1,0 +1,20 @@
+flowchart TD
+ subgraph hostns["MYKOS host namespace"]
+  app["Host traffic / Host network namespace"]
+  select["Site selector match / Fixed local 192.168.222.0/24 → entered remote subnet"]
+  xfrm["Host Libreswan / XFRM / One site connection; no managed default hook"]
+  wan["Ordinary WAN / DNS / Nonmatching traffic retains normal routing"]
+ end
+ subgraph guestsns["Private bridge namespaces"]
+  guests["MYKOS private bridge guests / Not enrolled by this mode"]
+ end
+ subgraph remote["Remote network"]
+  peer["Remote peer / site / Agreed selectors and return routing"]
+ end
+ app -->|"Route + policy lookup"| select
+ select -->|"Matching source / destination"| xfrm
+ xfrm -->|"Encrypted site traffic"| peer
+ app -->|"Nonmatching output"| wan
+ guests -->|"Existing bridge NAT; no shared profile"| wan
+ peer -.->|"Encrypted reply"| xfrm
+ xfrm -.->|"Reply to application"| app

@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KEY_ISSUES.md</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><ul>
+<li>mykos customs/components:</li>
+</ul>
+<ul>
+<li><p>Security/Compliance: Allows for very secure rootless containers to be created that run in a users chrooted jail.
+The management of the environment, image creation, key manipulation, access roles, etc. are handled by an admin at host install time.
+However, once configured and running in a production env, the VMs are ran under an unelevated user account.
+Isolation helps keep issues from happening to the global list of VMs.
+while still allowing root/admin access to the guest.</p>
+</li>
+<li><p>Deployment/Staging: Using podman as an orchestrator of chrooted, running, jails. 
+Allows for keeping a &quot;warm&quot; copy (already booted) as a starting point. 
+Making startup times extremely fast.</p>
+</li>
+<li><p>Image Capture/Snapshot Tool: Created a custom &quot;snapshot&quot; to use instead of docker commit because the commit doesnt capture device and memory states. only disks.
+So, a captured template or commited one would boot from scratch instead of starting from the warm state.
+This was used for all VM types.
+ . This is also used when creating the images so they can start from a warm state.</p>
+</li>
+<li><p>Statistical Data: All podman/dockers status info, start/stop, exec commands etc. are sent through PID1 linearly. That&#39;s a performance issue.
+A collection process, and API were created, along with refresh timing controls, to address that issue.</p>
+</li>
+<li><p>Fileshares/Printing: Keeping fileshares, printers, etc. on a linux server type from having to be done differently regardless if the server is at the same physical location or not.
+VPN solution was created to allow the guest images or the host instance to connect via ipsec ikev2 in a site-to-site (meraki/cisco) fashion.
+That allows for a machine to be used as a cloud server, serving hundreds of instances to different locations.
+Or, one instance that houses a server and several desktop instances that connect to it.
+Also allows for connections of complete remote offices. Not just a single node.
+So long as 1 side has udp ports 4500 and 500 forwarded to mykos, then a 2nd mykos instance can be used as a VPN endpoint in addition to the meraki/cisco routers.</p>
+</li>
+<li><p>Reporting / Alerting / Billing: Instead of making home-grown custom reports, alerts, etc. an API was added to offer all data points collected routinely by the custom collectors.
+This allows integrating any RMM, Reporting, Support etc. type system you wish.
+The collectors handle the data refresh (every few secs) so the integrating systems don&#39;t have to.
+The API used key based auth without cookies.
+It also has an admin and readonly roles for deliniating between using the POST API action commands as well.</p>
+</li>
+<li><p>Running the desktop instances on the same server also eleminates the need for a solution to quickly stage desktops that connect to the server. I.E. a pxe solution.
+Also, it allows for hardening of the host to protect not just the server, but all the desktops as well against whatever security role or requirements.
+Allowing the user able to connect to the system with just a browser. Easing some of the compliance and support issues.
+The desktop instances are also licenseless. Leaving it still up to the owner of the system to license the instances appropriately.
+ . Supports http desktop access or rdp and vnc remote desktops for windows and macos.</p>
+</li>
+<li><p>RedHat patches/Repos for Image creation: The system will optionally house the redhat rpm repos used for redhat installations.
+This allows for much faster staging times, as well as allowing for running of different OS major versions on the same host server.</p>
+</li>
+<li><p>Packaging/Installations/Patching: mykos is packaged in a signed rpm format and has an installable repo to go along side redhat&#39;s for patch management of this application as well.
+This way, the patching process should align with whatever existing process there is for the host for patches.</p>
+</li>
+<li><p>Memory ballooning: Windows does support it and it was implemented on the guest images.
+macOS does not support it and needs a memory ballooning driver.
+RedHat supports out of box.</p>
+</li>
+<li><p>Networking: Using a custom networking script (pipework). It requires dhclient, but opperates otherwise independantly of NetworkManager.
+the dhclient package is to be deprecated, however still available for rh9. So it was added as a dependency.
+This is used to share the hosts nic to the guest as an additional nic on the guest that makes a dhcp request for the same internal network the host is on.</p>
+</li>
+<li><p>WebUI: Created mainly to help with development and performance testing. (Then intension was to be administered primarily via the API).  But can be end user facing if desired.</p>
+</li>
+<li><p>RTI Backup: Legacy rsync backup solution that will be used as a migration tool to import physical systems custom data quickly.</p>
+</li>
+<li><p>Performance graph: To help with diagnosing performance issues along the way.</p>
+</li>
+<li><p>Host and guest networking: in the hopes of making the networking configuration consistant across instance types, wsl install was added to the win11 image creation and a prepared container built that contains libres   wan, iproute2, dhclient, and net-tools for the custom network pipework script. This way, we can similar nic names and behavior across OS types.
+Requirements we also added to ubuntu for the same reasons.
+Nested virtualization was enabled on the win11 guest.</p>
+</li>
+</ul>
+<ul>
+<li></li>
+</ul>
+<p><a href="mailto:mgreen@mykol.com">mgreen@mykol.com</a></p>
+<footer>MYKOS documentation</footer></main></html>

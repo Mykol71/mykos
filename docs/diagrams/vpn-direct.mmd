@@ -1,0 +1,23 @@
+flowchart TD
+ subgraph guest["Native guest namespace"]
+  app["Guest application / Native guest namespace"]
+  dns["Guest output guard + DNS / Non-loopback port 53 → 8.8.8.8; IPv6 blocked"]
+  xfrm["Guest Libreswan / XFRM / Site SA + selected full-tunnel CHILD_SA"]
+  loss["Tunnel unavailable / Guest output guard rejects protected clear-text fallback"]
+ end
+ subgraph host["MYKOS host namespace"]
+  bridge["Host private bridge / WAN NAT / Outer traffic only; host is not IPsec endpoint"]
+ end
+ subgraph remote["Remote network"]
+  peer["Remote VPN peer / Site routing + internet NAT + DNS access"]
+  internet["Remote site / internet / Return path decrypts in native guest"]
+ end
+ app -->|"IPv4 / DNS"| dns
+ dns -->|"Policy required; reject clear fallback"| xfrm
+ xfrm -->|"Encapsulated IPsec / UDP 4500"| bridge
+ bridge -->|"WAN"| peer
+ peer -->|"Decrypted inner traffic"| internet
+ internet -.->|"Reply through remote routes / NAT"| peer
+ peer -.->|"Encrypted reply"| xfrm
+ xfrm -.->|"Reply to application"| app
+ xfrm -.->|"SA unavailable"| loss

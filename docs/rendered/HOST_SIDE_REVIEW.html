@@ -1,0 +1,160 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Host-side monitoring review</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="host-side-monitoring-review">Host-side monitoring review</h1>
+<p><a href="README.html">Documentation index</a></p>
+<p>Reviewed collectors, web/API handlers, native/VM lifecycle, snapshots, POS menu,
+pipework, scheduled commands, backup helpers, repository synchronization, and WSL
+VPN scripts. Existing container state was inspected through host Podman metadata;
+this review did not execute diagnostic commands inside guests.</p>
+<!-- contents:start -->
+<p><strong>Contents</strong></p>
+<ul>
+<li><a href="#production-observations">Production observations</a></li>
+<li><a href="#prioritized-findings">Prioritized findings</a></li>
+<li><a href="#vpn-replacement-requires-protocol-validation">VPN replacement requires protocol validation</a></li>
+<li><a href="#calls-that-remain-intentional">Calls that remain intentional</a></li>
+<li><a href="#changes-completed-with-this-review">Changes completed with this review</a></li>
+<li><a href="#implemented-optimizations-release-51">Implemented optimizations (release 51)</a></li>
+<li><a href="#memory-and-networking-follow-up">Memory and networking follow-up</a></li>
+</ul>
+<!-- contents:end -->
+
+<h2 id="production-observations">Production observations</h2>
+<p>Five managed containers were running: one native Linux container and four desktop
+VM wrappers. Last observed basic/details/extended collector durations were about
+1.9/4.2/9.8 seconds. Those are single observed runs, not benchmark medians.</p>
+<p>Before application-monitoring removal, configured 15/30/30-second intervals imply
+up to 56 container execs/minute for that workload. OnUnitInactiveSec waits for the
+previous run to finish, so actual rates are lower. Removing RTI polling eliminates
+12 of those nominal calls/minute, leaving up to 44. These counts estimate command
+frequency, not CPU savings or guaranteed latency improvement.</p>
+<h2 id="prioritized-findings">Prioritized findings</h2>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Location</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>High</td>
+<td>collect-nodes.py, collect-extended.py</td>
+<td>Skip Linux VPN and eth1 queries for Windows/macOS/VM Ubuntu wrappers. After RTI removal, these still account for up to 32 unnecessary execs/minute with four VMs. Wrapper state is not guest state.</td>
+</tr>
+<tr>
+<td>High</td>
+<td>All three collectors</td>
+<td>Collect native VPN status once and publish a shared timestamped result. Do not query each tunnel independently in every collector.</td>
+</tr>
+<tr>
+<td>High</td>
+<td>collect-details.py</td>
+<td>Use image labels, selected OS metadata, and cached image tags for OS identity. Avoid repeated cat/cp of os-release and per-container image inspection. Preserve immutable image IDs for correctness and readable names for display.</td>
+</tr>
+<tr>
+<td>High</td>
+<td>collect-extended.py</td>
+<td>Batch Podman inspect and non-streaming stats rather than spawning each command per container. StartedAt already exists in inspect data.</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>collect-extended.py, mykos_linux.py, pos/pos</td>
+<td>Read IP/MAC/interface existence with host iproute tools in the selected network namespace. Podman inspect alone does not reliably describe pipework eth1. Guest OS binaries are unnecessary for these checks.</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Native lifecycle, pos/pos</td>
+<td>Replace filesystem existence/permission checks with trusted host metadata or mount-aware file access. Preserve bind mounts, symlink boundaries, and user namespace ownership mappings.</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>mykos-stage-pos, backup/menu helpers</td>
+<td>Legacy staging still knows RTI paths/services and backup types. Move these into explicit application adapters; the generic virtualization core must not assume their presence.</td>
+</tr>
+<tr>
+<td>Lower</td>
+<td>repo/bin/sync_repos</td>
+<td>Keep distribution-specific sync workers isolated. Build reusable worker images or use a single worker invocation per job instead of repeated setup execs; do not assume host yum tools can replace every release-specific workflow.</td>
+</tr>
+</tbody></table>
+<h2 id="vpn-replacement-requires-protocol-validation">VPN replacement requires protocol validation</h2>
+<p>Libreswan supports a Unix control socket and status queries selecting that socket.
+A host-side client could query the container daemon without podman exec, provided
+the installed client and daemon protocol versions are compatible and socket paths
+are resolved safely. Validate this before switching. Network-namespace XFRM state
+is useful for kernel counters, but SA counts alone are not equivalent to named
+Libreswan connection state, especially during rekeying.</p>
+<p>References:</p>
+<ul>
+<li><a href="https://libreswan.org/man/ipsec-status.8.html">https://libreswan.org/man/ipsec-status.8.html</a></li>
+<li><a href="https://libreswan.org/man/ipsec-whack.8.html">https://libreswan.org/man/ipsec-whack.8.html</a></li>
+<li><a href="https://docs.podman.io/en/v3.4.2/markdown/podman-stats.1.html">https://docs.podman.io/en/v3.4.2/markdown/podman-stats.1.html</a></li>
+<li><a href="https://www.man7.org/linux/man-pages/man1/nsenter.1.html">https://www.man7.org/linux/man-pages/man1/nsenter.1.html</a></li>
+</ul>
+<h2 id="calls-that-remain-intentional">Calls that remain intentional</h2>
+<p>Interactive root terminals, explicitly scheduled guest shell/PowerShell commands,
+and requested in-guest service/application actions need guest execution. Replacing
+those with namespace entry or chroot merely changes the mechanism. Keep them out
+of periodic polling. Image-build scripts and guest agents are separate from
+host-side monitoring.</p>
+<p>QEMU monitor access, balloon statistics, VM disk/memory capture, Podman lifecycle,
+host graphs, snapshot-file management and backup filesystem listings already use
+host interfaces. QEMU monitor access does not run a guest command. The QEMU guest
+agent executes inside Windows only for explicit scheduled PowerShell commands.</p>
+<h2 id="changes-completed-with-this-review">Changes completed with this review</h2>
+<ul>
+<li>Removed RTI/POS application probing from both collectors, GUI/text detail views,
+current and stale monitoring responses, and the RTI-specific monitoring route.</li>
+<li>Kept generic CPU/memory, OS, network, VPN, uptime and snapshot information.</li>
+<li>Corrected stage image selection to prefer the readable image name over ImageID.</li>
+<li>Preferred native OS tags over snapshot pin tags when resolving legacy hashes.</li>
+<li>Resolved native snapshot OS from host-side image tags when its stored name is a
+hash. OS detection for this fix does not execute commands inside the guest.</li>
+</ul>
+<h2 id="implemented-optimizations-release-51">Implemented optimizations (release 51)</h2>
+<ul>
+<li>Basic, details and extended monitoring no longer execute guest programs.</li>
+<li>Each collector batches container inspection. Extended batches all running
+container statistics and uses inspected StartedAt timestamps.</li>
+<li>Basic queries native Libreswan through the host client and selected container&#39;s
+control socket once per interval. Details/extended reuse timestamped results,
+bound to container ID/start time and expired after 60 seconds. VM wrappers are
+excluded. The production client/control protocol was verified; unsupported or
+inaccessible sockets report unknown, without falling back to guest execution.</li>
+<li>Native IP/MAC/interface checks use host iproute tools in the selected network
+namespace, with process lifetime checks. They do not enter its mount namespace
+or execute its binaries. Pipework remains in place pending a separate migration.</li>
+<li>OS/image identity uses batched host image metadata, readable tags and explicit
+VM labels. Immutable image IDs remain available for correctness. Native builds
+label their selected OS. This intentionally reports image identity, not an OS
+upgraded after the instance was created.</li>
+<li>Text-menu native staging now uses the same helper as web/API staging. Redundant
+guest filesystem tests and blanket ownership/SSH-key permission changes were
+removed. No replacement host chmod/chown is needed by generic staging; bind
+mounts retain their existing ownership and data.</li>
+<li>Generic staging does not assume an application stack or a running VPN service.
+Legacy restore mounts/services and backup classification are isolated in
+mykos_profiles.py, enabled only by root configuration
+<code>&quot;application_adapter&quot;: &quot;rti&quot;</code>. The default is <code>none</code>; enabling an adapter is
+an explicit operator choice. Existing backup accounts/data are preserved.</li>
+<li>Repo sync uses one isolated worker invocation per release, an exclusive host
+lock, and each release&#39;s own tools. It no longer starts privileged workers,
+executes a CLI command for every repo or replaces another worker&#39;s container.
+Installation of sync tools happens within that single job. Large network syncs
+have not been triggered as part of validation.</li>
+<li>Interactive terminals, requested service actions, image build preparation and
+explicitly scheduled guest shell/PowerShell commands remain intentional.</li>
+</ul>
+<p>A production shadow run on the same five managed instances measured approximately
+0.115 / 0.099 / 0.127 seconds for basic/details/extended. These are observed runs,
+not controlled benchmark medians or guaranteed latency. The native LAN IP was
+preserved and all OS families remained correctly classified.</p>
+<h2 id="memory-and-networking-follow-up">Memory and networking follow-up</h2>
+<p>Native RedHat containers share host memory rather than reserving 4 GiB. VMs use a 2048 MiB allocation through a guarded cold
+restart; old memory captures cannot be restored at a different RAM size. Guest
+pagefiles/swap can help at smaller allocations but do not themselves lower the
+QEMU allocation. The operator-selected policy is 2048 MiB for all VMs and a 12 GiB pagefile/swap target where configurable. Windows 11 is below its published supported minimum; macOS keeps kernel-managed swap.</p>
+<p>Production currently has both a Podman bridge address and a pipework LAN address.
+Replacing pipework requires a Podman macvlan/ipvlan LAN network, appropriate IPAM,
+and host-to-container connectivity. Removing eth1 alone would remove LAN/VPN
+reachability. No live networking migration is included in this release.</p>
+<footer>MYKOS documentation</footer></main></html>

@@ -39,7 +39,7 @@ def test_order_and_repeat(tmp_path, monkeypatch):
     a.install()
     assert events == ['prerequisites', 'firewall', 'https', 'renewal', 'proxy', 'repository']
     setup = next(args for args in calls if args[0] == '/usr/sbin/mykos-setup')
-    assert setup == ['/usr/sbin/mykos-setup', '--public-origin', 'https://example.com', '--enable']
+    assert setup == ['/usr/sbin/mykos-setup', '--public-origin', 'https://example.com', '--set-public-origin', '--enable']
     calls.clear(); events.clear()
     a.install()
     assert events == []
@@ -211,7 +211,9 @@ def test_rpm_queues_setup_outside_transaction():
     root = Path(__file__).resolve().parents[1]
     spec = (root / 'packaging/rpm/mykos.spec').read_text()
     posttrans = spec.split('%posttrans\n', 1)[1].split('%preun', 1)[0]
-    assert 'systemctl enable --now --no-block mykos-firstboot.service' in posttrans
+    assert 'systemctl enable --now mykos-firstboot.service' in posttrans
+    assert 'MYKOS is running:' in posttrans
+    assert '--configure-https' not in posttrans
     assert '! -f /var/lib/mykos-installer/installed.json' in posttrans
     assert 'dnf ' not in posttrans
     unit = (root / 'services/systemd/mykos-firstboot.service').read_text()
@@ -221,7 +223,7 @@ def test_rpm_queues_setup_outside_transaction():
     assert preun.index('disable --now mykos-firstboot.service') < preun.index('mykos-bootstrap --uninstall')
 
 
-@pytest.mark.parametrize('el',['8','9'])
+@pytest.mark.parametrize('el',['8','9','10'])
 def test_repository_uses_renamed_signed_repository(tmp_path,monkeypatch,el):
     a,calls=app(tmp_path)
     keys=[]
@@ -232,3 +234,52 @@ def test_repository_uses_renamed_signed_repository(tmp_path,monkeypatch,el):
     text=a.path('/etc/yum.repos.d/mykos-bootstrap.repo').read_text()
     assert 'baseurl='+origin+'\n' in text
     assert 'gpgcheck=1\n' in text and 'enabled=1\n' in text
+
+
+def test_ip_setup_never_calls_certbot_or_domain_setup_and_reports_reachable_url(tmp_path,monkeypatch,capsys):
+    calls=[]
+    def run(args,check=True):
+        calls.append(args)
+        return subprocess.CompletedProcess(args,0,stdout='Disabled' if args==['getenforce'] else '')
+    a=b.Bootstrap('192.168.22.10',tmp_path,run,ip_only=True)
+    a.path('/etc/os-release').parent.mkdir(parents=True);a.path('/etc/os-release').write_text('ID=rhel\nVERSION_ID="9.8"\n')
+    monkeypatch.setattr(b.shutil,'which',lambda name:None)
+    a.install_ip(installed_rpm=True)
+    assert not any(c[0] in ('certbot','dnf') for c in calls)
+    site=a.path('/etc/httpd/conf.d/00-mykos-ip.conf').read_text()
+    assert 'ServerName 192.168.22.10' in site and 'X-Forwarded-Proto "http"' in site
+    assert not a.path('/etc/httpd/conf.d/00-mykos-https.conf').exists()
+    assert calls.index(['systemctl','is-active','--quiet','mykos-web.service'])<calls.index(['curl','--fail','--silent','--show-error','--max-time','5','http://192.168.22.10/mykos/'])
+    assert 'MYKOS is running: http://192.168.22.10/mykos/' in capsys.readouterr().out
+
+
+def test_failed_app_start_never_prints_ready_url(tmp_path,monkeypatch,capsys):
+    a=b.Bootstrap('192.168.22.10',tmp_path,lambda args,check=True:subprocess.CompletedProcess(args,1,stdout=''),ip_only=True)
+    monkeypatch.setattr(b.time,'sleep',lambda seconds:None)
+    with pytest.raises(ValueError,match='did not become reachable'):a.ready('http://192.168.22.10')
+    assert 'MYKOS is running:' not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize('version',['8.10','9.8','10.1'])
+def test_supported_release_versions(tmp_path,version):
+    a,calls=app(tmp_path);p=a.path('/etc/os-release');p.parent.mkdir(parents=True);p.write_text('ID=rhel\nVERSION_ID="'+version+'"\n')
+    assert a.release()==version.split('.')[0]
+
+
+def test_standard_os_release_symlink_is_read_without_allowing_managed_symlink_writes(tmp_path):
+    a,calls=app(tmp_path)
+    target=tmp_path/'usr/lib/os-release';target.parent.mkdir(parents=True);target.write_text('ID=rhel\nVERSION_ID="9.8"\n')
+    path=tmp_path/'etc/os-release';path.parent.mkdir();path.symlink_to('../usr/lib/os-release')
+    assert a.release()=='9'
+    with pytest.raises(ValueError,match='symlink'):a.path('/etc/os-release')
+
+
+def test_fresh_apache_configuration_does_not_reload_stopped_service(tmp_path):
+    calls=[]
+    def run(args,check=True):
+        calls.append(args)
+        return subprocess.CompletedProcess(args,3 if args==['systemctl','is-active','--quiet','httpd'] else 0,stdout='')
+    a=b.Bootstrap('192.168.22.10',tmp_path,run,ip_only=True)
+    a.apache_write('/etc/httpd/conf.d/00-mykos-ip.conf','ServerName 192.168.22.10\n')
+    assert ['httpd','-t'] in calls
+    assert ['systemctl','reload','httpd'] not in calls
