@@ -4,6 +4,7 @@ from fastapi import APIRouter,HTTPException
 from fastapi.responses import FileResponse,RedirectResponse
 
 GUIDES={
+    'SECURITY_BY_DESIGN.md':'Security by design',
     'USE_CASES.md':'Example use cases',
     'DEVELOPERS_GUIDE.md':'Developer handoff and source guide',
     'KEY_INNOVATIONS.md':'Key innovations',

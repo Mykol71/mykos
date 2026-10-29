@@ -1,6 +1,6 @@
 # MYKOS documentation
 
-Documentation release **1.5.20261024-154**. Technical procedures are reviewed against the unchanged release146 runtime implementation.
+Documentation release **1.5.20261024-155**. Technical procedures are reviewed against the unchanged release146 runtime implementation.
 
 Use these guides to install, operate, integrate, and recover MYKOS. Start with the
 guide for your task, then follow its prerequisites and verification steps.
@@ -10,6 +10,7 @@ guide for your task, then follow its prerequisites and verification steps.
 | Guide | Use it for |
 | --- | --- |
 | [Example use cases](USE_CASES.md) | Practical workflows, starting with older applications on newer hardware |
+| [Security by design](SECURITY_BY_DESIGN.md) | Trust boundaries, identity, privileged operations, data protection, and deployment limits |
 | [Key innovations](KEY_INNOVATIONS.md) | Technical leadership overview of the design contributions |
 | [Performance by design](ENGINEERING_LESSONS.md) | Engineering milestones, difficult problems, and the whole-instance design rationale |
 | [Deployment efficiency and business value](DEPLOYMENT_EFFICIENCY.md) | Business scenarios, customer self-service, cost-saving mechanisms, and an illustrative savings model |

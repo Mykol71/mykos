@@ -1,0 +1,227 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MYKOS security by design</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}
+header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px}.docs-brand{display:inline-flex;align-items:center;gap:9px}.docs-brand .mykos-brand-flower{display:block;width:22px;height:31px;flex:0 0 22px}</style><header><span class="docs-brand"><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
+<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="mykos-security-by-design">MYKOS security by design</h1>
+<p><a href="README.html">Documentation index</a> · <a href="ARCHITECTURE.html">Architecture</a> · <a href="IDENTITY.html">Identity and access</a> · <a href="DEVELOPERS_GUIDE.html">Developer’s guide</a></p>
+<p><strong>How MYKOS separates trust, limits routine privileges, protects identities, and preserves customer state.</strong></p>
+<p>Implementation baseline: release <strong>1.5.20261024-154</strong>, reviewed for this guide on
+29 October 2026. This document explains implemented controls and their limits.
+It is not an independent security assessment, penetration-test report, or
+certification. Publishing it adds documentation, not new security enforcement.</p>
+<h2 id="the-design-starts-with-explicit-trust-boundaries">The design starts with explicit trust boundaries</h2>
+<p>MYKOS manages operating systems, customer data, networking, and administrative
+consoles. Those operations require substantial host privileges. Its design
+separates the component receiving HTTP requests from the components that perform
+host operations, then checks identity and authority at the appropriate boundary.</p>
+<table>
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Implemented control</th>
+<th>What it does not establish</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Browser to web application</td>
+<td>Account authentication, session checks, route permissions, and configured-Origin checks on browser mutation paths</td>
+<td>A visible button or hidden pane is not authorization</td>
+</tr>
+<tr>
+<td>Integration to API v2</td>
+<td>Hashed API keys with <code>read</code> or <code>admin</code> scope</td>
+<td>Keys are host-wide, not restricted to an individual customer ID</td>
+</tr>
+<tr>
+<td>Web service to root helper</td>
+<td>Unix socket permissions, kernel peer credentials, structured requests, and action/argument validation</td>
+<td>The helper identifies the calling service account, not the human user</td>
+</tr>
+<tr>
+<td>Host to managed environment</td>
+<td>Explicit guest identity, storage ownership, lifecycle locks, and native or VM-backed execution</td>
+<td>Rootful containers and a shared host are not a complete hostile-tenant isolation guarantee</td>
+</tr>
+<tr>
+<td>Source and packages to installed host</td>
+<td>Signed RPMs, checksums, managed-file records, preservation checks, and rollback archives</td>
+<td>A valid signature does not prove the signed code is free of vulnerabilities</td>
+</tr>
+<tr>
+<td>Runtime state to recovery material</td>
+<td>Private state paths and deliberate inclusion of sensitive data</td>
+<td>Backups and snapshots are not automatically encrypted or safe to publish</td>
+</tr>
+</tbody></table>
+<p>The <a href="diagrams/architecture.svg">architecture diagram</a> shows the service and
+observation paths. Read the boundaries as cooperating checks: a root helper’s
+peer check does not replace HTTP authorization, and an authenticated HTTP request
+does not remove the need to validate a host operation’s arguments.</p>
+<h2 id="1-keep-the-http-process-out-of-ordinary-root-execution">1. Keep the HTTP process out of ordinary root execution</h2>
+<p>The web service runs as <code>mykosweb</code>, not root. Its systemd unit applies
+<code>NoNewPrivileges=true</code>, <code>ProtectSystem=strict</code>, <code>ProtectHome=true</code>, and
+<code>PrivateTmp=true</code>, with <code>/opt/mykos-web/data</code> as its declared writable data path.
+These settings reduce what the HTTP process can modify directly and keep its
+normal filesystem access separate from host administration.</p>
+<p>Privileged actions cross a Unix socket to dedicated root helpers. The shared
+runtime reads Linux <code>SO_PEERCRED</code> and accepts root or the <code>mykosweb</code> UID. Requests
+are newline-delimited JSON with a size bound and socket timeout. The dispatch
+layer validates the selected operation and its arguments before performing it.
+Many operations use fixed subprocess argument arrays rather than constructing a
+shell command from browser text.</p>
+<p>This is privilege separation, not a claim that a compromised web account has no
+power. The allowed root operations remain powerful. Administrative terminals and
+the administrative scheduled-command feature intentionally expose broader
+execution capability. Treat those permissions as host-administration privileges;
+they are not a safe sandbox for untrusted users.</p>
+<p><strong>Source:</strong> <code>services/systemd/mykos-web.service</code>,
+<code>services/web/container_admin.py</code>, <code>services/helpers/mykos_runtime.py</code>, and
+<code>services/helpers/mykos-container-helper</code>.</p>
+<h2 id="2-separate-human-sessions-from-integration-credentials">2. Separate human sessions from integration credentials</h2>
+<p>Browser accounts and API v2 keys serve different callers. Guest OS accounts,
+backup SSH keys, and VPN pre-shared keys are separate identity systems again.
+Creating or rotating one does not automatically create or rotate the others.</p>
+<p>Browser passwords use randomly salted scrypt hashes. The identity database stores
+password hashes rather than plaintext passwords. Browser session tokens are
+random values; the database stores their SHA-256 digests and expiration times.
+Sessions expire after eight hours. Cookies are HttpOnly and SameSite=Strict.
+The Secure cookie flag follows the configured HTTP/HTTPS deployment mode.</p>
+<p>Password resets, role changes, account deletion, and explicit session revocation
+invalidate that account’s stored sessions. This affects later authorization
+checks; an already connected terminal is not reauthorized on every byte and may
+need to be closed explicitly for immediate disconnection.</p>
+<p>API v2 keys use random secrets and stored SHA-256 digests. Authentication compares
+the supplied key’s digest with the stored value using a constant-time comparison.
+The complete key is shown at creation, while listings omit both the secret and
+its digest. Keys can be revoked, but have no automatic expiration. Rotation is
+create, switch consumers, verify, then revoke the old key.</p>
+<p>Hashing reduces the exposure of usable credentials in a database copy. It does
+not make the database nonsensitive: password hashes can still be attacked offline,
+and a stolen live session or API key can still be used until it expires or is
+revoked. Protect the running host and credential stores as well as the hashes.</p>
+<p><strong>Read next:</strong> <a href="IDENTITY.html">Identity management</a>.<br><strong>Source:</strong> <code>services/web/mykos_users.py</code>, <code>services/web/mykos_api_keys.py</code>, and
+<code>services/web/app.py</code>.</p>
+<h2 id="3-enforce-permissions-on-the-request-not-the-page-layout">3. Enforce permissions on the request, not the page layout</h2>
+<p>The released browser roles are <code>user</code> and <code>admin</code>; API v2 scopes are <code>read</code> and
+<code>admin</code>. HTTP handlers enforce the required authority. Disabling an action button
+or hiding an OS pane is a usability choice, not a security control.</p>
+<p>Read access still exposes operational information such as inventory, logs, and
+process details. Administrative access includes substantial lifecycle and
+configuration authority. API keys are scoped across this host, with no per-ID
+restriction. Identity management itself uses local tools rather than a general
+HTTP account-management endpoint.</p>
+<p>Some data has an additional ownership rule: private operator notes require the
+named owner’s browser session, including through the corresponding v2 routes.
+An API key cannot prove that person’s identity. Shared customer-ID notes are a
+different feature: signed-in users can edit them, with revision checks to detect
+stale updates. Do not infer a private customer boundary from an ID or POS label.</p>
+<p>The proposed application-specific role grid and fully scoped customer delegation
+are not established released capabilities. Plan access around the permissions
+that exist, rather than the permissions a deployment would like to have.</p>
+<h2 id="4-check-browser-origin-and-control-what-is-rendered">4. Check browser origin and control what is rendered</h2>
+<p>Browser login/logout and operational mutation paths check the configured Origin
+alongside their applicable authentication and permission checks. Browser terminal
+connections check their expected origin and session before accepting the
+connection. This helps reject requests initiated from an unintended website.
+HttpOnly and SameSite cookies provide additional, different browser protections.
+These checks do not replace encryption or make an authorized administrator safe
+to treat as untrusted.</p>
+<p>Dynamic values must be escaped for the context in which they are displayed. For
+example, the environment title is HTML-escaped before insertion into the login
+page. Client-side rendering also uses escaping for dynamic labels and values.
+Continue reviewing each new rendering path; an existing escape helper is not a
+blanket guarantee against script injection elsewhere.</p>
+<p>Supporting documentation is deliberately public, pre-rendered, and served through
+an explicit file allowlist. The viewer rejects symlinks and paths outside its
+root, sets a restrictive documentation-specific Content Security Policy, and sends
+<code>X-Content-Type-Options: nosniff</code>. That policy belongs to the documentation viewer;
+it is not a claim that the dashboard or Swagger page has the same policy.
+API documentation and schema visibility do not authorize the operations they
+describe. Do not put secrets in public guides or examples.</p>
+<p><strong>Source:</strong> <code>services/web/app.py</code>, <code>services/web/api_v2.py</code>, and
+<code>services/web/supporting_docs.py</code>.</p>
+<h2 id="5-treat-network-exposure-and-encryption-as-deployment-decisions">5. Treat network exposure and encryption as deployment decisions</h2>
+<p>Default IP-based installation uses HTTP. Domain HTTPS is an explicit setup mode,
+and the Secure cookie setting must match that mode. A password hash in storage
+does not protect credentials or session tokens while they cross an unencrypted
+connection. Use the <a href="BOOTSTRAP.html">HTTPS procedure</a> when deploying across networks
+that require transport protection.</p>
+<p>Guest console mappings, administrative access, Apache content permissions, VPN
+selectors, and firewall/router rules need explicit configuration. Creating a
+guest does not automatically establish the intended external access policy.
+The current deployment’s local-only Apache webroot policy is a site configuration,
+not an isolation guarantee for every MYKOS installation or proxied application.</p>
+<p>VPN state also needs careful interpretation. A reported security association is
+not proof of complete application connectivity, correct remote authorization,
+or protected DNS and return traffic. Verify the selected mode and actual traffic
+path using the <a href="NETWORKING.html">networking guide</a>.</p>
+<h2 id="6-protect-lifecycle-identity-storage-and-customer-data">6. Protect lifecycle identity, storage, and customer data</h2>
+<p>Lifecycle code validates IDs and resolves the intended managed environment.
+Ambiguous identity is an error, not a reason to operate on the first matching
+container. Locks and persisted job states coordinate work so that concurrent
+requests do not independently manipulate the same instance or capture. Atomic
+state replacement reduces the chance of readers accepting partially written
+metadata. These controls protect integrity and recovery as well as availability.</p>
+<p>Native containers share the host kernel. VM-backed environments have a guest
+kernel but still depend on a privileged wrapper, host devices, storage, and
+networking. Evaluate the actual workload and host configuration before using a
+shared server for mutually untrusted parties.</p>
+<p>Compatible native backup composition can mount customer trees read/write.
+Application writes can change those trees. Use a separate working copy when a
+support, rehearsal, or training environment must preserve the original backup.
+Instance-private account, hostname, and configuration handling must not become a
+host-wide ownership rewrite or a modification of a shared customer backup.</p>
+<p>Intentional snapshots are separate from automatic startup state. VM memory/device
+captures must remain paired with their corresponding disks and compatible runtime
+settings. Memory captures can contain credentials and other private application
+data; keep them protected and outside source archives and RPMs.</p>
+<p><strong>Read next:</strong> <a href="INSTALL_SERVICES.html">Installation and recovery</a>,
+<a href="IMAGE_BUILDS.html">image lifecycle</a>, and <a href="DESKTOPS.html">VM storage</a>.</p>
+<h2 id="7-make-updates-verifiable-and-recovery-deliberate">7. Make updates verifiable and recovery deliberate</h2>
+<p>MYKOS releases use signed binary and source RPMs. Verify the package signature
+with an independently trusted MYKOS public key and keep signature checking
+enabled. SHA-256 manifests detect byte changes; an untrusted checksum delivered
+with an untrusted file does not authenticate its publisher.</p>
+<p>The installer tracks managed files and preserves customer runtime state during
+ordinary source updates. Publication procedures compare operator documentation
+and POS sources, retain rollback material, and check that existing guest identity,
+start times, notes, accounts, and Apache configuration survive the update.
+A source rollback archive is not a complete backup of customer disks or every
+external application dependency.</p>
+<p>Identity-data restoration deserves its own decision: restoring a database can
+restore old passwords, sessions, permissions, or revocation state. Source-only
+recovery and data recovery are different operations. Store sensitive backups
+with appropriate encryption and access controls; the existence of a backup
+command does not establish encrypted storage by itself.</p>
+<p><strong>Read next:</strong> <a href="RPM.html">Signed RPM installation</a> and
+<a href="INSTALL_SERVICES.html">installer recovery</a>.</p>
+<h2 id="8-know-what-this-design-does-not-claim">8. Know what this design does not claim</h2>
+<p>The controls above reduce specific risks. They do not establish all of the
+following protections automatically:</p>
+<ul>
+<li>Strong isolation between hostile tenants on a shared privileged host.</li>
+<li>A complete per-customer or per-application authorization model.</li>
+<li>MFA, comprehensive login throttling, or every desired edge/network protection.</li>
+<li>Automatic guest OS patching or remediation of an old application’s vulnerabilities.</li>
+<li>Encryption of every disk, backup, capture, or secret store at rest.</li>
+<li>A complete tamper-evident audit trail, independent security certification, or
+continuous compliance scanning.</li>
+</ul>
+<p>The current architecture includes shared host observations, job records, logs,
+and selected revision/editor metadata. Those are useful operational evidence;
+they are not interchangeable with a dedicated security audit system. Planned
+compliance scanning and configurable application alerts remain future work.</p>
+<h2 id="preserve-the-design-when-extending-mykos">Preserve the design when extending MYKOS</h2>
+<p>For a new capability, identify the caller, required authority, data owner, and
+privileged side effects before choosing the UI. Validate both the HTTP request
+and the helper operation. Keep guest identity and storage selection explicit,
+use the existing locks, bound long operations, and record failure without
+silently granting broader access.</p>
+<p>Verify rejection paths as well as successful actions: insufficient permissions,
+wrong origin, invalid IDs, ambiguous ownership, stale revisions, and requests
+from the wrong local socket peer. Use fixtures or an allocated test environment
+for those checks. A passing mocked test supports the tested boundary; it is not
+proof that host, network, backup, and guest isolation are all secure in production.</p>
+<p>When handing the change to another human, record the boundary it crosses, why the
+caller is allowed to cross it, what state must survive, how failure is reported,
+and how access can be revoked or the change recovered. See the
+<a href="DEVELOPERS_GUIDE.html">developer’s guide</a> for the source map and change workflow.</p>
+<footer>MYKOS documentation</footer></main></html>
