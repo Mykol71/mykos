@@ -1,6 +1,6 @@
 # MYKOS documentation
 
-Documentation release **1.5.20261024-153**. Technical procedures are reviewed against the unchanged release146 runtime implementation.
+Documentation release **1.5.20261024-154**. Technical procedures are reviewed against the unchanged release146 runtime implementation.
 
 Use these guides to install, operate, integrate, and recover MYKOS. Start with the
 guide for your task, then follow its prerequisites and verification steps.
