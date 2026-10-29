@@ -1,11 +1,13 @@
 # MYKOS documentation
 
-Documentation release **1.5.20261024-155**. Technical procedures are reviewed against the unchanged release146 runtime implementation.
+Documentation release **1.5.20261024-156**. Technical procedures are reviewed against the unchanged release146 runtime implementation.
 
 Use these guides to install, operate, integrate, and recover MYKOS. Start with the
 guide for your task, then follow its prerequisites and verification steps.
 
 ## Project design and business value
+
+Read the [two-paragraph business pitch](DEPLOYMENT_EFFICIENCY.md#the-business-case-in-two-paragraphs).
 
 | Guide | Use it for |
 | --- | --- |
@@ -15,7 +17,7 @@ guide for your task, then follow its prerequisites and verification steps.
 | [Performance by design](ENGINEERING_LESSONS.md) | Engineering milestones, difficult problems, and the whole-instance design rationale |
 | [Deployment efficiency and business value](DEPLOYMENT_EFFICIENCY.md) | Business scenarios, customer self-service, cost-saving mechanisms, and an illustrative savings model |
 
-Each guide includes a downloadable PDF. Capability statements retain their reviewed release146 implementation baseline; planned compliance scanning and alerts remain clearly marked as future work.
+The key innovations, performance by design, and deployment efficiency guides include downloadable PDFs. Capability statements retain their reviewed release146 implementation baseline; planned compliance scanning and alerts remain clearly marked as future work.
 
 ## Installation and recovery
 
