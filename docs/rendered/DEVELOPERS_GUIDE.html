@@ -1,0 +1,759 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MYKOS developer’s guide</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}
+header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px}.docs-brand{display:inline-flex;align-items:center;gap:9px}.docs-brand .mykos-brand-flower{display:block;width:22px;height:31px;flex:0 0 22px}</style><header><span class="docs-brand"><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
+<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="mykos-developers-guide">MYKOS developer’s guide</h1>
+<p><a href="README.html">Documentation index</a> · <a href="ARCHITECTURE.html">Architecture</a> · <a href="API.html">API</a></p>
+<p><strong>A handoff for the person who has to understand, change, and support this code.</strong>
+The baseline is <strong>1.5.20261024-147</strong>, Git commit
+<code>64f1c0ef725961f8be8d40e71c681a678713811d</code>, published 29 October 2026.
+This guide describes that released implementation. Local changes are not proof
+that a feature shipped. In particular, the separate PXE work is unpublished.</p>
+<p><strong>Find your way:</strong> <a href="#repository-map">Code map</a> · <a href="#source-code-versus-installed-state">Installed state</a> · <a href="#one-request-from-click-to-completion">Request walkthrough</a> · <a href="#get-a-safe-local-development-environment">Local setup</a> · <a href="#how-to-make-a-change">Making changes</a> · <a href="#tests-and-what-they-establish">Tests</a> · <a href="#debug-by-locating-the-boundary-that-failed">Troubleshooting</a> · <a href="#from-a-change-to-an-installed-release">Release workflow</a></p>
+<h2 id="start-here">Start here</h2>
+<p>MYKOS makes a complete customer environment available from a prepared operating
+system and, where selected, an existing customer backup. It adds a browser and
+API control plane to an operator toolkit built around rootful Podman, Linux
+systemd, native Linux containers, QEMU virtual machines, and customer backup and
+repository workflows. It is a host management application with substantial root
+privileges behind it. It is not just a dashboard over disposable containers.</p>
+<p>The central design is <strong>prepare once, reuse captured state, keep each customer’s
+identity and writable state separate</strong>. Native Linux shares the host kernel.
+Windows, macOS and Ubuntu run inside QEMU, inside a Podman wrapper. Their installed
+disks and paired RAM/device state are prepared for reuse. A running wrapper is
+not proof that its internal OS has finished restoring or is ready to use.</p>
+<p>If you have an hour, read this page through the request walkthrough, then inspect
+<code>services/web/app.py</code>, <code>services/web/container_admin.py</code>,
+<code>services/helpers/mykos-container-helper</code>, and <code>bin/mykos-install</code> in that order.
+Read the tests for the feature before changing its implementation. For an
+inherited incident, start with the troubleshooting table rather than restarting
+things to see whether the symptom disappears.</p>
+<h2 id="what-was-built-and-why-it-is-shaped-this-way">What was built and why it is shaped this way</h2>
+<p>The older shell menus and customer-data conventions remain part of the product.
+The maintained Python web/API, socket helpers, workers, state handling, image
+pipelines and packaging wrap and extend those workflows. Some old names and
+hard-coded paths survive. This is a description of the resulting system and its
+constraints, not a claim that every file was created in the same development pass.</p>
+<table>
+<thead>
+<tr>
+<th>Design choice</th>
+<th>What it accomplishes</th>
+<th>Consequence for the next developer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Prepared OS plus captured startup state</td>
+<td>Reuses installation and startup work</td>
+<td>Disk, RAM, devices and image metadata must agree; a disk-only substitute is not equivalent</td>
+</tr>
+<tr>
+<td>Customer backup composition</td>
+<td>Makes an existing customer environment usable without a full data copy</td>
+<td>Selected backup paths are mounted read/write; application writes can change the source backup</td>
+</tr>
+<tr>
+<td>Unprivileged web service plus root helpers</td>
+<td>Keeps HTTP processing separate from host mutation</td>
+<td>Every action needs HTTP authorization and narrow helper validation</td>
+</tr>
+<tr>
+<td>Queued workers for long operations</td>
+<td>Lets browser requests finish without owning the operation’s lifetime</td>
+<td>“Queued” is not “done”; clients must observe job state</td>
+</tr>
+<tr>
+<td>Host-side cached observation</td>
+<td>Avoids running repeated guest diagnostics for every browser</td>
+<td>Freshness, identity and unknown values are part of correctness</td>
+</tr>
+<tr>
+<td>Explicit state ownership and locks</td>
+<td>Avoids two requests manipulating the same guest or capture</td>
+<td>A second lock with a different name is not a substitute for the existing lifecycle lock</td>
+</tr>
+<tr>
+<td>Generated installation copies</td>
+<td>Adapts kickstarts to the builder without destroying operator recipes</td>
+<td>Change <code>pos/prepare_ks.py</code>, and preserve the source kickstarts</td>
+</tr>
+<tr>
+<td>Separate authentication systems</td>
+<td>Separates humans, API consumers, guest accounts and backup transport</td>
+<td>A browser session, API key, guest password and VPN PSK are not interchangeable</td>
+</tr>
+</tbody></table>
+<p>The owner has observed fast startup with compatible prepared state and available
+customer backups. There is no controlled benchmark in this guide. Measure on the
+target hardware before promising a startup time or concurrency level.</p>
+<h2 id="repository-map">Repository map</h2>
+<p>Paths below are relative to the source root. File names are useful search targets;
+they are not all standalone commands.</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Begin with</th>
+<th>What belongs here</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Browser UI</td>
+<td><code>services/web/index.html</code>, <code>terminal-window.html</code></td>
+<td>Dashboard markup, styles, JavaScript, polling, terminal popup</td>
+</tr>
+<tr>
+<td>HTTP application</td>
+<td><code>services/web/app.py</code></td>
+<td>Browser login/session routes, browser operations, route assembly</td>
+</tr>
+<tr>
+<td>API v2</td>
+<td><code>services/web/api_v2.py</code>, <code>image_build_api.py</code></td>
+<td>Key-authenticated integrations and read models</td>
+</tr>
+<tr>
+<td>Web-to-root bridge</td>
+<td><code>services/web/container_admin.py</code>, <code>mykos_admin_api.py</code></td>
+<td>Structured requests to fixed privileged operations</td>
+</tr>
+<tr>
+<td>Root dispatch and workers</td>
+<td><code>services/helpers/mykos-container-helper</code></td>
+<td>Action allowlist, validation, job queue and lifecycle dispatch</td>
+</tr>
+<tr>
+<td>Shared host primitives</td>
+<td><code>services/helpers/mykos_runtime.py</code></td>
+<td>Trusted config, command execution, identity selection, socket peer checks</td>
+</tr>
+<tr>
+<td>Native Linux instances</td>
+<td><code>mykos_linux.py</code>, <code>mykos-stage-pos</code></td>
+<td>Native lifecycle, guest selection, mounts and limits</td>
+</tr>
+<tr>
+<td>VM instances and storage</td>
+<td><code>mykos_vm.py</code>, <code>mykos-desktop</code></td>
+<td>OS definitions, private disks, checkpoints and restore</td>
+</tr>
+<tr>
+<td>OS image preparation</td>
+<td><code>mykos_image_build.py</code>, <code>mykos_image_admin.py</code></td>
+<td>Unattended builds, capture, image catalog, reset and removal</td>
+</tr>
+<tr>
+<td>Base console ownership</td>
+<td><code>mykos_base_session.py</code>, <code>mykos-terminal-helper</code></td>
+<td>One editor, terminal transport, reset on disconnect</td>
+</tr>
+<tr>
+<td>Live snapshots</td>
+<td><code>mykos_snapshots.py</code>, <code>mykos_criu.py</code></td>
+<td>Native CRIU and VM state capture/restore</td>
+</tr>
+<tr>
+<td>Backup composition</td>
+<td><code>mykos_backup_restore.py</code>, <code>mykos_backup_identity.py</code>, <code>mykos_profiles.py</code></td>
+<td>Direct mounts and instance-only account reconciliation</td>
+</tr>
+<tr>
+<td>Networking</td>
+<td><code>mykos_network.py</code>, <code>mykos_vpn_gateway.py</code>, <code>mykos_vpn_host.py</code></td>
+<td>Bridge allocation, shared routing and IPsec policy ownership</td>
+</tr>
+<tr>
+<td>VPN connection generation</td>
+<td><code>pos/pos</code>, <code>pos/host-vpn</code>, <code>pos/vpn-updown</code>, <code>pos/vpn-restore</code></td>
+<td>Interactive workflow, selectors, secret files and hooks</td>
+</tr>
+<tr>
+<td>Observation</td>
+<td><code>services/web/collect-*.py</code>, <code>host_monitoring.py</code>, <code>host_history.py</code></td>
+<td>Inventory, bounded host observations and retained history</td>
+</tr>
+<tr>
+<td>Service definitions</td>
+<td><code>services/systemd/</code></td>
+<td>Socket activation, workers, collector timers and boot order</td>
+</tr>
+<tr>
+<td>Installation and packages</td>
+<td><code>bin/mykos-install</code>, <code>bin/mykos-bootstrap</code>, <code>bin/mykos-package</code>, <code>packaging/rpm/</code></td>
+<td>File plan, setup, backups, source archives and RPMs</td>
+</tr>
+<tr>
+<td>Existing operator toolkit</td>
+<td><code>MENU</code>, <code>pos/</code>, <code>back/</code>, <code>repo/</code>, <code>data/</code></td>
+<td>Text administration and customer-specific legacy workflows</td>
+</tr>
+<tr>
+<td>Regression evidence</td>
+<td><code>tests/</code> in Git</td>
+<td>Python tests, Node <code>.cjs</code> checks and separately run Linux probes</td>
+</tr>
+<tr>
+<td>Documentation sources</td>
+<td><code>docs/</code>, <code>tools/docs/</code></td>
+<td>Maintained guides, graph models, rendering, link checks</td>
+</tr>
+</tbody></table>
+<p>The UI is largely one large HTML file with inline code. Search for the route,
+button class or function involved before editing it. Treating it as an assumed
+React/Vite project will lead you to the wrong build and test workflow.</p>
+<h2 id="source-code-versus-installed-state">Source code versus installed state</h2>
+<p>There are several copies of the code on an installed host. Editing the wrong one
+is a common reason a change appears to have no effect, or disappears on update.</p>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Purpose and owner</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/usr/share/mykos</code></td>
+<td>RPM-owned source/toolkit payload</td>
+</tr>
+<tr>
+<td><code>/usr/local/share/mykos</code></td>
+<td>Installer-managed toolkit/runtime source copy</td>
+</tr>
+<tr>
+<td><code>/opt/mykos-web</code></td>
+<td>Deployed web app and collectors; service runs as <code>mykosweb</code></td>
+</tr>
+<tr>
+<td><code>/usr/local/sbin/mykos-*</code></td>
+<td>Installed privileged entry points and Python helper modules</td>
+</tr>
+<tr>
+<td><code>/etc/systemd/system/mykos-*</code></td>
+<td>Installed units; <code>@PYTHON@</code> is substituted at install time</td>
+</tr>
+<tr>
+<td><code>/etc/mykos</code></td>
+<td>Host configuration and environment; keep secrets private</td>
+</tr>
+<tr>
+<td><code>/var/lib/mykos-installer</code></td>
+<td>Installer manifest and ownership/recovery bookkeeping</td>
+</tr>
+<tr>
+<td><code>/var/backups/mykos-installer</code></td>
+<td>Deployment rollback archives and release evidence</td>
+</tr>
+<tr>
+<td><code>/home/mgreen/mykos</code></td>
+<td>This deployment’s operator source copy; not a portable requirement</td>
+</tr>
+</tbody></table>
+<p>Make the change in maintained source, verify it, then use the installer/package
+workflow. A hot edit to <code>/opt/mykos-web</code> is not a complete source change. The
+installer manifest and RPM ownership are separate records; updating a live file
+by hand can make verification fail even if the app still runs.</p>
+<p>Runtime customer state lives outside normal source payloads:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Principal location</th>
+<th>Preserve when changing code</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Browser accounts/sessions and notes</td>
+<td><code>/opt/mykos-web/data/auth.db</code></td>
+<td>Password hashes, accounts, shared and personal notes</td>
+</tr>
+<tr>
+<td>API key digests/revocations</td>
+<td><code>/opt/mykos-web/data/api_keys.db</code></td>
+<td>Existing integrations and revocations</td>
+</tr>
+<tr>
+<td>Collected read models</td>
+<td><code>inventory.json</code>, <code>data/status.json</code>, <code>data/details.json</code>, <code>data/extended.json</code> under web root</td>
+<td>Saved metadata and observation timestamps</td>
+</tr>
+<tr>
+<td>Host history</td>
+<td>Web <code>data/host-history.sqlite3</code></td>
+<td>Real retained samples, not invented history</td>
+</tr>
+<tr>
+<td>Per-ID jobs</td>
+<td><code>/var/lib/mykos/jobs</code></td>
+<td>Queued/running/final operation state</td>
+</tr>
+<tr>
+<td>VM registry</td>
+<td><code>/usr/local/share/mykos/pos/.vm</code></td>
+<td>Original identity, OS, image and storage mapping</td>
+</tr>
+<tr>
+<td>VM disks and startup state</td>
+<td><code>/home/mykos-vms</code></td>
+<td>Customer private disks and matching startup captures</td>
+</tr>
+<tr>
+<td>Customer backup</td>
+<td><code>/backups/tfrsync-ID</code>, or configured <code>backup_root</code></td>
+<td>Live mounted data; not disposable test fixtures</td>
+</tr>
+<tr>
+<td>Native IPsec/private restore files</td>
+<td><code>pos/.ID</code> in the installed toolkit</td>
+<td>PSKs, reconnect ownership and instance-private <code>/etc</code> exceptions</td>
+</tr>
+<tr>
+<td>Shared VPN profiles</td>
+<td><code>/var/lib/mykos/vpn-gateways</code></td>
+<td>Gateway identity, route ownership and recovery state</td>
+</tr>
+<tr>
+<td>Intentional snapshots</td>
+<td>Configured snapshot storage</td>
+<td>User-selected recovery points, separate from automatic startup state</td>
+</tr>
+</tbody></table>
+<p>Do not copy production databases or guest disks into a development checkout.
+The installer intentionally clears disposable <code>pane_notes</code> change requests on
+update. <code>personal_notes</code> and shared customer-ID notes are different data and are
+preserved. Personal notes are not a source of development instructions.</p>
+<h2 id="one-request-from-click-to-completion">One request from click to completion</h2>
+<p><a href="diagrams/architecture.svg" title="Open full-size diagram"><img src="diagrams/architecture.svg" alt="Service processes, trust boundaries and observation paths."></a><a href="diagrams/architecture.svg">Open full-size diagram</a></p>
+<p><a href="diagrams/architecture.svg">Open full-size architecture diagram</a> ·
+<a href="diagrams/architecture.mmd">Editable Mermaid</a></p>
+<p>Take <strong>Start an existing container</strong> as the example:</p>
+<ol>
+<li>JavaScript in <code>index.html</code> sends a same-origin browser request to the public
+<code>/mykos/api/web/containers/ID/start</code> route. The public <code>/mykos</code> proxy prefix is
+different from the internal FastAPI route <code>/api/web/containers/{shop}/start</code>.</li>
+<li><code>app.py:mykos_start_container</code> checks the browser user’s operational permission,
+requires the configured Origin and validates the eight-digit ID. Hiding a
+button in JavaScript does not authorize the operation.</li>
+<li><code>container_admin.invoke(&#39;start-pos&#39;, shop)</code> sends one newline-terminated JSON
+object, <code>{&quot;args&quot;:[&quot;start-pos&quot;,&quot;12345678&quot;]}</code>, over the Unix socket
+<code>/run/mykos-container-admin.sock</code>. It waits for a bounded response, not a shell.</li>
+<li>systemd accepts the connection and starts <code>mykos-container-admin@.service</code> as
+root. <code>mykos_runtime.connection()</code> checks Unix peer credentials: only root or
+the <code>mykosweb</code> service UID may call it. This identifies the web service, not the
+human user; the HTTP layer must already have checked the user.</li>
+<li><code>mykos-container-helper</code> validates the action and arguments, resolves the
+existing managed instance, acquires its job lock, checks for an active worker,
+saves a <code>queued</code> job, and starts <code>mykos-stage@ID.service</code> without blocking.</li>
+<li>That unit invokes the same helper with <code>--stage-worker ID</code>. The worker records
+<code>running</code>, dispatches to native Linux or VM lifecycle code, then records <code>done</code>
+or <code>failed</code>. It uses the existing instance, not a fresh image clone.</li>
+<li>A completed action attempts an ID-scoped collector refresh through
+<code>mykos_refresh.refresh</code>. If that refresh fails, the action can still be <code>done</code>
+with a refresh warning. Failure to refresh the UI is not proof that Start failed.</li>
+<li>The browser polls job status and collected inventory. Only after observing
+the appropriate completed/readiness state should it present the action as
+finished. For VMs, Podman running and installed-OS readiness are distinct.</li>
+</ol>
+<p>The API v2 route follows its own API-key authorization and then converges on the
+helper. It does not reuse a browser cookie as an API key. Terminal traffic uses a
+separate socket and readiness/error handshake because an interactive PTY is not
+a JSON action result.</p>
+<p>Not every operation uses the per-ID queue. Image builds have their own unit and
+state directory; scheduled commands have another queue; some bounded diagnostics
+return synchronously. Follow the actual action’s dispatch path before adding a
+new worker or assuming an existing response means the job finished.</p>
+<h2 id="authentication-and-privilege-boundaries">Authentication and privilege boundaries</h2>
+<p>Browser roles in this release are <code>user</code> and <code>admin</code>; API scopes are <code>read</code> and
+<code>admin</code>. The proposed application-specific role matrix is not implemented. Saved
+RTI/Dove labels and preview visibility do not establish backend access control.</p>
+<p>Browser login stores scrypt password hashes and hashed session tokens. Sessions
+use HttpOnly, SameSite=Strict cookies; the Secure flag is enabled for HTTPS and
+disabled by default IP-only HTTP setup. Browser modifications require Origin.
+API keys arrive in <code>X-MYKOS-API-Key</code>; the stored values are digests, and revocation
+is checked on subsequent requests. Private pane/personal notes are a deliberate
+exception to the general v2 key pattern: they require the named <code>mgreen</code> session.</p>
+<p>Root helper authorization is a second layer, not a replacement for HTTP roles.
+Use fixed operations, strict argument counts, identity checks, bounded output,
+subprocess argument arrays and timeouts. Never add a general HTTP-to-root shell
+string. The separate scheduled-command feature is intentionally administrative;
+its existence does not authorize arbitrary execution through a new read endpoint.</p>
+<p>The host and guest terminal actions are already highly privileged. Session power
+command guards protect against accidental shutdown; an administrator with root
+is not confined by those shell wrappers. For Windows use the QEMU guest agent,
+for Ubuntu the private serial console, and for macOS its SSH workflow. Do not
+replace those with a public unauthenticated shell because it is easier to debug.</p>
+<h2 id="get-a-safe-local-development-environment">Get a safe local development environment</h2>
+<p>Use a normal user account on a workstation for web/model tests. Host lifecycle
+integration belongs on a disposable compatible Linux server. Running the web app
+on macOS does not validate Podman, CRIU, KVM, systemd, bridge NAT or IPsec.</p>
+<p>For a reproducible starting point, use the Git release commit in a new checkout.
+Keep an existing checkout’s local changes rather than resetting it:</p>
+<pre><code class="language-bash">git clone https://github.com/Mykol71/mykos.git mykos-dev
+cd mykos-dev
+git switch -c developer-handoff 64f1c0ef725961f8be8d40e71c681a678713811d
+python3.12 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r services/requirements.txt pytest httpx
+python -c &#39;import hashlib; assert hasattr(hashlib, &quot;scrypt&quot;)&#39;
+</code></pre>
+<p>Use Python 3.9+ for runtime compatibility; Python 3.12 is a useful workstation
+test interpreter. EL8 deployment selects Python 3.9; EL9/EL10 use their packaged
+<code>python3</code>. Runtime direct dependencies are pinned in <code>services/requirements.txt</code>;
+test dependencies in the command above are not a complete locked environment.
+Record resolved versions when reproducing a failure. Node is used for the plain
+<code>.cjs</code> UI checks and documentation tooling; it is not the deployed web server.</p>
+<p>The full Git checkout contains the broader regression suite. The packaged source
+archive contains only selected tests because <code>bin/mykos-package</code> derives most of
+its file list from installed payloads. Do not confuse a six-file packaged tests
+directory with the complete project test suite.</p>
+<h3 id="work-with-isolated-data">Work with isolated data</h3>
+<p><code>MYKOS_BASE</code> changes the web application’s data root. It does not relocate every
+privileged helper’s hard-coded system paths. Use explicit temporary state and
+nonexistent socket paths; never point a local browser at a production root socket.</p>
+<pre><code class="language-bash">export MYKOS_BASE=&quot;$(mktemp -d /tmp/mykos-dev.XXXXXX)&quot;
+export MYKOS_PUBLIC_ORIGIN=http://127.0.0.1:8001
+export MYKOS_SECURE_COOKIE=0
+export MYKOS_CONTAINER_SOCKET=&quot;$MYKOS_BASE/no-container-service.sock&quot;
+export MYKOS_TERMINAL_SOCKET=&quot;$MYKOS_BASE/no-terminal-service.sock&quot;
+mkdir -p &quot;$MYKOS_BASE/data&quot;
+cp services/web/index.html &quot;$MYKOS_BASE/index.html&quot;
+printf &#39;%s\n&#39; &#39;{&quot;nodes&quot;:[]}&#39; &gt; &quot;$MYKOS_BASE/inventory.json&quot;
+python services/web/manage.py users create developer --role admin
+</code></pre>
+<p>The last command prompts for a development-only password and writes only to the
+isolated database. Start this limited web preview from the repository root:</p>
+<pre><code class="language-bash">python -m uvicorn app:app --app-dir services/web --host 127.0.0.1 --port 8001
+</code></pre>
+<p>Open <code>http://127.0.0.1:8001/</code>. FastAPI’s <code>root_path</code> describes the deployed proxy
+prefix; it is not automatically a local <code>/mykos</code> route mount. Dashboard JavaScript
+uses public <code>/mykos/...</code> URLs, so a full interactive dashboard needs a local proxy
+that strips that prefix or an isolated mounted-app harness. Direct local routes
+and <code>TestClient</code> use paths such as <code>/api/login</code> and <code>/api/v2/overview</code>.</p>
+<p>This minimal preview has no root helper, live inventory or guest operations.
+Some panes will report unavailable services. Use test fixtures that mock the
+bridge for UI/API development. Setting <code>MYKOS_BASE</code> alone does not make it safe
+to run installed collectors or host helpers on a workstation.</p>
+<h3 id="a-first-request-without-a-running-server">A first request without a running server</h3>
+<p>The following example proves the read-model/API-key path using a temporary
+fixture. Run it in a fresh interpreter from the source root after activating the
+venv. It imports the app only after setting the temporary data root:</p>
+<pre><code class="language-python">from pathlib import Path
+import json
+import os
+import sys
+import tempfile
+import time
+from fastapi.testclient import TestClient
+
+with tempfile.TemporaryDirectory(prefix=&quot;mykos-dev-&quot;) as temporary:
+    base = Path(temporary)
+    (base / &quot;data&quot;).mkdir()
+    os.environ[&quot;MYKOS_BASE&quot;] = str(base)
+    os.environ[&quot;MYKOS_CONTAINER_SOCKET&quot;] = str(base / &quot;no-host-service.sock&quot;)
+    sys.path.insert(0, str(Path(&quot;services/web&quot;).resolve()))
+    import app
+    import mykos_api_keys
+
+    (base / &quot;inventory.json&quot;).write_text(json.dumps({
+        &quot;nodes&quot;: [{&quot;id&quot;: &quot;12345678&quot;, &quot;name&quot;: &quot;Development fixture&quot;}]
+    }))
+    (base / &quot;data/status.json&quot;).write_text(json.dumps({
+        &quot;collected_at&quot;: int(time.time()),
+        &quot;observations&quot;: {&quot;12345678&quot;: {&quot;status&quot;: &quot;online&quot;}}
+    }))
+    key = mykos_api_keys.create(&quot;development&quot;, &quot;read&quot;)
+    with TestClient(app.app) as client:
+        response = client.get(&quot;/api/v2/nodes&quot;, headers={
+            &quot;X-MYKOS-API-Key&quot;: key
+        })
+        assert response.status_code == 200, response.text
+        assert response.json()[&quot;nodes&quot;][0][&quot;id&quot;] == &quot;12345678&quot;
+        assert client.get(&quot;/api/v2/nodes&quot;).status_code == 401
+        print(&quot;Authenticated fixture request passed; no host helper invoked.&quot;)
+</code></pre>
+<p>The fixture’s details/extended observations are intentionally missing. Their
+freshness remains false; an online basic observation is not permission to invent
+other metrics. Do not print the generated key or reuse it outside the fixture.</p>
+<h2 id="state-concurrency-and-failure-rules">State, concurrency and failure rules</h2>
+<p>An image is a reusable installed OS plus required startup state. A container is
+an ID-specific instance with its own identity and writable state. A snapshot is
+an intentional capture of a live instance and leaves that instance running.
+These names describe different ownership and deletion rules.</p>
+<p><a href="diagrams/image-lifecycle.svg" title="Open full-size diagram"><img src="diagrams/image-lifecycle.svg" alt="Prepared state, instance creation, capture, reset and recovery boundaries."></a><a href="diagrams/image-lifecycle.svg">Open full-size diagram</a></p>
+<p><a href="diagrams/image-lifecycle.svg">Full-size lifecycle diagram</a> ·
+<a href="diagrams/image-lifecycle.mmd">Editable Mermaid</a></p>
+<p>Preserve these constraints when changing lifecycle code:</p>
+<ul>
+<li>Resolve an ID to exactly one managed container. Reject duplicate or ambiguous
+identities; never take the first Podman result. Validate original labels, full
+container IDs, storage paths and namespace identity before destructive work.</li>
+<li>Per-ID jobs serialize operations for that instance. <code>mykos_vm.locked()</code> protects
+the shared registry/lifecycle. Base consoles also have session ownership and
+capture/reset coordination. Trace lock acquisition order before nesting them.</li>
+<li>Publish state atomically. Existing writers use a temporary file, flush/fsync as
+appropriate, then replace the destination. A partially written JSON file must
+not become the next reader’s authoritative state.</li>
+<li>Queue the work, persist transitions, and record failure. Do not return <code>done</code>
+before image commit, memory restore or the operation’s readiness checks finish.</li>
+<li>Preserve a previously valid image/capture until replacement succeeds. A failed
+commit can be retried from retained prepared state instead of reinstalling.</li>
+<li>Capture base edits before logout. Disconnect queues reset from the latest
+captured image; uncaptured edits are intentionally discarded. Existing customer
+instances are not refreshed by capturing a new generic base.</li>
+<li>Keep intentional snapshots separate from automatic startup captures. Deletion
+and purge need dependency/ownership checks, not an image-name wildcard.</li>
+</ul>
+<p>Several Podman launch operations are placed in delegated systemd scopes by
+<code>mykos_runtime.podman_scope</code>. A short-lived worker’s control group must not take a
+persistent container monitor down when the worker exits. Preserve this when
+refactoring process launching.</p>
+<h2 id="areas-where-a-plausible-change-can-break-customers">Areas where a plausible change can break customers</h2>
+<h3 id="backup-data-and-accounts">Backup data and accounts</h3>
+<p>Native restore can mount <code>/usr2</code>, <code>/d</code>, complete <code>/etc</code>, <code>/home</code> and <code>/usr/java</code>
+directly read/write from a customer backup. It prepares only the new stopped
+guest’s image root and overlays private files for passwd/group/shadow/gshadow,
+host identity, mount tables, network ownership and PAM limits. UID/GID conflicts
+must be resolved deliberately. Do not “fix” ownership with a host-wide <code>chown</code> or
+rewrite the backup’s account databases. Password hashes are sensitive even when
+no plaintext password is present. See <a href="INSTALL_SERVICES.html#complete-customer-backup-mounts">backup mount details</a>.</p>
+<h3 id="networking-and-vpns">Networking and VPNs</h3>
+<p>The usual private bridge is <code>mykos-lan</code>, <code>192.168.22.0/24</code>; the physical LAN is a
+separate network. Native direct tunnels terminate in the guest namespace. Shared
+mode can terminate in a selected native guest or the host; the host controller
+owns scoped routes, firewall rules and host-output diversion. Host-only VPN is a
+legacy site-selector mode, not shared full tunnel. A reported local SA is not
+proof of remote DNS or internet forwarding.</p>
+<p>The reconnect/guard files, numeric peer endpoints, full-tunnel owner and
+boot-order guards are functional state. Do not clear them to make a UI indicator
+green. Read the <a href="NETWORKING.html#vpn-architecture-and-operations">VPN architecture and recovery procedure</a>
+and its diagrams before changing this area. The existing Add Gateway issue was
+deferred; this guide does not claim it was fixed. MYKOS-to-MYKOS peers are future work.</p>
+<h3 id="memory-and-consoles">Memory and consoles</h3>
+<p>New native ID-specific containers use a 2 GiB Podman limit and a read-only cgroup
+mount; this is different from allocating RAM inside a QEMU VM. Native consoles
+use <code>su - root</code>; complete backup <code>/etc</code> mounts need their private PAM limits file.
+VM runtime policy is 2048 MiB and captures must match the allocation. macOS
+installation temporarily uses more memory before runtime capture. Preserve the
+separate Windows guest-agent, Ubuntu serial and macOS SSH console paths.</p>
+<h2 id="observation-is-not-the-operation-itself">Observation is not the operation itself</h2>
+<p>Collectors build snapshots read by browsers and APIs. The basic collector normally
+runs 15 seconds after the previous run finishes; details and extended collectors
+normally use 30-second intervals. This is not one synchronous query per browser.
+API v2 considers these snapshots fresh for 120 seconds. Host history independently
+retains 30 minutes of real samples at a three-second target interval.</p>
+<p>Keep <code>collected_at</code>, identity and unknown values together. A previous observation
+of a reused ID must not be silently assigned to a different container. Do not
+convert null/stale data into a healthy-looking zero. Preserve saved inventory
+metadata such as shop name, POS label and coordinates during refresh. A browser
+that opens after an action should converge on the same shared state as one that
+was already open.</p>
+<p>Add a metric at the observation layer, publish it with freshness, expose it through
+the appropriate read model, then render it. Do not add periodic <code>podman exec</code> in
+JavaScript or a GET handler just to populate a cell. Use existing host-side batched
+observation/cache patterns. Application alert fields and automated compliance
+scans discussed elsewhere are plans, not released monitoring guarantees.</p>
+<h2 id="how-to-make-a-change">How to make a change</h2>
+<h3 id="a-new-read-only-field">A new read-only field</h3>
+<p>First decide which layer owns the truth. For an inventory/host metric, find its
+collector and the API v2 join in <code>snapshot()</code>. Add the field without discarding
+other IDs’ rows or saved metadata. Define missing and stale behavior, then update
+the browser renderer and API schema/documentation where appropriate.</p>
+<p>Test at least a fresh value, missing observation, stale observation and changed
+container identity. Count host/guest calls to ensure a new UI poll did not create
+new per-guest work. Do not run a real customer diagnostic to prove formatting.</p>
+<h3 id="a-new-operation">A new operation</h3>
+<p>Choose browser permissions and API scope first. Validate the HTTP body, Origin
+for browser writes, and the same arguments again in the helper. Use a fixed
+allowlisted action and existing identity/lock helpers. If the operation can take
+longer than a bounded request, use the appropriate queue and publish final state.</p>
+<p>An effective operation test checks denial before side effects, the exact selected
+identity, handling of duplicate/concurrent requests, failure after partial work,
+and preservation of unrelated data. Mock system calls at the boundary. A test
+that merely repeats the same <code>if</code> statement as the implementation gives little
+confidence about those properties.</p>
+<h3 id="an-os-or-image-building-change">An OS or image-building change</h3>
+<p>Review all participating registries rather than adding a dropdown alone:
+<code>mykos_runtime.NATIVE_OS_NAMES</code> / <code>STAGE_OS_NAMES</code>, <code>mykos_vm.VERSIONS</code>, the image
+build request validator, native kickstart mapping, image catalog, UI family
+mapping, and snapshot identity. Unsupported legacy installation paths are not
+automatically compatible with modern unattended answer files.</p>
+<p>Keep operator kickstarts intact. Generated build copies handle parser differences,
+firmware/microcode exclusions and boot tmpfiles nologin prevention. Builder
+credentials, callback tokens and per-build private packages are not source assets.
+Use the existing cleanup and scoped completion mechanisms; never put passwords in
+process arguments or broad callback URLs. See <a href="IMAGE_BUILDS.html">unattended builds</a>.</p>
+<h3 id="a-ui-change">A UI change</h3>
+<p>Find the existing event handler and render function. Check popup/focus/disconnect
+behavior as well as appearance. Capture-phase row handlers can intercept nested
+action buttons; a click that looks correct can still open the wrong action.
+Keep escaping/accessibility names and read-only permissions intact. Use existing
+<code>tests/*.cjs</code> checks and a browser preview with fixture data, then inspect the
+actual result rather than relying on a DOM string match alone.</p>
+<h3 id="a-documentation-change">A documentation change</h3>
+<p>Edit maintained Markdown, <code>tools/docs/diagrams.json</code>, or the shared stylesheet.
+The flower in the header comes from the existing
+<code>services/apache-index/mykos-flower.svg</code>; keep one source for that logo. Add new
+guides to <code>tools/docs/guides.json</code> and <code>services/web/supporting_docs.py</code>. The viewer
+uses an explicit public allowlist and a fixed light theme; do not expose arbitrary
+source paths or runtime files to make repository links work.</p>
+<pre><code class="language-bash">npm --prefix tools/docs ci --ignore-scripts
+node tools/docs/build.mjs
+python tools/docs/check.py
+node tools/docs/build.mjs --check
+python -m pytest -q tests/test_supporting_docs.py
+</code></pre>
+<p>The <code>.mmd</code> and <code>.svg</code> diagrams are generated from the same graph model; SVG layout
+uses Graphviz. Generated HTML and diagrams are bundled for servers without Node.
+Do not edit <code>docs/rendered</code> as the primary source or rerun the old one-time
+formatting migration. Preserve <code>KEY_ISSUES.md</code> and the historical Word guide.
+<a href="DOCUMENTATION_BUILD.html">Full documentation workflow</a>.</p>
+<h2 id="tests-and-what-they-establish">Tests and what they establish</h2>
+<p>From a full Git checkout, start with relevant tests:</p>
+<pre><code class="language-bash">python -m pytest -q tests/test_api_identity.py
+python -m pytest -q tests/test_helpers.py tests/test_image_admin.py
+python -m pytest -q tests/test_backup_identity.py tests/test_backup_restore.py
+node tests/test_container_actions.cjs
+</code></pre>
+<p>For a planned release, use the broader regression suite on a compatible test host:</p>
+<pre><code class="language-bash">PYTHONDONTWRITEBYTECODE=1 python -m pytest -q -p no:cacheprovider tests
+for test in tests/*.cjs; do node &quot;$test&quot; || exit 1; done
+</code></pre>
+<p>Python tests use temporary filesystems/databases and mocked Podman/systemd/socket
+boundaries. Some Linux-specific behavior needs its own environment; inspect each
+probe before running it. Scripts named <code>*_probe.py</code> are not interchangeable with
+mocked unit tests and may launch real isolated resources. Use an explicitly
+allocated test host/storage, never live customer IDs or a shared Podman store by
+accident. Staging with <code>bin/mykos-install --root</code> exercises file plans without
+activating services; it does not prove Linux guest behavior.</p>
+<p>Known historical kickstart-parity failures have appeared in earlier test records.
+Record exact failures against the chosen baseline; do not silently delete tests
+or report an old pass count as a result for the current tree. During this handoff,
+two OpenAPI path assertions also failed on the unchanged release147 source under
+the bundled workstation FastAPI 0.162.0/Pydantic 2.14.1, newer than the pinned
+0.128.8/2.13.5 runtime. These are recorded baseline/environment failures, not a
+passing release qualification; reproduce with the pinned runtime before changing
+API behavior to satisfy a different dependency version. A passing mocked
+suite proves decisions/protocol handling, not functioning KVM, CRIU restore,
+remote Meraki routing, real OS provisioning or secure multi-tenant isolation.
+Fresh RH9/RH10 package/app/login evidence used isolated RHEL UBI init systems;
+full bare-metal virtualization validation is a separate task.</p>
+<h2 id="debug-by-locating-the-boundary-that-failed">Debug by locating the boundary that failed</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>First place to inspect</th>
+<th>Common misunderstanding</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>401 after login</td>
+<td>Cookie scheme/host, session and expiry</td>
+<td>A Secure cookie is not sent over HTTP</td>
+</tr>
+<tr>
+<td>403 on a browser write</td>
+<td>Role and exact configured Origin</td>
+<td>A visible button or API key does not establish a browser session</td>
+</tr>
+<tr>
+<td>503 container service unavailable</td>
+<td>Socket path, socket unit and helper journal</td>
+<td>Restarting the web app cannot create a missing privileged socket</td>
+</tr>
+<tr>
+<td>Job remains queued/running</td>
+<td><code>mykos-stage@ID.service</code>, saved job, selected identity</td>
+<td>Accepted request is not completed work</td>
+</tr>
+<tr>
+<td>Action finished but row is old</td>
+<td>Scoped refresh warning, collector timestamps</td>
+<td>Retrying an already completed mutation can create a second problem</td>
+</tr>
+<tr>
+<td>Podman running but VM unavailable</td>
+<td>VM readiness, guest-agent/serial/SSH path and RAM restore</td>
+<td>Wrapper state is not guest readiness</td>
+</tr>
+<tr>
+<td>Base edits disappeared</td>
+<td>Capture completion versus console disconnect</td>
+<td>Logout deliberately resets uncaptured changes</td>
+</tr>
+<tr>
+<td>New code has no effect</td>
+<td>Which source/runtime copy and process are active</td>
+<td>Editing RPM source does not automatically change deployed web files</td>
+</tr>
+<tr>
+<td>Install verify reports changes</td>
+<td>Installer manifest versus operator edits</td>
+<td>A failed checksum is not permission to overwrite the file</td>
+</tr>
+<tr>
+<td>Site VPN up, DNS/internet down</td>
+<td>Default CHILD_SA, XFRM selectors, remote forwarding/NAT</td>
+<td>Site SA alone does not prove full tunnel</td>
+</tr>
+<tr>
+<td>Console fails with backup restore</td>
+<td>Instance-private <code>/etc</code> mounts and PAM limits</td>
+<td>Fixing the shared backup in place can damage the customer data source</td>
+</tr>
+</tbody></table>
+<p>For approved host inspection, use bounded logs and status queries:</p>
+<pre><code class="language-bash">sudo systemctl status mykos-web.service mykos-container-admin.socket --no-pager
+sudo journalctl -u mykos-web.service -n 100 --no-pager
+sudo journalctl -u mykos-stage@12345678.service -n 100 --no-pager
+sudo /usr/local/sbin/mykos-vpn-gateway list
+</code></pre>
+<p>Substitute the intended ID; a status command is not authorization to restart,
+remove or reconfigure it. Do not post secrets, database copies, private keys or
+raw key-bearing IPsec state in an issue. Use <code>ip xfrm state list nokeys</code> when
+kernel IPsec state is necessary. Reproduce the failure in a fixture or allocated
+test environment before changing production.</p>
+<h2 id="from-a-change-to-an-installed-release">From a change to an installed release</h2>
+<p>The source file plan in <code>bin/mykos-install</code> drives most packaging. A new file can
+be in Git yet absent from the package if it is outside the included directories.
+<code>bin/mykos-package</code> adds selected source/build files and writes a per-file
+<code>SHA256SUMS</code> plus an archive checksum. Inspect the produced archive, not just the
+working directory. Never package a mixed checkout containing unpublished work.</p>
+<p>The RPM spec selects EL8/EL9/EL10 host requirements and Python paths. <code>noarch</code>
+means the payload is not CPU-specific; it does not make a package interchangeable
+between host majors. Build and sign with the existing protected signing workflow;
+private signing keys stay outside source and packages. Verify the signed bytes
+before repository publication and refresh only the intended MYKOS repository.
+Do not invent an Azure remote: GitHub is configured; Azure needs a specific target.</p>
+<p>Before a change batch and again immediately before promotion, compare and preserve
+both production documentation folders. Reconcile operator edits, preserve POS and
+kickstart fixes, rebuild the documents, and recheck. Protect current guest IDs,
+start times, disks, snapshots, users, key digests and existing Apache settings.
+Keep a rollback archive and the exact source digest, release number, dependency
+record and verification results. A successful app restart is not enough evidence.</p>
+<p>Use <a href="RPM.html">signed installation/update procedures</a> for deployment and
+<a href="INSTALL_SERVICES.html">installer recovery</a> for rollback. An installer source/code
+backup is not a complete customer-disk backup. Restoring identity data can also
+restore old session/revocation state, so data rollback is an explicit decision.</p>
+<h2 id="what-the-next-maintainer-should-know-is-unfinished">What the next maintainer should know is unfinished</h2>
+<p>The API and source still mix historical names (<code>shop</code>, <code>shopcode</code>, internal
+<code>template</code> role values) with current user-facing ID/image terminology. Preserve
+stored/API compatibility while improving prose. Authentication checks and OS
+registries span several modules, and <code>index.html</code> is large; refactoring should
+first add boundary coverage, then consolidate behavior in small reviewable steps.</p>
+<p>The released README can lag the maintained task guides. In this baseline it still
+mentions automatic domain HTTPS, whereas actual setup defaults to IP HTTP and
+requires <code>--configure-https</code> for domain/Certbot setup. Verify against released
+installer code and <a href="BOOTSTRAP.html">bootstrap instructions</a>. Do not repeat obsolete
+README assumptions in a new implementation.</p>
+<p>Unpublished PXE changes, application-specific multi-role authorization,
+MYKOS-to-MYKOS VPN peers, configurable application alert fields and automated
+compliance scanning are not established released capabilities. Some private
+build/sign/promotion scripts are deployment-specific automation, not a complete
+portable CI service. Existing test evidence has practical host/OS limits. Preserve
+these distinctions instead of claiming that passing tests settles them.</p>
+<h2 id="a-useful-handoff-for-your-own-next-change">A useful handoff for your own next change</h2>
+<p>Leave the next human the problem and trigger, the files/entry points changed, why
+the chosen layer owns the behavior, state that must survive, and the failure and
+rollback behavior. Include exact test commands and current results, a source
+commit/digest and any environment limitation. For UI work include an actual
+screenshot; for a traffic change include the namespace and return path. This is
+more useful than a list of edited filenames or a transcript of implementation.</p>
+<footer>MYKOS documentation</footer></main></html>

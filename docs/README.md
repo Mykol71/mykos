@@ -1,6 +1,6 @@
 # MYKOS documentation
 
-Documentation release **1.5.20261024-147**. Technical procedures are reviewed against the unchanged release146 runtime implementation.
+Documentation release **1.5.20261024-148**. Technical procedures are reviewed against the unchanged release146 runtime implementation.
 
 Use these guides to install, operate, integrate, and recover MYKOS. Start with the
 guide for your task, then follow its prerequisites and verification steps.
@@ -39,6 +39,7 @@ Each guide includes a downloadable PDF. Capability statements retain their revie
 | --- | --- |
 | [API usage](API.md) | Authentication, endpoints, examples, and errors |
 | [OpenAPI specification](openapi.json) | Machine-readable API schema |
+| [Developer’s guide](DEVELOPERS_GUIDE.md) | Human handoff, code walkthroughs, safe setup, tests and changing the system |
 | [Architecture and deployed paths](ARCHITECTURE.md) | Components, trust boundaries, ownership, and systemd units |
 | [Operator script catalog](SCRIPTS.md) | Commands, menus, helper protocols, and legacy limitations |
 | [Validation record](VALIDATION.md) | Recorded checks and remaining integration work |

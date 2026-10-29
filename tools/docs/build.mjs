@@ -9,6 +9,7 @@ const {instance}=await import(pathToFileURL(require.resolve('@viz-js/viz')));
 const here=path.dirname(fileURLToPath(import.meta.url)),docs=path.resolve(here,'../../docs');
 const check=process.argv.includes('--check');
 const css=(await fs.readFile(path.join(here,'theme.css'),'utf8')).trimEnd();
+const flower=await fs.readFile(path.resolve(here,'../../services/apache-index/mykos-flower.svg'),'utf8');
 const models=JSON.parse(await fs.readFile(path.join(here,'diagrams.json'),'utf8'));
 const viz=await instance();
 let count=0;
@@ -47,7 +48,7 @@ for(const file of guides){
   return `<a href="${esc(href.replace(/\.md(?=$|#)/,'.html'))}"${title?' title="'+esc(title)+'"':''}>${this.parser.parseInline(tokens)}</a>`;
  }}});
  const text=await fs.readFile(path.join(docs,file),'utf8'),title=text.match(/^# (.+)/m)?.[1]||file;
- const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${css}</style><header>MYKOS / DOCUMENTATION · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main>${md.parse(text)}<footer>MYKOS documentation</footer></main></html>`;
+ const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${css}</style><header><span class="docs-brand">${flower}<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main>${md.parse(text)}<footer>MYKOS documentation</footer></main></html>`;
  await output('rendered/'+file.replace(/\.md$/,'.html'),html);
 }
 console.log(`${check?'Verified':'Generated'} ${count} files (${models.length} diagrams); permanent light theme.`);
