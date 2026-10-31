@@ -1,9 +1,5 @@
 # MYKOS
 
-![MYKOS production dashboard](docs/screenshots/production-dashboard.jpg)
-
-*Live production dashboard, October 30, 2026.*
-
 MYKOS is a virtualization and host-management solution for RHEL 9 and RHEL 10.
 RHEL 8 is no longer a supported MYKOS host; RHEL 8 guest images remain available.
 It combines a web control center, authenticated API, and text administration
