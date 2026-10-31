@@ -50,7 +50,7 @@ def update_shared_id_note(shop: str, data: NoteUpdate, request: Request):
     origin(request)
     return save_id_note(shop, data, identity['username'])
 
-@app.get('/api/web/personal-notes', summary='Read personal notes (mgreen only; excluded from change requests)')
+@app.get('/api/web/personal-notes', summary='Read personal notes (mgreen only)')
 def personal_note(request: Request):
     authorize_pane_notes(request)
     return read_personal_note()

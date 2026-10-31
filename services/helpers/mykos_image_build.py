@@ -493,6 +493,8 @@ def boot_installed(os_name):
 
 def build(os_name, username=None, password=None, replace=False):
     selection(os_name)
+    from mykos_runtime import build_priority
+    build_priority()
     # One build per OS; keep long installation work outside the VM registry lock.
     import fcntl
     with (folder(os_name)/'build.lock').open('a') as lock:

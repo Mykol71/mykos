@@ -180,6 +180,10 @@ runtime and persistent desktop rules. It never opens these ports by default:</p>
 <p>Preview the plan by adding <code>--dry-run</code>. The option is rejected for actual
 <code>--root</code> staging installs so tests cannot change the host firewall.</p>
 <h2 id="persistent-lifecycle-and-container-snapshots">Persistent lifecycle and container snapshots</h2>
+<p>During a brief web-service or proxy outage, the dashboard reports the HTTP
+status instead of displaying a JSON parser error. Queued-operation status reads
+can recover automatically. An action request is never automatically repeated: if
+its response was lost, check the job status and snapshot list before retrying.</p>
 <p>Start and Stop retain each container&#39;s current writable disks, identity and desktop
 ports. New native RedHat/Linux containers no longer use <code>--rm</code>; the Podman writable
 layer persists, and Pipework reattaches the saved eth1 MAC on restart. Mounted VPN

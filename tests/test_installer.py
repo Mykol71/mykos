@@ -172,7 +172,7 @@ def test_launcher_upgrade_removes_legacy_and_snapshot_can_restore_it(tmp_path):
     assert not launcher.exists()
 
 
-def test_update_clears_notes_but_preserves_identity(tmp_path):
+def test_update_preserves_pane_and_personal_notes_and_identity(tmp_path):
     import sqlite3
     root=tmp_path/'root';run(root,'install')
     database=root/'opt/mykos-web/data/auth.db'
@@ -187,7 +187,7 @@ def test_update_clears_notes_but_preserves_identity(tmp_path):
         db.execute("INSERT INTO api_keys VALUES('preserved-key')")
     run(root,'install')
     with sqlite3.connect(database) as db:
-        assert db.execute('SELECT * FROM pane_notes').fetchall()==[]
+        assert db.execute('SELECT * FROM pane_notes').fetchall()==[('host','change request')]
         assert db.execute('SELECT * FROM personal_notes').fetchall()==[('host','private personal text')]
         assert db.execute('SELECT * FROM users').fetchall()==[('admin','preserved')]
         assert db.execute('SELECT * FROM api_keys').fetchall()==[('preserved-key',)]

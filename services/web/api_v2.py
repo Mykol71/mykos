@@ -26,7 +26,7 @@ from pane_notes import read_personal as read_personal_note, save_personal as sav
 
 
 
-@router.get('/personal-notes', summary='Read personal notes (mgreen only; excluded from change requests)')
+@router.get('/personal-notes', summary='Read personal notes (mgreen only)')
 def personal_note(request: Request):
     authorize_pane_notes(request)
     return read_personal_note()

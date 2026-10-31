@@ -43,6 +43,9 @@ def main():
             if value.get('role')!='preview':show(vm.links(value))
         return
     if not args.selection: parser.error('Select an OS template or eight-digit code')
+    if args.action in ('build', 'create', 'prepare'):
+        from mykos_runtime import build_priority
+        build_priority()
     if args.action == 'build-status':
         from mykos_image_build import status
         show(status(args.selection));return

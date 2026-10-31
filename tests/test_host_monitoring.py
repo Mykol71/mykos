@@ -106,3 +106,17 @@ def test_established_names_include_only_established_child_states():
         '000 #4: "pending": STATE_MAIN_I1',
     ])
     assert host.parse_vpn(output)['established_connections'] == ['ikev1-a','ikev1-b']
+
+
+def test_dmi_hardware_is_bounded_filtered_and_cached(monkeypatch):
+    calls=[]
+    def probe(args,timeout):
+        calls.append(args);assert timeout==5
+        return 'System Information\n\tManufacturer: Dell Inc.\n\tProduct Name: PowerEdge T350\n\tSerial Number: EXAMPLE\n\tUUID: private-not-needed\nChassis Information\n\tAsset Tag: Not Specified\nBIOS Information\n\tVersion: 1.9.1\n'
+    monkeypatch.setattr(host,'run',probe)
+    value=host.hardware()
+    assert value['details']=={'manufacturer':'Dell Inc.','model':'PowerEdge T350','serial':'EXAMPLE','bios_version':'1.9.1'}
+    assert calls==[['/usr/sbin/dmidecode','--type','0,1,3']]
+    assert host.hardware(value)==value and len(calls)==1
+    monkeypatch.setattr(host,'run',lambda *args,**kw: (_ for _ in ()).throw(FileNotFoundError()))
+    assert host.hardware()['details']=={}

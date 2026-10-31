@@ -31,9 +31,66 @@ def podman_scope(args):
     spawning = args[:2] == [PODMAN, 'start'] or args[:3] == [PODMAN, 'container', 'restore']
     spawning = spawning or (args[:2] == [PODMAN, 'run'] and any(flag in args for flag in ('-d', '--detach')))
     if spawning and os.geteuid() == 0 and Path('/run/systemd/system').is_dir():
+        building = 'MYKOS_BUILD_NICE=1' in args
+        properties = ['--property=CPUWeight=10', '--property=IOWeight=10'] if building else []
+        # Detached runtime guests must not inherit their builder worker's nice/IO priority.
+        command = args
+        if not building and os.getpriority(os.PRIO_PROCESS, 0) > 0:
+            command = ['/usr/bin/nice', '-n', str(-os.getpriority(os.PRIO_PROCESS, 0)),
+                       '/usr/bin/ionice', '-c', '2', '-n', '4', *args]
         return ['/usr/bin/systemd-run', '--scope', '--quiet', '--collect',
-                '--property=Delegate=yes', '--unit=mykos-podman-' + os.urandom(12).hex(), '--', *args]
+                '--property=Delegate=yes', *properties, '--unit=mykos-podman-' + os.urandom(12).hex(), '--', *command]
     return args
+
+
+def build_priority():
+    """Background builders yield CPU and disk bandwidth to running workloads."""
+    os.setpriority(os.PRIO_PROCESS, 0, 15)
+    subprocess.run(['/usr/bin/ionice', '-c', '2', '-n', '7', '-p', str(os.getpid())],
+                   check=True, timeout=5)
+
+
+def inventory_read(key, callback, cache_root=Path('/var/cache/mykos/dashboard'), deadline=5):
+    """Bound read-only dashboard queries; a Podman lock must not erase the UI."""
+    import signal
+    import tempfile
+    if key not in ('list', 'stage-images'):
+        raise ValueError('Unsupported inventory cache')
+    cache_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    info = cache_root.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077:
+        raise ValueError('Unsafe inventory cache directory')
+    path = cache_root / (key + '.json')
+    def expired(signum, frame):
+        raise TimeoutError('Podman inventory is busy')
+    previous = signal.signal(signal.SIGALRM, expired)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, deadline)
+        try:
+            value = callback()
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+    except (TimeoutError, subprocess.TimeoutExpired):
+        info = path.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077:
+            raise ValueError('Unsafe inventory cache file')
+        cached = json.loads(path.read_text())
+        value = cached['value']
+        if isinstance(value, dict):
+            value = {**value, 'inventory_stale': True, 'inventory_collected_at': cached['collected_at']}
+        print('Podman busy; serving last successful dashboard inventory', file=sys.stderr)
+        return value
+    finally:
+        signal.signal(signal.SIGALRM, previous)
+    import time
+    fd, temporary = tempfile.mkstemp(prefix='.inventory-', dir=cache_root)
+    try:
+        with os.fdopen(fd, 'w') as handle:
+            json.dump({'collected_at': int(time.time()), 'value': value}, handle)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary): os.unlink(temporary)
+    return value
 
 
 OUTPUT_LIMIT = 16 * 1024 * 1024

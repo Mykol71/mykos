@@ -147,8 +147,9 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(mykosNodeIp('linux', {}, {eth1_ip:'192.0.2.99'}), '192.0.2.99');
         assert.equal(mykosNodeIp('ubuntu', {}, {eth1_ip:'192.0.2.99'}), 'Unknown');
         assert.equal(mykosNodeIp('ubuntu', {ips:[{address:'192.168.22.232'}]}, {eth1_ip:'192.0.2.99'}), '192.168.22.232');
+        const lastGoodVisibility = mykosOsFamilies.map(family => el(mykosOsId(family, 'mykos-container-panel')).hidden);
         fail = true; mykosStageImagesLoadedAt = 0; await mykosLoadStageImages();
-        for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, true);
+        for (const [index,family] of mykosOsFamilies.entries()) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, lastGoodVisibility[index], 'Failed inventory refresh preserves last-good panes');
         el('mykos-show-all-panes').onclick({preventDefault(){}});
         for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, !mykosPreviewOsFamilies.has(family));
         for (const family of mykosOsFamilies) {
@@ -186,7 +187,8 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, !mykosPreviewOsFamilies.has(family), 'Failed refresh preserves EL-only preview');
         mykosSetPaneVisible('backups', true);
         el('mykos-show-all-panes').onclick({preventDefault(){}});
-        for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, true);
+        for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, family !== 'linux', 'The retained real rh9 image remains visible when preview is off');
+        assert.equal(el('mykos-stage-os').value, 'rh9', 'Failed refresh preserves the available selection');
         assert.equal(el('mykos-backups-pane').hidden,false,'Turning override off restores the latest automatic state');
         assert.equal(el('mykos-repos-pane').hidden,true);
     })()`, context);

@@ -266,6 +266,10 @@ def _dispatch(args):
 
 def dispatch(args):
     from mykos_refresh import priority
+    if args in (['list'], ['stage-images']):
+        from mykos_runtime import inventory_read
+        with priority():
+            return inventory_read(args[0], lambda: _dispatch(args))
     if isinstance(args,list) and args and args[0] in ('backup-list','repo-list','list-snapshots','stage-images','host-logs','host-top','host-ipsec','logs','top','ipsec','checkit','memory-info'):
         with priority():
             return _dispatch(args)

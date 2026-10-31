@@ -653,11 +653,11 @@ Repository responses include `latest_rpm`, the filename (without directories), p
 The terminal title bar uses pane name `terminal` for its notes. Opening or closing
 the notes dialog leaves the active terminal connection running.
 
-Pane notes are disposable change requests and are cleared by each installation/update. User accounts, password hashes and API key digests are preserved.
+Pane notes and personal notes are user data and are preserved through installation/update, along with accounts and API keys.
 
 Pane notes are private to the `mgreen` browser account. Both web and v2 notes endpoints require its authenticated session cookie; scope-only API keys cannot read or write these notes. PUT also requires the configured Origin header.
 
-The orange Host notes icon opens personal notes. The equivalent web endpoints are `GET/PUT /api/web/personal-notes`. These use the separate `personal_notes` table and must never be included in automated change-request scans. Installation clears only disposable `pane_notes`; personal text remains private to mgreen and is preserved.
+The orange Host notes icon opens personal notes. The equivalent web endpoints are `GET/PUT /api/web/personal-notes`. These use the separate `personal_notes` table. Personal text remains private to mgreen and is preserved through updates. Maintenance automation may use these notes only with the owner's explicit authorization; that does not broaden API access.
 
 Prepared images stay visible to administrators in their OS panes.
 `GET /api/v2/images` also returns `captured_images` with image ID, size, version

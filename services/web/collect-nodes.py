@@ -80,6 +80,8 @@ def atomic_json(path, value):
 
 def collect(shop_filter=None):
     old_inventory = {"nodes": []}
+    try: hardware_previous=json.loads(STATUS.read_text()).get("host_hardware")
+    except (OSError,ValueError,AttributeError): hardware_previous=None
 
     if INVENTORY.exists():
         old_inventory = json.loads(INVENTORY.read_text())
@@ -142,6 +144,7 @@ def collect(shop_filter=None):
     atomic_json(STATUS, {
         "collected_at": int(time.time()),
         "graph_totals": graph_totals(),
+        "host_hardware": host.hardware(hardware_previous),
         "host_vpn_status": host.query_vpn()["status"] if not shop_filter or host_only else old.get("host_vpn_status","unknown"),
         "host_certificate_domain": host.apache_certificate_domain() if not shop_filter or host_only else old.get("host_certificate_domain"),
         "vpn_samples": vpn_samples,

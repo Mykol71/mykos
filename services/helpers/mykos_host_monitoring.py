@@ -363,3 +363,27 @@ def apache_certificate_domain():
                     candidate=next((site for site in sites if any(matches(site,name) for name in names)),None)
                     fallback=fallback or candidate or names[0].removeprefix('*.')
     return fallback
+
+
+def hardware(previous=None):
+    """Bounded SMBIOS inventory, reused for a day by the root collector."""
+    now=int(time.time())
+    if isinstance(previous,dict) and isinstance(previous.get('details'),dict):
+        stamp=previous.get('collected_at')
+        if type(stamp) is int and 0 <= now-stamp < (86400 if previous['details'] else 600):return previous
+    details={};section=None
+    fields={('System Information','Manufacturer'):'manufacturer',('System Information','Product Name'):'model',
+            ('System Information','Serial Number'):'serial',('System Information','SKU Number'):'sku',
+            ('Chassis Information','Asset Tag'):'asset_tag',('BIOS Information','Vendor'):'bios_vendor',
+            ('BIOS Information','Version'):'bios_version',('BIOS Information','Release Date'):'bios_date'}
+    try:
+        output=run(['/usr/sbin/dmidecode','--type','0,1,3'],timeout=5)
+        if len(output)>65536:raise ValueError('Oversized DMI inventory')
+        for line in output.splitlines():
+            if line and not line[0].isspace():section=line.strip()
+            elif line.startswith('\t') and not line.startswith('\t\t') and ':' in line:
+                key,value=line.strip().split(':',1);field=fields.get((section,key));value=' '.join(value.split())[:160]
+                if field and value.lower() not in ('','not specified','not available','unknown','none','default string','to be filled by o.e.m.'):
+                    details[field]=value
+    except (OSError,ValueError,subprocess.SubprocessError):pass
+    return {'collected_at':now,'details':details}

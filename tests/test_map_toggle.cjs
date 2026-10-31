@@ -8,12 +8,12 @@ for(const saved of [null,'on','off','invalid']) {
  const ctx=vm.createContext({document:{documentElement:root,getElementById:id=>{assert.equal(id,'mykos-map-toggle');return control;}},localStorage:{getItem:k=>k==='mykos-map-background'?saved:'light',setItem:(k,v)=>stored.push([k,v])},window:{dispatchEvent:e=>events.push(e.type)},Event:class{constructor(type){this.type=type;}}});
  vm.runInContext(scripts.find(s=>s.includes('Apply the saved theme')),ctx);
  vm.runInContext(scripts.find(s=>s.includes('MYKOS BACKGROUND MAP CONTROL')),ctx);
- assert.equal(root.dataset.mykosMapBackground,saved==='off'?'off':'on');
- assert.equal(attrs['aria-pressed'],String(saved!=='off'));
- click();assert.equal(root.dataset.mykosMapBackground,saved==='off'?'on':'off');
+ assert.equal(root.dataset.mykosMapBackground,saved==='on'?'on':'off');
+ assert.equal(attrs['aria-pressed'],String(saved==='on'));
+ click();assert.equal(root.dataset.mykosMapBackground,saved==='on'?'off':'on');
  assert.equal(stored[0][0],'mykos-map-background');assert.equal(stored[0][1],root.dataset.mykosMapBackground);
  assert.equal(root.dataset.theme,'light');assert.equal(events[0],'mykos-map-background-change');
- click();assert.equal(root.dataset.mykosMapBackground,saved==='off'?'off':'on');
+ click();assert.equal(root.dataset.mykosMapBackground,saved==='on'?'on':'off');
  ctx.localStorage.setItem=()=>{throw Error('Storage blocked');};click();
  assert.equal(attrs['aria-pressed'],String(root.dataset.mykosMapBackground!=='off'));
 }

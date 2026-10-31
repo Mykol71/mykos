@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        168%{?dist}
+Release:        174%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-Proprietary AND MIT
 URL: https://myk.sh/mykos/
@@ -37,7 +37,7 @@ Requires: openssh-server openssh-clients rsync iproute net-tools netavark criu l
 %if 0%{mykos_target_el} < 10
 Requires: containernetworking-plugins
 %endif
-Requires: curl wget jq util-linux procps-ng tar gzip cronie chrony firewalld
+Requires: dmidecode curl wget jq util-linux procps-ng tar gzip cronie chrony firewalld
 Requires: policycoreutils-python-utils ksh unzip expect nmap time ipset iptables git pykickstart
 Requires(pre): shadow-utils
 Requires(post): systemd %{mykos_python_packages}
@@ -110,6 +110,11 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-174
+- Report proxy/service failures clearly and recover safe operation-status polls.
+- Preserve pane and personal notes during application upgrades.
+- Consolidate verified build-priority, inventory, hardware and documentation updates.
+
 * Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-168
 - Consolidate verified production hotfixes: Snapshot Preview, graphical console framing and legacy/Ubuntu image capture.
 - Add host location and active VPN map lines, current documentation/screenshots and remote read-only repository inventory.

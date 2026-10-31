@@ -217,6 +217,11 @@ Preview the plan by adding `--dry-run`. The option is rejected for actual
 
 ## Persistent lifecycle and container snapshots
 
+During a brief web-service or proxy outage, the dashboard reports the HTTP
+status instead of displaying a JSON parser error. Queued-operation status reads
+can recover automatically. An action request is never automatically repeated: if
+its response was lost, check the job status and snapshot list before retrying.
+
 Start and Stop retain each container's current writable disks, identity and desktop
 ports. New native RedHat/Linux containers no longer use `--rm`; the Podman writable
 layer persists, and Pipework reattaches the saved eth1 MAC on restart. Mounted VPN

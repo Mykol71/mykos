@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>
 // Apply the saved theme before the first paint. Dark remains the default.
 try { document.documentElement.dataset.theme = localStorage.getItem('mykos-theme') === 'light' ? 'light' : 'dark'; } catch (_) { document.documentElement.dataset.theme = 'dark'; }
-try { document.documentElement.dataset.mykosMapBackground = localStorage.getItem('mykos-map-background') === 'off' ? 'off' : 'on'; } catch (_) { document.documentElement.dataset.mykosMapBackground = 'on'; }
+try { document.documentElement.dataset.mykosMapBackground = localStorage.getItem('mykos-map-background') === 'on' ? 'on' : 'off'; } catch (_) { document.documentElement.dataset.mykosMapBackground = 'off'; }
 </script><title>__MYKOS_BRAND_NAME__</title><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>
 :root{--mykos-page-background:#000;--mykos-chrome-background:#111c30;--mykos-page-texture:none;color-scheme:dark;font-family:monospace;font-size:12px}*{box-sizing:border-box}body{margin:0;background:#000;color:#e2e8f0;background-image:none}header{padding:10px 28px;background:#111c30;border-bottom:1px solid #334155;display:flex;justify-content:space-between}header b{color:#38bdf8;font-size:22px}main{max-width:1500px;margin:auto;padding:8px 26px 26px}h1{font-size:26px}p,small{color:#94a3b8}button,input{font:inherit;padding:10px 14px;border:1px solid #334155;border-radius:7px;background:#1e293b;color:#e2e8f0}button{cursor:pointer}button.active{background:#075985;border-color:#38bdf8}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.card,.panel{background:rgba(18,29,48,.9);border:1px solid #29384d;border-radius:10px;padding:19px}.card strong{font-size:32px;display:block;margin-top:10px}.panel{margin-top:22px}.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}#map,#topology{height:480px;margin-top:15px;background:#0d1726}#topology{overflow:auto}#topology svg{width:100%;height:100%;min-width:550px}table{width:100%;border-collapse:collapse;text-align:left}td,th{padding:12px;border-bottom:1px solid #29384d}th{color:#94a3b8}#login{min-height:100vh;display:grid;place-items:center}.loginbox{width:min(400px,92vw);padding:32px;background:#121d30;border:1px solid #334155;border-radius:12px}.loginbox input,.loginbox button{display:block;width:100%;margin-top:12px}.green{color:#4ade80}.red{color:#fb7185}.blue{color:#38bdf8}#error{color:#fb7185}@media(max-width:680px){.metrics{grid-template-columns:repeat(2,1fr)}}
 [hidden]{display:none!important}
@@ -637,11 +637,16 @@ table:has(> .mykos-container-rows) > thead > tr > th:last-child { text-align:rig
 :root[data-theme="light"] #mykos-geo-background .leaflet-control-attribution a { color:#0369a1; }
 
 /* Let the geographic backdrop show through while text stays fully opaque. */
-#mykos-host-pane, #mykos-os-panes .panel, #mykos-snapshots-pane, #mykos-backups-pane { background:rgba(18,29,48,.34); }
+#mykos-host-pane, #mykos-os-panes .panel, #mykos-snapshots-pane, #mykos-backups-pane, #mykos-repos-pane { background:rgba(18,29,48,.34); }
 :root[data-theme="light"] #mykos-host-pane,
 :root[data-theme="light"] #mykos-os-panes .panel,
 :root[data-theme="light"] #mykos-snapshots-pane,
-:root[data-theme="light"] #mykos-backups-pane { background:rgba(255,255,255,.40); }
+:root[data-theme="light"] #mykos-backups-pane,
+:root[data-theme="light"] #mykos-repos-pane { background:rgba(255,255,255,.40); }
+
+/* Restore the original pane fill whenever the map is disabled. */
+:root[data-mykos-map-background="off"] :is(#mykos-host-pane,#mykos-os-panes .panel,#mykos-snapshots-pane,#mykos-backups-pane,#mykos-repos-pane) { background:rgba(18,29,48,.9); }
+:root[data-theme="light"][data-mykos-map-background="off"] :is(#mykos-host-pane,#mykos-os-panes .panel,#mykos-snapshots-pane,#mykos-backups-pane,#mykos-repos-pane) { background:rgba(255,255,255,.9); }
 
 /* Always-visible location labels; every pixel passes clicks through. */
 #mykos-location-layer { position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.45; }
@@ -1828,7 +1833,14 @@ async function mykosRunContainerAction(shop, action, method = 'POST') {
     while (data.state === 'queued' || data.state === 'running') {
         if (Date.now() > deadline) throw new Error('Operation is still in progress; check the container job status.');
         await new Promise(resolve => setTimeout(resolve, action === 'start' ? 1000 : 2500));
-        data = await mykosStageJSON('/mykos/api/web/stage/' + encodeURIComponent(shop) + '/status');
+        try {
+            data = await mykosStageJSON('/mykos/api/web/stage/' + encodeURIComponent(shop) + '/status');
+        } catch (error) {
+            // A read-only status poll can recover after a brief web/proxy outage.
+            // Never repeat the action POST: it might already have queued work.
+            if ([502, 503, 504].includes(error.status)) continue;
+            throw error;
+        }
         if (action==='start') await mykosRefreshStartupInventory();
     }
     if (data.state === 'failed') throw new Error(data.output || 'Operation failed');
@@ -2911,7 +2923,7 @@ async function mykosLoadStageImages(force = false) {
         mykosAvailableImages = data.images;
         mykosInstallingImages = data.builds || [];
         mykosCapturedImages = data.captured_images || [];
-        mykosStageImagesError = '';
+        mykosStageImagesError = data.inventory_stale ? 'Image storage is busy; showing the last successful inventory.' : '';
         for (const family of mykosOsFamilies) {
             const images = data.images.filter(item => mykosImageFamily(item.os) === family);
             mykosSetOsPaneVisible(family, images.length > 0 || mykosCapturedImages.some(item=>mykosImageFamily(item.os)===family) || mykosInstallingImages.some(item => mykosImageFamily(item.os) === family));
@@ -2923,14 +2935,8 @@ async function mykosLoadStageImages(force = false) {
         table();
         mykosStageImagesLoadedAt = Date.now();
     } catch (error) {
-        mykosAvailableImages = [];
-        mykosInstallingImages = [];
-        mykosCapturedImages = [];
         mykosRenderImageBuilds();
         mykosStageImagesError = error.message;
-        for (const family of mykosOsFamilies) {
-            mykosSetOsPaneVisible(family, false);
-        }
         mykosRefreshOsChoices();
         mykosStageImagesLoadedAt = Date.now();
     } finally { mykosStageImagesLoading = false; }
@@ -2954,8 +2960,20 @@ setInterval(()=>{
 },5000);
 async function mykosStageJSON(url, options) {
     const response = await fetch(url, {cache:'no-store', ...options});
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || 'Request failed');
+    let data;
+    try {
+        data = await response.json();
+    } catch (_) {
+        const error = new Error(response.ok ? 'The server returned an invalid JSON response.' :
+            'Service unavailable (HTTP ' + response.status + '). Check the operation status before retrying.');
+        error.status = response.status;
+        throw error;
+    }
+    if (!response.ok) {
+        const error = new Error(data?.detail || 'Request failed (HTTP ' + response.status + ').');
+        error.status = response.status;
+        throw error;
+    }
     return data;
 }
 function mykosStageSetAccess() {
@@ -3592,7 +3610,7 @@ async function mykosNotesLoad() {
         if (request !== mykosNotesRequest || !mykosNotesDialog.open) return;
         mykosNotesText.value = mykosNotesSaved = data.text;
         mykosNotesRevision = data.revision;
-        el('mykos-notes-status').textContent = data.updated_at ? 'Saved ' + new Date(data.updated_at * 1000).toLocaleString() : (mykosNotesPane === 'personal' ? 'Personal notes; retained through updates and excluded from change requests.' : 'Private change requests for this pane.');
+        el('mykos-notes-status').textContent = data.updated_at ? 'Saved ' + new Date(data.updated_at * 1000).toLocaleString() : (mykosNotesPane === 'personal' ? 'Personal notes; private to mgreen and retained through updates.' : 'Private change requests for this pane.');
         mykosNotesSetBusy(false);
         mykosNotesText.focus();
     } catch (error) {
@@ -3637,7 +3655,7 @@ for (const [pane, label, refresh] of [
 el('mykos-host-pane').prepend(mykosNotesButton('host', 'Host'));
 const mykosPersonalNotes = mykosNotesButton('personal', 'Personal');
 mykosPersonalNotes.className += ' mykos-personal-notes-button';
-mykosPersonalNotes.title = 'Personal notes — excluded from change requests';
+mykosPersonalNotes.title = 'Personal notes — private to mgreen';
 mykosPersonalNotes.setAttribute('aria-label', mykosPersonalNotes.title);
 el('mykos-host-pane').prepend(mykosPersonalNotes);
 el('mykos-notes-form').addEventListener('submit', async event => {
@@ -3671,10 +3689,23 @@ const mykosHostStatusTable = document.createElement('div');
 mykosHostStatusTable.style.cssText = 'overflow-x:auto;margin-top:12px';
 mykosHostStatusTable.innerHTML = `<table class="mykos-aligned-table" aria-label="Host status"><colgroup><col class="mykos-col-id"><col class="mykos-col-status"><col class="mykos-col-version"><col class="mykos-col-ip"><col class="mykos-col-vpn"><col class="mykos-col-uptime"><col class="mykos-col-memory"><col class="mykos-col-actions"></colgroup><thead><tr><th>Host</th><th>Status</th><th>Version</th><th>IP</th><th>VPN</th><th>Uptime</th><th>Memory</th><th>Actions</th></tr></thead><tbody class="mykos-host-status-rows"><tr id="mykos-host-status-row" data-mykos-host-row="true"><td><button type="button" data-host-action="details" id="mykos-host-row-code" style="color:#38bdf8"><svg class="mykos-pane-logo mykos-logo-container" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Z"/><path d="m3 7 9 5 9-5M12 12v10M7.5 4.5l9 5"/></svg><span id="mykos-host-row-name">—</span></button></td><td id="mykos-host-row-status">—</td><td id="mykos-host-row-version" class="mykos-os-type">—</td><td class="mykos-node-ip"><button type="button" id="mykos-host-row-ip" data-host-action="geo" class="mykos-network-button" title="Geographic map" aria-label="Geographic map">—</button></td><td><button type="button" data-host-action="ipsec" id="mykos-host-row-vpn" title="View host IPsec status">—</button></td><td id="mykos-host-row-uptime">—</td><td><button type="button" class="mykos-top-button" data-host-action="top" id="mykos-host-row-memory" title="View host processes">—</button></td><td class="mykos-actions-cell"><div class="mykos-row-actions" role="group" aria-label="Host actions"><button type="button" class="mykos-logs-button" data-host-action="logs" title="Host Console Log" aria-label="Host Console Log" style="color:#4ade80"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8"/></svg></button><button type="button" class="mykos-terminal-button" data-host-action="terminal" title="Host root terminal (admin only)" aria-label="Host root terminal" style="color:#38bdf8" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="m7 9 3 3-3 3M13 16h4"/></svg></button><button type="button" class="mykos-stop-button" data-host-action="reboot" title="Reboot host (confirmation required)" aria-label="Reboot host" style="color:#ef4444" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></svg></button></div></td></tr></tbody></table>`;
 el('mykos-host-pane').append(mykosHostStatusTable);
+const mykosHostHardware = document.createElement('p');
+mykosHostHardware.id='mykos-host-hardware';
+mykosHostHardware.style.cssText='margin:6px 0 0;font-size:8px;line-height:1.4;color:#9098a3;overflow-wrap:anywhere';
+mykosHostHardware.hidden=true;
+el('mykos-host-pane').append(mykosHostHardware);
+function mykosHardwareSummary(hardware) {
+    if (!hardware || typeof hardware !== 'object') return '';
+    return [['manufacturer',''],['model','Model: '],['serial','Serial: '],['bios_version','BIOS version: '],['bios_date','BIOS date: ']]
+        .filter(([key]) => typeof hardware[key] === 'string' && hardware[key].trim())
+        .map(([key,label]) => label + hardware[key].trim()).join(' · ');
+}
 let mykosHostStatusData = null;
 function mykosRenderHostStatus(data) {
     mykosHostStatusData = data;
     const host = data?.host;
+    mykosHostHardware.textContent=mykosHardwareSummary(host?.hardware);
+    mykosHostHardware.hidden=!mykosHostHardware.textContent;
     if(typeof window!=='undefined')window.mykosGeoCurrentHost=host || null;
     el('mykos-host-row-name').textContent = host?.hostname || 'Host';
     el('mykos-host-row-status').innerHTML = statusIcon('node', host?.status || 'unknown');

@@ -18,6 +18,7 @@ def test_image_build_stops_before_unsafe_followup(tmp_path,build_major):
     build=source[source.index('create-image() {'):source.index('\nset_working_shopcode() {')]
     script=preflight+'\n'+build+'''
 renice() { :; }
+ionice() { :; }
 rpm() { echo "$TEST_BUILD_MAJOR"; }
 ksvalidator() { return 0; }
 podman() {
@@ -729,6 +730,7 @@ def test_existing_native_image_is_reused_without_touching_menu_priority(tmp_path
     functions=source[source.index('create-image() {'):source.index('\nset_working_shopcode() {')]
     script=functions+'''
 renice() { printf '%s %s\\n' "$*" "$PARENT_PID" > "$NICE_CALL"; }
+ionice() { :; }
 podman() { [ "$1 $2 $3" = 'image exists rh9' ]; }
 check_image_builder() { echo unexpected-preflight >&2; return 77; }
 PARENT_PID=$BASHPID
@@ -744,7 +746,7 @@ exit "$status"
     assert result.returncode==0,result.stderr
     assert 'Image already built: rh9' in result.stdout
     args=log.read_text().split()
-    assert args[:3]==['-n','1','-p'] and args[3]!=args[4], 'Only the build subprocess is reniced'
+    assert args[:3]==['-n','15','-p'] and args[3]!=args[4], 'Only the build subprocess is reniced'
     assert 'unexpected-preflight' not in result.stderr
 
 @pytest.mark.parametrize('failure',[1,22,28])

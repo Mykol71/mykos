@@ -1,6 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 checkpoint=/storage/.mykos-checkpoint
+# MYKOS MACOS AUTOMATIC BOOT
+# A fresh runtime wrapper must retain unattended boot after installer devices leave.
+if [[ -f /assets/config.plist ]]; then
+    python3 - <<'MYKOS_MAC_BOOT'
+import plistlib
+from pathlib import Path
+path=Path('/assets/config.plist')
+value=plistlib.loads(path.read_bytes())
+value['Misc']['Boot'].update(Timeout=2,ShowPicker=False)
+path.write_bytes(plistlib.dumps(value))
+MYKOS_MAC_BOOT
+fi
+# END MYKOS MACOS AUTOMATIC BOOT
 # Customize the vendor answer asset while retaining its media-specific XML
 # generation, drivers, QGA and SetupComplete/first-logon scripts.
 if [[ ${MYKOS_UNATTENDED:-} == windows ]]; then
@@ -59,7 +72,8 @@ RESTORE
 fi
 # QEMU and its vCPU/I/O threads inherit the image builder's CPU priority.
 if [[ ${MYKOS_BUILD_NICE:-0} == 1 ]]; then
-    renice -n 1 -p "$$" >/dev/null || echo 'Warning: Image build CPU priority could not be set' >&2
+    renice -n 15 -p "$$" >/dev/null || echo 'Warning: Image build CPU priority could not be set' >&2
+    ionice -c 2 -n 7 -p "$$" >/dev/null || echo 'Warning: Image build disk priority could not be set' >&2
 fi
 if [[ ${MYKOS_UNATTENDED:-} == ubuntu || ${MYKOS_UNATTENDED:-} == macos ]]; then
     exec /run/mykos-unattended-entry

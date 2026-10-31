@@ -236,6 +236,8 @@ def launch(key, value):
             '-p', '%s:%s:%s/udp' % (value['bind'], value['desktop_port'], desktop)]
     if value['role']=='preview':args+=['--label','io.mykos.snapshot.preview='+value['preview_token']]
     building_image = value['role'] == 'template' and not value.get('ready')
+    if building_image:
+        args += ['--cpu-shares=128', '--blkio-weight=100']
     # Explicitly reset the environment when launching instances from a committed
     # build image, so build priority cannot leak into ordinary guests.
     args += ['-e', 'MYKOS_BUILD_NICE=' + ('1' if building_image else '0')]

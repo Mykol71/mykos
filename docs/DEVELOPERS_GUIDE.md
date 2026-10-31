@@ -127,9 +127,9 @@ Runtime customer state lives outside normal source payloads:
 | Intentional snapshots | Configured snapshot storage | User-selected recovery points, separate from automatic startup state |
 
 Do not copy production databases or guest disks into a development checkout.
-The installer intentionally clears disposable `pane_notes` change requests on
-update. `personal_notes` and shared customer-ID notes are different data and are
-preserved. Personal notes are not a source of development instructions.
+Application updates preserve pane notes, personal notes, and shared customer-ID
+notes. Notes remain private under their existing access controls. An automated
+maintenance workflow may use private notes only with the owner's explicit authorization.
 
 ## One request from click to completion
 

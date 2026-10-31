@@ -824,9 +824,9 @@ Live control; horizontal/Shift-wheel scrolling also moves the selected window.</
 <p><code>DELETE /api/v2/images/{os_name}/build</code> removes only a failed, unfinished image builder and its private disks. Send <code>{&quot;confirmation&quot;:&quot;ubuntu22.04&quot;}</code> with the matching OS; administrator authorization is required. Published images and intentional snapshots are retained. The host terminal also accepts <code>?action=remove-vpn</code>, with interactive selection and confirmation of a MYKOS host connection.</p>
 <p>The terminal title bar uses pane name <code>terminal</code> for its notes. Opening or closing
 the notes dialog leaves the active terminal connection running.</p>
-<p>Pane notes are disposable change requests and are cleared by each installation/update. User accounts, password hashes and API key digests are preserved.</p>
+<p>Pane notes and personal notes are user data and are preserved through installation/update, along with accounts and API keys.</p>
 <p>Pane notes are private to the <code>mgreen</code> browser account. Both web and v2 notes endpoints require its authenticated session cookie; scope-only API keys cannot read or write these notes. PUT also requires the configured Origin header.</p>
-<p>The orange Host notes icon opens personal notes. The equivalent web endpoints are <code>GET/PUT /api/web/personal-notes</code>. These use the separate <code>personal_notes</code> table and must never be included in automated change-request scans. Installation clears only disposable <code>pane_notes</code>; personal text remains private to mgreen and is preserved.</p>
+<p>The orange Host notes icon opens personal notes. The equivalent web endpoints are <code>GET/PUT /api/web/personal-notes</code>. These use the separate <code>personal_notes</code> table. Personal text remains private to mgreen and is preserved through updates. Maintenance automation may use these notes only with the owner&#39;s explicit authorization; that does not broaden API access.</p>
 <p>Prepared images stay visible to administrators in their OS panes.
 <code>GET /api/v2/images</code> also returns <code>captured_images</code> with image ID, size, version
 and removal state. <code>DELETE /api/v2/images/{os_name}</code> accepts an exact OS

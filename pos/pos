@@ -149,13 +149,13 @@ create-image() {
 
 build-image() (
   local OS="$1"
+  renice -n 15 -p "$BASHPID" >/dev/null || return 1
+  ionice -c 2 -n 7 -p "$BASHPID" || return 1
   case "$OS" in
     win*|wns*|mac*|ubuntu*)
-      renice -n 1 -p "$BASHPID" >/dev/null || return 1
       "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;;
   esac
   case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
-  renice -n 1 -p "$BASHPID" >/dev/null || return 1
   if podman image exists "$OS"; then echo "Image already built: $OS"; return 0; fi
   check_image_builder || return 1
   rm -f "/var/tmp/$OS-docker.tar.xz" || return 1

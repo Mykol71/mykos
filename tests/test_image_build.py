@@ -10,6 +10,11 @@ import pytest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'services/helpers'))
 import mykos_image_build as b
 
+@pytest.fixture(autouse=True)
+def isolate_worker_priority(monkeypatch):
+    import mykos_runtime
+    monkeypatch.setattr(mykos_runtime, 'build_priority', lambda: None)
+
 @pytest.fixture
 def state(tmp_path,monkeypatch):
     monkeypatch.setattr(b,'STATE',tmp_path/'builds')

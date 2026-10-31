@@ -317,9 +317,9 @@ by hand can make verification fail even if the app still runs.</p>
 </tr>
 </tbody></table>
 <p>Do not copy production databases or guest disks into a development checkout.
-The installer intentionally clears disposable <code>pane_notes</code> change requests on
-update. <code>personal_notes</code> and shared customer-ID notes are different data and are
-preserved. Personal notes are not a source of development instructions.</p>
+Application updates preserve pane notes, personal notes, and shared customer-ID
+notes. Notes remain private under their existing access controls. An automated
+maintenance workflow may use private notes only with the owner&#39;s explicit authorization.</p>
 <h2 id="one-request-from-click-to-completion">One request from click to completion</h2>
 <p><a href="diagrams/architecture.svg" title="Open full-size diagram"><img src="diagrams/architecture.svg" alt="Service processes, trust boundaries and observation paths."></a><a href="diagrams/architecture.svg">Open full-size diagram</a></p>
 <p><a href="diagrams/architecture.svg">Open full-size architecture diagram</a> ·

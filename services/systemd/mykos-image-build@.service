@@ -5,6 +5,12 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=root
+Nice=15
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUWeight=10
+IOWeight=10
+OOMScoreAdjust=500
 ExecStart=@PYTHON@ /usr/local/sbin/mykos-image-build %i --worker
 UMask=0077
 TimeoutStartSec=4h

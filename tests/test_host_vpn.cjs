@@ -7,8 +7,9 @@ function el(id) {
     return elements.get(id);
 }
 const context=vm.createContext({el,document:{getElementById:id=>el(id)},Date,statusIcon:(_,status)=>status,mykosUptime:()=>'',mykosHostBytes:()=>'',
-    mykosHostStatusData:null,mykosTerminalAllowed:true,mykosHostStatusTable:{querySelector:selector=>el(selector)}});
+    mykosHostHardware:el('mykos-host-hardware'),mykosHostStatusData:null,mykosTerminalAllowed:true,mykosHostStatusTable:{querySelector:selector=>el(selector)}});
 vm.runInContext(html.slice(html.indexOf('function mykosReleaseName('),html.indexOf('function mykosRenderSnapshots()')),context);
+vm.runInContext(html.slice(html.indexOf('function mykosHardwareSummary('),html.indexOf('let mykosHostStatusData')),context);
 vm.runInContext(html.slice(html.indexOf('function mykosRenderHostStatus('),html.indexOf('let mykosHostDiagnosticRequest')),context);
 context.mykosRenderHostStatus({host:{vpn:'not_configured'}});
 const button=el('mykos-host-row-vpn');

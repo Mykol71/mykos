@@ -76,6 +76,10 @@ def snapshot():
     result['host'].update(location())
     try:
         status = json.loads((BASE / 'data/status.json').read_text())
+        entry=status.get('host_hardware')
+        hardware=entry.get('details',{}) if isinstance(entry,dict) else {}
+        if isinstance(hardware,dict):
+            result['host']['hardware']={key:value[:160] for key,value in hardware.items() if key in ('manufacturer','model','serial','sku','asset_tag','bios_vendor','bios_version','bios_date') and isinstance(value,str)}
         totals = status.get('graph_totals')
         if 0 <= time.time() - status['collected_at'] <= 120:
             certificate_domain = status.get('host_certificate_domain')

@@ -32,7 +32,7 @@ OPTIONAL_UNITS = ['mykos-repository-inventory.service','mykos-repository-invento
 EXACT = {'/usr/local/sbin/mykos_snapshot_preview.py','/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
          '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
          '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
-PACKAGES = ['podman','httpd','python3','python3-pip','openssh-server','openssh-clients','rsync',
+PACKAGES = ['dmidecode','podman','httpd','python3','python3-pip','openssh-server','openssh-clients','rsync',
             'iproute','net-tools','netavark','containernetworking-plugins','libreswan','curl','wget','jq','util-linux','procps-ng','tar','gzip',
             'cronie','chrony','firewalld','policycoreutils-python-utils','ksh','unzip',
             'expect','nmap','time','ipset','iptables','git','criu','pykickstart']
@@ -279,13 +279,8 @@ class Installer:
         docs.parent.chmod(0o755)
         for path in [docs,*docs.rglob('*')]:
             if path.is_dir() and not path.is_symlink():path.chmod(0o755)
-        notes_db=self.path('/opt/mykos-web/data/auth.db')
-        if notes_db.is_file() and not notes_db.is_symlink():
-            with notes_db.open('rb') as source: sqlite_header=source.read(16)
-            if sqlite_header == b'SQLite format 3\x00':
-                with sqlite3.connect(str(notes_db), timeout=10) as connection:
-                    if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='pane_notes'").fetchone():
-                        connection.execute('DELETE FROM pane_notes')
+        # Notes are user data, including the notes-driven maintenance work list.
+        # An application upgrade must not clear either pane or personal notes.
         for prefix in ('/usr/local/share/mykos',):
             removed=self.path(prefix+'/docs/notes.md')
             if removed.is_file() and not removed.is_symlink(): removed.unlink()
