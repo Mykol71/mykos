@@ -370,6 +370,8 @@ def restore_vm(shop,identifier):
         if target(shop)!=current['name'] or metadata['name']!=current['name']:raise ValueError('Container identity mismatch')
         state=vm.inspect(current['name'])
         if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.vm.os')!=current['os']:raise ValueError('Container identity mismatch')
+        from mykos_runtime import require_container_capacity
+        require_container_capacity(current['name'])
         value={**current,'image':metadata['image'],'image_name':metadata['image_ref'],'cpu_env':captured.get('cpu_env',{}),'capture_mode':'memory'}
         vm.restore_manifest(value,folder/'storage')
         parent=vm.storage(shop);vm.safe_dir(parent)
@@ -441,6 +443,8 @@ def restore_native(shop,identifier):
         folder,metadata=read_snapshot(shop,identifier)
         if metadata.get('capture_mode')!='criu-memory':raise ValueError('Not a native memory snapshot')
         name,state=mykos_linux.inspect(shop);mykos_linux.require_persistent(state)
+        from mykos_runtime import require_container_capacity
+        require_container_capacity(name)
         if name!=metadata['name'] or state['Id']!=metadata['configuration']['Id'] or state['Image']!=metadata['image']:raise ValueError('Native snapshot requires its original container and image')
         if state.get('GraphDriver',{}).get('Name')!='overlay':raise ValueError('Overlay storage is required')
         cgroup=restore_cgroup_context(state,metadata)

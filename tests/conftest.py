@@ -8,3 +8,13 @@ def no_live_meraki_credentials(monkeypatch,request):
     if request.node.module.__name__ != 'test_meraki_sites':
         import meraki_sites
         monkeypatch.setattr(meraki_sites,'credentials',lambda *a,**k:{})
+
+
+@pytest.fixture(autouse=True)
+def no_live_capacity_inventory(monkeypatch, request):
+    # Existing isolated lifecycle tests model only their selected container.
+    # Capacity tests supply a complete inventory and exercise the real guard.
+    if request.node.module.__name__ != 'test_capacity':
+        import mykos_runtime
+        monkeypatch.setattr(mykos_runtime, 'require_container_capacity', lambda *a, **kw: None)
+        monkeypatch.setattr(mykos_runtime, 'container_capacity', lambda: None)

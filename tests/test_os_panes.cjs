@@ -55,7 +55,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.ok(el('rocky-mykos-image-builds').innerHTML.includes('Produced: '+new Date(1793060009*1000).toLocaleString()));
         mykosCapturedImages[0].delete_state='failed';mykosCapturedImages[0].delete_error='Dependency';
         mykosRenderImageBuilds();
-        assert.ok(el('rocky-mykos-image-builds').innerHTML.includes('Size: 2.00 GiB | Produced:'));
+        assert.ok(el('rocky-mykos-image-builds').innerHTML.includes('Size: 2.00 GiB · Produced:'));
         mykosCapturedImages[0].delete_state='idle';
         assert.match(el('rocky-mykos-image-builds').innerHTML,/9\.10/);
         mykosTerminalAllowed=false;mykosRenderImageBuilds();

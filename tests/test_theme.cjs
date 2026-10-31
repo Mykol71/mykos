@@ -16,5 +16,5 @@ for(const saved of [null,'dark','light','invalid']) {
 }
 assert.ok(html.indexOf('id="mykos-theme-toggle"')<html.indexOf('class="mykos-footer-email"'));
 assert.match(html, /id="mykos-login-theme-toggle" type="button"/);
-assert.match(html, /id="mykos-login-theme-toggle"[\s\S]*?<\/button> \| <a class="mykos-login-api"[^>]+>API<\/a> \|/);
+assert.match(html, /id="mykos-login-theme-toggle"[\s\S]*?<\/button> · <a class="mykos-login-api"[^>]+>API<\/a> ·/);
 console.log('Login and footer theme controls: dark default, saved preference, toggle, accessible label and footer order passed.');

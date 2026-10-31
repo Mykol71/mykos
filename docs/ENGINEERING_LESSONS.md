@@ -183,6 +183,26 @@ The engineering chapter will cover policy selection, scan scheduling and cost, m
 
 ## Measuring the performance goal
 
+### Idle image bases accounted for an apparent memory leak
+
+An October 31 production reboot reduced observed host memory from an earlier
+median of about 21.8 GiB to a settled 11.2 GiB. The persistent services and 24
+customer instances returned, but five desktop image bases and 19 native bases did
+not. Each desktop base had 2 GiB configured RAM. Their combined 10 GiB, together
+with the native bases and runtime overhead, closely explains the 10.6 GiB decrease.
+The earlier sample was a saved 30-minute history, not a measurement immediately
+before shutdown. The retained history did not show unexplained sustained growth;
+this evidence does not establish that a kernel patch fixed a leak or exclude a
+slow leak under other workloads.
+
+The resulting lifecycle change stops completed image bases after five idle minutes
+and reopens their saved captures on demand. Active sessions and build/capture/restore
+operations block cleanup; customer instances and saved artifacts remain intact.
+See [idle-base operations](IMAGE_BUILDS.md#release-memory-from-idle-image-bases).
+Compare workload counts and anonymous memory before calling a lower post-reboot
+reading a leak fix. A copying process can also have a large cgroup file-cache charge
+while its actual anonymous memory remains small.
+
 Use application-ready time as the main startup endpoint: the required customer service works with its data, identity, and connectivity. Keep container/wrapper launch, OS restoration, and actual application readiness as separate timestamps.
 
 | Question | Measurement that can answer it |

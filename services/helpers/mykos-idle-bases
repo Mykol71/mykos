@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+import argparse,json
+from mykos_idle_bases import sweep
+parser=argparse.ArgumentParser(description='Stop unused captured-image bases; preserve instances and saved images')
+parser.add_argument('--dry-run',action='store_true')
+args=parser.parse_args()
+print(json.dumps(sweep(dry_run=args.dry_run)))

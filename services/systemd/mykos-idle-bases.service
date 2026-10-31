@@ -1,0 +1,12 @@
+[Unit]
+Description=Release memory from unused captured-image bases
+After=network-online.target
+[Service]
+Type=oneshot
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-idle-bases
+UMask=0077
+Nice=15
+IOSchedulingClass=idle
+CPUWeight=10
+IOWeight=10
+TimeoutStartSec=10min

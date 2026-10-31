@@ -147,6 +147,23 @@ header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px
 <p>Automated security compliance scans are planned. The intended workflow is to scan against the selected compliance policy, show pass/fail status, and alert when a previously passing system falls out of compliance. This is future work requested by the project owner, not a capability validated in the released baseline.</p>
 <p>The engineering chapter will cover policy selection, scan scheduling and cost, meaningful status freshness, and regression alerts after we implement and test those parts together. The performance goal carries into that work: measure scan overhead and schedule it deliberately so assurance does not undermine the responsiveness being protected. Existing authentication and isolation mechanisms do not stand in for that future assessment.</p>
 <h2 id="measuring-the-performance-goal">Measuring the performance goal</h2>
+<h3 id="idle-image-bases-accounted-for-an-apparent-memory-leak">Idle image bases accounted for an apparent memory leak</h3>
+<p>An October 31 production reboot reduced observed host memory from an earlier
+median of about 21.8 GiB to a settled 11.2 GiB. The persistent services and 24
+customer instances returned, but five desktop image bases and 19 native bases did
+not. Each desktop base had 2 GiB configured RAM. Their combined 10 GiB, together
+with the native bases and runtime overhead, closely explains the 10.6 GiB decrease.
+The earlier sample was a saved 30-minute history, not a measurement immediately
+before shutdown. The retained history did not show unexplained sustained growth;
+this evidence does not establish that a kernel patch fixed a leak or exclude a
+slow leak under other workloads.</p>
+<p>The resulting lifecycle change stops completed image bases after five idle minutes
+and reopens their saved captures on demand. Active sessions and build/capture/restore
+operations block cleanup; customer instances and saved artifacts remain intact.
+See <a href="IMAGE_BUILDS.html#release-memory-from-idle-image-bases">idle-base operations</a>.
+Compare workload counts and anonymous memory before calling a lower post-reboot
+reading a leak fix. A copying process can also have a large cgroup file-cache charge
+while its actual anonymous memory remains small.</p>
 <p>Use application-ready time as the main startup endpoint: the required customer service works with its data, identity, and connectivity. Keep container/wrapper launch, OS restoration, and actual application readiness as separate timestamps.</p>
 <table>
 <thead>

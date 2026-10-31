@@ -180,3 +180,8 @@ installer; audit and configure trusted delivery before operational use.
 follows `/var/log/secure` and appends invalid-login source IPs to a manual blacklist.
 These are third-party/legacy tools, not enabled services. They can block legitimate
 administrators and conflict with firewalld policy; inspect them before enabling.
+
+
+## Physical memory inventory
+
+The gray hardware line at the bottom of the Host pane includes the installed memory type, configured speed, and total DIMM capacity reported by SMBIOS. Empty slots are excluded; mixed types or speeds are listed separately. Configured speed is preferred, falling back to module speed when firmware omits it. Installed capacity can exceed Linux usable memory because firmware reserves some RAM. Unavailable fields are omitted. The root collector caches inventory for 24 hours; the dashboard reads only the filtered collector output.

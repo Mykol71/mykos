@@ -147,6 +147,8 @@ def start(shop):
     with vm.locked():
         name,state=inspect(shop);require_persistent(state)
         if state.get('State',{}).get('Running'):return {'shop':shop,'state':'running','output':name}
+        from mykos_runtime import require_container_capacity
+        require_container_capacity(name)
         labels=state.get('Config',{}).get('Labels') or {}
         if labels.get('io.mykos.network.interface') != 'eth0':
             raise ValueError('Legacy pipework container: recreate on mykos-lan before startup; saved data was preserved')

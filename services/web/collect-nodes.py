@@ -39,6 +39,12 @@ def graph_totals(root=POS):
     except OSError:
         return None
 
+
+def running_capacity():
+    from mykos_runtime import container_capacity
+    try: return container_capacity()
+    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired): return None
+
 SHOP_PATTERN = re.compile(r"^([0-9]{8})(?:\.|$)")
 
 
@@ -144,6 +150,7 @@ def collect(shop_filter=None):
     atomic_json(STATUS, {
         "collected_at": int(time.time()),
         "graph_totals": graph_totals(),
+        "container_capacity": running_capacity(),
         "host_hardware": host.hardware(hardware_previous),
         "host_vpn_status": host.query_vpn()["status"] if not shop_filter or host_only else old.get("host_vpn_status","unknown"),
         "host_certificate_domain": host.apache_certificate_domain() if not shop_filter or host_only else old.get("host_certificate_domain"),

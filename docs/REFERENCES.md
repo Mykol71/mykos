@@ -91,7 +91,7 @@ the installation input; this page explains the major components.
 | [OpenSSL](https://www.openssl.org/) | TLS certificates and cryptographic tooling |
 | [Certbot](https://certbot.eff.org/) · [Let's Encrypt](https://letsencrypt.org/) | Optional trusted domain certificate issuance and renewal |
 | [firewalld](https://firewalld.org/) · [SELinux Project](https://github.com/SELinuxProject/selinux) | Host firewall and mandatory-access-control infrastructure |
-| [dmidecode](https://www.nongnu.org/dmidecode/) | Physical host model, serial number, and BIOS information |
+| [dmidecode](https://www.nongnu.org/dmidecode/) | Physical host model, serial number, BIOS information, and installed memory type, speed, and capacity |
 
 ## Compatibility fixes and troubleshooting references
 

@@ -368,22 +368,44 @@ def apache_certificate_domain():
 def hardware(previous=None):
     """Bounded SMBIOS inventory, reused for a day by the root collector."""
     now=int(time.time())
-    if isinstance(previous,dict) and isinstance(previous.get('details'),dict):
+    if isinstance(previous,dict) and previous.get('schema')==3 and isinstance(previous.get('details'),dict):
         stamp=previous.get('collected_at')
         if type(stamp) is int and 0 <= now-stamp < (86400 if previous['details'] else 600):return previous
-    details={};section=None
+    details={};section=None;devices=[];device=None
     fields={('System Information','Manufacturer'):'manufacturer',('System Information','Product Name'):'model',
             ('System Information','Serial Number'):'serial',('System Information','SKU Number'):'sku',
             ('Chassis Information','Asset Tag'):'asset_tag',('BIOS Information','Vendor'):'bios_vendor',
             ('BIOS Information','Version'):'bios_version',('BIOS Information','Release Date'):'bios_date'}
     try:
-        output=run(['/usr/sbin/dmidecode','--type','0,1,3'],timeout=5)
-        if len(output)>65536:raise ValueError('Oversized DMI inventory')
+        output=run(['/usr/sbin/dmidecode','--type','0,1,3,17'],timeout=5)
+        if len(output)>262144:raise ValueError('Oversized DMI inventory')
         for line in output.splitlines():
-            if line and not line[0].isspace():section=line.strip()
+            if line and not line[0].isspace():
+                section=line.strip()
+                device={} if section=='Memory Device' else None
+                if device is not None:devices.append(device)
             elif line.startswith('\t') and not line.startswith('\t\t') and ':' in line:
                 key,value=line.strip().split(':',1);field=fields.get((section,key));value=' '.join(value.split())[:160]
+                if device is not None and key in ('Size','Type','Speed','Configured Memory Speed','Configured Clock Speed'):device[key]=value
                 if field and value.lower() not in ('','not specified','not available','unknown','none','default string','to be filled by o.e.m.'):
                     details[field]=value
     except (OSError,ValueError,subprocess.SubprocessError):pass
-    return {'collected_at':now,'details':details}
+    installed=[];total_mib=0
+    for device in devices:
+        match=re.fullmatch(r'(\d+) (kB|KB|MB|GB|TB|KiB|MiB|GiB|TiB)',device.get('Size',''))
+        if not match:continue
+        size=int(match[1])*{'kB':1/1024,'KB':1/1024,'MB':1,'GB':1024,'TB':1048576,'KiB':1/1024,'MiB':1,'GiB':1024,'TiB':1048576}[match[2]]
+        if size<=0:continue
+        total_mib+=size;installed.append(device)
+    def known(value):
+        return value.lower() not in ('','unknown','other','not specified','not available','none')
+    types=sorted({d.get('Type','') for d in installed if known(d.get('Type',''))})
+    speeds=set()
+    for device in installed:
+        for key in ('Configured Memory Speed','Configured Clock Speed','Speed'):
+            speed=device.get(key,'')
+            if re.fullmatch(r'[1-9]\d* (?:MT/s|MHz)',speed):speeds.add(speed);break
+    if types:details['memory_type']=', '.join(types)
+    if speeds:details['memory_speed']=', '.join(sorted(speeds))
+    if total_mib:details['memory_total']=f'{total_mib/1024:g} GiB' if total_mib>=1024 else f'{total_mib:g} MiB'
+    return {'schema':3,'collected_at':now,'details':details}

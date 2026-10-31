@@ -1,0 +1,8 @@
+[Unit]
+Description=Check captured-image bases for five minutes of inactivity
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1min
+Unit=mykos-idle-bases.service
+[Install]
+WantedBy=timers.target

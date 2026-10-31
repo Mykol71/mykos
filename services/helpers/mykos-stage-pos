@@ -21,6 +21,8 @@ def stage(shop, restore, image=None):
 def _stage(shop, restore, image=None):
     shopcode(shop)
     if restore not in ('yes','no'): raise ValueError('Expected yes/no restore flag')
+    from mykos_runtime import require_container_capacity
+    require_container_capacity()
     cfg=config()
     image=image if image is not None else cfg.get('stage_image')
     if not isinstance(image,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9./_:@-]*',image):

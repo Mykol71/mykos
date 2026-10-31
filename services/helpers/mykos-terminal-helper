@@ -40,6 +40,8 @@ def main():
         from mykos_base_session import acquire
         try:
             session_fd=acquire(data_shop)
+            from mykos_idle_bases import open_base
+            open_base(data_shop)
             from mykos_image_admin import base_container
             base_container(data_shop,start_native=True)
         except Exception as error:

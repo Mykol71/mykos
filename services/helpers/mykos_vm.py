@@ -216,6 +216,9 @@ def launch_image(value):
 
 
 def launch(key, value):
+    if value.get('role') in ('instance', 'preview'):
+        from mykos_runtime import require_container_capacity
+        require_container_capacity(value['name'])
     kind, version = VERSIONS[value['os']]
     ram_mib = value.get('ram_mib', 4096)
     installing = value['role'] == 'template' and not value.get('ready') and not value.get('installation_complete')
@@ -1089,11 +1092,15 @@ def start(shop, os_name=None):
             data = inspect(value['name'])
             if (data.get('Config', {}).get('Labels') or {}).get('io.mykos.vm.os') != value['os']:
                 raise ValueError('Container identity mismatch')
+            from mykos_runtime import require_container_capacity
+            require_container_capacity(value['name'])
             run([PODMAN, 'start', value['name']], timeout=120)
             if not data.get('State', {}).get('Running'):
                 value['last_start'] = 'boot'; save(shop, value)
                 publish_started(shop)
         else:
+            from mykos_runtime import require_container_capacity
+            require_container_capacity()
             preflight(os_name)
             template = read(os_name)
             if template.get('ram_mib', 4096) != 2048:
@@ -1187,6 +1194,9 @@ def ensure_prepared_base(os_name):
 def resume(key):
     with locked():
         value = read(key)
+        if value.get('role') in ('instance', 'preview'):
+            from mykos_runtime import require_container_capacity
+            require_container_capacity(value['name'])
         try:
             info = inspect(value['name'])
         except RuntimeError:

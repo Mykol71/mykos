@@ -66,3 +66,12 @@ def test_installation_location_is_optional_and_validated(tmp_path,monkeypatch):
     for bad in ({'lat':True,'lon':0},{'lat':91,'lon':0},{'lat':0,'lon':181},{'lat':0},{'lat':float('nan'),'lon':0},[],None):
         path.write_text(json.dumps(bad));assert host_metrics.location()=={}
     path.write_text('broken json');assert host_metrics.location()=={}
+
+
+def test_hardware_memory_fields_are_allowlisted(tmp_path,monkeypatch):
+    import json,time
+    monkeypatch.setattr(host_metrics,'BASE',tmp_path)
+    (tmp_path/'data').mkdir()
+    details={'memory_type':'DDR4','memory_speed':'2933 MT/s','memory_total':'32 GiB','private':'secret'}
+    (tmp_path/'data/status.json').write_text(json.dumps({'collected_at':int(time.time()),'host_hardware':{'details':details}}))
+    assert host_metrics.snapshot()['host']['hardware']=={k:v for k,v in details.items() if k!='private'}

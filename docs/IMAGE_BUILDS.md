@@ -109,6 +109,53 @@ and restores RAM. Container names remain `SHOPCODE.hostname`, for example
 
 ## Memory and host dependencies
 
+### Running-container limit
+
+MYKOS currently allows at most **50 running customer instances and snapshot
+previews combined**. The container graph reaches 100% at 50. Saved/stopped
+containers and captured images do not consume a running slot; image-building and
+generic base containers are excluded. A preview consumes a slot until it closes.
+
+Native Linux creation/restart, desktop creation/restart, stopped-container snapshot
+restore, and preview startup enforce the limit on the server. Workers check live
+Podman inventory while holding the shared lifecycle lock, so simultaneous requests
+cannot both claim the last slot. At the limit, stop an instance or close a preview
+before starting another. Repeating Start on an already-running instance remains
+allowed, and replacing that running instance from its snapshot reuses its slot.
+Existing workloads are never stopped automatically to enforce this ceiling.
+
+The ceiling applies to MYKOS-managed start paths; root-level Podman operations
+outside MYKOS remain administrative operations. RAM and disk readiness checks still
+apply below the count limit; 50 is a ceiling, not a promise that any mixture of
+50 guests fits a particular host.
+
+### Release memory from idle image bases
+
+Captured images remain available without keeping their generic base containers
+running. `mykos-idle-bases.timer` checks once per minute and stops a completed base
+after five minutes without console activity. Opening its base console starts it
+again from the saved capture; this does not reinstall the OS. Native images remain
+listed and usable for new instances even when their auto-remove base is gone.
+
+Cleanup checks the exact base name, managed labels and saved image identity.
+Unfinished builds, active console connections, terminal ownership, image operations,
+and captures/restores holding the registry lock prevent cleanup. ID-specific
+instances, saved images, golden disks, and intentional snapshots remain intact.
+Capture edits you want to keep before leaving a base console; uncaptured base edits
+are discarded when its captured state is reopened, as with the normal session reset.
+
+To inspect candidates without stopping them:
+
+```bash
+sudo /usr/local/sbin/mykos-idle-bases --dry-run
+sudo systemctl status mykos-idle-bases.timer
+sudo journalctl -u mykos-idle-bases.service
+```
+
+This reclaims unused base RAM without rebooting the host or stopping customer
+instances. It does not promise a fixed memory reduction: the amount depends on
+which bases were running and their resident memory.
+
 Runtime guests and their startup captures use 2048 MiB RAM. Unattended macOS
 installation temporarily uses 4096 MiB because Apple mounts a 2.5 GiB temporary
 filesystem during its second stage. The builder returns to 2048 MiB and verifies

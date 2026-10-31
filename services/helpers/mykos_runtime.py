@@ -12,6 +12,36 @@ CONFIG = Path('/etc/mykos/config.json')
 JOBS = Path('/var/lib/mykos/jobs')
 PODMAN = '/usr/bin/podman'
 SHOP = re.compile(r'[0-9]{8}\Z')
+CONTAINER_LIMIT = 50
+
+
+def capacity_names(rows):
+    """Running customer instances and isolated previews; bases/builders excluded."""
+    result = set()
+    for row in rows:
+        state = row.get('State')
+        if isinstance(state, dict) and not state.get('Running'): continue
+        if isinstance(state, str) and state not in ('running', 'paused', 'restarting'): continue
+        names = row.get('Names') or row.get('Name') or []
+        if isinstance(names, str): names = [names]
+        for name in names:
+            name = name.lstrip('/')
+            if re.fullmatch(r'[0-9]{8}(?:\.[A-Za-z0-9_.-]+)?|mykos-preview-[0-9a-f]{32}', name):
+                result.add(name)
+    return result
+
+
+def container_capacity():
+    names = capacity_names(json.loads(run([PODMAN, 'ps', '--format', 'json'], timeout=20)))
+    return {'running': len(names), 'limit': CONTAINER_LIMIT}
+
+
+def require_container_capacity(name=None):
+    """Caller holds vm.locked() through admission AND actual launch/restore."""
+    names = capacity_names(json.loads(run([PODMAN, 'ps', '--format', 'json'], timeout=20)))
+    if name is not None and name.lstrip('/') in names: return
+    if len(names) >= CONTAINER_LIMIT:
+        raise ValueError('Container limit reached (50 running instances/previews). Stop an instance or close a preview before starting another.')
 NATIVE_OS_NAMES = ('rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44')
 STAGE_OS_NAMES = ('mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12')
 
@@ -166,6 +196,14 @@ def stage_images():
                         continue
                 images[name] = {'os': name, 'image': image}
     from mykos_vm import prepared_templates
+    # Native bases use --rm, so an idle stop removes their containers. The
+    # committed image tag remains the source of availability for new instances.
+    saved = json.loads(run([PODMAN, 'images', '--format', 'json']))
+    tags = {tag for row in saved for tag in (row.get('Names') or []) if isinstance(tag, str)}
+    for name in NATIVE_OS_NAMES:
+        reference = 'localhost/' + name + ':latest'
+        if reference in tags and name not in images:
+            images[name] = {'os': name, 'image': reference}
     for item in prepared_templates():
         images[item['os']] = item
     ordered = [name for name in STAGE_OS_NAMES if name in images]

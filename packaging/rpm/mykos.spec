@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        174%{?dist}
+Release:        177%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-Proprietary AND MIT
 URL: https://myk.sh/mykos/
@@ -110,6 +110,10 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-177
+- Show installed memory type, configured speed and total capacity in the Host hardware line
+- Include validated idle-base and 50-instance capacity updates
+
 * Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-174
 - Report proxy/service failures clearly and recover safe operation-status polls.
 - Preserve pane and personal notes during application upgrades.

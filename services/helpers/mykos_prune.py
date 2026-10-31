@@ -24,8 +24,8 @@ BUILD = Path('/var/tmp/containers')
 RUNTIME = [Path('/var/lib/mykos/image-builds'), Path('/var/lib/mykos/image-admin'), Path('/var/lib/mykos/jobs'), Path('/var/lib/mykos/commands'), Path('/var/cache/mykos/image-os')]
 STAGING = Path('/var/tmp')
 EXPORTS = [Path('/home/mgreen')]
-TIMERS = ['mykos-collector.timer', 'mykos-details.timer', 'mykos-extended.timer', 'mykos-command-collector.timer']
-SERVICES = ['mykos-vpn-gateway-guard.service','mykos-vpn-gateway.timer','mykos-vpn-gateway.service','mykos-web.service', 'mykos-container-admin.socket', 'mykos-terminal.socket',
+TIMERS = ['mykos-idle-bases.timer','mykos-collector.timer', 'mykos-details.timer', 'mykos-extended.timer', 'mykos-command-collector.timer']
+SERVICES = ['mykos-idle-bases.service','mykos-vpn-gateway-guard.service','mykos-vpn-gateway.timer','mykos-vpn-gateway.service','mykos-web.service', 'mykos-container-admin.socket', 'mykos-terminal.socket',
             'mykos-collector.service', 'mykos-details.service', 'mykos-extended.service',
             'mykos-command-collector.service', 'mykos-image-remove-*.service', 'mykos-image-reset-*.service', 'mykos-image-build@*.service', 'mykos-stage@*.service', 'mykos-command@*.service',
             'mykos-container-admin@*.service', 'mykos-terminal@*.service']

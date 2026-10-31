@@ -88,6 +88,8 @@ def create(shop,identifier,owner):
             except (ValueError,OSError):continue
         if len(active)>=MAX_PREVIEWS:raise ValueError('Close an existing snapshot preview before opening another')
         with vm.locked():
+            from mykos_runtime import require_container_capacity
+            require_container_capacity()
             _,saved=snapshots.read_snapshot(shop,identifier)
             mode='memory' if saved['capture_mode']=='memory' else 'filesystem' if saved['capture_mode']=='criu-memory' else None
             if mode is None:raise ValueError('Unsupported snapshot preview type')
@@ -228,6 +230,8 @@ def worker(value):
             data['state']='starting';write(directory(value)/'status.json',data)
             with vm.locked():
                 if expired(data):raise ValueError('Preview was closed')
+                from mykos_runtime import require_container_capacity
+                require_container_capacity()
                 folder,saved=snapshots.read_snapshot(data['code'],data['snapshot'])
                 if data['mode']=='memory':start_vm(data,folder,saved)
                 else:start_filesystem(data,folder,saved)

@@ -17,7 +17,7 @@ for(const saved of [null,'on','off','invalid']) {
  ctx.localStorage.setItem=()=>{throw Error('Storage blocked');};click();
  assert.equal(attrs['aria-pressed'],String(root.dataset.mykosMapBackground!=='off'));
 }
-assert.match(html,/\| <button id="mykos-map-toggle" type="button"/);
+assert.match(html,/· <button id="mykos-map-toggle" type="button"/);
 assert.match(html,/data-mykos-map-background="off"[^}]+#mykos-geo-background,#mykos-location-layer[^}]+display:none !important/);
 assert.match(html,/addEventListener\('mykos-map-background-change',updateBackgroundMap\)/);
 console.log('Footer map leaf toggles backdrop and bubbles, persists preference, preserves theme and supports blocked storage.');

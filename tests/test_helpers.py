@@ -197,7 +197,7 @@ def test_stage_images_only_running_rh_templates(monkeypatch):
     assert mykos_runtime.stage_images() == [
         {'os': 'rh8', 'image': 'localhost/rh8:latest'},
         {'os': 'rh9', 'image': 'sha256:abc123'}]
-    assert calls == [[mykos_runtime.PODMAN, 'ps', '-a', '--format', 'json']]
+    assert calls == [[mykos_runtime.PODMAN, 'ps', '-a', '--format', 'json'], [mykos_runtime.PODMAN, 'images', '--format', 'json']]
 
 
 def test_selected_os_is_saved_and_passed_to_worker(tmp_path, monkeypatch):
@@ -651,7 +651,7 @@ def test_stage_prefers_readable_image_name_without_guest_calls(monkeypatch):
         return json.dumps([{'Names':['rh8'],'State':'running','Image':'localhost/rh8:latest','ImageID':'a'*64}])
     monkeypatch.setattr(mykos_runtime,'run',run)
     assert mykos_runtime.stage_images()==[{'os':'rh8','image':'localhost/rh8:latest'}]
-    assert calls==[[mykos_runtime.PODMAN,'ps','-a','--format','json']]
+    assert calls==[[mykos_runtime.PODMAN,'ps','-a','--format','json'],[mykos_runtime.PODMAN,'images','--format','json']]
 
 
 def test_container_status_does_not_use_image_removal_job(monkeypatch):

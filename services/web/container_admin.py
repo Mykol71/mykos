@@ -103,7 +103,8 @@ def invoke(*args):
 
     if not response.get("ok"):
         raise HTTPException(
-            500, response.get("error", "Container operation failed")
+            409 if str(response.get("error", "")).startswith("Container limit reached") else 500,
+            response.get("error", "Container operation failed")
         )
 
     return response["result"]

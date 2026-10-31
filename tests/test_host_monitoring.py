@@ -116,7 +116,31 @@ def test_dmi_hardware_is_bounded_filtered_and_cached(monkeypatch):
     monkeypatch.setattr(host,'run',probe)
     value=host.hardware()
     assert value['details']=={'manufacturer':'Dell Inc.','model':'PowerEdge T350','serial':'EXAMPLE','bios_version':'1.9.1'}
-    assert calls==[['/usr/sbin/dmidecode','--type','0,1,3']]
+    assert calls==[['/usr/sbin/dmidecode','--type','0,1,3,17']]
     assert host.hardware(value)==value and len(calls)==1
     monkeypatch.setattr(host,'run',lambda *args,**kw: (_ for _ in ()).throw(FileNotFoundError()))
     assert host.hardware()['details']=={}
+
+
+def test_memory_inventory_counts_installed_dimms_and_prefers_configured_speed(monkeypatch):
+    output='Memory Device\n\tSize: 16 GB\n\tType: DDR4\n\tSpeed: 3200 MT/s\n\tConfigured Memory Speed: 2933 MT/s\n'
+    output+='Memory Device\n\tSize: No Module Installed\n\tType: DDR5\n\tSpeed: 4800 MT/s\n'
+    output+='Memory Device\n\tSize: 16384 MB\n\tType: DDR4\n\tSpeed: 3200 MT/s\n\tConfigured Memory Speed: 2933 MT/s\n'
+    monkeypatch.setattr(host,'run',lambda *a,**k:output)
+    result=host.hardware({'collected_at':int(host.time.time()),'details':{'model':'old cache'}})
+    assert result['details']=={'memory_type':'DDR4','memory_speed':'2933 MT/s','memory_total':'32 GiB'}
+    assert result['schema']==3
+
+
+def test_memory_inventory_mixed_modules_and_unknown_fields(monkeypatch):
+    output='Memory Device\n\tSize: 1 TB\n\tType: DDR5\n\tSpeed: 4800 MT/s\n\tConfigured Memory Speed: Unknown\n'
+    output+='Memory Device\n\tSize: 512 MB\n\tType: Unknown\n\tSpeed: Unknown\n'
+    output+='Memory Device\n\tSize: Unknown\n\tType: DDR3\n\tSpeed: 1600 MHz\n'
+    monkeypatch.setattr(host,'run',lambda *a,**k:output)
+    assert host.hardware()['details']=={'memory_type':'DDR5','memory_speed':'4800 MT/s','memory_total':'1024.5 GiB'}
+
+
+def test_dmidecode_binary_unit_names(monkeypatch):
+    output='Memory Device\n\tSize: 16 GiB\n\tType: DDR4\n\tSpeed: 3200 MT/s\n'
+    monkeypatch.setattr(host,'run',lambda *a,**k:output*2)
+    assert host.hardware()['details']=={'memory_type':'DDR4','memory_speed':'3200 MT/s','memory_total':'32 GiB'}

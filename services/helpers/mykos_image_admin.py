@@ -247,7 +247,7 @@ def launch_native(os_name):
     return module.launch(os_name)
 
 
-def reset_base(os_name,expected_id=None):
+def reset_base(os_name,expected_id=None,*,only_if_stopped=False):
     selection(os_name)
     with vm.locked():
         image=json.loads(run([PODMAN,'image','inspect',reference(os_name)],timeout=20))[0]
@@ -275,6 +275,9 @@ def reset_base(os_name,expected_id=None):
             if os_name in vm.VERSIONS:
                 if labels.get('io.mykos.vm.os')!=os_name or labels.get('io.mykos.vm.role')!='template':raise ValueError('Generic base identity mismatch')
             elif labels.get('io.mykos.os')!=os_name or base.get('ImageName')!=reference(os_name):raise ValueError('Generic native base identity mismatch')
+            if only_if_stopped and base.get('State',{}).get('Running'):
+                if base.get('State',{}).get('Paused'):raise ValueError('Resume the generic base before connecting')
+                return {'os':os_name,'base_running':True}
             if base.get('State',{}).get('Paused'):run([PODMAN,'unpause',base['Id']],timeout=20)
             if base.get('State',{}).get('Running'):
                 if private:vm.stop_container(base['Id'],grace_seconds=2)

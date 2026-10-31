@@ -309,6 +309,15 @@ sudo python3 bin/mykos-install verify
 sudo systemctl --no-block restart mykos-web.service
 </code></pre>
 <h2 id="scheduled-command-collector">Scheduled-command collector</h2>
+<h3 id="idle-image-memory-cleanup">Idle image memory cleanup</h3>
+<p>The global installer enables <code>mykos-idle-bases.timer</code> alongside the monitoring
+timers. Its worker stops only verified, completed generic image bases after five
+minutes of inactivity. Saved images remain selectable and bases reopen on demand.
+It does not stop customer instances or prune their images, disks or snapshots.
+See <a href="IMAGE_BUILDS.html#release-memory-from-idle-image-bases">idle-base lifecycle and safety checks</a>.</p>
+<pre><code class="language-bash">sudo systemctl status mykos-idle-bases.timer
+sudo /usr/local/sbin/mykos-idle-bases --dry-run
+</code></pre>
 <p>Installation initializes <code>/var/lib/mykos/commands</code> as root mode 0700. Activation
 with <code>--enable</code> enables <code>mykos-command-collector.timer</code>, which dispatches due jobs
 every 30 seconds. It does not change the performance collector interval.

@@ -79,7 +79,7 @@ def snapshot():
         entry=status.get('host_hardware')
         hardware=entry.get('details',{}) if isinstance(entry,dict) else {}
         if isinstance(hardware,dict):
-            result['host']['hardware']={key:value[:160] for key,value in hardware.items() if key in ('manufacturer','model','serial','sku','asset_tag','bios_vendor','bios_version','bios_date') and isinstance(value,str)}
+            result['host']['hardware']={key:value[:160] for key,value in hardware.items() if key in ('manufacturer','model','serial','sku','asset_tag','bios_vendor','bios_version','bios_date','memory_type','memory_speed','memory_total') and isinstance(value,str)}
         totals = status.get('graph_totals')
         if 0 <= time.time() - status['collected_at'] <= 120:
             certificate_domain = status.get('host_certificate_domain')
@@ -96,6 +96,9 @@ def snapshot():
                 result['graph_counts'] = {
                     'containers': sum(isinstance(v, dict) and v.get('status') == 'online' for v in observations.values()),
                     'vpns': sum(isinstance(v, dict) and v.get('vpn_status') == 'up' for v in observations.values())}
+                capacity = status.get('container_capacity')
+                if isinstance(capacity, dict) and type(capacity.get('running')) is int and capacity['running'] >= 0:
+                    result['graph_counts']['containers'] = capacity['running']
     except (OSError, ValueError, KeyError, TypeError):
         pass
     try:
