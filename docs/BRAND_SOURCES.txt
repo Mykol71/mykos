@@ -1,0 +1,85 @@
+Brand asset sources for the MYKOS Credits page
+
+Simple Icons assets are supplied under CC0; see https://github.com/simple-icons/simple-icons/blob/develop/LICENSE.md
+Microsoft PNG is an unmodified official website asset. Teleflora PNG is an unmodified Teleflora-authored logo reproduced from Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Teleflora_logo.png), credited there to https://www.teleflora.com/. Brand names and marks belong to their respective owners.
+
+redhat
+  File: brands/redhat.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/redhat.svg
+  SHA256: 3d0e1854a9dad1a8ad11132843f522f948197ec0e0ee49b7a51d5fdf44230568
+rockylinux
+  File: brands/rockylinux.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/rockylinux.svg
+  SHA256: a65476b168c4ef14c6b743e7eb3875e56c9d60ca15bbaef57a72a6cdeab242d0
+almalinux
+  File: brands/almalinux.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/almalinux.svg
+  SHA256: d31e95e025c2299efb0fcbf64965081c5815ae32a54ad39db20b0c16327a6ef6
+centos
+  File: brands/centos.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/centos.svg
+  SHA256: 94a3ca4414ed77c8bdf1ff0bd6d40d64ac4e27bd863889af50044ab6167ce1fa
+fedora
+  File: brands/fedora.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/fedora.svg
+  SHA256: c234757373cab5ed80d7b2df8ff26ea039bcec16a9e9a47adbd29f5d0e94489a
+ubuntu
+  File: brands/ubuntu.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/ubuntu.svg
+  SHA256: b0aca674c881a07bb60b26afbcee07093ae419e29ee38e376f938817fa66ae03
+apple
+  File: brands/apple.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/apple.svg
+  SHA256: 2a1509dccd25e6d2bc7a11a8e52941077e1a48555e192ce638699b9f083c2a7c
+cisco
+  File: brands/cisco.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/cisco.svg
+  SHA256: 005c240c62355768860ad0bb19820033bc840ee390192c7139f8777d78291391
+dell
+  File: brands/dell.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/dell.svg
+  SHA256: be787bc8a294cecf64f7197b36f3f095583b2274f13ab336e7dabfe582353c45
+github
+  File: brands/github.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/github.svg
+  SHA256: 3bf8cceead820aec50d4ee825a3fd02c5a1cd6665cc9cf4cbf3d9c8861a204bb
+teleflora
+  File: brands/teleflora.png
+  Source: https://upload.wikimedia.org/wikipedia/commons/0/0e/Teleflora_logo.png
+  SHA256: 08a27b07d86c618f392251a5b9df2fefc46e110656d179a0e0e3d84803248f4e
+microsoft
+  File: brands/microsoft.png
+  Source: https://uhf.microsoft.com/images/microsoft/RE1Mu3b.png
+  SHA256: 112fec798b78aa02e102a724b5cb1990c0f909bc1d8b7b1fa256eab41bbc0960
+podman
+  File: brands/podman.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/podman.svg
+  SHA256: 676f0e895fed6e004e2fbf55f364ba900ff1a6a6de26b78fb5066dde421e4e00
+qemu
+  File: brands/qemu.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/qemu.svg
+  SHA256: a5f1391561dd37a0e4be72f2dc94fe54148fab2bb1cfece0a528642610808f90
+python
+  File: brands/python.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/python.svg
+  SHA256: ad9468e1c4903f73ae7eebfbe980f0f727a10db695be3d914e7d8bd25356a862
+fastapi
+  File: brands/fastapi.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/fastapi.svg
+  SHA256: af0bdd5fd3f16a49e341089049418af7b02a04eefdc088b2e26c4524fa8b75d1
+apache
+  File: brands/apache.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/apache.svg
+  SHA256: b6f98b799dbc23a0b3e3cf60a9508bcf11c58cbb8830762e942ff995adce93fc
+canonical
+  File: brands/canonical.svg
+  Source: https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/canonical.svg
+  SHA256: 0db1b85408fd819cd6c10f73bef513d885a020f02aef26a5e64721035620e3fa
+oracle
+  File: brands/oracle.svg
+  Source: https://cdn.jsdelivr.net/npm/simple-icons@11.15.0/icons/oracle.svg
+  SHA256: d355bd1561de9aea08928e662bdce5b4834f0dcb6096aa0b04b4eed23fc1fcb9
+openai
+  File: brands/openai.svg
+  Source: https://cdn.jsdelivr.net/npm/simple-icons@11.15.0/icons/openai.svg
+  SHA256: 2b4a04ddc2395b20d168694d3850ce2050a702c4a0cdeb4d8b31b9a970481a8c

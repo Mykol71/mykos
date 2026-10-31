@@ -52,6 +52,7 @@ The key innovations, performance by design, and deployment efficiency guides inc
 
 | Guide | Use it for |
 | --- | --- |
+| [Credits](CREDITS.md) | Vendor and project logos, acknowledgments, Dell, Teleflora, Codex, and ChatGPT |
 | [References](REFERENCES.md) | Upstream projects, dependencies, compatibility references, development tools, and OS vendor sites |
 | [API usage](API.md) | Authentication, endpoints, examples, and errors |
 | [OpenAPI specification](openapi.json) | Machine-readable API schema |

@@ -76,3 +76,19 @@ def test_only_named_example_screenshots_are_public(client):
         assert response.content==(ROOT/'docs/screenshots'/name).read_bytes()
     assert client.get('/docs/screenshots/private.jpg').status_code==404
     assert client.get('/docs/screenshots/auth.db').status_code==404
+
+
+def test_credits_logos_are_local_allowlisted_assets(client):
+    from supporting_docs import BRAND_LOGOS
+    page=client.get('/docs/CREDITS.html')
+    assert page.status_code==200
+    for name in ('Dell','Teleflora','Codex','ChatGPT'):
+        assert name in page.text
+    for name in BRAND_LOGOS:
+        assert 'brands/'+name in page.text
+        response=client.get('/docs/brands/'+name)
+        assert response.status_code==200
+        assert response.headers['content-type'].startswith('image/')
+        assert "default-src 'none'" in response.headers['content-security-policy']
+    assert client.get('/docs/brands/private.svg').status_code==404
+    assert client.get('/docs/BRAND_SOURCES.txt').status_code==200
