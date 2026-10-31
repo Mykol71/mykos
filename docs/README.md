@@ -52,6 +52,7 @@ The key innovations, performance by design, and deployment efficiency guides inc
 
 | Guide | Use it for |
 | --- | --- |
+| [References](REFERENCES.md) | Upstream projects, dependencies, compatibility references, development tools, and OS vendor sites |
 | [API usage](API.md) | Authentication, endpoints, examples, and errors |
 | [OpenAPI specification](openapi.json) | Machine-readable API schema |
 | [Developer’s guide](DEVELOPERS_GUIDE.md) | Human handoff, code walkthroughs, safe setup, tests and changing the system |
