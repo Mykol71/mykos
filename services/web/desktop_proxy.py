@@ -14,7 +14,7 @@ from websockets.asyncio.client import connect
 
 LIMIT = 16 * 1024 * 1024
 AUTH_INTERVAL = 15
-SELECTION = re.compile(r'(?:[0-9]{8}|(?:win|wns|mac|ubuntu)[A-Za-z0-9.]+)\Z')
+SELECTION = re.compile(r'(?:preview-[0-9a-f]{32}|[0-9]{8}|(?:win|wns|mac|ubuntu)[A-Za-z0-9.]+)\Z')
 
 
 def authorize(connection, api=False):
@@ -27,10 +27,13 @@ def authorize(connection, api=False):
             raise HTTPException(403, 'Administrator login required')
 
 
-def target(selection):
+def target(selection, preview_owner=None):
     if not SELECTION.fullmatch(selection): raise HTTPException(400, 'Invalid console selection')
     from container_admin import invoke
-    value = invoke('console-target', selection)
+    if selection.startswith('preview-'):
+        if not preview_owner:raise HTTPException(403,'Preview session required')
+        value=invoke('snapshot-preview-target',selection[8:],preview_owner)
+    else:value = invoke('console-target', selection)
     host = IPv4Address(value['host'])
     port = value['port']
     if host.is_unspecified or host.is_multicast or type(port) is not int or not 18006 <= port <= 19005:
@@ -66,7 +69,8 @@ def http_proxy(request, selection, path, api):
     authorize(request, api)
     if '..' in path.split('/') or '\\' in path or '\x00' in path:
         raise HTTPException(400, 'Invalid console path')
-    host, port = target(selection)
+    from snapshot_preview_api import owner
+    host, port = target(selection,owner(request)) if selection.startswith('preview-') else target(selection)
     status, content_type, body = fetch(host, port, path, request.url.query, request.method)
     if path == 'mandatory.json' and status == 200:
         try: settings = json.loads(body)
@@ -88,7 +92,11 @@ async def websocket_proxy(ws, selection, path, api):
         if not api and ws.headers.get('origin') != os.environ.get('MYKOS_PUBLIC_ORIGIN', 'https://mykol.com'):
             raise HTTPException(403, 'Invalid origin')
         await asyncio.to_thread(authorize, ws, api)
-        host, port = await asyncio.to_thread(target, selection)
+        from snapshot_preview_api import owner
+        preview_owner=owner(ws) if selection.startswith('preview-') else None
+        if selection.startswith('preview-'):
+            host, port = await asyncio.to_thread(target, selection,preview_owner)
+        else:host, port = await asyncio.to_thread(target, selection)
     except (HTTPException, OSError, ValueError):
         await ws.close(code=1008); return
     offered = [p.strip() for p in ws.headers.get('sec-websocket-protocol', '').split(',') if p.strip() in ('binary', 'base64')]
@@ -111,6 +119,9 @@ async def websocket_proxy(ws, selection, path, api):
                 while True:
                     await asyncio.sleep(AUTH_INTERVAL)
                     await asyncio.to_thread(authorize, ws, api)
+                    if preview_owner:
+                        from container_admin import invoke
+                        await asyncio.to_thread(invoke,'snapshot-preview-status',selection[8:],preview_owner)
             tasks = [asyncio.create_task(f()) for f in (inbound, outbound, authorization_watch)]
             try:
                 done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)

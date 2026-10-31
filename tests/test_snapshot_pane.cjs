@@ -19,7 +19,7 @@ const run=s=>vm.runInContext(s,context);
 run('mykosRenderSnapshots()');assert.equal(visible,false);assert.equal(el('mykos-snapshots-rows').children.length,0);
 run('mykosShowAllPanes=true;mykosRenderSnapshots()');assert.equal(visible,false); // Automatic state remains false; shared visibility applies the toggle.
 let rows=el('mykos-snapshots-rows').children;assert.equal(rows.length,2);
-for(const row of rows){const select=row.children[3].children[0],button=row.children[5].children[0].children[0];assert.equal(select.disabled,true);assert.equal(select.children[0].disabled,true);assert.equal(button.disabled,true);assert.equal(row.children[5].children[0].children.length,2);assert.equal(row.children[5].children[0].children[1].disabled,true);}
+for(const row of rows){const select=row.children[3].children[0],button=row.children[5].children[0].children[0];assert.equal(select.disabled,true);assert.equal(select.children[0].disabled,true);assert.equal(button.disabled,true);assert.equal(row.children[5].children[0].children.length,3);assert.equal(row.children[5].children[0].children[1].disabled,true);assert.equal(row.children[5].children[0].children[2].disabled,true);}
 run(`mykosSnapshotData=[{code:'12345678',os:'win11',id:'1792900000-abcdef123456',created_at:1792900000,capture_mode:'memory'},{code:'12345678',os:'win11',id:'1792900001-abcdef123457',created_at:1792900001,capture_mode:'memory'},{code:'87654321',os:'mac15',id:'1792900002-abcdef123458',created_at:1792900002,capture_mode:'memory'}];mykosRenderSnapshots();`);
 rows=el('mykos-snapshots-rows').children;assert.equal(rows.length,2);assert.equal(visible,true);
 assert.equal(rows[0].children[1].textContent,'Windows 11');assert.equal(rows[1].children[1].textContent,'macOS 15 Sequoia');
@@ -41,6 +41,15 @@ console.log('Snapshot pane checks passed: grouping, per-container choices, prese
  const row=el('mykos-snapshots-rows').children[0];
  await row.children[5].children[0].children[1].onclick();
  assert.deepEqual(requests,[['12345678','snapshots/1792900001-abcdef123457','DELETE']]);
+ const previews=[],urls=[];context.window.location={origin:'https://testserver'};context.URL=URL;
+ context.window.open=()=>({location:{replace:url=>urls.push(url)},close(){throw Error('Preview should open');}});
+ context.mykosStageJSON=async(...args)=>{previews.push(args);return {url:'/mykos/api/web/snapshot-preview/'+'a'.repeat(32)+'/page'};};
+ await row.children[5].children[0].children[2].onclick();
+ assert.equal(previews[0][0],'/mykos/api/web/containers/12345678/snapshots/1792900001-abcdef123457/preview');
+ assert.equal(previews[0][1].method,'POST');
+ assert.equal(urls[0],'https://testserver/mykos/api/web/snapshot-preview/'+'a'.repeat(32)+'/page');
+ assert.equal(requests.length,1,'Preview must never invoke restore');
+
  run('mykosShowAllPanes=false;mykosTerminalAllowed=false;mykosRenderSnapshots()');
  assert.equal(el('mykos-snapshots-rows').children[0].children[5].children[0].children[0].disabled,true);
  context.fetch=async()=>({ok:true,json:async()=>({allowed:true})});

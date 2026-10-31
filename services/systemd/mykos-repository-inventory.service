@@ -1,0 +1,8 @@
+[Unit]
+Description=MYKOS repository inventory for production dashboard
+[Service]
+Type=oneshot
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-repo-inventory
+UMask=0022
+TimeoutStartSec=600
+Nice=10

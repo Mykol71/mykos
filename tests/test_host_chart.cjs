@@ -22,11 +22,11 @@ vm.runInContext(source + `
 assert.equal(new Set(mykosChartMetrics.map(m => m.color)).size, 7);
 assert.ok(!mykosChartMetrics.some(m => ['backups','repos'].includes(m.key)));
 assert.equal(mykosChartWindow, 300000);
-assert.equal(mykosCountPercent(15),100);
-assert.equal(mykosCountPercent(3),20);
+assert.equal(mykosCountPercent(40),100);
+assert.equal(mykosCountPercent(8),20);
 assert.equal(mykosCountPercent(0),0);
 assert.equal(mykosCountPercent(null),null);
-assert.equal(mykosCountPercent(30),200);
+assert.equal(mykosCountPercent(80),200);
 const animatedMetric = {points:[{t:clock.now-7500,percent:20},{t:clock.now,percent:80}]};
 const animatedPoint = animatedMetric.points[1];
 assert.equal(mykosChartDisplayPercent(animatedMetric,animatedPoint,clock.now),20);
@@ -83,7 +83,7 @@ assert.ok(mykosChartMetrics.every(m => m.points.length === 0));
 assert.equal(mykosChartStartedAt, null);
 mykosMergeHostHistory([{collected_at:(clock.now - 600000) / 1000, cpu_percent:42, cpu_count:4, memory:null, disk:null, load_average:[1,1,1], graph_counts:{containers:1,vpns:1}, graph_totals:{containers:2,vpns:1}}]);
 assert.equal(mykosChartMetrics.find(m => m.key === 'cpu').points[0].value, '42.0%');
-assert.equal(mykosChartMetrics.find(m => m.key === 'containers').points[0].percent, 100/15);
+assert.equal(mykosChartMetrics.find(m => m.key === 'containers').points[0].percent, 100/40);
 mykosResetHostChart();
 mykosSetHostMetric('containers', 20, '3', 'running');
 clock.now += 10000;
@@ -124,4 +124,4 @@ assert.equal(mykosChartMetrics.find(m => m.key === 'cpu').points.length, 0, 'Dat
 `, context);
 console.log('Host chart checks passed: thresholds, healthy availability, colors, gaps, staleness, retention, scaling and reset.');
 
-vm.runInContext(`assert.equal(mykosHistoryValue({data:{percent:25,used_bytes:250,total_bytes:1000}}, "data").value,"25.0%"); assert.equal(mykosHistoryValue({}, "data").percent,null); assert.equal(mykosChartMetrics.find(m=>m.key==="disk").label,"Root");`,context);
+vm.runInContext(`assert.equal(mykosHistoryValue({data:{percent:25,used_bytes:250,total_bytes:1000}}, "data").value,"25.0%"); assert.equal(mykosHistoryValue({}, "data").percent,null); assert.equal(mykosChartMetrics.find(m=>m.key==="disk").label,"System");`,context);

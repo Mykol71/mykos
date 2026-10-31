@@ -11,3 +11,8 @@ points=[{...points[0],serial:'MX1',shop_name:'Site One'},{...points[0],serial:'M
 parent={id:'details'};ctx.mykosSyncLocationPins();assert.equal(layer.hidden,true);
 assert.doesNotMatch(html,/mykos-location-close|mykos-location-popover|mykosLocationLocked/);assert.match(html,/#mykos-location-layer \*[^}]+pointer-events:none !important/);
 console.log('Always-visible passive bubbles: full metadata, positioning, red/down to green/up refresh, no click targets, detail-view cleanup passed.');
+
+parent={id:'mykos-geo-background'};points=[{kind:'host',hostname:'prod.example',name:'MYKOS',address:'Oklahoma City, OK',lat:36,lon:-90,status:'online'},points[0]];
+ctx.mykosSyncLocationPins();const hostBubble=layer.children.find(p=>p.children.some(c=>c.textContent==='MYKOS'));
+assert.equal(hostBubble.dataset.placement,'below');assert.ok(hostBubble.children.some(c=>c.textContent==='Oklahoma City, OK'));
+console.log('Co-located MYKOS host label stays below its router label.');

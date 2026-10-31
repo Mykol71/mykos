@@ -82,9 +82,12 @@ def update_pane_note(pane: Pane, data: NoteUpdate, request: Request):
 async def headers(request,call_next):
     response=await call_next(request)
     response.headers['X-Content-Type-Options']='nosniff'
-    response.headers['X-Frame-Options']='DENY'
+    # Snapshot desktops are embedded only by MYKOS's same-origin preview page.
+    preview_frame = bool(_mykos_re.fullmatch(r'(?:/mykos)?/console/preview-[0-9a-f]{32}/.*', request.url.path))
+    response.headers['X-Frame-Options']='SAMEORIGIN' if preview_frame else 'DENY'
+    frame_ancestors = "'self'" if preview_frame else "'none'"
     response.headers['Cache-Control']='no-store'
-    response.headers.setdefault('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://tile.openstreetmap.org; connect-src 'self'; object-src 'none'; frame-ancestors 'none'")
+    response.headers.setdefault('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://tile.openstreetmap.org; connect-src 'self'; object-src 'none'; frame-ancestors "+frame_ancestors)
     return response
 
 
@@ -362,13 +365,14 @@ async def mykos_terminal_websocket(ws: WebSocket, shop: str):
         await mykos_terminal_bridge(ws, shop, action=action)
 
 
-async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell'):
+async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell', preview_owner: str = None):
     """Common PTY transport; callers must authorize and validate the shop first."""
     try:
         reader, writer = await _mykos_asyncio.wait_for(
             _mykos_asyncio.open_unix_connection(os.environ.get('MYKOS_TERMINAL_SOCKET', '/run/mykos-terminal.sock')), 5)
         payload = {'shop': shop}
         if action != 'shell': payload['action'] = action
+        if action=='preview-shell':payload['owner']=preview_owner
         writer.write((json.dumps(payload) + '\n').encode())
         await writer.drain()
         ready = await _mykos_asyncio.wait_for(reader.readline(), 20)
@@ -583,3 +587,5 @@ def mykos_purge_status(request: Request):
 
 from desktop_proxy import routes as desktop_proxy_routes
 app.include_router(desktop_proxy_routes())
+from snapshot_preview_api import router as snapshot_preview_router
+app.include_router(snapshot_preview_router)

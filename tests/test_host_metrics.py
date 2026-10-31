@@ -53,3 +53,16 @@ def test_internal_ip_uses_local_route_without_sending(monkeypatch):
     def unavailable(*args): raise OSError('No route')
     monkeypatch.setattr(host_metrics.socket, 'socket', unavailable)
     assert host_metrics.internal_ip() is None
+
+
+def test_installation_location_is_optional_and_validated(tmp_path,monkeypatch):
+    import json
+    path=tmp_path/'host-location.json';monkeypatch.setattr(host_metrics,'LOCATION',path)
+    assert host_metrics.location()=={}
+    value={'name':'MYKOS','address':'Oklahoma City, OK','lat':35.46,'lon':-97.51,'secret':'never expose'}
+    path.write_text(json.dumps(value))
+    assert host_metrics.location()=={k:v for k,v in value.items() if k!='secret'}
+    assert host_metrics.snapshot()['host']['lat']==35.46
+    for bad in ({'lat':True,'lon':0},{'lat':91,'lon':0},{'lat':0,'lon':181},{'lat':0},{'lat':float('nan'),'lon':0},[],None):
+        path.write_text(json.dumps(bad));assert host_metrics.location()=={}
+    path.write_text('broken json');assert host_metrics.location()=={}

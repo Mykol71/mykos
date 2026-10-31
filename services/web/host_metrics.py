@@ -1,6 +1,7 @@
 """Read host performance counters without privileged commands or dependencies."""
 import os
 import json
+import math
 import platform
 import shlex
 import re
@@ -12,6 +13,25 @@ import time
 from mykos_config import BASE
 
 PROC = Path('/proc')
+LOCATION = Path('/etc/mykos/host-location.json')
+
+
+def location():
+    """Saved installation coordinates, independent of container/VPN inventory."""
+    try:
+        value = json.loads(LOCATION.read_text())
+        if not isinstance(value, dict): return {}
+        lat, lon = value.get('lat'), value.get('lon')
+        if (type(lat) not in (int, float) or type(lon) not in (int, float)
+                or not math.isfinite(lat) or not math.isfinite(lon)
+                or abs(lat) > 90 or abs(lon) > 180): return {}
+        result = {'lat': lat, 'lon': lon}
+        for key in ('name', 'address'):
+            if isinstance(value.get(key), str): result[key] = value[key][:512]
+        return result
+    except (OSError, ValueError, TypeError):
+        return {}
+
 
 
 def internal_ip():
@@ -53,6 +73,7 @@ def snapshot():
                        'version': release.get('VERSION_ID', 'Unknown'),
                        'os_codename': release.get('VERSION_CODENAME') or (re.search(r'\(([^)]+)\)',release.get('VERSION','')).group(1) if re.search(r'\(([^)]+)\)',release.get('VERSION','')) else None),
                        'kernel': platform.release(), 'internal_ip': internal_ip(), 'vpn': 'unknown'}}
+    result['host'].update(location())
     try:
         status = json.loads((BASE / 'data/status.json').read_text())
         totals = status.get('graph_totals')

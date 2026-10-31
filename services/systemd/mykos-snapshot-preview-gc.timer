@@ -1,0 +1,8 @@
+[Unit]
+Description=Collect abandoned MYKOS snapshot previews
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Unit=mykos-snapshot-preview-gc.service
+[Install]
+WantedBy=timers.target

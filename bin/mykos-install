@@ -23,13 +23,13 @@ from urllib.parse import urlsplit
 SOURCE = Path(__file__).resolve().parents[1]
 STATE = '/var/lib/mykos-installer/installed.json'
 BACKUPS = '/var/backups/mykos-installer'
-UNITS = ['mykos-host-history.service','mykos-web.service','mykos-container-admin.socket','mykos-terminal.socket',
+UNITS = ['mykos-snapshot-preview-gc.timer','mykos-host-history.service','mykos-web.service','mykos-container-admin.socket','mykos-terminal.socket',
          'mykos-collector.timer','mykos-details.timer','mykos-extended.timer','mykos-command-collector.timer']
 PREFIXES = ('/opt/mykos-web/', '/usr/local/share/mykos/', '/etc/mykos/',
             '/etc/systemd/system/mykos-', '/usr/local/sbin/mykos-')
 # Keep the legacy path allowed for old recovery snapshots and upgrade cleanup.
-OPTIONAL_UNITS = ['mykos-legacy-cgroups.service','mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service','mykos-vpn-gateway.timer']
-EXACT = {'/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
+OPTIONAL_UNITS = ['mykos-repository-inventory.service','mykos-repository-inventory.timer','mykos-snapshot-preview-gc.service','mykos-legacy-cgroups.service','mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service','mykos-vpn-gateway.timer']
+EXACT = {'/usr/local/sbin/mykos_snapshot_preview.py','/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
          '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
          '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
 PACKAGES = ['podman','httpd','python3','python3-pip','openssh-server','openssh-clients','rsync',
@@ -329,7 +329,7 @@ class Installer:
                         command(['systemctl','restart',unit])
             command(['systemctl','start','mykos-container-admin.socket','mykos-terminal.socket'])
             command(['systemctl','restart','mykos-web.service','mykos-host-history.service'])
-            command(['systemctl','start','mykos-host-history.service','mykos-collector.timer','mykos-details.timer','mykos-extended.timer','mykos-command-collector.timer'])
+            command(['systemctl','start','mykos-snapshot-preview-gc.timer','mykos-host-history.service','mykos-collector.timer','mykos-details.timer','mykos-extended.timer','mykos-command-collector.timer'])
         print('Installed. Snapshot:',snap)
         print('Configure HTTPS proxy, /etc/mykos settings, users, and prepared POS images before production use.')
         if not self.live:print('Staging only: no accounts, dependency installation, chown, or service changes were performed.')

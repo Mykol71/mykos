@@ -37,3 +37,16 @@ context.mykosMerakiSites=[{serial:'MX1',network_id:'N1',shop_name:'Known',lat:33
 const orgPoints=context.mykosGeoPoints().filter(p=>p.kind==='router');assert.equal(orgPoints.length,2);
 assert.equal(orgPoints.find(p=>p.serial==='MX1').status,'down');assert.equal(orgPoints.find(p=>p.serial==='MX2').status,'unknown');
 console.log('All organization sites are visible; linked VPN state overrides unknown organization state.');
+
+const lines=[];L.polyline=(coords,options)=>{const line={coords,options,addTo(){return this;}};lines.push(line);return line;};
+context.mykosListMemory['12345678'].vpn_topology.links[0].meraki.vpn_status='up';
+context.drawMap();assert.equal(lines.length,1);
+assert.equal(JSON.stringify(lines[0].coords),JSON.stringify([[35,-95],[33,-88]]));
+assert.equal(lines[0].options.color,'#22c55e');assert.equal(lines[0].options.interactive,false);
+assert.ok(lines[0].options.opacity>0 && lines[0].options.opacity<.5);
+const activeLine=lines[0];context.mykosListMemory['12345678'].vpn_topology.links[0].meraki.vpn_status='down';
+context.drawMap();assert.equal(lines.length,1);assert.ok(removed.includes(activeLine),'Disconnected VPN line is removed');
+context.window.mykosGeoCurrentHost={hostname:'unlocated.example'};
+context.mykosListMemory['12345678'].vpn_topology.links[0].meraki.vpn_status='up';
+context.drawMap();assert.equal(lines.length,1,'Never connect from another saved host');
+console.log('Dim green VPN lines use the current host, connected remote sites only, and disappear on disconnect.');

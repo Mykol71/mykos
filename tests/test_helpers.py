@@ -337,7 +337,7 @@ def test_add_vpn_requires_entered_psk_before_commands(tmp_path):
     assert not list(tmp_path.iterdir())
 
 
-def run_meraki(tmp_path,existing,*,get_failure=False,put_failure=False,put_response=None,changed_config=False):
+def run_meraki(tmp_path,existing,*,get_failure=False,put_failure=False,put_response=None,changed_config=False,firmware='wired-19-1-5',site_only=False,mode='direct',scope_conflict=False):
     import json,os,subprocess
     source=(HELPERS.parents[1]/'pos/pos').read_text()
     function=source[source.index('update_meraki() {'):source.index('\nlist_vpns() {')]
@@ -361,25 +361,42 @@ curl() {
     if [ -n "$headers" ]; then printf 'HTTP/1.1 200 OK\\r\\n\\r\\n' > "$headers"; fi
     if [[ "$url" = *uplink/statuses* ]]; then
       printf '%s' '[{"networkId":"N_test","uplinks":[{"publicIp":"203.0.113.1"}]}]' > "$output"
+    elif [[ "$url" = */devices ]]; then
+      printf '{"unused":true}' > "$output"
+      printf '[{"model":"MX64W","firmware":"%s"}]' "$FIRMWARE" > "$output"
+    elif [[ "$url" = */organizations/123/networks* ]]; then
+      "$MYKOS_PYTHON" -c 'import hashlib,json,os;tag="mykos-vpn-"+hashlib.sha256(b"N_test").hexdigest()[:16];print(json.dumps([{"id":"N_test","tags":["existing-site-tag"]}]+([{"id":"N_other","tags":[tag]}] if os.environ["SCOPE_CONFLICT"]=="1" else [])))' > "$output"
+    elif [[ "$url" = */networks/N_test ]]; then
+      printf '%s' '{"id":"N_test","tags":["existing-site-tag"]}' > "$output"
     else
       config_reads=$(( ${config_reads:-0}+1 ))
       if [ "$CHANGED_CONFIG" = 1 ] && [ "$config_reads" -gt 1 ]; then printf '%s' '{"peers":[{"name":"concurrent-change"}]}' > "$output"
       else printf '%s' "$EXISTING_PEERS" > "$output"; fi
     fi
   else
+    if [[ "$url" = */networks/N_test ]]; then
+      cp "$payload" tag-request.json
+      cp "$payload" "$output"
+      return 0
+    fi
     cp "$payload" request.json
-    [ "$PUT_FAILURE" = 1 ] && return 22
+    if [ "$PUT_FAILURE" = 1 ]; then
+      "$MYKOS_PYTHON" -c 'import json,os;print(json.dumps({"errors":["Rejected "+os.environ["VPN_PSK"]+" test-key"]}))' > "$output"
+      return 22
+    fi
     if [ -n "$PUT_RESPONSE" ]; then printf '%s' "$PUT_RESPONSE" > "$output"; else cp "$payload" "$output"; fi
   fi
 }
 update_meraki
 '''
     result=subprocess.run(['bash','-c',script],cwd=tmp_path,text=True,capture_output=True,
-        env={**os.environ,'MYKOS_PYTHON':sys.executable,'VPN_PSK':secret,'MERAKI_API_KEY':'test','MERAKI_ORG_ID':'123',
+        env={**os.environ,'MYKOS_PYTHON':sys.executable,'VPN_PSK':secret,'MERAKI_API_KEY':'test-key','MERAKI_ORG_ID':'123',
              'REMOTE_NAME':'peer','REMOTE_PUBLIC':'203.0.113.1','PUBLIC':'203.0.113.20','VPN_LOCAL_CIDR':'192.168.22.134/32','TMPDIR':str(tmp_path),
-             'EXISTING_PEERS':existing,'GET_FAILURE':str(int(get_failure)),'PUT_FAILURE':str(int(put_failure)),'PUT_RESPONSE':put_response or '', 'CHANGED_CONFIG':str(int(changed_config))})
+             'EXISTING_PEERS':existing,'GET_FAILURE':str(int(get_failure)),'PUT_FAILURE':str(int(put_failure)),'PUT_RESPONSE':put_response or '', 'CHANGED_CONFIG':str(int(changed_config)),
+             'FIRMWARE':firmware,'VPN_SITE_ONLY':str(int(site_only)),'VPN_MODE':mode,'SCOPE_CONFLICT':str(int(scope_conflict))})
     assert not list(tmp_path.glob('mykos-meraki.*')), 'Private API configuration must be cleaned up'
     assert secret not in result.stdout+result.stderr
+    assert 'test-key' not in result.stdout+result.stderr
     assert not (tmp_path/'injected').exists()
     return result
 
@@ -394,7 +411,7 @@ def test_meraki_psk_is_serialized_as_data_and_existing_peers_preserved(tmp_path)
     assert peers[0]==existing and len(peers)==2
     assert peers[1]['secret']=='''quotes"slashes\\and'$(touch injected)'''
     assert 'peerId' not in peers[1]
-    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET','PUT']
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET','GET','PUT']
 
 
 @pytest.mark.parametrize('existing,get_failure',[('bad-json',False),('{}',False),('{"peers":null}',False),('{"peers":[null]}',False),('{"peers":[]}',True)])
@@ -410,19 +427,53 @@ def test_meraki_identical_peer_is_noop_and_conflicting_name_is_not_overwritten(t
     first=run_meraki(tmp_path,'{"peers":[]}');assert first.returncode==0
     existing=(tmp_path/'request.json').read_text();(tmp_path/'calls').unlink();(tmp_path/'request.json').unlink()
     same=run_meraki(tmp_path,existing);assert same.returncode==0
-    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET']
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET']
     assert not (tmp_path/'request.json').exists()
     value=json.loads(existing);value['peers'][0]['publicIp']='203.0.113.99';(tmp_path/'calls').unlink()
     conflict=run_meraki(tmp_path,json.dumps(value));assert conflict.returncode!=0
-    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET']
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET']
     assert not (tmp_path/'request.json').exists()
 
 
 def test_meraki_failed_put_is_reported_and_private_config_cleaned(tmp_path):
     result=run_meraki(tmp_path,'{"peers":[]}',put_failure=True)
     assert result.returncode!=0
-    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET','PUT']
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET','GET','PUT']
     assert 'Done' not in result.stdout
+    assert 'Meraki: Rejected [redacted] [redacted]' in result.stderr
+
+
+def test_meraki_legacy_requires_explicit_site_only_choice_without_remote_writes(tmp_path):
+    result=run_meraki(tmp_path,'{"peers":[]}',firmware='wired-18-1-07')
+    assert result.returncode==20
+    assert 'PUT' not in (tmp_path/'calls').read_text()
+    assert not (tmp_path/'request.json').exists()
+
+
+def test_meraki_legacy_assigns_only_one_network_and_preserves_existing_tags_and_peers(tmp_path):
+    import json
+    existing={'name':'QA','networkTags':['all'],'secret':'existing-secret','extra':{'future':True}}
+    result=run_meraki(tmp_path,json.dumps({'peers':[existing]}),firmware='wired-18-1-07',site_only=True)
+    assert result.returncode==0,result.stdout+result.stderr
+    peers=json.loads((tmp_path/'request.json').read_text())['peers']
+    assert peers[0]==existing
+    peer=peers[1]
+    assert 'network' not in peer and 'isRouteBased' not in peer
+    assert len(peer['networkTags'])==1 and peer['networkTags'][0].startswith('mykos-vpn-')
+    assert json.loads((tmp_path/'tag-request.json').read_text())['tags']==['existing-site-tag',peer['networkTags'][0]]
+
+
+@pytest.mark.parametrize('options',[{'mode':'gateway'},{'mode':'host-gateway'},{'scope_conflict':True}])
+def test_meraki_legacy_rejects_shared_modes_and_nonunique_scope_without_put(tmp_path,options):
+    result=run_meraki(tmp_path,'{"peers":[]}',firmware='wired-18-1-07',site_only=True,**options)
+    assert result.returncode!=0
+    assert 'PUT' not in (tmp_path/'calls').read_text()
+
+
+def test_meraki_unknown_actual_firmware_aborts_without_put(tmp_path):
+    result=run_meraki(tmp_path,'{"peers":[]}',firmware='unknown')
+    assert result.returncode!=0
+    assert 'PUT' not in (tmp_path/'calls').read_text()
 
 
 def test_network_device_detected_from_route_and_override(monkeypatch):
@@ -729,7 +780,7 @@ def test_meraki_unverified_success_never_reports_done(tmp_path,response):
 def test_meraki_concurrent_config_change_aborts_before_put(tmp_path):
     result=run_meraki(tmp_path,'{"peers":[]}',changed_config=True)
     assert result.returncode!=0
-    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET']
+    assert (tmp_path/'calls').read_text().splitlines()==['GET','GET','GET','GET']
     assert not (tmp_path/'request.json').exists()
 
 
@@ -751,6 +802,27 @@ def test_default_tunnel_renders_valid_independent_connection(tmp_path):
     assert parsed[0]['pfs']=='no','Match the Meraki childPfsGroup disabled policy'
     for field in ('left','leftid','leftsubnet','right','rightid','ike','esp','authby','encapsulation','pfs','dpddelay','retransmit-timeout'):
         assert parsed[0][field]==parsed[1][field]
+
+
+def test_legacy_site_only_connection_has_no_default_tunnel_or_internet_guard(tmp_path):
+    import runpy,subprocess,os
+    workflow=runpy.run_path(str(HELPERS.parents[1]/'pos/host-vpn'))
+    directory=tmp_path/'ipsec.d';directory.mkdir()
+    hook=(HELPERS.parents[1]/'pos/vpn-updown').read_text()
+    workflow['save_connection'](tmp_path,'TOPG','127.0.0.1','192.168.22.2/32','192.168.10.0/24','private-test',
+        native_directory=directory,local_id='guest.test',remote_id='127.0.0.1',full_tunnel_hook=hook,site_only=True)
+    config=(directory/'TOPG.conn.conf').read_text()
+    assert 'rightsubnet=192.168.10.0/24' in config
+    assert '0.0.0.0/0' not in config and '-mykos-default' not in config
+    script=(directory/'TOPG.updown').read_text().replace('cd /etc/ipsec.d','cd '+str(directory))
+    assert 'MYKOS_SITE_ONLY=1' in script
+    binary=tmp_path/'bin';binary.mkdir()
+    for name in ('iptables','ip6tables'):
+        path=binary/name;path.write_text('#!/bin/sh\necho unexpected-firewall-change >&2\nexit 1\n');path.chmod(0o700)
+    result=subprocess.run(['bash','-c',script],capture_output=True,text=True,env={**os.environ,'PATH':str(binary)+':'+os.environ['PATH'],'PLUTO_CONNECTION':'TOPG','PLUTO_VERB':'up-client'})
+    assert result.returncode==0,result.stderr
+    assert 'unexpected-firewall-change' not in result.stderr
+    assert not (directory/'.mykos-first-tunnel').exists()
 
 
 def test_stopped_verified_native_base_remains_available_for_creation(monkeypatch):

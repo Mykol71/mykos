@@ -10,7 +10,7 @@ ProxyPassReverse /mykos/api/v2/terminal/ ws://127.0.0.1:8000/api/v2/terminal/
 # Requests still pass through MYKOS authentication; do not proxy directly to VM ports.
 RewriteEngine On
 RewriteCond %{HTTP:Upgrade} =websocket [NC]
-RewriteCond %{REQUEST_URI} ^/mykos/(api/v2/)?console/
+RewriteCond %{REQUEST_URI} ^/mykos/((api/v2/)?console/|api/web/snapshot-preview/[0-9a-f]{32}/terminal$)
 RewriteRule ^/mykos/(.*)$ ws://127.0.0.1:8000/$1 [P,L]
 ProxyPass /mykos/ http://127.0.0.1:8000/
 ProxyPassReverse /mykos/ http://127.0.0.1:8000/

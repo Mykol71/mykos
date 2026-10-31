@@ -58,7 +58,7 @@ def identity(value):
         return '@'+value
 
 
-def save_connection(root, name, peer, local, remote, secret, *, local_id="192.168.222.0", remote_id="192.168.222.0", native_directory=None, full_tunnel_hook=None):
+def save_connection(root, name, peer, local, remote, secret, *, local_id="192.168.222.0", remote_id="192.168.222.0", native_directory=None, full_tunnel_hook=None, site_only=False):
     local, remote = validate(name, peer, local, remote, secret)
     directory = native_directory if native_directory is not None else root / 'ipsec.d'
     if directory.is_symlink() or not directory.is_dir():
@@ -100,7 +100,10 @@ def save_connection(root, name, peer, local, remote, secret, *, local_id="192.16
                       .replace('  auto=start\n','  auto=ignore\n',1))
         # Keep the default connection in the included .conn.conf file. A separate
         # .default.conf is not matched by the existing MYKOS include glob.
-        config_text+='\n'+default_text
+        if not site_only:config_text+='\n'+default_text
+        if site_only:
+            first,body=full_tunnel_hook.split('\n',1)
+            full_tunnel_hook=first+'\nMYKOS_SITE_ONLY=1\n'+body
         extra=[(directory/(connection+'.updown'),full_tunnel_hook,0o700),
                (directory/(connection+'.vpn-peer'),address+'\n',0o600)]
         for path,_,_ in extra:
@@ -162,7 +165,7 @@ def main():
         if len(values)!=9 or values[-1]!='':raise ValueError('Invalid native VPN input')
         shop,name,peer,local,remote,secret,local_id,remote_id=values[:-1]
         if not re.fullmatch(r'[0-9]{8}',shop):raise ValueError('Invalid ID')
-        print(save_connection(Path.cwd(),name,peer,local,remote,secret,local_id=local_id,remote_id=remote_id,native_directory=Path('.'+shop),full_tunnel_hook=Path(__file__).with_name('vpn-updown').read_text()))
+        print(save_connection(Path.cwd(),name,peer,local,remote,secret,local_id=local_id,remote_id=remote_id,native_directory=Path('.'+shop),full_tunnel_hook=Path(__file__).with_name('vpn-updown').read_text(),site_only=os.environ.get('MYKOS_VPN_SITE_ONLY')=='1'))
         return
     if sys.argv[1:]==['--remove']:
         remove(Path('/etc'));return

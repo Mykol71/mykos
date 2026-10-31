@@ -283,12 +283,24 @@ def ubuntu_userdata(values, setup):
     late=["curtin in-target -- mkdir -p /usr/local/sbin /var/lib/mykos",
           "printf %s "+shlex.quote(script)+" | base64 -d > /target/usr/local/sbin/mykos-ubuntu-setup.py",
           "chmod 700 /target/usr/local/sbin/mykos-ubuntu-setup.py",
+          # Subiquity 20.04 can select CD-only sources during base extraction.
+          # Late commands run after it restores the configured online sources.
+          "curtin in-target -- apt-get -o Acquire::Retries=5 update",
+          "curtin in-target -- env DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y qemu-guest-agent libreswan iproute2 net-tools curl python3",
           "touch /run/mykos-install/disk-installed"]
     firstboot="set -eu; trap 'touch /var/lib/mykos/image-install-failed' EXIT; python3 /usr/local/sbin/mykos-ubuntu-setup.py; export DEBIAN_FRONTEND=noninteractive; apt-get install -y ubuntu-desktop-minimal; systemctl set-default graphical.target; systemctl start --no-block graphical.target; touch /var/lib/mykos/image-install-complete; trap - EXIT"
     data={'autoinstall':{'version':1,'refresh-installer':{'update':False},'locale':'en_US.UTF-8',
         'keyboard':{'layout':'us'},'identity':{'hostname':'mykos-base','username':values['username'],'password':hashed},
         'storage':{'layout':{'name':'direct'},'swap':{'size':0}},
-        'packages':['qemu-guest-agent','libreswan','iproute2','net-tools','curl','python3'],
+        # qemu-guest-agent and Libreswan need Ubuntu's Universe component.
+        # Explicit sources avoid inheriting the ISO's restricted package list.
+        'apt':{'preserve_sources_list':False,'geoip':False,
+               'primary':[{'arches':['default'],'uri':'http://archive.ubuntu.com/ubuntu'}],
+               'security':[{'arches':['default'],'uri':'http://security.ubuntu.com/ubuntu'}],
+               'sources_list':'deb $PRIMARY $RELEASE main restricted universe multiverse\n'
+                              'deb $PRIMARY $RELEASE-updates main restricted universe multiverse\n'
+                              'deb $SECURITY $RELEASE-security main restricted universe multiverse\n'},
+        'packages':[],
         'early-commands':['modprobe 9pnet_virtio','mkdir -p /run/mykos-install','mount -t 9p -o trans=virtio,version=9p2000.L mykosinstall /run/mykos-install'],
         'late-commands':late,'shutdown':'poweroff',
         'error-commands':['cp /var/log/installer/subiquity-server-debug.log /run/mykos-install/installer-error.log || true','journalctl --no-pager > /run/mykos-install/installer-journal.log','touch /run/mykos-install/installer-failed'],
@@ -535,6 +547,8 @@ def build(os_name, username=None, password=None, replace=False):
                 report(os_name,'ready','Image committed; rerun Build to retry the generic base restart without reinstalling')
             elif saved.get('pending_commit'):
                 report(os_name,'failed','Image commit did not finish; completed disk/RAM capture retained. Resolve the reported error, then rerun Build to retry the commit without reinstalling')
+            elif saved.get('installation_complete'):
+                report(os_name,'failed','OS installation completed, but startup RAM capture did not finish; rerun Build to finish the saved installation without reinstalling')
             else:
                 report(os_name,'failed','Build did not finish; retained its disks and diagnostics')
             raise

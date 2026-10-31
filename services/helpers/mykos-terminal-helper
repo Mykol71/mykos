@@ -11,17 +11,22 @@ def main():
     conn=connection()
     if not config().get('terminal_enabled',False): raise ValueError('Terminal disabled in configuration')
     data=request(conn)
-    if set(data) not in ({'shop'}, {'shop', 'action'}): raise ValueError('Expected shop and optional action')
+    if set(data) not in ({'shop'}, {'shop', 'action'}, {'shop','action','owner'}): raise ValueError('Expected shop and optional action')
     action = data.get('action', 'shell')
-    if action not in ('shell', 'add-vpn', 'remove-vpn', 'image-shell'): raise ValueError('Unsupported terminal action')
+    if action not in ('shell', 'add-vpn', 'remove-vpn', 'image-shell','preview-shell'): raise ValueError('Unsupported terminal action')
+    preview_shell=action=='preview-shell'
+    if ('owner' in data)!=preview_shell:raise ValueError('Invalid preview terminal request')
     data_shop = data['shop']
     host = data_shop == 'host'
     image_shell = action == 'image-shell'
-    if image_shell:
+    if preview_shell:
+        from mykos_snapshot_preview import target as preview_target
+        name=preview_target(data_shop,data['owner'],'shell')['name']
+    elif image_shell:
         name=data_shop
     else:
         name=None if host else target(data['shop'])
-    if not host and not image_shell:
+    if not host and not image_shell and not preview_shell:
         from mykos_vm import record_path
         if record_path(data['shop']).is_file():
             from mykos_vm import read
@@ -42,7 +47,9 @@ def main():
             conn.sendall(('MYKOS_TERMINAL_ERROR '+str(error)+'\n').encode());conn.close();return
     pid,master=pty.fork()
     if pid==0:
-        if host and action == 'remove-vpn':
+        if preview_shell:
+            os.execv(PODMAN,[PODMAN,'exec','-it','--user','0',name,'/bin/bash','--login'])
+        elif host and action == 'remove-vpn':
             os.execv('/usr/bin/python3', ['/usr/bin/python3', '/usr/local/share/mykos/pos/host-vpn', '--remove'])
         elif host and action == 'add-vpn':
             os.execv('/usr/bin/python3', ['/usr/bin/python3', '/usr/local/share/mykos/pos/host-vpn'])
@@ -120,7 +127,7 @@ def main():
         # A closed shell or VPN workflow may have changed this resource.
         try:
             from mykos_refresh import refresh
-            if not image_shell: refresh('host' if host else data_shop)
+            if not image_shell and not preview_shell: refresh('host' if host else data_shop)
         except Exception as error:
             print('Related terminal data refresh deferred: ' + str(error), file=sys.stderr)
 

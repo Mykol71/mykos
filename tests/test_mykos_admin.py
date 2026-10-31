@@ -212,3 +212,29 @@ def test_latest_rpm_ignores_symlinks_and_returns_relative_name(tmp_path):
     sub=tmp_path/'Packages';sub.mkdir();new=sub/'new.rpm';new.write_text('new');os.utime(new,(20,20))
     (tmp_path/'link.rpm').symlink_to(new)
     assert latest_rpm(tmp_path)=='Packages/new.rpm'
+
+
+def test_remote_repository_inventory_and_action_guard(tmp_path, monkeypatch):
+    import time
+    from io import BytesIO
+    import urllib.request
+    config=tmp_path/'repository-source.json'
+    config.write_text(json.dumps({'host':'repo.example','inventory_url':'http://192.0.2.5/_mykos-inventory.json','public_base_url':'https://example/repos/'}))
+    monkeypatch.setattr(mykos_admin,'REPOSITORY_SOURCE',config)
+    payload={'repos':[{'name':'rhel-9-rpms'}],'storage':{},'collected_at':int(time.time())}
+    class Opener:
+        def open(self,url,timeout):
+            assert url=='http://192.0.2.5/_mykos-inventory.json' and timeout==8
+            return BytesIO(json.dumps(payload).encode())
+    monkeypatch.setattr(urllib.request,'build_opener',lambda *args:Opener())
+    result=mykos_admin.repo_status()
+    assert result['source_host']=='repo.example' and result['read_only']
+    assert result['public_base_url']=='https://example/repos/'
+    with pytest.raises(ValueError,match='read-only'):
+        mykos_admin.dispatch(['repo-action','delete','rhel-9-rpms','{}'])
+    payload['collected_at']-=901
+    with pytest.raises(ValueError,match='stale'):mykos_admin.repo_status()
+    payload['collected_at']=int(time.time());payload['repos'][0]['name']='../private'
+    with pytest.raises(ValueError,match='name'):mykos_admin.repo_status()
+    config.chmod(0o666)
+    with pytest.raises(ValueError,match='protected'):mykos_admin.repository_source()

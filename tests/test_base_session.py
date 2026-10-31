@@ -107,12 +107,20 @@ def test_vm_reset_restores_only_private_working_tree_from_golden(monkeypatch,tmp
     monkeypatch.setattr(vm,'read',lambda key:{'role':'template','name':'mac15','ready':True,'image':'captured'})
     monkeypatch.setattr(vm,'storage',lambda key:tmp_path)
     golden=tmp_path/'golden';golden.mkdir();(golden/'saved').write_text('captured')
+    (golden/'.mykos-checkpoint').mkdir()
     working=tmp_path/'storage';working.mkdir();(working/'unsaved').write_text('discard')
     monkeypatch.setattr(vm,'restore_manifest',lambda *a:{})
     monkeypatch.setattr(vm,'tree_copy',shutil.copytree)
     monkeypatch.setattr(vm,'wait_for_restore',lambda *a:None)
-    launched=[];monkeypatch.setattr(vm,'launch',lambda *a:launched.append(a))
+    launched=[]
+    def launch(*args):
+        request=working/'.mykos-checkpoint/restore.request'
+        assert request.read_text()=='restore once\n'
+        assert request.stat().st_mode & 0o777==0o600
+        launched.append(args)
+    monkeypatch.setattr(vm,'launch',launch)
     assert images.reset_base('mac15')['state']=='reset'
     assert (working/'saved').read_text()=='captured' and not (working/'unsaved').exists()
     assert (golden/'saved').read_text()=='captured'
+    assert not (golden/'.mykos-checkpoint/restore.request').exists()
     assert launched and not list(tmp_path.glob('.reset-before-*'))

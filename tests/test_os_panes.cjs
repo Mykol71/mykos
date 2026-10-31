@@ -61,6 +61,24 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         mykosTerminalAllowed=false;mykosRenderImageBuilds();
         assert.match(el('rocky-mykos-image-builds').innerHTML,/Prepared image/);
         assert.doesNotMatch(el('rocky-mykos-image-builds').innerHTML,/<button/);
+        assert.doesNotMatch(el('rocky-mykos-image-builds').innerHTML,/href=/);
+        mykosTerminalAllowed=true;
+        for (const os of ['win11','wns2025','mac15','ubuntu24.04']) {
+            const family=mykosImageFamily(os);
+            el(mykosOsId(family,'mykos-image-builds')).querySelectorAll=()=>[];
+            mykosCapturedImages=[{os,size_bytes:1,created_at:1793060009}];
+            mykosRenderImageBuilds();
+            const markup=el(mykosOsId(family,'mykos-image-builds')).innerHTML;
+            assert.ok(markup.includes('https://testserver/mykos/console/'+os+'/'),'Completed desktop images retain their graphical console action');
+            assert.match(markup,/Desktop console/);
+            mykosTerminalAllowed=false;mykosRenderImageBuilds();
+            assert.doesNotMatch(el(mykosOsId(family,'mykos-image-builds')).innerHTML,/href=/);
+            mykosTerminalAllowed=true;
+        }
+        mykosCapturedImages=[{os:'win11',console_url:'https://untrusted.example/mykos/console/win11/'}];
+        mykosRenderImageBuilds();
+        assert.doesNotMatch(el('windows-mykos-image-builds').innerHTML,/href=/);
+        mykosTerminalAllowed=false;
         responseCapturedImages=[{os:'rh7',version:'7.9',size_bytes:232810879,created_at:1793325655}];
         responseImages=[];mykosStageImagesLoadedAt=0;await mykosLoadStageImages();
         assert.equal(el(mykosOsId('linux','mykos-container-panel')).hidden,false);

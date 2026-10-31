@@ -65,7 +65,7 @@ def setup(ram_mib=2048):
     descriptor = os.open(lock, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(descriptor, 'w') as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
-        current = swap_rows(command(['swapon', '--show', '--bytes', '--noheadings', '--raw', '--output', 'NAME,SIZE']))
+        current = swap_rows(command(['swapon', '--show=NAME,SIZE', '--bytes', '--noheadings', '--raw']))
         # Reuse an existing suitable swap file without allocating another one.
         target = next((Path(name) for name, size in current if size_bytes - 4096 <= size <= size_bytes), TARGET)
         fstab = Path('/etc/fstab')

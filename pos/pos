@@ -288,8 +288,70 @@ except (OSError,ValueError,KeyError):
  raise SystemExit('Could not uniquely match the remote Meraki site in this organization; no VPN peers were changed')
 SITE_PY
 ) || exit 1
+# Use device firmware: a network's advertised upgrade target can be newer than
+# the actual MX64/MX65 hardware can run.
+[[ "$selected_network" =~ ^[NL]_[A-Za-z0-9_-]+$ ]] || exit 1
+curl --fail --silent --show-error --connect-timeout 15 --max-time 60 --request GET \
+  --url "https://api.meraki.com/api/v1/networks/$selected_network/devices" --header "@$work/headers" --output "$work/devices.json" || exit 1
+local legacy
+legacy=$("$MYKOS_PYTHON" - "$work/devices.json" <<'FIRMWARE_PY'
+import json,re,sys
+try:
+ rows=json.load(open(sys.argv[1]));versions=[]
+ if not isinstance(rows,list):raise ValueError()
+ for row in rows:
+  if str(row.get('model','')).startswith('MX'):
+   match=re.match(r'^wired-(\d+)[.-](\d+)',row.get('firmware',''))
+   if not match:raise ValueError()
+   versions.append(tuple(map(int,match.groups())))
+ if not versions:raise ValueError()
+ print(int(any(v<(19,1) for v in versions)))
+except (OSError,ValueError,AttributeError):raise SystemExit('Cannot verify actual MX firmware; no VPN configuration changed')
+FIRMWARE_PY
+) || exit 1
+local scope_tag=''
+if [ "$legacy" = 1 ]; then
+  [ "${VPN_MODE:-direct}" = direct ] || { echo 'This MX requires a site-only policy VPN; shared full-internet gateway mode is unsupported.'; exit 1; }
+  [ "${VPN_SITE_ONLY:-0}" = 1 ] || { echo 'This MX runs older firmware and requires a site-only policy VPN.'; exit 20; }
+  scope_tag=$("$MYKOS_PYTHON" -c 'import hashlib,sys;print("mykos-vpn-"+hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])' "$selected_network") || exit 1
+  # A dedicated, unique tag is the legacy API's site assignment mechanism.
+  next_url="https://api.meraki.com/api/v1/organizations/$MERAKI_ORG_ID/networks?perPage=1000"
+  page=0
+  while [ -n "$next_url" ]; do
+    page=$((page+1)); [ "$page" -le 100 ] || exit 1
+    curl --fail --silent --show-error --connect-timeout 15 --max-time 60 --request GET \
+      --url "$next_url" --header "@$work/headers" --dump-header "$work/page.headers" --output "$work/networks-$page.json" || exit 1
+    next_url=$("$MYKOS_PYTHON" - "$work/page.headers" "$MERAKI_ORG_ID" <<'NETWORK_PAGE_PY'
+import re,sys,urllib.parse
+links=re.findall(r'<([^>]+)>;\s*rel="?next"?',open(sys.argv[1]).read(),re.I)
+if len(links)>1:raise SystemExit('Ambiguous Meraki pagination')
+if links:
+ u=urllib.parse.urlsplit(links[0])
+ if u.scheme!='https' or u.netloc!='api.meraki.com' or u.path!='/api/v1/organizations/'+sys.argv[2]+'/networks':raise SystemExit('Unexpected Meraki pagination URL')
+ print(links[0])
+NETWORK_PAGE_PY
+    ) || exit 1
+  done
+  "$MYKOS_PYTHON" - "$work" "$selected_network" "$scope_tag" <<'TAG_PLAN_PY' || exit 1
+import json,pathlib,sys
+try:
+ rows=[]
+ for p in pathlib.Path(sys.argv[1]).glob('networks-*.json'):
+  page=json.loads(p.read_text())
+  if not isinstance(page,list) or not all(isinstance(r,dict) for r in page):raise ValueError()
+  rows+=page
+ for r in rows:
+  tags=r.get('tags',[])
+  if not isinstance(tags,list) or not all(isinstance(t,str) for t in tags):raise ValueError()
+  if sys.argv[3] in tags and r.get('id')!=sys.argv[2]:raise ValueError()
+ targets=[r for r in rows if r.get('id')==sys.argv[2]]
+ if len(targets)!=1:raise ValueError()
+ pathlib.Path(sys.argv[1],'network-before.json').write_text(json.dumps(targets[0]))
+except (OSError,ValueError):raise SystemExit('Cannot verify unique legacy VPN site assignment; nothing was uploaded')
+TAG_PLAN_PY
+fi
 # Preserve the complete downloaded peer list. Never PUT an empty fallback on GET/JSON failure.
-MERAKI_ROUTE_BASED="${VPN_ROUTE_BASED:-0}" VPN_PSK="$VPN_PSK" REMOTE_NAME="$REMOTE_NAME" VPN_LOCAL_CIDR="$VPN_LOCAL_CIDR" PUBLIC="$PUBLIC" MERAKI_NETWORK_ID="$selected_network" MERAKI_PEER_NAME="${SHOPCODE:+$SHOPCODE.}$REMOTE_NAME" VPN_LOCAL_ID="${VPN_LOCAL_ID:-192.168.222.0}" VPN_REMOTE_ID="${VPN_REMOTE_ID:-192.168.222.0}" "$MYKOS_PYTHON" - "$work/existing.json" "$work/payload.json" <<'JSON_PY'
+MERAKI_SCOPE_TAG="$scope_tag" MERAKI_ROUTE_BASED="${VPN_ROUTE_BASED:-0}" VPN_PSK="$VPN_PSK" REMOTE_NAME="$REMOTE_NAME" VPN_LOCAL_CIDR="$VPN_LOCAL_CIDR" PUBLIC="$PUBLIC" MERAKI_NETWORK_ID="$selected_network" MERAKI_PEER_NAME="${SHOPCODE:+$SHOPCODE.}$REMOTE_NAME" VPN_LOCAL_ID="${VPN_LOCAL_ID:-192.168.222.0}" VPN_REMOTE_ID="${VPN_REMOTE_ID:-192.168.222.0}" "$MYKOS_PYTHON" - "$work/existing.json" "$work/payload.json" <<'JSON_PY'
 import json, os, sys
 try:
     with open(sys.argv[1]) as handle: current=json.load(handle)
@@ -308,6 +370,9 @@ peer = {
     "networkTags": ["none"], "localId": os.environ["VPN_REMOTE_ID"], "remoteId": os.environ["VPN_LOCAL_ID"],
     "isRouteBased": os.environ["MERAKI_ROUTE_BASED"]=="1", "publicIp": os.environ["PUBLIC"],
     "network": {"ids": [os.environ["MERAKI_NETWORK_ID"]]}}
+if os.environ['MERAKI_SCOPE_TAG']:
+    peer['networkTags']=[os.environ['MERAKI_SCOPE_TAG']]
+    peer.pop('network');peer.pop('isRouteBased')
 matches=[p for p in current['peers'] if p.get('name')==peer['name']]
 if matches:
     if len(matches)==1 and all(matches[0].get(k)==v for k,v in peer.items()):
@@ -328,10 +393,48 @@ try:
  if json.load(open(sys.argv[1]))!=json.load(open(sys.argv[2])):raise ValueError()
 except (OSError,ValueError):raise SystemExit('Meraki peers changed during setup; nothing was uploaded. Review and retry.')
 RECHECK_PY
+if [ "$legacy" = 1 ]; then
+  curl --fail --silent --show-error --connect-timeout 15 --max-time 60 --request GET \
+    --url "https://api.meraki.com/api/v1/networks/$selected_network" --header "@$work/headers" --output "$work/network-now.json" || exit 1
+  "$MYKOS_PYTHON" - "$work" "$scope_tag" <<'TAG_RECHECK_PY' || exit 1
+import json,pathlib,sys
+p=pathlib.Path(sys.argv[1]);before=json.loads((p/'network-before.json').read_text());now=json.loads((p/'network-now.json').read_text())
+if before.get('id')!=now.get('id') or before.get('tags',[])!=now.get('tags',[]):raise SystemExit('Meraki network tags changed during setup; retry after reviewing Dashboard')
+tags=now.get('tags',[])
+if sys.argv[2] not in tags:tags=tags+[sys.argv[2]]
+(p/'tag-payload.json').write_text(json.dumps({'tags':tags}))
+TAG_RECHECK_PY
+  if ! curl --fail-with-body --silent --show-error --connect-timeout 15 --max-time 60 --request PUT \
+    --url "https://api.meraki.com/api/v1/networks/$selected_network" --header "@$work/headers" \
+    --header 'Content-Type: application/json' --data-binary "@$work/tag-payload.json" --output "$work/tag-result.json"; then
+    echo 'Meraki site tag assignment failed; VPN peer was not uploaded.'; exit 1
+  fi
+  "$MYKOS_PYTHON" - "$work/tag-payload.json" "$work/tag-result.json" <<'TAG_VERIFY_PY' || exit 1
+import json,sys
+if json.load(open(sys.argv[1]))['tags']!=json.load(open(sys.argv[2])).get('tags'):raise SystemExit('Cannot verify site tag assignment; VPN peer was not uploaded')
+TAG_VERIFY_PY
+fi
 echo "Appending site-to-site peer on Meraki...."
-curl --fail --silent --show-error --connect-timeout 15 --max-time 60 --request PUT \
+if ! curl --fail-with-body --silent --show-error --connect-timeout 15 --max-time 60 --request PUT \
   --url "$endpoint" --header "@$work/headers" \
-  --header 'Content-Type: application/json' --data-binary "@$work/payload.json" --output "$work/result.json" || exit 1
+  --header 'Content-Type: application/json' --data-binary "@$work/payload.json" --output "$work/result.json"; then
+  VPN_PSK="$VPN_PSK" MERAKI_API_KEY="$MERAKI_API_KEY" "$MYKOS_PYTHON" - "$work/result.json" "$work/existing.json" <<'API_ERROR_PY'
+import json,os,re,sys
+try:
+ secrets=[os.environ.get(key,'') for key in ('VPN_PSK','MERAKI_API_KEY')]
+ secrets += [p.get('secret','') for p in json.load(open(sys.argv[2])).get('peers',[])]
+ errors=json.load(open(sys.argv[1])).get('errors',[])
+ for error in errors if isinstance(errors,list) else []:
+  if isinstance(error,str):
+   for secret in secrets:
+    if secret:
+     for form in (secret,json.dumps(secret)[1:-1]):error=error.replace(form,'[redacted]')
+   error=re.sub(r'[\x00-\x1f\x7f]',' ',error)
+   print('Meraki: '+error[:1000],file=sys.stderr)
+except (OSError,ValueError,AttributeError):pass
+API_ERROR_PY
+  exit 1
+fi
 # A successful HTTP code alone does not verify the returned configuration.
 "$MYKOS_PYTHON" - "$work/payload.json" "$work/result.json" <<'VERIFY_PY' || exit 1
 import json,sys
@@ -360,7 +463,7 @@ list_vpns() {
 }
 
 add_vpn() {
-local VPN_PSK vpn_psk_escaped host_connection VPN_LOCAL_CIDR VPN_LOCAL_ID VPN_REMOTE_ID VPN_MODE=direct VPN_REMOTE_CIDR VPN_ROUTE_BASED=0
+local VPN_PSK vpn_psk_escaped host_connection VPN_LOCAL_CIDR VPN_LOCAL_ID VPN_REMOTE_ID VPN_MODE=direct VPN_REMOTE_CIDR VPN_ROUTE_BASED=0 VPN_SITE_ONLY=0
 VPN_LOCAL_CIDR=192.168.222.0/24
 if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
 [[ "${SHOPCODE:-}" =~ ^[0-9]{8}$ ]] || { echo "Invalid ID"; return 1; }
@@ -445,7 +548,13 @@ if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then check_owner=host;check_connection="mykos
 # service or routing mutation occurs before this success gate.
     echo -n "Push peer config to meraki? y/n " && read -r ans || return 1
     case "$ans" in
-      y|Y) update_meraki || return 1 ;;
+      y|Y)
+        local meraki_status=0
+        update_meraki || meraki_status=$?
+        if [ "$meraki_status" = 20 ]; then
+          read -r -p 'Use a site-only VPN on this older MX (ordinary internet routing unchanged)? y/n: ' ans || return 1
+          case "$ans" in y|Y) VPN_SITE_ONLY=1;update_meraki || return 1 ;; *) return 1 ;; esac
+        elif [ "$meraki_status" != 0 ]; then return 1;fi ;;
       n|N|'') ;;
       *) echo 'Choose y or n'; return 1 ;;
     esac
@@ -459,7 +568,7 @@ if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then
   fi
 else
 mkdir -p -- ".$SHOPCODE" || return 1
-printf '%s\0' "$SHOPCODE" "$REMOTE_NAME" "$REMOTE_PUBLIC" "$VPN_LOCAL_CIDR" "$VPN_REMOTE_CIDR" "$VPN_PSK" "$VPN_LOCAL_ID" "$VPN_REMOTE_ID" | "$MYKOS_PYTHON" ./host-vpn --save-native || return 1
+printf '%s\0' "$SHOPCODE" "$REMOTE_NAME" "$REMOTE_PUBLIC" "$VPN_LOCAL_CIDR" "$VPN_REMOTE_CIDR" "$VPN_PSK" "$VPN_LOCAL_ID" "$VPN_REMOTE_ID" | MYKOS_VPN_SITE_ONLY="$VPN_SITE_ONLY" "$MYKOS_PYTHON" ./host-vpn --save-native || return 1
 
 fi
     if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then

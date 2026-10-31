@@ -3,7 +3,7 @@ set -euo pipefail
 state=/storage/.mykos-installstate
 if [[ ${MYKOS_UNATTENDED:-} == ubuntu ]]; then
     if [[ ! -f "$state/boot-installed" ]]; then
-        /run/mykos-ubuntu-iso
+        python3 /run/mykos-ubuntu-iso
         export BOOT=none
         # This installation-only share is removed by the host before capture.
         export ARGUMENTS="${ARGUMENTS:-} -fsdev local,id=mykosinstallfs,path=$state,security_model=none -device virtio-9p-pci,fsdev=mykosinstallfs,mount_tag=mykosinstall"

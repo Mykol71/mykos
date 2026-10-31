@@ -13,7 +13,14 @@ url=os.environ['MYKOS_UBUNTU_ISO_URL']
 if not re.fullmatch(r'https://(?:releases\.ubuntu\.com|old-releases\.ubuntu\.com)/[A-Za-z0-9/._-]+-live-server-amd64\.iso',url):
     raise ValueError('Expected an official Canonical live-server ISO')
 source=root/'installer.iso';target=root/'custom.iso'
-if target.is_file():raise SystemExit(0)
+# qemux caches custom media as boot.iso. Invalidate both on seed changes;
+# otherwise a retry silently boots the old autoinstall configuration.
+seed=hashlib.sha256(url.encode()+b'\0'+(state/'user-data').read_bytes()+b'\0'+(state/'meta-data').read_bytes()).hexdigest()
+stamp=state/'media.sha256'
+if target.is_file() and stamp.is_file() and stamp.read_text().strip()==seed:raise SystemExit(0)
+for cached in (target,root/'boot.iso'):
+    if cached.is_symlink():raise ValueError('Unsafe installer media cache')
+    cached.unlink(missing_ok=True)
 name=url.rsplit('/',1)[1]
 checks=urllib.request.urlopen(url.rsplit('/',1)[0]+'/SHA256SUMS',timeout=30).read().decode()
 match=re.search(r'(?m)^([0-9a-f]{64})\s+\*?'+re.escape(name)+r'$',checks)
@@ -46,3 +53,4 @@ with tempfile.TemporaryDirectory(prefix='mykos-iso-') as temp:
     subprocess.run(['xorriso','-indev',str(source),'-outdev',str(target),'-map',str(state/'user-data'),'/nocloud/user-data',
                     '-map',str(state/'meta-data'),'/nocloud/meta-data',*maps,'-boot_image','any','replay'],check=True)
 os.chmod(target,0o600)
+stamp.write_text(seed+'\n');stamp.chmod(0o600)

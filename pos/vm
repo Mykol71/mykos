@@ -38,7 +38,9 @@ def main():
     if args.ram_mib is not None and args.ram_mib != 2048: parser.error('VM images use 2048 MiB RAM')
     if args.target_mib is not None and args.action not in ('memory','memory-configure'): parser.error('--target-mib requires memory')
     if args.action == 'list':
-        for path in vm.ROOT.glob('*.json'): show(vm.links(vm.read(path.stem)))
+        for path in vm.ROOT.glob('*.json'):
+            value=vm.read(path.stem)
+            if value.get('role')!='preview':show(vm.links(value))
         return
     if not args.selection: parser.error('Select an OS template or eight-digit code')
     if args.action == 'build-status':
@@ -94,7 +96,8 @@ def main():
         runtime_step = args.selection.startswith('win') and not record.get('ready') and not record.get('runtime_memory_prepared') and (record.get('ram_mib', 2048) > 2048 or record.get('build_pagefile_mib'))
         prompt = ('Restart this installed image at 2 GiB with Windows-managed paging? After its desktop is ready, run Finish again to capture. [y/N] ' if runtime_step else 'Capture VM state, then shut down and commit the image? [y/N] ')
         if input(prompt).lower() == 'y':
-            show(vm.prepare(args.selection, replace=args.replace, keep_running=True, embed_disk=True))
+            show(vm.prepare(args.selection, replace=args.replace, keep_running=True, embed_disk=True,
+                            **({'confirm_legacy':True} if args.selection in ('win98','winme','win2k','winxp','win7u') else {})))
     elif args.action == 'start': show(vm.start(args.selection, args.os))
     elif args.action == 'toggle': show(vm.stop(args.selection) if vm.info(args.selection)['running'] else vm.resume(args.selection))
     else: show(getattr(vm, args.action)(args.selection))

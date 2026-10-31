@@ -59,7 +59,7 @@ def locked():
 
 
 def record_path(key):
-    if key not in VERSIONS and not re.fullmatch(r'[0-9]{8}', key):
+    if key not in VERSIONS and not re.fullmatch(r'(?:[0-9]{8}|preview-[0-9a-f]{32})', key):
         raise ValueError('Invalid VM selection')
     return ROOT / (key + '.json')
 
@@ -225,7 +225,7 @@ def launch(key, value):
     desktop = 3389 if kind == 'windows' else 5900
     args = [PODMAN, 'run', '-d', '--name', value['name'], '--hostname', value['name'],
             '--device=/dev/kvm', '--device=/dev/net/tun', '--cap-add=NET_ADMIN',
-            '--security-opt=label=disable', '--stop-timeout=120', '--restart=' + ('no' if value['role'] == 'template' else 'unless-stopped'), '--pull=never',
+            '--security-opt=label=disable', '--stop-timeout=120', '--restart=' + ('no' if value['role'] in ('template','preview') else 'unless-stopped'), '--pull=never',
             '--label', 'io.mykos.vm.os=' + value['os'], '--label', 'io.mykos.vm.role=' + value['role'],
             '--label', 'io.mykos.vm.host=' + value['host'],
             '-e', ('BOOT=' + value['boot']) if kind == 'ubuntu' else 'VERSION=' + version,
@@ -234,6 +234,7 @@ def launch(key, value):
             '-p', '%s:%s:8006/tcp' % (value['bind'], value['console_port']),
             '-p', '%s:%s:%s/tcp' % (value['bind'], value['desktop_port'], desktop),
             '-p', '%s:%s:%s/udp' % (value['bind'], value['desktop_port'], desktop)]
+    if value['role']=='preview':args+=['--label','io.mykos.snapshot.preview='+value['preview_token']]
     building_image = value['role'] == 'template' and not value.get('ready')
     # Explicitly reset the environment when launching instances from a committed
     # build image, so build priority cannot leak into ordinary guests.
@@ -248,7 +249,7 @@ def launch(key, value):
         from mykos_image_build import launch_arguments
         args += launch_arguments(value, key)
     args += network.arguments(host_config(), value['name'])
-    credentials = storage(value['os']) / 'windows.env'
+    credentials = storage(key if value['role']=='preview' else value['os']) / 'windows.env'
     if kind == 'windows':
         preserve = value['role'] == 'instance' or value.get('ready') or value.get('installation_complete')
         args += ['-e', 'MYKOS_PRESERVE_WINDOWS_DISK=' + ('Y' if preserve else 'N')]
@@ -256,7 +257,7 @@ def launch(key, value):
             args += ['-e', 'MANUAL=Y', '-e', 'SHUTDOWN=N']
         if credentials.is_symlink() or not credentials.is_file(): raise ValueError('Missing template credentials')
         args += ['--env-file', str(credentials)]
-        oem = storage(value['os']) / 'oem'
+        oem = storage(key if value['role']=='preview' else value['os']) / 'oem'
         if oem.is_dir() and not oem.is_symlink():
             args += ['-v', str(oem) + ':/oem:ro']
     if value.get('guest_agent') and kind in ('windows','ubuntu'):
@@ -488,7 +489,7 @@ def cpu_checkpoint_registers(output):
     return registers
 
 
-def capture_live(value, source, destination):
+def capture_live(value, source, destination, quiesce=False):
     """Save RAM/devices live, snapshot the matching disks, then resume source."""
     monitor = QemuMonitor(value)
     migrating = False
@@ -509,9 +510,17 @@ def capture_live(value, source, destination):
         for name in ('memory.gz','manifest.json','restore.request','restore.consumed'):
             if (checkpoint/name).is_symlink(): raise ValueError('Symlink checkpoint file rejected')
         token = '.memory-' + os.urandom(8).hex() + '.tmp'
-        # QEMU writes through gzip to reduce disk I/O. Rename marks completed gzip output.
+        # Image builders can dirty RAM faster than gzip can drain live precopy.
+        # Pause only this builder for a bounded, consistent startup capture.
+        # Ordinary live snapshots retain their existing precopy behavior.
+        if quiesce:
+            monitor.command('stop')
+            if monitor.command('info status') != 'VM status: paused':
+                raise RuntimeError('Image builder did not pause for startup capture')
+        # gzip can exit successfully even when QEMU cancels its stream. Publish
+        # only after BOTH QEMU and gzip have completed, never from the shell.
         uri = 'exec:gzip -1 > /storage/.mykos-checkpoint/' + token + \
-              ' && mv /storage/.mykos-checkpoint/' + token + ' /storage/.mykos-checkpoint/memory.gz'
+              ' && touch /storage/.mykos-checkpoint/' + token + '.done'
         monitor.command('migrate_set_parameter max-bandwidth 4096')  # HMP uses MiB/s.
         migrating = True
         monitor.command('migrate -d "' + uri + '"')
@@ -537,9 +546,12 @@ def capture_live(value, source, destination):
             if result: raise RuntimeError('QEMU disk flush failed: ' + result)
         # Wait for gzip's atomic completion marker before publishing matching disks.
         deadline = time.monotonic() + 20
-        while (checkpoint/token).exists() or not (checkpoint/'memory.gz').is_file():
+        while not (checkpoint/(token+'.done')).is_file() or not (checkpoint/token).is_file():
             if time.monotonic() > deadline: raise RuntimeError('Compressed checkpoint did not finalize')
             time.sleep(.1)
+        if (checkpoint/token).stat().st_size <= 0: raise RuntimeError('Empty memory checkpoint')
+        (checkpoint/token).chmod(0o600)
+        os.replace(checkpoint/token, checkpoint/'memory.gz')
         manifest = {'format':1, 'os':value['os'], 'image':value['image'],
                     'cpu_env':value.get('cpu_env', {}), 'registers':registers,
                     'qemu_version':monitor.command('info version'),
@@ -570,6 +582,7 @@ def capture_live(value, source, destination):
             # Remove only our incomplete stream, after its writer has been cancelled.
             if 'token' in locals() and not migrating:
                 (checkpoint/token).unlink(missing_ok=True)
+                (checkpoint/(token+'.done')).unlink(missing_ok=True)
 
 
 def stop_for_restore(value, disk):
@@ -902,6 +915,9 @@ def verify_windows_installation(value):
     """Explicit image finish must capture installed Windows, never WinPE/setup."""
     if VERSIONS[value['os']][0] != 'windows': return
     if value['os'] in ('win98','winme','win2k','winxp','win7u'):
+        # Legacy installers have no modern provisioning/guest-agent callback.
+        # Only the explicit Finish workflow may confirm the installed desktop.
+        if value.get('legacy_installation_confirmed') is True:return
         marker = storage(value['os'])/'storage/windows.boot'
         if marker.is_symlink() or not marker.is_file():
             raise ValueError('Finish Windows installation and boot the installed system before capturing this image')
@@ -994,7 +1010,7 @@ def commit_capture(os_name,value,captured,keep_running=False,embed_disk=False):
     return links(value)
 
 
-def prepare(os_name, replace=False, keep_running=False, embed_disk=False):
+def prepare(os_name, replace=False, keep_running=False, embed_disk=False, confirm_legacy=False):
     if os_name not in VERSIONS: raise ValueError('Select a template OS')
     with locked():
         value = read(os_name)
@@ -1004,6 +1020,8 @@ def prepare(os_name, replace=False, keep_running=False, embed_disk=False):
             try:return commit_capture(os_name,value,captured,keep_running,embed_disk)
             finally:
                 if not captured.exists():captured.parent.rmdir()
+        if confirm_legacy is True and os_name in ('win98','winme','win2k','winxp','win7u'):
+            value['legacy_installation_confirmed']=True
         verify_windows_installation(value)
         if value['os'].startswith('ubuntu') and not value.get('ready') and value.get('guest_agent'):
             from mykos_ubuntu_vpn import execute
@@ -1038,7 +1056,7 @@ Write-Output 'Runtime RAM and Windows-managed paging verified.'
         temporary=Path(tempfile.mkdtemp(prefix='.capture-',dir=str(storage(os_name))))
         captured=temporary/'golden';completed=False
         try:
-            capture_live(value,storage(os_name)/'storage',captured)
+            capture_live(value,storage(os_name)/'storage',captured,True)
             completed=True
             state=inspect(value['name'])
             value['pending_commit']={'directory':temporary.name,'container_id':state['Id'],

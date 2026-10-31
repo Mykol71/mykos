@@ -132,7 +132,15 @@ routing can still carry traffic from its wrapper, as for Windows and macOS.
 The chosen remote public endpoint must uniquely identify one network in the
 configured Meraki organization. New peers are restricted to that network; MYKOS
 does not fall back to all networks. Network-ID binding and route-based peer settings
-require MX 19.1 or newer. See Cisco's
+require MX 19.1 or newer. MYKOS checks the actual MX device firmware, since a
+network's displayed upgrade target can exceed the hardware's supported release.
+For older MX devices, direct mode offers an explicit site-only policy VPN. It
+adds a dedicated, organization-unique network tag while preserving existing tags,
+and assigns the new peer only to that tag. It omits unsupported network-ID and
+route-based fields. Existing peers remain intact. The local connection has only
+the requested site subnet, with no default CHILD_SA, internet/DNS guard, or default
+gateway election; ordinary internet routing is unchanged. Legacy shared gateway
+modes are rejected before any upload. See Cisco's
 [third-party VPN peer API](https://developer.cisco.com/meraki/api-v1/update-organization-appliance-vpn-third-party-vpn-peers/).
 
 MYKOS downloads and preserves the complete peer list, rechecks for concurrent

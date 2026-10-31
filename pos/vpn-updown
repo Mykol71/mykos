@@ -95,6 +95,7 @@ promote_remaining() {
   while read -r candidate; do
     [[ "$candidate" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,69}$ ]] || continue
     [ "$candidate" != "$removed" ] && [ -f "$candidate.conn.conf" ] && [ ! -L "$candidate.conn.conf" ] && [ -f "$candidate.updown" ] || continue
+    grep -qx 'MYKOS_SITE_ONLY=1' "$candidate.updown" && continue
     printf '%s\n' "$status" | grep -F "\"$candidate\"" | grep -Eq 'STATE_V2_ESTABLISHED_CHILD_SA|STATE_QUICK_I2|STATE_QUICK_R2|IPsec SA established' || continue
     umask 077
     temporary=$(mktemp .mykos-connected.XXXXXXXX)
@@ -120,7 +121,9 @@ if [ "${1:-}" = --remove ]; then
   # Keep the guard while any other connection remains; reconnect selects a new primary.
   remaining=0
   for file in *.conn.conf; do
-    [ -f "$file" ] && [ "$file" != "$name.conn.conf" ] && remaining=1
+    if [ -f "$file" ] && [ "$file" != "$name.conn.conf" ]; then
+      grep -qx 'MYKOS_SITE_ONLY=1' "${file%.conn.conf}.updown" 2>/dev/null || remaining=1
+    fi
   done
   if [ "$remaining" = 0 ] && [ "${MYKOS_HOST_GATEWAY:-0}" != 1 ]; then
     "$IPTABLES" -w 5 -D OUTPUT -m comment --comment mykos-full-vpn -j "$chain" 2>/dev/null || true
@@ -131,6 +134,14 @@ if [ "${1:-}" = --remove ]; then
 fi
 if [ "${1:-}" = --allow-peer ]; then allow_peer "$2";exit;fi
 if [ "${1:-}" = --restore ]; then [ ! -f .mykos-first-tunnel ] || guard;exit;fi
+# Legacy Meraki policy peers have only site selectors. Do not elect them as a
+# default gateway or install internet/DNS guards for a nonexistent default SA.
+if [ "${MYKOS_SITE_ONLY:-0}" = 1 ]; then
+  for original in /usr/libexec/ipsec/_updown.netkey /usr/lib/ipsec/_updown.netkey; do
+    if [ -x "$original" ]; then exec "$original";fi
+  done
+  exit 0
+fi
 name=${PLUTO_CONNECTION:-}
 [[ "$name" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,69}$ ]] || exit 1
 case "${PLUTO_VERB:-}" in

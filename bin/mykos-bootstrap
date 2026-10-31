@@ -266,7 +266,7 @@ class Bootstrap:
                    'ProxyPass /mykos/api/v2/terminal/ ws://127.0.0.1:8000/api/v2/terminal/\n'
                    'ProxyPassReverse /mykos/api/v2/terminal/ ws://127.0.0.1:8000/api/v2/terminal/\n'
                    'RewriteEngine On\nRewriteCond %{HTTP:Upgrade} =websocket [NC]\n'
-                   'RewriteCond %{REQUEST_URI} ^/mykos/(api/v2/)?console/\n'
+                   'RewriteCond %{REQUEST_URI} ^/mykos/((api/v2/)?console/|api/web/snapshot-preview/[0-9a-f]{32}/terminal$)\n'
                    'RewriteRule ^/mykos/(.*)$ ws://127.0.0.1:8000/$1 [P,L]\n'
                    'ProxyPass /mykos/ http://127.0.0.1:8000/\n'
                    'ProxyPassReverse /mykos/ http://127.0.0.1:8000/\nRedirectMatch ^/mykos$ /mykos/\n')

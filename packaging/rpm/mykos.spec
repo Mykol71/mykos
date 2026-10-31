@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        162%{?dist}
+Release:        168%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-Proprietary AND MIT
 URL: https://myk.sh/mykos/
@@ -110,6 +110,11 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-168
+- Consolidate verified production hotfixes: Snapshot Preview, graphical console framing and legacy/Ubuntu image capture.
+- Add host location and active VPN map lines, current documentation/screenshots and remote read-only repository inventory.
+- Scale the container graph to 40 running containers at 100 percent; preserve host-local configuration.
+
 * Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-162
 - Include production RH7 private-namespace build repairs and fresh-host storage dependencies.
 - Add separate Root/Data metrics, account-specific password policy support, and read-only Meraki site enrichment.

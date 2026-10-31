@@ -19,6 +19,7 @@ BACKUPS = Path('/backups')
 REPOS = Path('/var/www/html')
 TOOLKIT = Path('/usr/local/share/mykos')
 LOCK = Path('/run/mykos-admin.lock')
+REPOSITORY_SOURCE = Path('/etc/mykos/repository-source.json')
 
 
 def trusted_storage_alias(alias, label):
@@ -225,7 +226,45 @@ def latest_rpm(root):
     return latest[1] if latest else None
 
 
+def repository_source():
+    if not REPOSITORY_SOURCE.exists(): return None
+    info=REPOSITORY_SOURCE.lstat()
+    if not stat.S_ISREG(info.st_mode) or info.st_uid not in (0, os.geteuid()) or info.st_mode & 0o022:
+        raise ValueError('Repository source configuration must be root-owned and protected')
+    config=json.loads(REPOSITORY_SOURCE.read_text())
+    from urllib.parse import urlsplit
+    for key in ('inventory_url','public_base_url'):
+        url=urlsplit(config[key])
+        if url.scheme not in ('http','https') or not url.hostname or url.username or url.password or url.fragment or url.query:
+            raise ValueError('Invalid repository source URL')
+    return config
+
+
+def remote_repo_status(config):
+    from urllib.request import build_opener, HTTPRedirectHandler, ProxyHandler
+    class NoRedirect(HTTPRedirectHandler):
+        def redirect_request(self,*args,**kwargs): return None
+    try:
+        with build_opener(ProxyHandler({}),NoRedirect()).open(config['inventory_url'],timeout=8) as response:
+            raw=response.read(1048577)
+        if len(raw)>1048576: raise ValueError('Repository inventory is too large')
+        value=json.loads(raw)
+        if not isinstance(value.get('repos'),list) or not isinstance(value.get('storage'),dict) or type(value.get('collected_at')) is not int:
+            raise ValueError('Invalid repository inventory')
+        if not 0 <= time.time()-value['collected_at'] < 900:
+            raise ValueError('Repository inventory is stale')
+        for item in value['repos']:
+            if not isinstance(item,dict) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}',item.get('name','')):
+                raise ValueError('Invalid repository inventory name')
+        value.update(source_host=config['host'],public_base_url=config['public_base_url'],read_only=True)
+        return value
+    except (OSError,ValueError,KeyError,TypeError) as error:
+        raise ValueError('Repository server inventory unavailable: '+str(error)) from error
+
+
 def repo_status():
+    config=repository_source()
+    if config: return remote_repo_status(config)
     usage = sizes(REPOS)
     rows = []
     root = directory(REPOS)
@@ -354,6 +393,8 @@ def dispatch(args):
     payload = json.loads(raw)
     if not isinstance(payload, dict): raise ValueError('Invalid payload')
     if kind not in ('backup-action', 'repo-action'): raise ValueError('Unsupported action')
+    if kind == 'repo-action' and repository_source():
+        raise ValueError('Remote repositories are read-only here; manage them on the repository server')
     LOCK.parent.mkdir(parents=True, exist_ok=True)
     with LOCK.open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

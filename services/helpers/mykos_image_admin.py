@@ -198,7 +198,8 @@ def capture(os_name,confirmation):
     if os_name in vm.VERSIONS:
         value=vm.read(os_name)
         if value.get('ready'):base_container(os_name)
-        return vm.prepare(os_name,replace=bool(value.get('ready')),keep_running=True,embed_disk=True)
+        return vm.prepare(os_name,replace=bool(value.get('ready')),keep_running=True,embed_disk=True,
+                          **({'confirm_legacy':True} if os_name in ('win98','winme','win2k','winxp','win7u') else {}))
     with vm.locked():
         base=base_container(os_name)
         if job(os_name).get('state') in ('queued','deleting','resetting'):
@@ -285,6 +286,9 @@ def reset_base(os_name,expected_id=None):
             os.replace(private,previous)
             try:
                 vm.tree_copy(golden,private);vm.restore_manifest(value,private)
+                request=private/'.mykos-checkpoint/restore.request'
+                if request.is_symlink():raise ValueError('Symlink restore request rejected')
+                request.write_text('restore once\n');request.chmod(0o600)
                 vm.launch(os_name,value)
                 vm.wait_for_restore(value,private)
             except BaseException:

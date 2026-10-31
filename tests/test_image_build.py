@@ -64,7 +64,16 @@ def test_ubuntu_userdata_is_unattended_and_keeps_guest_fixes(monkeypatch):
     assert value['identity']['password'].startswith('$6$')
     assert 'PrivateTest9!' not in text
     assert value['shutdown']=='poweroff'
-    assert {'libreswan','qemu-guest-agent'}<=set(value['packages'])
+    assert value['packages']==[]
+    late=value['late-commands']
+    update=next(i for i,line in enumerate(late) if 'apt-get -o Acquire::Retries=5 update' in line)
+    install=next(i for i,line in enumerate(late) if 'install -y qemu-guest-agent libreswan' in line)
+    complete=next(i for i,line in enumerate(late) if 'disk-installed' in line)
+    assert update<install<complete
+    assert value['apt']['preserve_sources_list'] is False
+    assert all('universe' in line for line in value['apt']['sources_list'].splitlines())
+    assert '$RELEASE-security' in value['apt']['sources_list']
+    assert 'trusted=yes' not in str(value['apt'])
     assert 'ubuntu-desktop-minimal' not in value['packages']
     assert 'apt-get install -y ubuntu-desktop-minimal' in str(value['user-data'])
     assert 'installer-failed' in str(value['error-commands'])
@@ -275,3 +284,45 @@ def test_pending_commit_failure_reports_safe_retry(state,monkeypatch):
     assert reports[-1][1]=='failed'
     assert 'completed disk/RAM capture retained' in reports[-1][2]
     assert 'without reinstalling' in reports[-1][2]
+
+
+def test_ubuntu_wrapper_uses_its_python_despite_host_helper_shebang(tmp_path):
+    import os
+    storage=tmp_path/'storage';state=storage/'.mykos-installstate';state.mkdir(parents=True)
+    run=tmp_path/'run';run.mkdir()
+    helper=run/'mykos-ubuntu-iso'
+    helper.write_text('#!/no/such/host/python3.11\nfrom pathlib import Path\nPath('+repr(str(state/'iso-prepared'))+').touch()\n')
+    helper.chmod(0o755)
+    entry=run/'entry.sh';entry.write_text('#!/bin/sh\ntouch '+str(state/'disk-installed')+'\n');entry.chmod(0o755)
+    source=(Path(b.__file__).parent/'mykos-unattended-entry').read_text().replace('/storage',str(storage)).replace('/run/',str(run)+'/')
+    process=subprocess.run(['/bin/bash','-c',source],env={**os.environ,'MYKOS_UNATTENDED':'ubuntu'},capture_output=True,text=True)
+    assert process.returncode==0,process.stderr
+    assert (state/'iso-prepared').exists() and (state/'boot-installed').exists()
+
+
+def test_ubuntu_media_cache_tracks_seed_and_discards_vendor_boot_copy(tmp_path,monkeypatch):
+    import hashlib,io
+    storage=tmp_path/'storage';state=storage/'.mykos-installstate';state.mkdir(parents=True)
+    official=b'checked official media';(storage/'installer.iso').write_bytes(official)
+    (state/'user-data').write_text('old seed');(state/'meta-data').write_text('instance metadata')
+    (storage/'custom.iso').write_bytes(b'old custom');(storage/'boot.iso').write_bytes(b'old boot')
+    monkeypatch.setenv('MYKOS_UBUNTU_ISO_URL','https://releases.ubuntu.com/20.04/ubuntu-20.04.6-live-server-amd64.iso')
+    monkeypatch.setattr(b.urllib.request,'urlopen',lambda *a,**k:io.BytesIO((hashlib.sha256(official).hexdigest()+'  ubuntu-20.04.6-live-server-amd64.iso\n').encode()))
+    builds=[]
+    def xorriso(args,**kwargs):
+        if '-extract' in args:Path(args[-1]).write_text('set timeout=30\nlinux /casper/vmlinuz ---\n')
+        else:
+            builds.append(args);Path(args[args.index('-outdev')+1]).write_bytes((state/'user-data').read_bytes())
+        return subprocess.CompletedProcess(args,0,'','')
+    monkeypatch.setattr(subprocess,'run',xorriso)
+    code=(Path(b.__file__).parent/'mykos-ubuntu-iso').read_text().replace("root=Path('/storage')","root=Path("+repr(str(storage))+")")
+    exec(compile(code,'mykos-ubuntu-iso','exec'),{})
+    assert len(builds)==1 and not (storage/'boot.iso').exists()
+    assert (storage/'custom.iso').read_text()=='old seed'
+    (storage/'boot.iso').write_text('current boot')
+    with pytest.raises(SystemExit) as unchanged:exec(compile(code,'mykos-ubuntu-iso','exec'),{})
+    assert unchanged.value.code==0 and len(builds)==1 and (storage/'boot.iso').exists()
+    (state/'user-data').write_text('corrected seed')
+    exec(compile(code,'mykos-ubuntu-iso','exec'),{})
+    assert len(builds)==2 and not (storage/'boot.iso').exists()
+    assert (storage/'custom.iso').read_text()=='corrected seed'

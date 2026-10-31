@@ -1,0 +1,7 @@
+[Unit]
+Description=Remove closed and expired MYKOS snapshot previews
+[Service]
+Type=oneshot
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-snapshot-preview gc
+UMask=0077
+TimeoutStartSec=5min

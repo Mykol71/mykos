@@ -1021,3 +1021,49 @@ def test_full_access_account_can_preview_every_os_pane(environment):
     admin=login('operator','operator-password-123')
     assert reader.get('/api/web/current-user').json()=={'username':'reader','preview_all_panes':False}
     assert admin.get('/api/web/current-user').json()=={'username':'operator','preview_all_panes':True}
+
+
+def test_snapshot_preview_requires_admin_origin_and_binds_browser_session(environment,monkeypatch):
+    import snapshot_preview_api as preview,hashlib
+    calls=[]
+    def fake(*args):
+        calls.append(args)
+        return {'token':'a'*32,'state':'queued','code':'01234567','snapshot':'1793400000-abcdef123456','mode':'memory'}
+    monkeypatch.setattr(preview,'invoke',fake)
+    path='/api/web/containers/01234567/snapshots/1793400000-abcdef123456/preview'
+    anonymous=TestClient(app.app,base_url='https://testserver')
+    assert anonymous.post(path,headers={'Origin':'https://testserver'}).status_code==401
+    reader=login('reader','reader-password-123')
+    assert reader.post(path,headers={'Origin':'https://testserver'}).status_code==403
+    admin=login('operator','operator-password-123')
+    assert admin.post(path).status_code==403
+    response=admin.post(path,headers={'Origin':'https://testserver'})
+    assert response.status_code==200
+    assert response.json()['url']=='/mykos/api/web/snapshot-preview/'+'a'*32+'/page'
+    assert calls[-1]==('snapshot-preview-create','01234567','1793400000-abcdef123456',hashlib.sha256(admin.cookies.get('mykos_session').encode()).hexdigest())
+    assert 'mykos_session' not in response.text and 'owner' not in response.text
+    for suffix in ('heartbeat','close'):
+        endpoint='/api/web/snapshot-preview/'+'a'*32+'/'+suffix
+        assert admin.post(endpoint).status_code==403
+        assert admin.post(endpoint,headers={'Origin':'https://testserver'}).status_code==200
+    assert admin.get('/api/web/snapshot-preview/'+'a'*32+'/page').status_code==200
+    assert anonymous.get('/api/web/snapshot-preview/'+'a'*32+'/page').status_code==401
+
+
+def test_snapshot_console_allows_only_same_origin_framing(environment,monkeypatch):
+    import desktop_proxy
+    monkeypatch.setattr(container_admin,'invoke',lambda *a:{'host':'127.0.0.1','port':18006})
+    monkeypatch.setattr(desktop_proxy,'fetch',lambda *a:(200,'text/html',b'<html>console</html>'))
+    operator=login('operator','operator-password-123')
+    preview=operator.get('/console/preview-'+'a'*32+'/')
+    assert preview.status_code==200
+    assert preview.headers['x-frame-options']=='SAMEORIGIN'
+    assert "frame-ancestors 'self'" in preview.headers['content-security-policy']
+    normal=operator.get('/console/win11/')
+    assert normal.status_code==200
+    assert normal.headers['x-frame-options']=='DENY'
+    assert "frame-ancestors 'none'" in normal.headers['content-security-policy']
+    page=operator.get('/api/web/current-user')
+    assert page.headers['x-frame-options']=='DENY'
+    anonymous=TestClient(app.app,base_url='https://testserver')
+    assert anonymous.get('/console/preview-'+'a'*32+'/').status_code==401

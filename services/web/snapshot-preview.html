@@ -1,0 +1,41 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Snapshot Preview · MYKOS</title>
+<link rel="stylesheet" href="https://unpkg.com/@xterm/xterm@5.5.0/css/xterm.css">
+<style>:root{color-scheme:dark;background:#050a12;color:#e2e8f0;font:12px monospace}*{box-sizing:border-box}body{margin:0}header{padding:10px 16px;background:#111c30;display:flex;align-items:center;gap:16px;flex-wrap:wrap}header strong{color:#38bdf8}small,#status{color:#94a3b8}button{margin-left:auto;background:transparent;border:1px solid #334155;border-radius:5px;color:#38bdf8;padding:5px 10px;font:inherit}iframe{width:100%;height:calc(100vh - 95px);border:0}#terminal{padding:12px}#notice{margin:0;padding:9px 16px;background:#172033;color:#fbbf24}#status{padding:8px 16px}[hidden]{display:none!important}</style></head><body>
+<header><strong>Snapshot Preview</strong><span id="identity"></span><button id="close" type="button">Close preview</button></header>
+<p id="notice"></p><div id="status" role="status">Starting a separate preview…</div><iframe id="desktop" title="Snapshot desktop preview" hidden></iframe><div id="terminal" hidden></div>
+<script id="preview-config" type="application/json">__MYKOS_PREVIEW_CONFIG__</script>
+<script src="https://unpkg.com/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+<script>
+const config=JSON.parse(document.getElementById('preview-config').textContent),el=id=>document.getElementById(id);
+const base='/mykos/api/web/snapshot-preview/'+encodeURIComponent(config.token);
+let closed=false,started=false,socket=null,term=null,timer=null,busy=false;
+el('identity').textContent=config.code+' · '+config.snapshot;
+el('notice').textContent=config.mode==='memory'?'Saved RAM and disks · separate session · guest networking blocked · changes discarded on close':'Saved filesystem shell · captured RAM and services are not resumed · no network · changes discarded on close';
+function stop(){if(socket){socket.onclose=null;socket.close();socket=null;}if(term){term.dispose();term=null;}el('desktop').removeAttribute('src');}
+function close(){if(closed)return;closed=true;clearTimeout(timer);stop();fetch(base+'/close',{method:'POST',keepalive:true}).catch(()=>{});}
+function openConsole(){
+ if(started)return;started=true;
+ if(config.mode==='memory'){el('desktop').src='/mykos/console/preview-'+config.token+'/';el('desktop').hidden=false;}
+ else{
+  if(!window.Terminal)throw Error('Terminal display library unavailable');
+  el('terminal').hidden=false;term=new Terminal({cursorBlink:true,scrollback:1000,cols:120,rows:30,theme:{background:'#050a12',foreground:'#e2e8f0'}});term.open(el('terminal'));term.focus();
+  const url=new URL(base+'/terminal',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';
+  socket=new WebSocket(url);socket.binaryType='arraybuffer';
+  socket.onopen=()=>term.onData(data=>{if(socket?.readyState===WebSocket.OPEN)socket.send(data);});
+  socket.onmessage=e=>term?.write(e.data instanceof ArrayBuffer?new Uint8Array(e.data):e.data);
+  socket.onclose=()=>{el('status').textContent='Preview terminal ended';close();};
+ }
+ el('status').textContent='Temporary preview ready; original container and snapshot are unchanged. Maximum session: 30 minutes.';
+}
+async function poll(){
+ if(closed || busy)return;busy=true;
+ try{
+  const response=await fetch(base+'/heartbeat',{method:'POST',cache:'no-store'});const data=await response.json();
+  if(!response.ok)throw Error(data.detail || 'Preview session ended');
+  if(data.state==='failed' || data.state==='cleanup_failed')throw Error(data.error || 'Preview failed');
+  if(data.state==='ready')openConsole();else el('status').textContent=data.state==='queued'?'Preview queued…':'Preparing a private copy of saved state…';
+ }catch(error){el('status').textContent=error.message;close();}
+ finally{busy=false;if(!closed)timer=setTimeout(poll,started?15000:1000);}
+}
+el('close').onclick=()=>{close();window.close();};window.addEventListener('pagehide',close);poll();
+</script></body></html>

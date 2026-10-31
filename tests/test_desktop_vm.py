@@ -47,7 +47,10 @@ def desktop(tmp_path, monkeypatch):
             if command.startswith('migrate -d'):
                 self.migrated=True;self.paused=True
                 folder=vm.storage(self.value['os'])/'storage/.mykos-checkpoint'
-                folder.mkdir(exist_ok=True);(folder/'memory.gz').write_bytes(b'compressed memory')
+                import re
+                token=re.search(r'/storage/\.mykos-checkpoint/(\.memory-[0-9a-f]+\.tmp)',command).group(1)
+                folder.mkdir(exist_ok=True);(folder/token).write_bytes(b'compressed memory')
+                (folder/(token+'.done')).touch()
             if command=='info migrate':return 'Status: completed' if self.migrated else ''
             if command=='info registers':return 'RIP=0000abc CR3=0000def'
             if command=='info version':return 'QEMU test version'
@@ -118,6 +121,38 @@ def test_capture_failure_resumes_without_marking_ready(desktop,monkeypatch):
     assert not (root/'.vm/mac15/golden').exists()
     assert not list((root/'.vm/mac15').glob('.capture-*'))
     assert vm.read('mac15')['ready'] is False
+
+
+def test_startup_capture_pauses_before_streaming_and_cleans_temporary_files(desktop,monkeypatch):
+    import shutil
+    root,calls=desktop;vm.create('win11','operator','private-password')
+    value=vm.read('win11');value['runtime_memory_prepared']=True;vm.save('win11',value)
+    (vm.storage('win11')/'storage/data.img').write_bytes(b'installed disk')
+    monkeypatch.setattr(vm,'tree_copy',lambda source,dest,**kw:shutil.copytree(source,dest))
+    vm.prepare('win11')
+    migration=next(i for i,c in enumerate(calls) if c[0]=='monitor' and c[1].startswith('migrate -d'))
+    assert calls.index(['monitor','stop'])<migration<calls.index(['monitor','cont'])
+    checkpoint=vm.storage('win11')/'storage/.mykos-checkpoint'
+    assert not list(checkpoint.glob('.memory-*'))
+
+
+def test_live_snapshot_keeps_precopy_and_failed_stream_never_replaces_checkpoint(desktop,monkeypatch,tmp_path):
+    root,calls=desktop;vm.create('win11','operator','private-password');value=vm.read('win11')
+    source=vm.storage('win11')/'storage';checkpoint=source/'.mykos-checkpoint';checkpoint.mkdir()
+    (source/'data.img').write_bytes(b'installed disk')
+    (checkpoint/'memory.gz').write_bytes(b'previous-valid-stream')
+    original=vm.QemuMonitor
+    class Failed(original):
+        def command(self,command):
+            if command=='info migrate' and self.migrated:return 'Status: failed'
+            return super().command(command)
+    monkeypatch.setattr(vm,'QemuMonitor',Failed)
+    with pytest.raises(RuntimeError,match='Memory checkpoint failed'):
+        vm.capture_live(value,source,tmp_path/'capture')
+    assert ['monitor','stop'] not in calls
+    assert ['monitor','cont'] in calls
+    assert (checkpoint/'memory.gz').read_bytes()==b'previous-valid-stream'
+    assert not list(checkpoint.glob('.memory-*'))
 
 
 def test_instance_uses_independent_prepared_storage(desktop,monkeypatch):
@@ -897,3 +932,13 @@ def test_pending_commit_rejects_replaced_builder(desktop,monkeypatch):
     monkeypatch.setattr(vm,'inspect',replaced)
     with pytest.raises(ValueError,match='identity changed'):vm.prepare('mac15')
     assert vm.pending_capture(vm.read('mac15')).is_dir()
+
+
+def test_legacy_windows_requires_explicit_installed_desktop_confirmation(tmp_path,monkeypatch):
+    monkeypatch.setattr(vm,'storage',lambda os_name:tmp_path)
+    for os_name in ('win98','winme','win2k','winxp','win7u'):
+        with pytest.raises(ValueError,match='Finish Windows installation'):
+            vm.verify_windows_installation({'os':os_name})
+        vm.verify_windows_installation({'os':os_name,'legacy_installation_confirmed':True})
+        with pytest.raises(ValueError):
+            vm.verify_windows_installation({'os':os_name,'legacy_installation_confirmed':'true'})
