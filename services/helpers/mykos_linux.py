@@ -154,6 +154,9 @@ def start(shop):
         if selected not in state.get('NetworkSettings',{}).get('Networks',{}):
             raise ValueError('Container is not attached to the configured native LAN network')
         value=remember(shop,name,state)
+        if (state.get('Config',{}).get('Annotations') or {}).get('run.oci.systemd.force_cgroup_v1')=='/sys/fs/cgroup':
+            from mykos_cgroups import arguments
+            arguments('rh7')
         run([PODMAN,'start',name],timeout=120)
         state=json.loads(run([PODMAN,'container','inspect',name],timeout=30))[0]
         # Restart a VPN service only when this ID has explicitly configured tunnels.

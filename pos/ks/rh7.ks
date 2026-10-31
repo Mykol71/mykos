@@ -4,22 +4,20 @@
 # Accounts are locked at build time; provision host/container access explicitly.
 rootpw --lock
 url --url="https://mykol.com/rhel-7-server-rpms"
-repo --name="Optional" --install --baseurl=https://mykol.com/rhel-7-optional-rpms
-repo --name="Extras" --install --baseurl=https://mykol.com/rhel-7-extras-rpms
+repo --name="Optional" --install --baseurl=https://mykol.com/rhel-7-server-optional-rpms
+repo --name="Extras" --install --baseurl=https://mykol.com/rhel-7-server-extras-rpms
 repo --name="Server" --install --baseurl=https://mykol.com/rhel-7-server-rpms
 keyboard us
 selinux --permissive
 firewall --disabled
 skipx
 timezone  America/Chicago
+timesource --ntp-disable
 network --bootproto=dhcp --device=link --activate --onboot=on
 shutdown
 bootloader --disabled
 lang en_US.UTF-8
 firstboot --disable
-logging --level=info
-auth  --useshadow --passalgo=sha512
-
 #users
 
 # Disk setup
@@ -27,73 +25,46 @@ zerombr
 clearpart --all --initlabel
 part / --asprimary --fstype="ext4" --size=10000
 
-%addon org_fedora_oscap
-content-type = scap-security-guide
-profile = xccdf_org.ssgproject.content_profile_pci-dss
-%end
 
 # Explicit packages: the site's RHEL 7 mirrors do not publish comps group metadata.
 # --nocore prevents Anaconda from implicitly requesting the missing Core group.
-%packages --nocore --excludedocs --instLangs=en
-filesystem
-setup
-basesystem
+%packages --nocore --excludedocs --inst-langs=en
+# Explicit runtime requirements; the solver adds only hard dependencies.
 redhat-release-server
-coreutils
-util-linux
-shadow-utils
-sed
-grep
-gawk
-findutils
-diffutils
-gzip
-bzip2
-xz
-cpio
-which
-hostname
-ca-certificates
-glibc-common
-dbus
-bind-utils
 bash
-yum
-less
-iputils
-iproute
-net-tools
-rsync
-rootfiles
-tar
-passwd
-yum-utils
-yum-plugin-ovl
--firewalld
-telnet
-slang
-curl
-mtools
-kbd
-sysstat
-procps-ng
-e2fsprogs
-uuid
-libuuid
-iptables-services
-deltarpm
+coreutils
+grep
+sed
+systemd
+systemd-sysv
 openssh-server
+shadow-utils
+util-linux
+ca-certificates
+curl
 openssl
-authconfig
+nmap-ncat
+yum
+libreswan
+iptables
+# Host-managed networking, time, and performance need no guest daemons.
+-firewalld
 -tuned
+-chrony
+-NetworkManager
+# Hardware and kernel support come from the container host.
 -kernel
 -kernel-core
 -kernel-modules
 -kernel-modules-core
 -kernel-modules-extra
+-linux-firmware
+-*-firmware
+-microcode_ctl
 %end
-%post --erroronfail --log=/anaconda-post.log
+%post --erroronfail --log=/root/mykos-image-post.log
 set -eu
+mkdir -p /etc/rpm /etc/yum/vars /etc/NetworkManager/conf.d
 
 if [ -f /etc/yum/pluginconf.d/subscription-manager.conf ]; then
     sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/subscription-manager.conf
@@ -113,12 +84,9 @@ echo "%_install_langs $LANG" > /etc/rpm/macros.image-language-conf
 # systemd fixes
 systemd-tmpfiles --create --boot
 # mask mounts and login bits
-systemctl mask systemd-logind.service getty.target console-getty.service sys-fs-fuse-connections.mount systemd-remount-fs.service dev-hugepages.mount
+systemctl mask systemd-logind.service getty.target console-getty.service sys-fs-fuse-connections.mount systemd-remount-fs.service dev-hugepages.mount sys-kernel-config.mount systemd-udevd.service systemd-udevd-control.socket systemd-udevd-kernel.socket systemd-udev-trigger.service
 
 # Remove things we don't need
-rm -f /etc/udev/hwdb.bin
-rm -rf /usr/lib/udev/hwdb.d/
-rm -rf /boot
 # Keep Yum's package history intact; this image does not use DNF.
 
 # /bin/sh is supplied by the distribution; access accounts are provisioned later.
@@ -132,4 +100,8 @@ bash -n "$updateos_tmp"
 chmod 0755 "$updateos_tmp"
 mv -f "$updateos_tmp" /usr/bin/updateos
 trap - EXIT
+
+systemctl enable sshd
+rm -rf /var/cache/yum /var/cache/dnf
+: > /etc/machine-id
 %end

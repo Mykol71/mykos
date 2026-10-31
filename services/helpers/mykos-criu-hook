@@ -18,6 +18,12 @@ def capture_files(context_path):
     context=json.loads(path.read_text());directory=Path(context['directory'])
     vm.safe_dir(directory)
     if path.parent!=directory:raise ValueError('CRIU context directory mismatch')
+    if context.get('cgroup'):
+        from mykos_criu_cgroups import checked_root,controllers,namespace_root,delegation_state
+        context['cgroup']['controllers']=controllers(checked_root(context['cgroup']))
+        context['cgroup']['namespace_controllers']=controllers(namespace_root(context['cgroup']))
+        context['cgroup']['delegation']=delegation_state(context['cgroup'])
+        path.write_text(json.dumps(context));path.chmod(0o600)
     copies=[(context['upper'],directory/'rootfs-upper')]
     for index,mount in enumerate(context['mounts']):
         folder=directory/'mounts'/str(index);vm.safe_dir(folder)

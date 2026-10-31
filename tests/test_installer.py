@@ -28,32 +28,18 @@ def test_dry_run_has_no_side_effects(tmp_path):
     assert not root.exists()
 
 
-def test_http_ip_origin_and_explicit_https_switch(tmp_path):
+def test_documentation_ancestors_are_traversable_with_restrictive_umask(tmp_path):
     root=tmp_path.resolve()/'root'
-    run(root,'install','--public-origin','http://192.168.22.10')
-    env=root/'etc/mykos/web.env'
-    assert env.read_text()=='MYKOS_PUBLIC_ORIGIN=http://192.168.22.10\nMYKOS_SECURE_COOKIE=0\n'
-    run(root,'install','--public-origin','https://example.com','--set-public-origin')
-    assert env.read_text()=='MYKOS_PUBLIC_ORIGIN=https://example.com\nMYKOS_SECURE_COOKIE=1\n'
-    run(tmp_path.resolve()/'bad','install','--public-origin','http://example.com',ok=False)
-    run(tmp_path.resolve()/'staged','install','--configure-https',ok=False)
-
-
-def test_firstboot_venv_is_readable_by_service_group_without_touching_link_targets(tmp_path,monkeypatch):
-    import importlib.machinery,importlib.util,os
-    loader=importlib.machinery.SourceFileLoader('installer_venv_test',str(INSTALL))
-    spec=importlib.util.spec_from_loader(loader.name,loader);module=importlib.util.module_from_spec(spec);loader.exec_module(module)
-    root=tmp_path/'venv';(root/'bin').mkdir(parents=True,mode=0o700)
-    script=root/'bin/uvicorn';script.write_text('entrypoint');script.chmod(0o700)
-    data=root/'module.py';data.write_text('module');data.chmod(0o600)
-    external=tmp_path/'python';external.write_text('system interpreter');external.chmod(0o755)
-    (root/'bin/python').symlink_to(external)
-    owners=[];monkeypatch.setattr(module.os,'chown',lambda *args:owners.append(args))
-    module.readable_venv(root,123)
-    assert (root/'bin').stat().st_mode&0o777==0o750
-    assert script.stat().st_mode&0o777==0o750 and data.stat().st_mode&0o777==0o640
-    assert external.stat().st_mode&0o777==0o755
-    assert not any(p==root/'bin/python' or p==external for p,*rest in owners)
+    result=subprocess.run([sys.executable,str(INSTALL),'install','--root',str(root)],
+                          capture_output=True,text=True,umask=0o077)
+    assert result.returncode==0,result.stdout+result.stderr
+    docs=root/'usr/local/share/mykos/docs'
+    assert docs.parent.stat().st_mode & 0o777==0o755
+    assert docs.stat().st_mode & 0o777==0o755
+    assert (docs/'rendered').stat().st_mode & 0o777==0o755
+    assert (root/'etc/mykos/config.json').stat().st_mode & 0o777==0o600
+    assert (root/'opt/mykos-web/data').stat().st_mode & 0o777==0o700
+    run(root,'verify')
 
 def test_install_update_backup_restore_and_remove(tmp_path):
     root=tmp_path.resolve()/'root'
@@ -213,3 +199,81 @@ def test_rpm_and_installer_include_kickstart_validator(tmp_path):
     assert 'pykickstart' in plan['system_packages_if_requested']
     spec=(REPO/'packaging/rpm/mykos.spec').read_text()
     assert any(line.startswith('Requires:') and 'pykickstart' in line.split() for line in spec.splitlines())
+
+
+
+
+def test_http_ip_origin_and_explicit_https_switch(tmp_path):
+    root=tmp_path.resolve()/'root'
+    run(root,'install','--public-origin','http://192.168.22.10')
+    env=root/'etc/mykos/web.env'
+    assert env.read_text()=='MYKOS_PUBLIC_ORIGIN=http://192.168.22.10\nMYKOS_SECURE_COOKIE=0\n'
+    run(root,'install','--public-origin','https://example.com','--set-public-origin')
+    assert env.read_text()=='MYKOS_PUBLIC_ORIGIN=https://example.com\nMYKOS_SECURE_COOKIE=1\n'
+    run(tmp_path.resolve()/'bad','install','--public-origin','http://example.com',ok=False)
+    run(tmp_path.resolve()/'staged','install','--configure-https',ok=False)
+
+
+def test_firstboot_venv_is_readable_by_service_group_without_touching_link_targets(tmp_path,monkeypatch):
+    import importlib.machinery,importlib.util,os
+    loader=importlib.machinery.SourceFileLoader('installer_venv_test',str(INSTALL))
+    spec=importlib.util.spec_from_loader(loader.name,loader);module=importlib.util.module_from_spec(spec);loader.exec_module(module)
+    root=tmp_path/'venv';(root/'bin').mkdir(parents=True,mode=0o700)
+    script=root/'bin/uvicorn';script.write_text('entrypoint');script.chmod(0o700)
+    data=root/'module.py';data.write_text('module');data.chmod(0o600)
+    external=tmp_path/'python';external.write_text('system interpreter');external.chmod(0o755)
+    (root/'bin/python').symlink_to(external)
+    owners=[];monkeypatch.setattr(module.os,'chown',lambda *args:owners.append(args))
+    module.readable_venv(root,123)
+    assert (root/'bin').stat().st_mode&0o777==0o750
+    assert script.stat().st_mode&0o777==0o750 and data.stat().st_mode&0o777==0o640
+    assert external.stat().st_mode&0o777==0o755
+    assert not any(p==root/'bin/python' or p==external for p,*rest in owners)
+
+
+def test_upgrade_preserves_operator_kickstart_package_and_post_sections(tmp_path):
+    root=tmp_path.resolve()/'root'
+    run(root,'install')
+    p=root/'usr/local/share/mykos/pos/ks/rh7.ks'
+    custom=p.read_bytes()+b'\n# Operator-owned additions\n%post\necho keep-my-application-settings\n%end\n'
+    p.write_bytes(custom)
+    run(root,'install')
+    assert p.read_bytes()==custom
+    manifest=json.loads((root/'var/lib/mykos-installer/installed.json').read_text())
+    entry=next(e for e in manifest['files'] if e['path']=='/usr/local/share/mykos/pos/ks/rh7.ks')
+    assert entry['mutable'] and entry['sha256']==hashlib.sha256(custom).hexdigest()
+    run(root,'verify')
+
+
+
+
+def load_venv_installer():
+    import importlib.machinery,importlib.util
+    loader=importlib.machinery.SourceFileLoader('installer_venv_migration_test',str(INSTALL))
+    spec=importlib.util.spec_from_loader(loader.name,loader);module=importlib.util.module_from_spec(spec);loader.exec_module(module);return module
+
+
+def test_runtime_migration_keeps_old_environment_and_second_install_reuses_new_one(tmp_path,monkeypatch):
+    module=load_venv_installer();venv=tmp_path/'.venv';(venv/'bin').mkdir(parents=True);(venv/'bin/python').write_text('old');(venv/'old-library').write_text('keep me')
+    def version(args,**kwargs):return '[3, 9]' if str(args[0])==str(venv/'bin/python') and (venv/'old-library').exists() else '[3, 11]'
+    monkeypatch.setattr(module.subprocess,'check_output',version);calls=[]
+    def runner(args):
+        calls.append(args)
+        if args[1:3]==['-m','venv']:(venv/'bin').mkdir(parents=True);(venv/'bin/python').write_text('new')
+    backup=module.provision_venv(venv,'/selected/python',tmp_path/'requirements.txt',runner=runner)
+    assert (backup/'old-library').read_text()=='keep me' and not (venv/'old-library').exists()
+    assert (venv/'bin/python').read_text()=='new'
+    before=len([c for c in calls if c[1:3]==['-m','venv']])
+    assert module.provision_venv(venv,'/selected/python',tmp_path/'requirements.txt',runner=runner) is None
+    assert len([c for c in calls if c[1:3]==['-m','venv']])==before
+
+
+def test_failed_runtime_dependency_install_restores_original_environment(tmp_path,monkeypatch):
+    import pytest
+    module=load_venv_installer();venv=tmp_path/'.venv';(venv/'bin').mkdir(parents=True);(venv/'bin/python').write_text('old');(venv/'old-library').write_text('original')
+    monkeypatch.setattr(module.subprocess,'check_output',lambda args,**kwargs:'[3, 9]' if str(args[0])==str(venv/'bin/python') else '[3, 11]')
+    def runner(args):
+        if args[1:3]==['-m','venv']:(venv/'bin').mkdir(parents=True);(venv/'bin/python').write_text('partial new environment')
+        elif args[1:4]==['-m','pip','install']:raise RuntimeError('dependency download failed')
+    with pytest.raises(RuntimeError,match='dependency download failed'):module.provision_venv(venv,'/selected/python',tmp_path/'requirements.txt',runner=runner)
+    assert (venv/'old-library').read_text()=='original' and (venv/'bin/python').read_text()=='old'

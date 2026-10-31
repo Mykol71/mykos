@@ -52,3 +52,6 @@ assert.match(context.mykosVpnGraph('12345678'),/<image x="-6" y="-8" width="12" 
 logo={tagName:'img',getAttribute:()=> 'https://untrusted.invalid/logo.png'};
 assert.doesNotMatch(context.mykosVpnGraph('12345678'),/untrusted.invalid/);
 console.log('Embedded vendor OS icons, muted inactive icons, and yellow node labels passed.');
+cache['12345678'].vpn_topology.links[0].meraki={shop_name:'Flower <Shop>',router_name:'MX Store',address:'Main St',model:'MX85',serial:'MX1'};
+const enriched=context.mykosVpnGraph('12345678');assert.match(enriched,/Flower &lt;Shop&gt;/);assert.match(enriched,/Main St/);assert.match(enriched,/MX85/);assert.doesNotMatch(enriched,/Flower <Shop>/);
+console.log('Meraki site labels, device information and escaping passed.');

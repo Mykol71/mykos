@@ -6,6 +6,7 @@ import re
 import socket
 import stat
 import subprocess
+import sys
 
 CONFIG = Path('/etc/mykos/config.json')
 JOBS = Path('/var/lib/mykos/jobs')
@@ -35,16 +36,24 @@ def podman_scope(args):
     return args
 
 
+OUTPUT_LIMIT = 16 * 1024 * 1024
+
 def run(args, timeout=75):
     # Use disk-backed output to avoid unbounded memory consumption.
     import tempfile
-    with tempfile.TemporaryFile() as out:
-        p = subprocess.run(podman_scope(args), stdout=out, stderr=subprocess.STDOUT, timeout=timeout, check=False,
+    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
+        p = subprocess.run(podman_scope(args), stdout=out, stderr=err, timeout=timeout, check=False,
                            env={**os.environ, 'PATH':'/usr/sbin:/usr/bin:/sbin:/bin'})
         out.seek(0)
-        text = out.read(512 * 1024).decode('utf-8', 'replace')
+        data = out.read(OUTPUT_LIMIT + 1)
+        if len(data) > OUTPUT_LIMIT:
+            raise RuntimeError('Command output exceeds the safe read limit: ' + args[0])
+        text = data.decode('utf-8', 'replace')
+        err.seek(0)
+        warnings = err.read(512 * 1024).decode('utf-8', 'replace')
     if p.returncode:
-        raise RuntimeError(text[-4000:] or 'Command failed: ' + args[0])
+        raise RuntimeError((text+'\n'+warnings).strip()[-4000:] or 'Command failed: ' + args[0])
+    if warnings:print(warnings,end='' if warnings.endswith('\n') else '\n',file=sys.stderr)
     return text.strip()
 
 def network_device(settings):
@@ -73,7 +82,7 @@ def containers():
     return result
 
 def stage_images():
-    """Running Linux templates and captured desktop templates supply images."""
+    """Captured native images remain usable while their base sandbox is stopped."""
     items = json.loads(run([PODMAN, 'ps', '-a', '--format', 'json']))
     images = {}
     for item in items:
@@ -93,7 +102,11 @@ def stage_images():
                         image = value.get('image_name') or value['image']
                     except (ValueError, OSError): continue
                 elif item.get('State', 'running') != 'running':
-                    continue
+                    # A stopped base still pins a captured image. Do not require
+                    # opening its sandbox before creating an ID-specific guest.
+                    if (name not in NATIVE_OS_NAMES or not isinstance(labels,dict) or
+                        labels.get('io.mykos.os')!=name or image!='localhost/'+name+':latest'):
+                        continue
                 images[name] = {'os': name, 'image': image}
     from mykos_vm import prepared_templates
     for item in prepared_templates():

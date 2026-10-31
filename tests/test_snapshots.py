@@ -17,6 +17,7 @@ def environment(tmp_path,monkeypatch):
     monkeypatch.setattr(vm,'storage_root',lambda:tmp_path/'disks')
     monkeypatch.setattr(snaps,'target',lambda code:code+'.test')
     monkeypatch.setattr(snaps,'prepare_native_mounts',lambda *args:None)
+    monkeypatch.setattr(snaps,'criu_binary',lambda:'/usr/sbin/criu')
     calls=[]
     monkeypatch.setattr(vm,'run',lambda args,**kw:calls.append(args) or '')
     monkeypatch.setattr(vm,'stop_for_restore',lambda value,disk:vm.stop_container(value['name'],grace_seconds=2))
@@ -310,3 +311,93 @@ def test_disk_size_uses_allocated_blocks_and_ignores_links(tmp_path):
     outside=tmp_path.parent/'outside-size';outside.write_bytes(b'x'*16384)
     (tmp_path/'link').symlink_to(outside)
     assert allocated_bytes(tmp_path)==disk.stat().st_blocks*512
+
+
+def test_native_data_mounts_excludes_only_readonly_kernel_cgroup(tmp_path,monkeypatch):
+    original=Path.resolve
+    def resolve(path,**kwargs):
+        return Path('/sys/fs/cgroup') if str(path)=='/sys/fs/cgroup' else original(path,**kwargs)
+    monkeypatch.setattr(Path,'resolve',resolve)
+    data=tmp_path/'data';data.mkdir()
+    config=tmp_path/'config';config.write_text('operator config')
+    controller={'Type':'bind','Source':'/sys/fs/cgroup','Destination':'/sys/fs/cgroup','RW':False}
+    state={'Mounts':[controller,
+        {'Type':'bind','Source':str(data),'Destination':'/etc/ipsec.d','RW':True},
+        {'Type':'bind','Source':str(config),'Destination':'/etc/config','RW':False}]}
+    assert snaps.native_data_mounts(state)==[
+        {'source':str(data),'destination':'/etc/ipsec.d','rw':True},
+        {'source':str(config),'destination':'/etc/config','rw':False}]
+    # Do not silently skip a different mapping or an unexpected writable mount.
+    for change in ({'RW':True},{'Destination':'/saved-data'},{'Type':'volume'}):
+        assert len(snaps.native_data_mounts({'Mounts':[{**controller,**change}]}))==1
+
+
+@pytest.mark.parametrize('source',['cgroup','cgroup2'])
+def test_native_data_mounts_skips_podman5_synthetic_cgroup_before_resolving(source,tmp_path):
+    data=tmp_path/'data';data.mkdir()
+    state={'Mounts':[
+        {'Type':'bind','Source':source,'Destination':'/sys/fs/cgroup','RW':True},
+        {'Type':'bind','Source':str(data),'Destination':'/etc/ipsec.d','RW':True}]}
+    assert snaps.native_data_mounts(state)==[{'source':str(data),'destination':'/etc/ipsec.d','rw':True}]
+    # Other relative/nonexistent sources remain invalid, rather than silently
+    # dropping mounted application data from a successful snapshot.
+    with pytest.raises(FileNotFoundError):
+        snaps.native_data_mounts({'Mounts':[{'Type':'bind','Source':source,'Destination':'/data','RW':True}]})
+
+
+def netns_fixture(tmp_path):
+    for pid,pidns,netns in [(42,42,7),(43,42,8),(99,1,9)]:
+        p=tmp_path/str(pid);(p/'ns').mkdir(parents=True)
+        (p/'ns/pid').symlink_to('pid:['+str(pidns)+']');(p/'ns/net').symlink_to('net:['+str(netns)+']')
+        (p/'comm').write_text('startup-service');(p/'stat').write_text(str(pid)+' (init) S '+'0 '*18+'12345')
+    return {'State':{'Pid':42}}
+
+
+def test_snapshot_waits_for_transient_guest_netns_without_touching_host(tmp_path,monkeypatch):
+    state=netns_fixture(tmp_path);waited=[]
+    def settle(seconds):
+        waited.append(seconds);p=tmp_path/'43/ns/net';p.unlink();p.symlink_to('net:[7]')
+    monkeypatch.setattr(snaps.time,'sleep',settle)
+    snaps.wait_native_network(state,tmp_path,timeout=2)
+    assert waited==[.5] and (tmp_path/'99/ns/net').readlink()==Path('net:[9]')
+
+
+def test_persistent_guest_netns_aborts_before_any_capture(tmp_path):
+    state=netns_fixture(tmp_path)
+    with pytest.raises(ValueError,match='left running'):snaps.wait_native_network(state,tmp_path,timeout=0)
+
+
+def test_optional_unmount_rechecks_service_namespace_after_propagation(tmp_path,monkeypatch):
+    for pid in (42,43):
+        process=tmp_path/str(pid);(process/'root/sys/kernel/config').mkdir(parents=True)
+        (process/'ns').mkdir();(process/'ns/pid').symlink_to('pid:[42]');(process/'ns/mnt').symlink_to('mnt:['+str(pid)+']')
+        (process/'mountinfo').write_text('10 9 0:1 / /sys/kernel/config rw - configfs configfs rw\n')
+    calls=[]
+    def execute(args,**kwargs):
+        calls.append(args)
+        if args[0]=='/usr/bin/nsenter':
+            (tmp_path/'42/mountinfo').write_text('');(tmp_path/'43/mountinfo').write_text('')
+        return ''
+    monkeypatch.setattr(vm,'run',execute)
+    snaps.prepare_native_mounts('test',{'State':{'Pid':42}},tmp_path)
+    assert sum(call[0]=='/usr/bin/nsenter' for call in calls)==1
+    assert calls[-1][-2:]==['mask','sys-kernel-config.mount']
+
+
+def test_optional_unmount_rejects_host_namespace_before_writing(tmp_path,monkeypatch):
+    for name in ('42','self'):
+        p=tmp_path/name;(p/'ns').mkdir(parents=True);(p/'ns/pid').symlink_to('pid:[1]');(p/'ns/mnt').symlink_to('mnt:[1]')
+    monkeypatch.setattr(vm,'run',lambda *a,**k:pytest.fail('Host namespace must not be modified'))
+    with pytest.raises(ValueError,match='host PID namespace'):
+        snaps.prepare_native_mounts('test',{'State':{'Pid':42}},tmp_path)
+
+
+@pytest.mark.parametrize('version,supported',[('3.19',False),('4.0',False),('4.1',True),('4.2.1',True)])
+def test_pidfd_capability_is_checked_before_seizing_a_container(environment,monkeypatch,version,supported):
+    proc=environment[0]/'proc';p=proc/'42';(p/'ns').mkdir(parents=True);(p/'fd').mkdir()
+    (p/'ns/pid').symlink_to('pid:[42]');(p/'ns/uts').symlink_to('uts:[42]');(p/'fd/7').symlink_to('anon_inode:[pidfd]')
+    monkeypatch.setattr(vm,'run',lambda *a,**k:'Version: '+version)
+    if supported:snaps.check_native_compatibility({'State':{'Pid':42}},proc)
+    else:
+        with pytest.raises(ValueError,match='CRIU 4.1'):
+            snaps.check_native_compatibility({'State':{'Pid':42}},proc)

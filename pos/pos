@@ -65,7 +65,7 @@ case "$OS" in
   *) os_vendor=RHEL
      # Fetch and validate on the builder; minimal guests need no download client.
      update_tmp=$(mktemp .mykos-updateos.XXXXXX) || return 1
-     if ! curl --fail --show-error --location --retry 2 --connect-timeout 15 --max-time 120 "https://$REPOSERVER/updateos/updateos" -o "$update_tmp" ||
+     if ! curl --fail --show-error --location --retry 2 --connect-timeout 15 --max-time 120 "${MYKOS_REPO_ORIGIN:-https://$REPOSERVER}/updateos/updateos" -o "$update_tmp" ||
         ! test -s "$update_tmp" || ! bash -n "$update_tmp"; then
        rm -f -- "$update_tmp"
        echo 'Could not stage the updateos script; Podman build was not started.' >&2
@@ -160,8 +160,8 @@ build-image() (
   check_image_builder || return 1
   rm -f "/var/tmp/$OS-docker.tar.xz" || return 1
   create_ks || return 1
-  if ! livemedia-creator --no-virt --make-tar --ks="/var/tmp/$OS.ks" --image-name="$OS-docker.tar.xz" --logfile="/tmp/build-$OS-container.error.log"; then
-    echo "Image creation failed; see /tmp/build-$OS-container.error.log. Podman build was not started." >&2
+  if ! "$MYKOS_PYTHON" ./build_rootfs.py "$OS" "/var/tmp/$OS.ks"; then
+    echo "Image creation failed; see the installer diagnostics directory printed above. Podman build was not started." >&2
     return 1
   fi
   [ -s "/var/tmp/$OS-docker.tar.xz" ] || { echo 'Image creator did not produce a rootfs archive' >&2; return 1; }

@@ -1,0 +1,39 @@
+MYKOS checkpoint RPMs
+
+Build mykos-criu.spec inside a build environment matching the target EL major.
+Release160 is validated and published for EL9 hosts; EL8 host builds are excluded. Keep package signature checks enabled for build dependencies.
+
+The pinned upstream source is:
+https://codeload.github.com/checkpoint-restore/criu/tar.gz/9539417f3e3cfa4eb84c319cd71f4d52f1f08645
+Save it as SOURCES/criu-4.2.1.tar.gz and copy 4.2.1-subtree-control.patch into
+SOURCES, along with overlay-fsnotify.patch. Then run rpmbuild -ba with the target distribution's .elN dist macro.
+The source RPM contains both the upstream source and the patch.
+
+The binary installs to /opt/mykos-criu/4.2.1/sbin/criu. It does not replace
+/usr/sbin/criu. MYKOS selects this root-owned packaged engine by default unless
+/etc/mykos/config.json explicitly selects a different supported executable.
+Every parent directory and the executable must remain root-owned and must not
+be writable by group or other users. Symlinks are rejected.
+
+Install the signed mykos-criu RPM and the MYKOS RPM for the same EL host major.
+DNF resolves the checkpoint-engine dependency from the matching MYKOS repository.
+Verify the trusted signing key and published checksums before installation.
+Run /opt/mykos-criu/4.2.1/sbin/criu check on the actual host and verify a disposable
+container's capture/restore before depending on live RAM snapshots.
+
+The patch trims trailing newline/space characters from cgroup.subtree_control
+readback before CRIU prefixes controller names for restoration. The MYKOS relay
+also restores saved private delegation before reconnecting systemd event watches.
+Native RHEL 7 on a cgroup-v2 host starts through a private legacy systemd branch.
+Existing running guests are not recreated automatically during an RPM upgrade;
+retain their disks and schedule any required legacy runtime migration separately.
+
+Overlay/inotify patch provenance:
+https://git.almalinux.org/rpms/criu/commit/850fe769aab961cf25e420edc39ec3935f136a67
+3043.patch; enum context adapted to pinned 4.2.1, implementation/tests retained.
+Upstream patch SHA256: 2009bb70b9070c4b2bc42a34f958d28a579ccff56753f246fea3c00e6fdb10a6.
+It uses a bounded OverlayFS directory walk when open_by_handle_at cannot open
+a watched inode. The included tests verify watches survive capture and restore.
+
+The MYKOS extension resolves portable overlay paths before handle opening, so
+handles that are valid during capture do not become stale after an overlay remount.

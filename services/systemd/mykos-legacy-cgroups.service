@@ -1,0 +1,13 @@
+[Unit]
+Description=MYKOS legacy systemd cgroup compatibility
+After=local-fs.target
+Before=podman-restart.service
+ConditionPathExists=/sys/fs/cgroup/cgroup.controllers
+
+[Service]
+Type=oneshot
+ExecStart=@PYTHON@ /usr/local/sbin/mykos_cgroups.py --prepare
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

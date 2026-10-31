@@ -27,8 +27,8 @@ const mykosRefreshHeaderTotals = () => {};
 const mykosLoadCountMetrics = () => {};
 const mykosRefreshSampleRows = () => {};
 const mykosRenderSnapshots = () => {};
-let responseImages = [], responseBuilds = [], fail = false;
-async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); return {images:responseImages, builds:responseBuilds}; }
+let responseImages = [], responseBuilds = [], responseCapturedImages = [], fail = false;
+async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); return {images:responseImages, builds:responseBuilds, captured_images:responseCapturedImages}; }
 ` + source, context);
 (async () => {
     await vm.runInContext(`(async () => {
@@ -59,7 +59,14 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         mykosCapturedImages[0].delete_state='idle';
         assert.match(el('rocky-mykos-image-builds').innerHTML,/9\.10/);
         mykosTerminalAllowed=false;mykosRenderImageBuilds();
-        assert.doesNotMatch(el('rocky-mykos-image-builds').innerHTML,/Prepared image/);
+        assert.match(el('rocky-mykos-image-builds').innerHTML,/Prepared image/);
+        assert.doesNotMatch(el('rocky-mykos-image-builds').innerHTML,/<button/);
+        responseCapturedImages=[{os:'rh7',version:'7.9',size_bytes:232810879,created_at:1793325655}];
+        responseImages=[];mykosStageImagesLoadedAt=0;await mykosLoadStageImages();
+        assert.equal(el(mykosOsId('linux','mykos-container-panel')).hidden,false);
+        assert.match(el(mykosOsId('linux','mykos-image-builds')).innerHTML,/7\.9/);
+        assert.doesNotMatch(el(mykosOsId('linux','mykos-image-builds')).innerHTML,/<button/);
+        responseCapturedImages=[];
         mykosTerminalAllowed=true;mykosCapturedImages=[];
 
         for (const images of [[], ['rh9'], ['ubuntu24.04'], ['win11'], ['wns2022'], ['mac15'], ['mssql2022'], ['rocky9'], ['alma10'], ['oracle8'], ['centos10'], ['fedora44'], ['rh10','ubuntu24','win10','wns2025','mac14']]) {

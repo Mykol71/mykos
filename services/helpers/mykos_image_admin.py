@@ -167,15 +167,13 @@ def worker(os_name):
     save(os_name,value);return value
 
 
-def base_container(os_name):
+def base_container(os_name, *, start_native=False):
     """Resolve only the named managed base, never an ID-specific instance."""
     selection(os_name)
     state=vm.inspect(os_name)
     labels=state.get('Config',{}).get('Labels') or {}
     if state.get('Name','').lstrip('/')!=os_name:
         raise ValueError('Generic base identity mismatch')
-    if not state.get('State',{}).get('Running') or state['State'].get('Paused'):
-        raise ValueError('Start the generic base before connecting or capturing')
     if os_name in vm.VERSIONS:
         value=vm.read(os_name)
         if (value.get('name')!=os_name or value.get('role')!='template' or not value.get('ready') or value.get('pending_commit') or
@@ -183,6 +181,13 @@ def base_container(os_name):
             raise ValueError('Select a completed generic VM base')
     elif labels.get('io.mykos.os')!=os_name or state.get('ImageName')!=reference(os_name):
         raise ValueError('Generic native base identity mismatch')
+    if state.get('State',{}).get('Paused'):
+        raise ValueError('Resume the generic base before connecting or capturing')
+    if not state.get('State',{}).get('Running'):
+        if not start_native or os_name in vm.VERSIONS:
+            raise ValueError('Start the generic base before connecting or capturing')
+        run([PODMAN,'start',state['Id']],timeout=15)
+        return base_container(os_name)
     return state
 
 

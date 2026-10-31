@@ -16,7 +16,7 @@ RETENTION = 30 * 60
 INTERVAL = 3
 DATABASE = BASE / 'data/host-history.sqlite3'
 LIVE = Path('/run/mykos-host-metrics/latest.json')
-FIELDS = ('collected_at', 'cpu_percent', 'cpu_count', 'memory', 'disk',
+FIELDS = ('collected_at', 'cpu_percent', 'cpu_count', 'memory', 'disk', 'data',
           'load_average', 'graph_totals', 'graph_counts')
 
 

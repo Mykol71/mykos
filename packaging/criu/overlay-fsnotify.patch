@@ -1,0 +1,751 @@
+Overlay/inotify directory walk from AlmaLinux CRIU 3043.patch.
+Source: https://git.almalinux.org/rpms/criu/commit/850fe769aab961cf25e420edc39ec3935f136a67
+Context adapted for pinned 4.2.1. MYKOS extension: resolve overlay path hints
+before handle opening, since a handle valid at capture can become stale on remount.
+Upstream implementation and accompanying regression tests retained.
+
+--- a/criu/fsnotify.c
++++ b/criu/fsnotify.c
+@@ -7,6 +7,7 @@
+ #include <string.h>
+ #include <utime.h>
+ #include <limits.h>
++#include <dirent.h>
+ #include <sys/stat.h>
+ #include <sys/types.h>
+ #include <sys/inotify.h>
+@@ -104,6 +105,163 @@
+ 
+ enum { ERR_NO_MOUNT = -1, ERR_NO_PATH_IN_MOUNT = -2, ERR_GENERIC = -3 };
+ 
++#define OVL_WALK_MAX_DEPTH	64
++#define OVL_WALK_WARN_THRESHOLD	10000
++
++/*
++ * Recursively walk a directory tree looking for an inode matching
++ * (s_dev, i_ino).  Returns an allocated path string on success,
++ * NULL when not found.  The caller is responsible for freeing the
++ * returned string via xfree().
++ *
++ * Note: this function takes ownership of @dirfd and closes it
++ * (via fdopendir/closedir) whether it succeeds or fails.
++ *
++ * @visited is incremented for each inode examined and is used to
++ * emit a one-time warning when the walk becomes expensive.
++ */
++static char *__walk_overlay_dir(int dirfd, const char *base,
++				unsigned int s_dev,
++				unsigned long i_ino, int depth,
++				unsigned long *visited)
++{
++	DIR *dfd;
++	struct dirent *de;
++	char *found = NULL;
++
++	if (depth <= 0) {
++		close(dirfd);
++		return NULL;
++	}
++
++	dfd = fdopendir(dirfd);
++	if (!dfd) {
++		pr_perror("Can't fdopendir for overlay walk");
++		close(dirfd);
++		return NULL;
++	}
++
++	while (1) {
++		struct stat st;
++
++		errno = 0;
++		de = readdir(dfd);
++		if (!de)
++			break;
++
++		if (dir_dots(de))
++			continue;
++
++		if (fstatat(dirfd, de->d_name, &st,
++			    AT_SYMLINK_NOFOLLOW) < 0) {
++			pr_debug("overlay walk: fstatat(%s/%s) failed: %s\n",
++				 base, de->d_name, strerror(errno));
++			continue;
++		}
++
++		(*visited)++;
++		if (*visited == OVL_WALK_WARN_THRESHOLD)
++			pr_warn("overlay walk: examined %lu entries so far "
++				"looking for ino %lx, mount may be large\n",
++				*visited, i_ino);
++
++		if (MKKDEV(major(st.st_dev), minor(st.st_dev)) == s_dev &&
++		    st.st_ino == i_ino) {
++			found = xsprintf("%s/%s", base, de->d_name);
++			if (!found)
++				pr_err("OOM building overlay path for ino %lx\n",
++				       i_ino);
++			break;
++		}
++
++		if (S_ISDIR(st.st_mode)) {
++			int subfd;
++			char *subbase;
++
++			subfd = openat(dirfd, de->d_name,
++				       O_RDONLY | O_DIRECTORY | O_CLOEXEC);
++			if (subfd < 0)
++				continue;
++
++			subbase = xsprintf("%s/%s", base, de->d_name);
++			if (!subbase) {
++				close(subfd);
++				continue;
++			}
++
++			found = __walk_overlay_dir(subfd, subbase,
++						   s_dev, i_ino,
++						   depth - 1,
++						   visited);
++			xfree(subbase);
++			if (found)
++				break;
++		}
++	}
++
++	if (!de && errno)
++		pr_perror("overlay walk: readdir failed on %s", base);
++
++	closedir(dfd);
++	return found;
++}
++
++/*
++ * Try to locate a file on an overlay mount by walking the directory
++ * tree and matching (s_dev, i_ino).  Returns an allocated absolute
++ * path (e.g. "/tmp/merged/subdir/file") on success, NULL on failure.
++ */
++static char *find_path_on_overlay(struct mount_info *m,
++				  unsigned int s_dev,
++				  unsigned long i_ino)
++{
++	int root_fd, mount_fd;
++	unsigned long visited = 0;
++	char *base, *found;
++	struct stat st;
++
++	root_fd = mntns_get_root_fd(m->nsid);
++	if (root_fd < 0)
++		return NULL;
++
++	/*
++	 * ns_mountpoint has a leading dot, e.g. "./tmp/merged",
++	 * which makes it relative to mntns root for openat.
++	 */
++	mount_fd = openat(root_fd, m->ns_mountpoint, O_RDONLY | O_DIRECTORY);
++	if (mount_fd < 0) {
++		pr_perror("Can't open overlay mountpoint %s",
++			  m->ns_mountpoint);
++		return NULL;
++	}
++
++	/*
++	 * The path stored in f_handle->path must be absolute so
++	 * that get_mark_path() can strip the leading "/" and use
++	 * openat(mntns_root, path + 1, O_PATH) on restore.
++	 * ns_mountpoint + 1 gives us e.g. "/tmp/merged".
++	 */
++	base = m->ns_mountpoint + 1;
++
++	/* Check if the mountpoint directory itself is the target */
++	if (fstat(mount_fd, &st) == 0 &&
++	    MKKDEV(major(st.st_dev), minor(st.st_dev)) == s_dev &&
++	    st.st_ino == i_ino) {
++		close(mount_fd);
++		return xstrdup(base);
++	}
++
++	found = __walk_overlay_dir(mount_fd, base, s_dev, i_ino,
++				   OVL_WALK_MAX_DEPTH, &visited);
++	/* mount_fd is consumed by fdopendir inside __walk_overlay_dir */
++
++	if (found)
++		pr_debug("overlay walk: found ino %lx after %lu entries\n",
++			 i_ino, visited);
++
++	return found;
++}
++
+ static char *alloc_openable(unsigned int s_dev, unsigned long i_ino, FhEntry *f_handle)
+ {
+ 	struct mount_info *m;
+@@ -138,10 +296,49 @@
+ 		if (mntfd < 0)
+ 			continue;
+ 
++		/* Overlay handles can be openable now but stale after remount.
++		 * Always retain a namespace-relative path when it is resolvable,
++		 * including watches on the overlay root itself.
++		 */
++		if (m->fstype->code == FSTYPE__OVERLAYFS) {
++			char *ovl_path = find_path_on_overlay(m, s_dev, i_ino);
++			if (ovl_path) {
++				close(mntfd);
++				if (root_ns_mask & CLONE_NEWNS) {
++					f_handle->has_mnt_id = true;
++					f_handle->mnt_id = m->mnt_id;
++				}
++				return ovl_path;
++			}
++		}
++
+ 		fd = userns_call(open_by_handle, UNS_FDOUT, &handle, sizeof(handle), mntfd);
+ 		close(mntfd);
+-		if (fd < 0)
++		if (fd < 0) {
++			if (m->fstype->code == FSTYPE__OVERLAYFS) {
++				char *ovl_path;
++
++				pr_debug("\t\tHandle open failed on overlay,"
++					 " trying dir walk for %lx\n",
++					 i_ino);
++				ovl_path = find_path_on_overlay(m, s_dev,
++								i_ino);
++				if (ovl_path) {
++					if (root_ns_mask & CLONE_NEWNS) {
++						f_handle->has_mnt_id = true;
++						f_handle->mnt_id = m->mnt_id;
++					}
++					return ovl_path;
++				}
++				/*
++				 * Mark as found so the caller gets
++				 * ERR_NO_PATH_IN_MOUNT and falls
++				 * through to irmap lookup.
++				 */
++				suitable_mount_found = 1;
++			}
+ 			continue;
++		}
+ 		suitable_mount_found = 1;
+ 
+ 		if (read_fd_link(fd, buf, sizeof(buf)) < 0) {
+
+From 53b8358a1f39f9f94844f2c147be472fa0b38da1 Mon Sep 17 00:00:00 2001
+From: Adrian Reber <areber@redhat.com>
+Date: Thu, 11 Jun 2026 15:41:19 +0000
+Subject: [PATCH 2/3] test/others/overlayfs: add inotify C/R test
+
+Add a test that exercises checkpoint/restore of a process with an
+inotify watch on a file inside an overlayfs mount.
+
+The test compiles inotify_test.c (a simple program that sets up an
+inotify watch and blocks reading events), starts it watching a file
+on an overlay mount, dumps and restores via criu, then verifies the
+restored process is still alive.
+
+Run with: make -C test/others/overlayfs run-inotify
+
+Assisted-by: Claude Code (claude-opus-4-6):default
+Signed-off-by: Adrian Reber <areber@redhat.com>
+---
+ test/others/overlayfs/.gitignore     |  1 +
+ test/others/overlayfs/Makefile       | 17 ++++--
+ test/others/overlayfs/inotify_test.c | 69 ++++++++++++++++++++++++
+ test/others/overlayfs/run-inotify.sh | 78 ++++++++++++++++++++++++++++
+ 4 files changed, 162 insertions(+), 3 deletions(-)
+ create mode 100644 test/others/overlayfs/.gitignore
+ create mode 100644 test/others/overlayfs/inotify_test.c
+ create mode 100755 test/others/overlayfs/run-inotify.sh
+
+diff --git a/test/others/overlayfs/.gitignore b/test/others/overlayfs/.gitignore
+new file mode 100644
+index 0000000000..ec554b8965
+--- /dev/null
++++ b/test/others/overlayfs/.gitignore
+@@ -0,0 +1 @@
++inotify_test
+diff --git a/test/others/overlayfs/Makefile b/test/others/overlayfs/Makefile
+index 78c246bd88..1ebf139f60 100644
+--- a/test/others/overlayfs/Makefile
++++ b/test/others/overlayfs/Makefile
+@@ -1,6 +1,17 @@
+-run:
++CC ?= cc
++
++inotify_test: inotify_test.c
++	$(CC) -Wall -o $@ $<
++
++run: run-inotify
+ 	./run.sh
+ 
++run-inotify: inotify_test
++	./run-inotify.sh
++
+ clean:
+-	umount -f overlay_test/z
+-	rm -rf overlay_test output checkpoint
++	umount -f overlay_test/z 2>/dev/null || true
++	umount -f ovl_inotify/merged 2>/dev/null || true
++	rm -rf overlay_test ovl_inotify output checkpoint inotify_test
++
++.PHONY: run run-inotify clean
+diff --git a/test/others/overlayfs/inotify_test.c b/test/others/overlayfs/inotify_test.c
+new file mode 100644
+index 0000000000..00f1b7f99b
+--- /dev/null
++++ b/test/others/overlayfs/inotify_test.c
+@@ -0,0 +1,69 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <errno.h>
++#include <unistd.h>
++#include <sys/inotify.h>
++
++#define EVENT_SIZE	(sizeof(struct inotify_event))
++#define BUF_LEN		(1024 * (EVENT_SIZE + 16))
++
++int main(int argc, char **argv)
++{
++	char buf[BUF_LEN];
++	int fd, wd, len, i;
++
++	if (argc < 2) {
++		fprintf(stderr, "Usage: %s <path>\n", argv[0]);
++		return 1;
++	}
++
++	fd = inotify_init();
++	if (fd < 0) {
++		perror("inotify_init");
++		return 1;
++	}
++
++	wd = inotify_add_watch(fd, argv[1],
++			       IN_MODIFY | IN_CREATE | IN_DELETE |
++			       IN_OPEN | IN_CLOSE);
++	if (wd < 0) {
++		perror("inotify_add_watch");
++		close(fd);
++		return 1;
++	}
++
++	printf("Watching %s for events...\n", argv[1]);
++
++	while (1) {
++		len = read(fd, buf, BUF_LEN);
++		if (len < 0) {
++			perror("read");
++			break;
++		}
++
++		i = 0;
++		while (i < len) {
++			struct inotify_event *event;
++
++			event = (struct inotify_event *)&buf[i];
++
++			if (event->mask & IN_CREATE)
++				printf("CREATE: %s\n", event->name);
++			if (event->mask & IN_DELETE)
++				printf("DELETE: %s\n", event->name);
++			if (event->mask & IN_MODIFY)
++				printf("MODIFY: %s\n", event->name);
++			if (event->mask & IN_OPEN)
++				printf("OPEN: %s\n", event->name);
++			if (event->mask & IN_CLOSE)
++				printf("CLOSE: %s\n", event->name);
++
++			i += EVENT_SIZE + event->len;
++		}
++	}
++
++	inotify_rm_watch(fd, wd);
++	close(fd);
++
++	return 0;
++}
+diff --git a/test/others/overlayfs/run-inotify.sh b/test/others/overlayfs/run-inotify.sh
+new file mode 100755
+index 0000000000..8711797221
+--- /dev/null
++++ b/test/others/overlayfs/run-inotify.sh
+@@ -0,0 +1,78 @@
++#!/bin/bash
++
++set -eu
++
++SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
++CRIU="${SCRIPT_DIR}/../../../criu/criu"
++ORIG_WD=$(pwd)
++PROC_PID=""
++
++cleanup() {
++	if [ -n "${PROC_PID}" ]; then
++		kill "${PROC_PID}" > /dev/null 2>&1 || true
++		wait "${PROC_PID}" 2>/dev/null || true
++	fi
++	cd "${ORIG_WD}"
++	umount ovl_inotify/merged 2>/dev/null || true
++	rm -rf ovl_inotify
++}
++
++trap cleanup EXIT
++
++setup() {
++	mkdir -p ovl_inotify
++	cd ovl_inotify
++	mkdir -p lower upper work merged checkpoint
++
++	cp "${SCRIPT_DIR}/inotify_test" .
++	touch lower/testfile
++	mount -t overlay overlay \
++		-o lowerdir=lower,upperdir=upper,workdir=work merged
++
++	setsid bash -c 'echo $$ > inotify.pid; exec ./inotify_test "$@"' \
++		-- merged/testfile < /dev/null &> output &
++	sleep 1
++	PROC_PID=$(cat inotify.pid)
++	echo "PROC_PID=$PROC_PID"
++}
++
++check_criu() {
++	echo "Dumping $PROC_PID..."
++	if ! $CRIU dump -D checkpoint -t "${PROC_PID}" --shell-job -v4; then
++		echo "ERROR! dump failed"
++		return 1
++	fi
++
++	echo "Restoring..."
++	if ! $CRIU restore -d -D checkpoint --shell-job -v4; then
++		echo "ERROR! restore failed"
++		return 1
++	fi
++
++	sleep 1
++
++	# Trigger an inotify event on the restored process
++	touch merged/testfile
++	sleep 1
++
++	# The restored process should still be alive
++	if ! kill -0 "${PROC_PID}" 2>/dev/null; then
++		echo "ERROR! restored process is not running"
++		return 1
++	fi
++
++	return 0
++}
++
++main() {
++	setup
++
++	if ! check_criu; then
++		exit 1
++	fi
++
++	echo "OverlayFS inotify C/R successful."
++	exit 0
++}
++
++main
+
+From 082ca25d2280a632e0c19540a52d54460a23cff4 Mon Sep 17 00:00:00 2001
+From: Adrian Reber <areber@redhat.com>
+Date: Thu, 11 Jun 2026 15:50:54 +0000
+Subject: [PATCH 3/3] zdtm: add inotify_overlayfs test
+
+Add a ZDTM test that verifies inotify watches on files inside an
+overlayfs mount survive checkpoint/restore.
+
+The test uses the external mount pattern (like mnt_ext_auto): in
+the ZDTM_NEWNS=1 phase it creates an overlay mount before
+unshare(CLONE_NEWNS), so CRIU treats it as an external mount and
+does not attempt to reconstruct the overlay on restore.  After
+restore the test opens the watched file and reads back the inotify
+event to confirm the watch is intact.
+
+This is needed because the test/others/overlayfs test only checks
+that the process survives C/R.  This ZDTM test validates that the
+inotify watch itself is properly dumped and restored by exercising
+the overlay directory walk fallback added in fsnotify.c.
+
+The test is restricted to the 'ns' flavor because the overlay
+setup requires the ZDTM_NEWNS=1 lifecycle and root privileges
+for mounting overlayfs.
+
+Assisted-by: Claude Code (claude-opus-4-6):default
+Signed-off-by: Adrian Reber <areber@redhat.com>
+---
+ test/zdtm/static/Makefile               |   1 +
+ test/zdtm/static/inotify_overlayfs.c    | 213 ++++++++++++++++++++++++
+ test/zdtm/static/inotify_overlayfs.desc |   2 +
+ test/zdtm/static/inotify_overlayfs.hook |  19 +++
+ 4 files changed, 235 insertions(+)
+ create mode 100644 test/zdtm/static/inotify_overlayfs.c
+ create mode 100644 test/zdtm/static/inotify_overlayfs.desc
+ create mode 100755 test/zdtm/static/inotify_overlayfs.hook
+
+diff --git a/test/zdtm/static/Makefile b/test/zdtm/static/Makefile
+index 0e2580ed6e..d53eec2e2d 100644
+--- a/test/zdtm/static/Makefile
++++ b/test/zdtm/static/Makefile
+@@ -481,6 +481,7 @@ TST_DIR		=				\
+ 		symlink				\
+ 		symlink01			\
+ 		unbindable			\
++		inotify_overlayfs		\
+ 
+ TST_DIR_FILE	=				\
+ 		chroot				\
+diff --git a/test/zdtm/static/inotify_overlayfs.c b/test/zdtm/static/inotify_overlayfs.c
+new file mode 100644
+index 0000000000..5044037a9e
+--- /dev/null
++++ b/test/zdtm/static/inotify_overlayfs.c
+@@ -0,0 +1,213 @@
++#include <sched.h>
++#include <unistd.h>
++#include <limits.h>
++#include <ftw.h>
++
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <sys/mount.h>
++#include <fcntl.h>
++#include <string.h>
++#include <stdio.h>
++#include <errno.h>
++#include <stdlib.h>
++#include <dirent.h>
++#include <sys/inotify.h>
++
++#include "zdtmtst.h"
++
++const char *test_doc = "Check inotify C/R on overlayfs";
++const char *test_author = "CRIU contributors";
++
++char *dirname = "inotify_overlayfs.test";
++TEST_OPTION(dirname, string, "directory name", 1);
++
++#define BUFF_SIZE ((sizeof(struct inotify_event) + PATH_MAX))
++#define TEST_FNAME "testfile"
++
++#define OVL_DIR_SUFFIX "zdtm_inotify_ovl.XXXXXX"
++
++static int rm_entry(const char *path, const struct stat *st,
++		    int flag, struct FTW *ftw)
++{
++	return remove(path);
++}
++
++/*
++ * Clean up overlay backing dirs matching the zdtm_inotify_ovl prefix
++ * in the given directory.  Called at setup to remove leftovers from
++ * previous runs.  Post-test cleanup is handled by
++ * inotify_overlayfs.hook (--clean).
++ */
++static void cleanup_stale_ovl_dirs(const char *parent)
++{
++	DIR *d;
++	struct dirent *de;
++	char path[PATH_MAX];
++
++	d = opendir(parent);
++	if (!d)
++		return;
++
++	while ((de = readdir(d)) != NULL) {
++		if (strncmp(de->d_name, "zdtm_inotify_ovl.",
++			    strlen("zdtm_inotify_ovl.")) != 0)
++			continue;
++		snprintf(path, sizeof(path), "%s/%s", parent, de->d_name);
++		nftw(path, rm_entry, 16, FTW_DEPTH | FTW_PHYS);
++	}
++	closedir(d);
++}
++
++int main(int argc, char *argv[])
++{
++	char merged[PATH_MAX], watch_path[PATH_MAX];
++	char buf[BUFF_SIZE];
++	int inotify_fd, wd, fd, dir_fd;
++	char *zdtm_newns = getenv("ZDTM_NEWNS");
++	cleanup_free char *cwd = NULL;
++
++	cwd = get_current_dir_name();
++	snprintf(merged, sizeof(merged), "%s/%s", cwd, dirname);
++
++	if (zdtm_newns && !strcmp(zdtm_newns, "1")) {
++		char ovl_dir[PATH_MAX - 2];
++		char ovl_lower[PATH_MAX], ovl_upper[PATH_MAX];
++		char ovl_work[PATH_MAX];
++		char ovl_mnt[] = "/tmp/zdtm_ino_mnt.XXXXXX";
++		char opts[3 * PATH_MAX + 32];
++
++		/*
++		 * Phase 1: running before namespace creation.
++		 *
++		 * Overlay backing dirs (lower/upper/work) are placed
++		 * in cwd so they live on a real filesystem — tmpfs
++		 * does not support overlayfs upperdir on all kernels.
++		 *
++		 * The overlay is mounted at a temporary directory
++		 * under /tmp, which is outside ZDTM_ROOT and will
++		 * not be visible after pivot_root.  After unshare
++		 * we bind-mount it into the test directory; the bind
++		 * creates a shared/master relationship that
++		 * --external mnt[]:s can detect.
++		 */
++		cleanup_stale_ovl_dirs(cwd);
++
++		snprintf(ovl_dir, sizeof(ovl_dir), "%s/" OVL_DIR_SUFFIX, cwd);
++		if (!mkdtemp(ovl_dir)) {
++			pr_perror("Can't create overlay tmpdir");
++			return 1;
++		}
++
++		snprintf(ovl_lower, sizeof(ovl_lower), "%s/l", ovl_dir);
++		snprintf(ovl_upper, sizeof(ovl_upper), "%s/u", ovl_dir);
++		snprintf(ovl_work, sizeof(ovl_work), "%s/w", ovl_dir);
++
++		if (mkdir(ovl_lower, 0700) < 0) {
++			pr_perror("Can't mkdir %s", ovl_lower);
++			return 1;
++		}
++		if (mkdir(ovl_upper, 0700) < 0) {
++			pr_perror("Can't mkdir %s", ovl_upper);
++			return 1;
++		}
++		if (mkdir(ovl_work, 0700) < 0) {
++			pr_perror("Can't mkdir %s", ovl_work);
++			return 1;
++		}
++
++		/* Create a test file in the lower layer */
++		dir_fd = openat(AT_FDCWD, ovl_lower, O_RDONLY | O_DIRECTORY);
++		if (dir_fd < 0) {
++			pr_perror("Can't open lower dir %s", ovl_lower);
++			return 1;
++		}
++		fd = openat(dir_fd, TEST_FNAME, O_CREAT | O_WRONLY, 0644);
++		close(dir_fd);
++		if (fd < 0) {
++			pr_perror("Can't create test file in lower");
++			return 1;
++		}
++		close(fd);
++
++		/*
++		 * Mount overlay at a path outside ZDTM_ROOT so it
++		 * does not appear in mountinfo after pivot_root.
++		 */
++		if (!mkdtemp(ovl_mnt)) {
++			pr_perror("Can't create overlay mount dir");
++			return 1;
++		}
++		snprintf(opts, sizeof(opts),
++			 "lowerdir=%s,upperdir=%s,workdir=%s",
++			 ovl_lower, ovl_upper, ovl_work);
++
++		if (mount("overlay", ovl_mnt, "overlay", 0, opts) < 0) {
++			pr_perror("Can't mount overlayfs at %s", ovl_mnt);
++			return 1;
++		}
++
++		if (unshare(CLONE_NEWNS)) {
++			pr_perror("unshare");
++			return 1;
++		}
++
++		/* Bind-mount into test directory inside new mntns */
++		if (mkdir(merged, 0700) < 0) {
++			pr_perror("Can't mkdir %s", merged);
++			return 1;
++		}
++		if (mount(ovl_mnt, merged, NULL, MS_BIND, NULL) < 0) {
++			pr_perror("Can't bind-mount overlay to %s", merged);
++			return 1;
++		}
++	}
++
++	/*
++	 * test_init handles ZDTM_NEWNS internally:
++	 *  "1" -> ns_create() re-execs with "2" (never returns)
++	 *  "2" -> ns_init() forks, child continues
++	 *  unset -> normal execution
++	 */
++	test_init(argc, argv);
++
++	snprintf(watch_path, sizeof(watch_path),
++		 "%s/" TEST_FNAME, dirname);
++
++	inotify_fd = inotify_init1(IN_NONBLOCK);
++	if (inotify_fd < 0) {
++		pr_perror("inotify_init1 failed");
++		return 1;
++	}
++
++	wd = inotify_add_watch(inotify_fd, watch_path, IN_OPEN);
++	if (wd < 0) {
++		pr_perror("inotify_add_watch failed for %s", watch_path);
++		close(inotify_fd);
++		return 1;
++	}
++
++	test_daemon();
++	test_waitsig();
++
++	/* After restore, trigger an inotify event */
++	fd = open(watch_path, O_RDONLY);
++	if (fd < 0) {
++		fail("Can't open %s after restore", watch_path);
++		close(inotify_fd);
++		return 1;
++	}
++	close(fd);
++
++	/* Check that we got the event */
++	memset(buf, 0, sizeof(buf));
++	if (read(inotify_fd, buf, sizeof(buf)) <= 0) {
++		fail("No inotify events after restore");
++		close(inotify_fd);
++		return 1;
++	}
++
++	close(inotify_fd);
++	pass();
++	return 0;
++}
+diff --git a/test/zdtm/static/inotify_overlayfs.desc b/test/zdtm/static/inotify_overlayfs.desc
+new file mode 100644
+index 0000000000..f1c3a17143
+--- /dev/null
++++ b/test/zdtm/static/inotify_overlayfs.desc
+@@ -0,0 +1,2 @@
++{'flags': 'suid', 'flavor': 'ns', 'feature': 'mnt_id',
++ 'opts': '--external mnt[]:s'}
+diff --git a/test/zdtm/static/inotify_overlayfs.hook b/test/zdtm/static/inotify_overlayfs.hook
+new file mode 100755
+index 0000000000..06d128755e
+--- /dev/null
++++ b/test/zdtm/static/inotify_overlayfs.hook
+@@ -0,0 +1,19 @@
++#!/bin/bash
++
++[ "$1" == "--clean" ] || exit 0
++
++# Remove overlay backing dirs left by the ZDTM_NEWNS=1 phase.
++# The test creates them in its working directory, which is the
++# same directory as this hook script.
++test_dir=$(dirname "$(readlink -f "$0")")
++for dir in "$test_dir"/zdtm_inotify_ovl.* ; do
++	[ -d "$dir" ] && rm -rf "$dir"
++done
++
++# Remove overlay mount point dirs from /tmp.
++for dir in /tmp/zdtm_ino_mnt.* ; do
++	umount "$dir" 2>/dev/null || true
++	[ -d "$dir" ] && rmdir "$dir"
++done
++
++exit 0

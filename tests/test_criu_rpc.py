@@ -10,7 +10,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'services/helpers'))
 import mykos_criu as rpc
 
 # criu_req DUMP, opts.pid=42; criu_resp NOTIFY, success, notify.script.
-DUMP=b'\x08\x01\x12\x02\x10\x2a'
+DUMP=b'\x08\x01\x12\x04\x10\x2a\x60\x01'
 NOTIFY=b'\x08\x06\x10\x01\x2a\x0b\x0a\x09post-dump'
 ACK=b'\x08\x06\x18\x01'
 DONE=b'\x08\x01\x10\x01'
@@ -115,3 +115,39 @@ def test_dump_rpc_adds_scoped_inode_hint_without_replacing_other_options():
     assert rpc.directory_fds(updated,os.getpid(),[])==updated
     restore=b'\x08\x02\x12'+rpc.integer(len(options))+options
     assert rpc.directory_fds(restore,os.getpid(),[])==restore
+
+
+@pytest.mark.parametrize('fails',[False,True])
+def test_libcriu_dump_without_callback_gets_owned_notifications(fails):
+    # Unix datagrams provide the same packet boundaries for this protocol test
+    # on macOS; production CRIU always uses Linux SOCK_SEQPACKET.
+    kind=socket.SOCK_SEQPACKET if sys.platform=='linux' else socket.SOCK_DGRAM
+    runtime,client=socket.socketpair(socket.AF_UNIX,kind)
+    criu,worker=socket.socketpair(socket.AF_UNIX,kind)
+    for sock in (runtime,client,criu,worker):sock.settimeout(2)
+    captured=[];errors=[]
+    def callback():
+        captured.append(True)
+        if fails:raise OSError('disk copy failed')
+    def run():
+        try:rpc.relay(client,worker,42,callback)
+        except BaseException as error:errors.append(error)
+    thread=threading.Thread(target=run);thread.start()
+    try:
+        runtime.send(b'\x08\x01\x12\x02\x10\x2a')
+        modified=criu.recv(1024)
+        assert rpc.fields(rpc.fields(modified)[2])[12]==1
+        query=b'\x0a\x0fquery-ext-files'
+        criu.send(b'\x08\x06\x10\x01\x2a'+rpc.integer(len(query))+query)
+        assert criu.recv(1024)==ACK  # No additional external files from crun.
+        criu.send(NOTIFY)
+        assert criu.recv(1024)==b'\x08\x06\x18'+bytes([int(not fails)])
+        assert captured==[True]
+        unlock=b'\x08\x06\x10\x01\x2a\x10\x0a\x0enetwork-unlock'
+        criu.send(unlock);assert criu.recv(1024)==ACK
+        criu.send(DONE);assert runtime.recv(1024)==DONE
+        runtime.send(b'')
+    finally:
+        runtime.close();thread.join(3)
+        for sock in (client,criu,worker):sock.close()
+    assert not thread.is_alive() and not errors

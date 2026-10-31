@@ -39,7 +39,7 @@ def main():
                     if not result.rowcount: raise ValueError('No active key with that ID')
                     print('Key revoked:', a.id)
     elif a.action in ('create','passwd'):
-        password = getpass.getpass('New password (12+ characters): ')
+        password = getpass.getpass(f'New password ({mykos_users.password_minimum(a.name)}+ characters): ')
         if password != getpass.getpass('Confirm password: '): raise ValueError('Passwords do not match')
         mykos_users.set_password(a.name, password, getattr(a, 'role', None), a.action == 'create')
         print('Account ready:', a.name)

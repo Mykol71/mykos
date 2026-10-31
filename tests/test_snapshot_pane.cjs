@@ -44,7 +44,7 @@ console.log('Snapshot pane checks passed: grouping, per-container choices, prese
  run('mykosShowAllPanes=false;mykosTerminalAllowed=false;mykosRenderSnapshots()');
  assert.equal(el('mykos-snapshots-rows').children[0].children[5].children[0].children[0].disabled,true);
  context.fetch=async()=>({ok:true,json:async()=>({allowed:true})});
- context.mykosRenderMykos=()=>{};context.mykosCloseTerminal=()=>{};
+ context.mykosRenderMykos=()=>{};context.mykosCloseTerminal=()=>{};context.mykosSetPanePreviewAccess=()=>{};
  const imageRefreshes=[];context.mykosLoadStageImages=force=>imageRefreshes.push(force);
  const permission=html.slice(html.indexOf('async function mykosCheckTerminalPermission()'),html.indexOf('setTimeout(mykosCheckTerminalPermission'));
  vm.runInContext(permission,context);

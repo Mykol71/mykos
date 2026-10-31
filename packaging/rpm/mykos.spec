@@ -1,34 +1,43 @@
-%{!?mykos_target_el:%global mykos_target_el 8}
-%if 0%{mykos_target_el} == 9 || 0%{mykos_target_el} == 10
+%{!?mykos_target_el:%global mykos_target_el 9}
+%if 0%{mykos_target_el} == 9
+%global mykos_python /usr/bin/python3.11
+%global mykos_python_packages python3.11 python3.11-pip
+%else
+%if 0%{mykos_target_el} == 10
 %global mykos_python /usr/bin/python3
 %global mykos_python_packages python3 python3-pip
 %else
-%if 0%{mykos_target_el} != 8
-%{error:MYKOS RPM supports mykos_target_el 8, 9 or 10}
+%{error:This MYKOS release targets EL9/EL10 hosts; EL8 guest images remain supported}
 %endif
-%global mykos_python /usr/bin/python3.9
-%global mykos_python_packages python39 python39-pip
 %endif
 %global debug_package %{nil}
 %global __brp_python_bytecompile %{nil}
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        156%{?dist}
+Release:        162%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-Proprietary AND MIT
-URL: https://mykol.com/mykos/
+URL: https://myk.sh/mykos/
 Source0: %{name}-%{version}.tar.gz
 BuildArch: noarch
 BuildRequires: python3 >= 3.9
 AutoReqProv: no
 Requires: system-release(releasever) = %{mykos_target_el}
 Requires: %{mykos_python_packages} podman httpd
+Requires: mykos-criu >= 4.2.1-3
+Requires: mod_ssl openssl lorax-lmc-novirt anaconda-tui
+%if 0%{mykos_target_el} == 9
+# Match Anaconda/blivet's NVMe API on a fresh older EL9 installation.
+Requires: libblockdev >= 2.28-16.el9
+Requires: python3-blockdev >= 2.28-16.el9
+Requires: libblockdev-plugins-all >= 2.28-16.el9
+%endif
 Requires: openssh-server openssh-clients rsync iproute net-tools netavark criu libreswan
 %if 0%{mykos_target_el} < 10
 Requires: containernetworking-plugins
 %endif
-Requires: curl wget jq util-linux tar gzip cronie chrony firewalld
+Requires: curl wget jq util-linux procps-ng tar gzip cronie chrony firewalld
 Requires: policycoreutils-python-utils ksh unzip expect nmap time ipset iptables git pykickstart
 Requires(pre): shadow-utils
 Requires(post): systemd %{mykos_python_packages}
@@ -101,6 +110,26 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-162
+- Include production RH7 private-namespace build repairs and fresh-host storage dependencies.
+- Add separate Root/Data metrics, account-specific password policy support, and read-only Meraki site enrichment.
+- Include coast-to-coast geographic background, passive status-glowing location labels and pane styling.
+
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-161
+- Include admin pane refresh and configurable generated-copy repository origins.
+- Raise the shared inotify instance quota for concurrent systemd containers.
+
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-160
+- Preserve complete bounded command JSON for larger container inventories.
+- Require portable OverlayFS watch paths during checkpoint restore.
+
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-159
+- Require the overlay/inotify-compatible checkpoint engine tested on split image storage.
+
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-158
+- Promote QA-verified minimal EL images, isolated builders, native RPM databases and snapshot/terminal repairs.
+- Use a versioned checkpoint engine while preserving vendor tools and operator kickstarts.
+
 * Wed Oct 28 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-146
 - Keep documentation index redirects relative behind existing reverse proxies
 

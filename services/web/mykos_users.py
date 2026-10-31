@@ -1,6 +1,8 @@
 """Browser identity storage, also used by the local account manager."""
 from contextlib import contextmanager
 import hashlib
+import json
+from pathlib import Path
 import re
 import secrets
 import sqlite3
@@ -34,10 +36,21 @@ def is_admin(name):
         row = c.execute('SELECT role FROM users WHERE name=?', (name,)).fetchone()
     return bool(row and row[0] == 'admin')
 
+def password_minimum(name):
+    """Root-managed per-account exceptions; other accounts retain 12 characters."""
+    policy = Path('/etc/mykos/password-policy.json')
+    if not policy.exists():
+        return 12
+    minimum = json.loads(policy.read_text()).get('minimum_length_by_user', {}).get(name, 12)
+    if type(minimum) is not int or not 1 <= minimum <= 12:
+        raise ValueError('Invalid account password minimum')
+    return minimum
+
 def set_password(name, password, role=None, create=False):
     validate_name(name)
-    if len(password) < 12:
-        raise ValueError('Use a password of at least 12 characters')
+    minimum = password_minimum(name)
+    if len(password) < minimum:
+        raise ValueError(f'Use a password of at least {minimum} characters')
     if role is not None and role not in ('user', 'admin'):
         raise ValueError('Role must be user or admin')
     salt = secrets.token_hex(16)

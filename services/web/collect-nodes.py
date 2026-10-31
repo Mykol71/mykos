@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from mykos_config import BASE
+from meraki_sites import organization_sites
 import host_monitoring as host
 DATA = BASE / "data"
 INVENTORY = BASE / "inventory.json"
@@ -137,7 +138,7 @@ def collect(shop_filter=None):
     nodes.sort(key=lambda n: n["id"])
 
     if not host_only:
-        atomic_json(INVENTORY, {**({"hosts": old_inventory["hosts"]} if "hosts" in old_inventory else {}), "nodes": nodes})
+        atomic_json(INVENTORY, {**({"hosts": old_inventory["hosts"]} if "hosts" in old_inventory else {}), "nodes": nodes, "meraki_sites": organization_sites()})
     atomic_json(STATUS, {
         "collected_at": int(time.time()),
         "graph_totals": graph_totals(),

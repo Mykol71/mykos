@@ -1,0 +1,44 @@
+MYKOS release160: repeatable RHEL9 installation and upgrade
+
+This promotion targets the RHEL9 dev and QA hosts. It does not upgrade the
+existing RHEL8 production application. RHEL7, RHEL8, RHEL9 and RHEL10 guest
+images remain supported; the host OS and guest OS are separate choices.
+
+Use the signed EL9 MYKOS and mykos-criu RPMs from this release. The trusted
+MYKOS signing fingerprint is BC14191DE284100A246DD552F4384FD1AD974308.
+Verify SHA256SUMS and RPM signatures using your already trusted public key.
+
+Install with the host's working signed RHEL9 BaseOS/AppStream repositories:
+  sudo dnf --setopt=localpkg_gpgcheck=1 install ./mykos-criu-4.2.1-3.el9.x86_64.rpm ./mykos-1.5.20261024-160.el9.noarch.rpm
+
+For an existing configured host, retain its actual public origin:
+  sudo mykos-setup --public-origin https://YOUR-HOST --set-public-origin --enable
+  sudo /usr/bin/python3.11 /usr/share/mykos/bin/mykos-install verify
+
+The package requires Python3.11, the native checkpoint engine and the image
+builder dependencies. Setup uses the checked-in Python dependency versions.
+An existing Python environment with a different interpreter is retained before
+creating the selected runtime. Failed dependency installation restores that
+previous environment. Repeating setup reuses a matching working environment.
+
+Keep operator-edited kickstarts and any .rpmnew files. The deployment promotes
+reviewed minimal defaults only over recognized prior stock versions; unknown
+operator edits must be reconciled explicitly. Root passwords stay locked.
+Existing containers, snapshots, identities and host access rules are retained.
+A successful install does not automatically rebuild or replace running guests.
+
+Verify on each host: installer verification; login/logout and permissions;
+host/container terminal; image listing; disposable container create/start/stop;
+leave-running snapshot and RAM/disk restore; deletion of only that test instance.
+Build an OS image through the normal menu when a clean host has no images.
+The build runs in private installer namespaces and preserves failed diagnostics.
+
+The EL8 guest fix rebuilds a private copy of a readable but read-only installer
+RPM database using the guest's own RPM. It verifies a writable native database
+and the exact package inventory before swapping it in. Package payloads and
+application data are not reinstalled. A real signed package-install test is
+part of this release's validation.
+
+The checkpoint engine also includes the distribution-maintained overlay/inotify
+fix for hosts that keep image layers and writable containers on different filesystems.
+The signed engine source RPM includes the patch and its upstream regression tests.

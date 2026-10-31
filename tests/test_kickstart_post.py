@@ -18,7 +18,7 @@ def test_rh7_post_handles_optional_files_and_download_failure(tmp_path,download,
         conf.parent.mkdir(parents=True);conf.write_text('[main]\nenabled=1\n')
     fakebin=tmp_path/'bin';fakebin.mkdir()
     (fakebin/'systemd-tmpfiles').write_text('#!/bin/sh\nexit 0\n')
-    (fakebin/'systemctl').write_text('#!/bin/sh\n[ "$1" = mask ] || exit 90\nexit 0\n')
+    (fakebin/'systemctl').write_text('#!/bin/sh\ncase "$1" in mask) exit 0;; enable) [ "$2" = sshd ] || exit 90;; *) exit 90;; esac\nexit 0\n')
     # The image uses GNU sed; macOS sed has different -i argument handling.
     (fakebin/'sed').write_text('#!'+sys.executable+'''\nimport sys
 from pathlib import Path

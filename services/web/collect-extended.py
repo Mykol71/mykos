@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 from mykos_config import BASE
+from meraki_sites import enrich
 import host_monitoring as host
 from mykos_vpn_topology import topology
 from mykos_vpn_gateway import summaries as gateway_profiles
@@ -51,6 +52,8 @@ def collect(shop_filter=None):
                 "status": "unknown"
             }
         }
+
+    enrich(nodes)
 
     if shop_filter and OUT.exists():
         nodes={**{k:v for k,v in json.loads(OUT.read_text()).get('nodes',{}).items() if k!=shop_filter},**nodes}

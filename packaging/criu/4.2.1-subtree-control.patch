@@ -1,0 +1,10 @@
+--- a/criu/cgroup.c
++++ b/criu/cgroup.c
+@@ -1429,6 +1429,7 @@
+ 	}
+ 	/* Remove the trailing newline */
+ 	buf[ret] = '\0';
++	while (ret > 0 && (buf[ret - 1] == '\n' || buf[ret - 1] == ' ')) buf[--ret] = '\0';
+ 
+ 	/* Remove all current subsys in subtree_control */
+ 	if (buf[0] != '\0')

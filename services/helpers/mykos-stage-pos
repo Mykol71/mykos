@@ -11,6 +11,7 @@ import re
 import socket
 import sys
 from mykos_runtime import PODMAN, config, containers, run, shopcode, network_device
+from mykos_cgroups import arguments as cgroup_arguments, init_command
 
 def stage(shop, restore, image=None):
     with vm.locked():
@@ -43,8 +44,9 @@ def _stage(shop, restore, image=None):
         args.extend(profile.mounts(shop,cfg))
         private,private_args=backup.private_mounts(vpn)
         args.extend(private_args)
+    args.extend(cgroup_arguments(image))
     args.extend(network_args)
-    args.extend([image,'/sbin/init'])
+    args.extend([image,*init_command(image)])
     cid=None
     try:
         cid=run(args)

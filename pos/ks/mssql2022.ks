@@ -27,39 +27,47 @@ repo --name="AppStream" --install --baseurl=https://mykol.com/rhel-9-for-x86_64-
 repo --name="BaseOS" --install --baseurl=https://mykol.com/rhel-9-for-x86_64-baseos-rpms
 
 # Package setup
-%packages
-@^minimal-environment
-@system-tools
+%packages --nocore --excludedocs --inst-langs=en --exclude-weakdeps
+# Explicit runtime requirements; the solver adds only hard dependencies.
+redhat-release
 bash
-ksh
-net-tools
-wget
-procmail
-bind-utils
-rsyslog
+coreutils
+grep
 sed
-rsync
+systemd
+openssh-server
+shadow-utils
+util-linux
+ca-certificates
 curl
+openssl
+nmap-ncat
+dnf
+libreswan
+iptables-nft
+# Host-managed networking, time, and performance need no guest daemons.
+-firewalld
 -tuned
+-chrony
+-NetworkManager
+# Hardware and kernel support come from the container host.
 -kernel
 -kernel-core
 -kernel-modules
 -kernel-modules-core
 -kernel-modules-extra
-%end
-
-%addon org_fedora_oscap      
-    content-type = scap-security-guide
-    datastream-id = scap_org.open-scap_datastream_from_xccdf_ssg-rhel8-xccdf-1.2.xml
-    xccdf-id = scap_org.open-scap_cref_ssg-rhel8-xccdf-1.2.xml
-    profile = xccdf_org.ssgproject.content_profile_pci-dss
+-linux-firmware
+-*-firmware
+-microcode_ctl
 %end
 
 
-%post
+
+%post --erroronfail --log=/root/mykos-image-post.log
+set -eu
+mkdir -p /etc/rpm /etc/dnf/vars /etc/NetworkManager/conf.d
 
 # container customizations inside the chroot
-rpm -e kernel
 
 echo 'container' > /etc/dnf/vars/infra
 
@@ -67,21 +75,45 @@ echo 'container' > /etc/dnf/vars/infra
 /bin/date +%Y%m%d_%H%M > /etc/BUILDTIME
 
 # Limit languages to help reduce size.
-LANG="en_US:UTF-8"
+LANG="en_US.UTF-8"
 echo "%_install_langs $LANG" > /etc/rpm/macros.image-language-conf
 
 # systemd fixes
 systemd-tmpfiles --create --boot
 # mask mounts and login bits
-systemctl mask systemd-logind.service getty.target console-getty.service sys-fs-fuse-connections.mount systemd-remount-fs.service dev-hugepages.mount
+systemctl mask systemd-logind.service getty.target console-getty.service sys-fs-fuse-connections.mount systemd-remount-fs.service dev-hugepages.mount sys-kernel-config.mount systemd-udevd.service systemd-udevd-control.socket systemd-udevd-kernel.socket systemd-udev-trigger.service
 
 # Remove things we don't need
-rm -f /etc/udev/hwdb.bin
-rm -rf /usr/lib/udev/hwdb.d/
-rm -rf /boot
-rm -rf /var/lib/dnf/history.*
-updatedb
-ln -s /usr/bin/sh /bin/sh
-curl -s https://mykol.com/updateos/updateos -O /bin/updateos
-/bin/updateos help > /dev/null
+
+# MYKOS checkpoint service profile: CRIU cannot save BPF program FDs.
+# Preserve vendor syscall/capability limits; avoid BPF and nested UTS in these services.
+checkpoint_services="systemd-journald"
+if [ -f /usr/lib/systemd/system/dbus-broker.service ]; then
+  checkpoint_services="$checkpoint_services dbus-broker"
+elif [ -f /usr/lib/systemd/system/dbus.service ]; then
+  checkpoint_services="$checkpoint_services dbus"
+fi
+for checkpoint_optional in systemd-userdbd systemd-hostnamed systemd-localed systemd-timedated logrotate; do
+  if [ -f "/usr/lib/systemd/system/$checkpoint_optional.service" ]; then
+    checkpoint_services="$checkpoint_services $checkpoint_optional"
+  fi
+done
+for checkpoint_service in $checkpoint_services; do
+  mkdir -p "/etc/systemd/system/$checkpoint_service.service.d"
+  cat > "/etc/systemd/system/$checkpoint_service.service.d/90-mykos-checkpoint.conf" <<'MYKOS_CHECKPOINT'
+[Service]
+PrivateDevices=no
+DevicePolicy=auto
+DeviceAllow=
+IPAccounting=no
+IPAddressAllow=
+IPAddressDeny=
+ProtectHostname=no
+MYKOS_CHECKPOINT
+done
+# End MYKOS checkpoint service profile.
+
+systemctl enable sshd
+rm -rf /var/cache/yum /var/cache/dnf
+: > /etc/machine-id
 %end

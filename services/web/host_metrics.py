@@ -46,7 +46,7 @@ def snapshot():
         pass
     result = {'collected_at': int(time.time()), 'cpu_percent': None,
               'cpu_count': os.cpu_count(), 'load_average': None,
-              'memory': None, 'swap': None, 'disk': None, 'uptime_seconds': None,
+              'memory': None, 'swap': None, 'disk': None, 'data': None, 'uptime_seconds': None,
               'graph_totals': None, 'graph_counts': None,
               'host': {'hostname': socket.gethostname(), 'status': 'online',
                        'os': release.get('PRETTY_NAME', 'Linux'),
@@ -100,13 +100,14 @@ def snapshot():
         result['load_average'] = list(os.getloadavg())
     except OSError:
         pass
-    try:
-        total, used, free = shutil.disk_usage('/')
-        result['disk'] = {'path': '/', 'total_bytes': total, 'used_bytes': used,
-                          'free_bytes': free,
-                          'percent': round(used / total * 100, 1) if total else 0}
-    except OSError:
-        pass
+    for label, path in (('disk', '/'), ('data', '/home')):
+        try:
+            total, used, free = shutil.disk_usage(path)
+            result[label] = {'path': path, 'total_bytes': total, 'used_bytes': used,
+                             'free_bytes': free,
+                             'percent': round(used / total * 100, 1) if total else 0}
+        except OSError:
+            pass
     try:
         result['uptime_seconds'] = float((PROC / 'uptime').read_text().split()[0])
     except (OSError, ValueError, IndexError):

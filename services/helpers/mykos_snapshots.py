@@ -10,6 +10,10 @@ import time
 
 import mykos_vm as vm
 from mykos_runtime import shopcode, target
+from mykos_criu_cgroups import capture_context as native_cgroup_context
+from mykos_criu_cgroups import restore_context as restore_cgroup_context
+
+from mykos_criu_binary import binary as criu_binary
 
 
 def allocated_bytes(folder):
@@ -106,8 +110,10 @@ def capture_vm(shop):
 
 def check_native_compatibility(state, proc=Path('/proc')):
     """Reject known CRIU 3.x blockers before seizing any source processes."""
-    version=vm.run(['criu','--version'],timeout=10)
-    if not re.search(r'Version:\s*3\.',version): return
+    version=vm.run([criu_binary(),'--version'],timeout=10)
+    match=re.search(r'Version:\s*(\d+)\.(\d+)',version)
+    if not match:raise ValueError('Cannot determine checkpoint tool capabilities')
+    supports_pidfd=tuple(map(int,match.groups()))>=(4,1)
     init=proc/str(int(state['State']['Pid']))
     namespace=(init/'ns/pid').readlink()
     uts=(init/'ns/uts').readlink()
@@ -122,18 +128,48 @@ def check_native_compatibility(state, proc=Path('/proc')):
                     name=(process/'comm').read_text().strip()
                     raise ValueError('Native RAM snapshot unavailable: '+name+' holds '+target_name+
                         ', which CRIU cannot save. Release that device before retrying; the container was left running.')
+                if target_name=='anon_inode:[pidfd]' and not supports_pidfd:
+                    raise ValueError('Native RAM snapshot unavailable: this container uses PIDFD handles. Configure CRIU 4.1 or newer; the container was left running.')
                 if target_name=='anon_inode:bpf-prog':
-                    raise ValueError('Native RAM snapshot unavailable: this container holds BPF programs that CRIU 3.x cannot save. No snapshot was created; the container was left running. Use a checkpoint-compatible container profile/runtime.')
+                    raise ValueError('Native RAM snapshot unavailable: this container holds BPF programs that this checkpoint profile cannot save. No snapshot was created; the container was left running. Use a checkpoint-compatible container profile/runtime.')
             if (process/'ns/uts').readlink()!=uts:
                 name=(process/'comm').read_text().strip()
-                raise ValueError('Native RAM snapshot unavailable: '+name+' uses a nested hostname namespace that CRIU 3.x cannot save. No snapshot was created; the container was left running.')
+                raise ValueError('Native RAM snapshot unavailable: '+name+' uses a nested hostname namespace unsupported by this checkpoint profile. No snapshot was created; the container was left running.')
         except (FileNotFoundError,ProcessLookupError):continue
+
+
+def wait_native_network(state,proc=Path('/proc'),timeout=45):
+    """Let transient boot services release private netns without changing units."""
+    init=proc/str(int(state['State']['Pid']))
+    identity=(init/'stat').read_text().rsplit(')',1)[1].split()[19]
+    pidns=(init/'ns/pid').readlink();netns=(init/'ns/net').readlink()
+    deadline=time.monotonic()+timeout;announced=False
+    while True:
+        if (init/'stat').read_text().rsplit(')',1)[1].split()[19]!=identity:
+            raise ValueError('Container changed during snapshot preflight')
+        blocked=[]
+        for process in proc.iterdir():
+            if not process.name.isdigit():continue
+            try:
+                if (process/'ns/pid').readlink()==pidns and (process/'ns/net').readlink()!=netns:
+                    blocked.append((process/'comm').read_text().strip())
+            except (FileNotFoundError,ProcessLookupError):continue
+        if not blocked:return
+        if time.monotonic()>=deadline:
+            raise ValueError('Native RAM snapshot unavailable: '+', '.join(sorted(set(blocked)))+
+                ' still uses a nested network namespace. No snapshot was created; the container was left running.')
+        if not announced:print('Snapshot: waiting for startup network isolation to settle',flush=True);announced=True
+        time.sleep(.5)
 
 
 def prepare_native_mounts(name, state, proc=Path('/proc')):
     """Remove unused optional hugetlbfs copies only in this container's namespaces."""
     init = proc / str(int(state['State']['Pid']))
     pid_namespace = (init/'ns/pid').readlink()
+    host_pid = proc/'self/ns/pid'
+    host_mount = proc/'self/ns/mnt'
+    if host_pid.is_symlink() and pid_namespace == host_pid.readlink():
+        raise ValueError('A host PID namespace cannot be prepared for a container snapshot')
     seen = set()
     candidates = []
     optional = {'/dev/hugepages': ('hugetlbfs', 'dev-hugepages.mount'),
@@ -145,6 +181,8 @@ def prepare_native_mounts(name, state, proc=Path('/proc')):
             if (process/'ns/pid').readlink() != pid_namespace:
                 continue
             namespace = (process/'ns/mnt').readlink()
+            if host_mount.is_symlink() and namespace == host_mount.readlink():
+                raise ValueError('A host mount namespace cannot be prepared for a container snapshot')
             if namespace in seen:
                 continue
             seen.add(namespace)
@@ -166,14 +204,51 @@ def prepare_native_mounts(name, state, proc=Path('/proc')):
                 raise RuntimeError('Container namespaces changed; retry the snapshot')
         except (FileNotFoundError, ProcessLookupError):
             continue
+        # A previous unmount can propagate into a service's slave namespace.
+        # Read it again rather than acting on the initial, now stale inventory.
+        current = [line for line in (process/'mountinfo').read_text().splitlines()
+                   if len(line.split()) > 5 and line.split()[4] == mountpoint]
+        if not current:
+            continue
+        kind = optional[mountpoint][0]
+        if len(current) != 1 or ' - '+kind+' ' not in current[0]:
+            raise ValueError('Optional mount changed during snapshot preparation')
+        if any((process/'root'/mountpoint.lstrip('/')).iterdir()):
+            raise ValueError('Optional mount files are in use: '+mountpoint+'; cannot safely capture')
         # Normal unmount refuses open files, mappings and working directories.
         # Never force/lazy unmount, enter a host namespace, or restart services.
-        vm.run(['/usr/bin/nsenter', '--mount='+str(process/'ns/mnt'),
-                '--root='+str(process/'root'), '--wd=/', '--',
-                '/usr/bin/umount', mountpoint], timeout=15)
+        try:
+            vm.run(['/usr/bin/nsenter', '--mount='+str(process/'ns/mnt'),
+                    '--root='+str(process/'root'), '--wd=/', '--',
+                    '/usr/bin/umount', mountpoint], timeout=15)
+        except RuntimeError:
+            remaining = [line for line in (process/'mountinfo').read_text().splitlines()
+                         if len(line.split()) > 5 and line.split()[4] == mountpoint]
+            if remaining:
+                raise
     if candidates:
         vm.run([vm.PODMAN, 'exec', name, 'systemctl', 'mask',
                 *sorted({unit for _, _, _, unit in candidates})], timeout=15)
+
+
+def native_data_mounts(state):
+    """Select mounted disk data; CRIU/runc own kernel cgroup state."""
+    mounts=[]
+    for mount in state.get('Mounts') or []:
+        if mount.get('Type') not in ('bind','volume') or not mount.get('Source'):continue
+        if (mount.get('Type')=='bind' and mount.get('Source') in ('cgroup','cgroup2') and
+                mount.get('Destination')=='/sys/fs/cgroup'):
+            # Podman 5 describes its runtime-created cgroup filesystem as a bind
+            # with a symbolic source. It is not a relative host disk directory.
+            continue
+        source=str(Path(mount['Source']).resolve(strict=True))
+        if (mount.get('Type')=='bind' and source=='/sys/fs/cgroup' and
+                mount.get('Destination')=='/sys/fs/cgroup' and not mount.get('RW',False)):
+            # The read-only host controller hierarchy is not disk data. Reading
+            # write-only devices.allow/devices.deny files fails even as root.
+            continue
+        mounts.append({'source':source,'destination':mount['Destination'],'rw':mount.get('RW',False)})
+    return mounts
 
 
 def capture_native(shop):
@@ -182,8 +257,9 @@ def capture_native(shop):
     with vm.locked():
         name,state=mykos_linux.inspect(shop)
         if not state.get('State',{}).get('Running'):raise ValueError('Start the container before taking a snapshot')
-        if not shutil.which('criu'):raise ValueError('Install criu and runc to enable native Linux memory snapshots')
+        criu_binary()
         check_native_compatibility(state)
+        wait_native_network(state)
         vm.run(['criu','check'],timeout=60)
         prepare_native_mounts(name, state)
         driver=state.get('GraphDriver',{})
@@ -196,12 +272,10 @@ def capture_native(shop):
         reference='localhost/mykos-snapshots/'+shop+':'+identifier
         pinned=False;published=False;pending=None
         try:
-            mounts=[]
-            for mount in state.get('Mounts') or []:
-                if mount.get('Type') in ('bind','volume') and mount.get('Source'):
-                    mounts.append({'source':str(Path(mount['Source']).resolve(strict=True)),
-                                   'destination':mount['Destination'],'rw':mount.get('RW',False)})
+            mounts=native_data_mounts(state)
             context={'upper':str(upper.resolve(strict=True)),'mounts':mounts,'directory':str(temporary)}
+            cgroup=native_cgroup_context(state)
+            if cgroup:context['cgroup']=cgroup
             context_path=temporary/'hook-context.json';context_path.write_text(json.dumps(context));context_path.chmod(0o600)
             configure_native_hook()
             annotation=(state.get('Config',{}).get('Annotations') or {}).get('org.criu.config')
@@ -214,9 +288,7 @@ def capture_native(shop):
             pending.chmod(0o600)
             # runc resolves its CRIU executable through PATH. Keep the wrapper private
             # to this one checkpoint; unrelated operators use the vendor binary.
-            binary=str(Path(shutil.which('criu')).resolve(strict=True))
-            if binary not in ('/usr/sbin/criu','/usr/bin/criu'):
-                raise ValueError('Expected the vendor CRIU binary')
+            binary=criu_binary()
             launcher=temporary/'bin';vm.safe_dir(launcher)
             script=launcher/'criu'
             settings={'MYKOS_CRIU_BINARY':binary,'MYKOS_CRIU_PID':str(pid),
@@ -250,6 +322,7 @@ def capture_native(shop):
                       'capture_mode':'criu-memory','image':image,'image_ref':reference,'path':str(final),
                       'source_running':True,'configuration':state,'mounts':mounts,
                       'filesystem_source':'rootfs-upper','external_writers_frozen':False}
+            if cgroup:metadata['cgroup']=json.loads(context_path.read_text())['cgroup']
             metadata['size_bytes']=allocated_bytes(temporary)
             path=temporary/'metadata.json';path.write_text(json.dumps(metadata,indent=2)+'\n');path.chmod(0o600)
             os.replace(temporary,final);published=True
@@ -370,10 +443,11 @@ def restore_native(shop,identifier):
         name,state=mykos_linux.inspect(shop);mykos_linux.require_persistent(state)
         if name!=metadata['name'] or state['Id']!=metadata['configuration']['Id'] or state['Image']!=metadata['image']:raise ValueError('Native snapshot requires its original container and image')
         if state.get('GraphDriver',{}).get('Name')!='overlay':raise ValueError('Overlay storage is required')
+        cgroup=restore_cgroup_context(state,metadata)
         upper=Path(state['GraphDriver']['Data']['UpperDir']);vm.safe_dir(upper)
         static=Path(state['StaticDir']);vm.safe_dir(static)
         mounts=metadata.get('mounts',[])
-        current={(str(Path(m['Source']).resolve(strict=True)),m['Destination'],bool(m.get('RW'))) for m in state.get('Mounts',[]) if m.get('Type') in ('bind','volume')}
+        current={(m['source'],m['destination'],bool(m['rw'])) for m in native_data_mounts(state)}
         if any((m['source'],m['destination'],bool(m['rw'])) not in current for m in mounts):raise ValueError('Mounted data configuration changed since capture')
         targets=[(folder/'rootfs-upper',upper)]
         for index,mount in enumerate(mounts):
@@ -385,7 +459,23 @@ def restore_native(shop,identifier):
             if str(dest) not in volume_sources and not any(dest==p or p in dest.parents for p in permitted):raise ValueError('Refusing restore of unmanaged shared host data')
             targets.append((source,dest))
         initialize();transaction=Path(tempfile.mkdtemp(prefix='.native-restore-',dir=str(root())))
-        unpacked=transaction/'checkpoint';extract_checkpoint(folder/'checkpoint.tar.gz',unpacked)
+        try:
+            unpacked=transaction/'checkpoint';extract_checkpoint(folder/'checkpoint.tar.gz',unpacked)
+            from mykos_criu_images import external_files,normalize_files
+            if re.search(r'Version:\s*3\.',vm.run(['criu','--version'],timeout=10)):
+                normalize_files(unpacked/'checkpoint',external_files(state))
+            environment=None
+            if cgroup:
+                context=transaction/'restore-context.json'
+                context.write_text(json.dumps({'operation':'restore','cgroup':cgroup}));context.chmod(0o600)
+                launcher=transaction/'bin';vm.safe_dir(launcher)
+                binary=criu_binary()
+                settings={'MYKOS_CRIU_BINARY':binary,'MYKOS_CRIU_PID':'0','MYKOS_CRIU_CONTEXT':str(context)}
+                script=launcher/'criu'
+                script.write_text('#!'+sys.executable+'\nimport os,sys\nos.environ.update('+repr(settings)+')\nsys.path.insert(0,'+repr(str(Path(__file__).parent))+')\nfrom mykos_criu import main\nmain()\n');script.chmod(0o700)
+                environment=dict(os.environ,PATH=str(launcher)+os.pathsep+os.environ.get('PATH',''))
+        except Exception:
+            shutil.rmtree(transaction);raise
         running=bool(state.get('State',{}).get('Running'));changed=False;backed=[]
         def sync(source,dest):
             if source.is_dir():vm.run(['/usr/bin/rsync','-aHAX','--numeric-ids','--delete',str(source)+'/',str(dest)+'/'],timeout=900)
@@ -398,7 +488,7 @@ def restore_native(shop,identifier):
             merged=state['GraphDriver']['Data'].get('MergedDir')
             if merged and os.path.ismount(merged):raise ValueError('Container layer is still mounted')
             for index,(source,dest) in enumerate(targets):
-                if source.is_symlink() or not source.is_dir():raise ValueError('Snapshot filesystem is missing')
+                if source.is_symlink() or not source.exists() or source.is_dir()!=dest.is_dir():raise ValueError('Snapshot filesystem is missing')
                 backup=transaction/('data-'+str(index))
                 vm.run(['/usr/bin/cp','-a','--reflink=auto','--sparse=auto',str(dest),str(backup)],timeout=900)
                 backed.append((backup,dest))
@@ -411,7 +501,7 @@ def restore_native(shop,identifier):
                 elif dest.exists():dest.unlink()
                 if entry.is_dir():shutil.copytree(entry,dest)
                 else:shutil.copy2(entry,dest)
-            vm.run([vm.PODMAN,'container','restore','--tcp-established','--file-locks',name],timeout=900)
+            vm.run([vm.PODMAN,'container','restore','--tcp-established','--file-locks',name],timeout=900,env=environment)
             if not mykos_linux.inspect(shop)[1].get('State',{}).get('Running'):raise RuntimeError('CRIU did not resume the container')
         except Exception as original_error:
             try:

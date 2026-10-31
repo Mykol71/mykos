@@ -134,3 +134,21 @@ def test_native_capture_rejects_active_installer(monkeypatch):
     monkeypatch.setattr(prune,'builders',lambda:{1:{'args':['anaconda','--kickstart','/var/tmp/rh9.ks']}})
     monkeypatch.setattr(vm,'run',lambda *a,**kw:pytest.fail('No commit during install'))
     with pytest.raises(ValueError,match='build is still active'):images.capture('rh9','rh9')
+
+
+def test_console_starts_verified_stopped_native_without_replacing_files(monkeypatch):
+    states=iter([native_base(State={'Running':False}),native_base()])
+    monkeypatch.setattr(vm,'inspect',lambda name:next(states))
+    calls=[];monkeypatch.setattr(images,'run',lambda args,**kw:calls.append(args))
+    assert images.base_container('rh9',start_native=True)['State']['Running']
+    assert calls==[[images.PODMAN,'start','base-id']]
+
+@pytest.mark.parametrize('state',[
+    native_base(Name='/12345678.host'),native_base(ImageName='unrelated'),
+    native_base(Config={'Labels':{'io.mykos.os':'rh8'}}),
+    native_base(State={'Running':False,'Paused':True}),
+])
+def test_console_never_starts_unverified_or_paused_base(monkeypatch,state):
+    monkeypatch.setattr(vm,'inspect',lambda name:state)
+    monkeypatch.setattr(images,'run',lambda *a,**kw:pytest.fail('Unsafe start'))
+    with pytest.raises(ValueError):images.base_container('rh9',start_native=True)

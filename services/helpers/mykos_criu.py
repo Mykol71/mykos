@@ -7,12 +7,14 @@ Only this snapshot operation puts the private launcher on PATH.
 import array
 import importlib.machinery
 import importlib.util
+import json
 import os
 from pathlib import Path
 import select
 import socket
 import subprocess
 import struct
+import stat
 import sys
 
 LIMIT = 2 * 1024 * 1024
@@ -67,6 +69,14 @@ def replace_fields(data, replacements):
     return b''.join(result)
 
 
+def enable_dump_notifications(data):
+    """Request callbacks when libcriu's caller (crun) did not register any."""
+    options=fields(data)[2]
+    if 12 in fields(options):options=replace_fields(options,{12:1})
+    else:options+=integer(12<<3)+b'\x01'
+    return replace_fields(data,{2:options})
+
+
 def directory_fds(packet, peer_pid, retained):
     # CRIU opens images_dir_fd/work_dir_fd through /proc/<RPC peer>/fd.
     # The relay is now that peer; retain equivalent directory descriptors here.
@@ -106,8 +116,8 @@ def receive(sock):
     return data, ancillary, descriptors
 
 
-def relay(client, worker, pid, callback, peer_pid=None, retained=None):
-    dumping = False; captured = False
+def relay(client, worker, pid, callback, peer_pid=None, retained=None, cgroup=None):
+    dumping = False; captured = False; own_notifications = False
     if retained is None: retained = []
     while True:
         ready, _, _ = select.select([client, worker], [], [], 900)
@@ -117,10 +127,13 @@ def relay(client, worker, pid, callback, peer_pid=None, retained=None):
             try:
                 if not data: return
                 message = fields(data)
+                if source is worker and cgroup is not None:cgroup.notification(message)
                 if source is client and message.get(1) == 1:
                     if fields(message.get(2, b'')).get(2) != pid:
                         raise ValueError('CRIU dump target does not match snapshot')
                     dumping = True
+                    own_notifications=not bool(fields(message.get(2,b'')).get(12))
+                    if own_notifications:data=enable_dump_notifications(data)
                 if (source is worker and dumping and message.get(1) == 6 and
                         fields(message.get(5, b'')).get(1) == b'post-dump'):
                     if captured: raise ValueError('Duplicate CRIU post-dump')
@@ -134,8 +147,21 @@ def relay(client, worker, pid, callback, peer_pid=None, retained=None):
                         captured = True
                         continue
                     captured = True
+                if source is worker and dumping and own_notifications and message.get(1)==6:
+                    action=fields(message.get(5,b'')).get(1)
+                    # crun does not register dump callbacks. Acknowledge the
+                    # lifecycle notifications here after the filesystem copy;
+                    # CRIU still performs its normal internal network locking.
+                    # Never swallow descriptor handoffs or unknown actions.
+                    allowed={b'pre-dump',b'post-dump',b'network-lock',b'network-unlock',
+                             b'pre-resume',b'post-resume',b'status-ready',b'query-ext-files'}
+                    success=action in allowed and not descriptors
+                    worker.send(b'\x08\x06\x18'+bytes([int(success)]))
+                    if not success:raise ValueError('Unsupported CRIU dump notification: '+repr(action))
+                    continue
                 if source is client and peer_pid is not None:
                     data = directory_fds(data,peer_pid,retained)
+                if source is client and cgroup is not None:data=cgroup.request(data)
                 destination = worker if source is client else client
                 if destination.sendmsg([data], ancillary) != len(data):
                     raise RuntimeError('Incomplete CRIU RPC packet')
@@ -145,10 +171,20 @@ def relay(client, worker, pid, callback, peer_pid=None, retained=None):
 
 def main():
     real = os.environ['MYKOS_CRIU_BINARY']
-    if real not in ('/usr/sbin/criu', '/usr/bin/criu'): raise ValueError('Unexpected CRIU binary')
+    from mykos_criu_binary import checked
+    real=checked(real)
     args = sys.argv[1:]
     if len(args) != 2 or args[0] != 'swrk': os.execv(real, [real] + args)
     context = Path(os.environ['MYKOS_CRIU_CONTEXT'])
+    status=context.lstat()
+    if not stat.S_ISREG(status.st_mode) or status.st_uid!=0 or status.st_mode & 0o077:
+        raise ValueError('CRIU context must be a private root-owned regular file')
+    value=json.loads(context.read_text());operation=value.get('operation','capture')
+    if operation not in ('capture','restore'):raise ValueError('Unexpected CRIU operation')
+    cgroup=None
+    if value.get('cgroup'):
+        from mykos_criu_cgroups import Transaction
+        cgroup=Transaction(value['cgroup'],operation)
     pid = int(os.environ['MYKOS_CRIU_PID'])
     hook = Path(__file__).with_name('mykos-criu-hook')
     loader = importlib.machinery.SourceFileLoader('mykos_criu_hook', str(hook))
@@ -174,9 +210,12 @@ def main():
                 os.fstat(fd); inherited.append(fd)
         except OSError: pass
     process = subprocess.Popen([real, 'swrk', str(child.fileno())], pass_fds=tuple(inherited))
+    if cgroup is not None:cgroup.worker=process.pid;cgroup.peer=peer_pid
     child.close()
     try:
-        relay(client, worker, pid, capture, peer_pid, retained)
+        relay(client, worker, pid, capture, peer_pid, retained,cgroup)
+        if cgroup is not None and operation=='restore' and cgroup.succeeded and not cgroup.prepared:
+            raise ValueError('CRIU did not prepare the saved cgroup controllers')
     except BaseException as error:
         marker = context.parent/'hook.error'
         marker.write_text(str(error)); marker.chmod(0o600)
@@ -187,6 +226,7 @@ def main():
         try: process.wait(timeout=15)
         except subprocess.TimeoutExpired:
             process.terminate(); process.wait(timeout=15)
+        if cgroup is not None:cgroup.close()
     if process.returncode: raise SystemExit(process.returncode)
 
 

@@ -4,6 +4,7 @@ import sys
 import mykos_vm as vm
 from mykos_runtime import config, run, PODMAN, NATIVE_OS_NAMES
 from mykos_network import native_arguments as arguments
+from mykos_cgroups import arguments as cgroup_arguments, init_command
 
 
 def start(os_name):
@@ -14,9 +15,9 @@ def start(os_name):
 
 def launch(os_name):
     if os_name not in NATIVE_OS_NAMES:raise ValueError('Select a supported native Linux image')
-    args = arguments(config(), os_name)
+    args = [*arguments(config(), os_name),*cgroup_arguments(os_name)]
     return run([PODMAN,'run','-d','-it','--hostname',os_name,'--name',os_name,
-                '--rm','--privileged','--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro','--memory=4g','--pull=never',*args,os_name,'/sbin/init'])
+                '--rm','--privileged','--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro','--memory=4g','--pull=never',*args,os_name,*init_command(os_name)])
 
 
 if __name__ == '__main__':

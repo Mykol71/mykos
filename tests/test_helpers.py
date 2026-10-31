@@ -27,7 +27,8 @@ podman() {
 }
 rm() { :; }
 create_ks() { :; }
-livemedia-creator() { return 1; }
+builder_python() { [ "$1" = ./build_rootfs.py ] || echo unexpected-python-operation; return 1; }
+MYKOS_PYTHON=builder_python
 mv() { echo unexpected-file-move; return 1; }
 mkdir() { echo unexpected-directory-write; return 1; }
 create_dockerfile() { echo unexpected-dockerfile-write; return 1; }
@@ -223,6 +224,8 @@ def test_selected_os_is_saved_and_passed_to_worker(tmp_path, monkeypatch):
 @pytest.mark.parametrize('device', [None, 'eth0'])
 def test_stage_uses_selected_image_instead_of_default(tmp_path, monkeypatch, device):
     module = load('mykos-stage-pos')
+    monkeypatch.setattr(module,'cgroup_arguments',lambda image:[])
+    monkeypatch.setattr(module,'init_command',lambda image:['/sbin/init'])
     from contextlib import nullcontext
     monkeypatch.setattr(module.vm, 'locked', nullcontext)
     monkeypatch.setattr(module.network, 'arguments', lambda cfg, name: ['--network', 'mykos-lan', '--label', 'io.mykos.network.interface=eth0'])
@@ -748,3 +751,43 @@ def test_default_tunnel_renders_valid_independent_connection(tmp_path):
     assert parsed[0]['pfs']=='no','Match the Meraki childPfsGroup disabled policy'
     for field in ('left','leftid','leftsubnet','right','rightid','ike','esp','authby','encapsulation','pfs','dpddelay','retransmit-timeout'):
         assert parsed[0][field]==parsed[1][field]
+
+
+def test_stopped_verified_native_base_remains_available_for_creation(monkeypatch):
+    import json
+    monkeypatch.setattr(mykos_runtime,'run',lambda args,**kw:json.dumps([
+        {'Names':['rh9'],'Image':'localhost/rh9:latest','State':'created','Labels':{'io.mykos.os':'rh9'}},
+        {'Names':['rh8'],'Image':'localhost/rh8:latest','State':'exited','Labels':{'io.mykos.os':'wrong'}},
+    ]))
+    import mykos_vm
+    monkeypatch.setattr(mykos_vm,'prepared_templates',lambda:[])
+    assert mykos_runtime.stage_images()==[{'os':'rh9','image':'localhost/rh9:latest'}]
+
+
+def test_runtime_machine_output_is_not_contaminated_by_successful_warnings(capsys):
+    import mykos_runtime as runtime
+    import json,sys
+    output=runtime.run([sys.executable,'-c','import sys; print("{\\"id\\": \\"container-123\\"}"); print("non-TTY warning",file=sys.stderr)'])
+    assert json.loads(output)=={'id':'container-123'}
+    assert 'non-TTY warning' in capsys.readouterr().err
+
+
+def test_runtime_failure_retains_stdout_and_stderr():
+    import mykos_runtime as runtime
+    import sys
+    with pytest.raises(RuntimeError) as error:
+        runtime.run([sys.executable,'-c','import sys; print("operation context"); print("runtime failure",file=sys.stderr); sys.exit(2)'])
+    assert 'operation context' in str(error.value) and 'runtime failure' in str(error.value)
+
+
+def test_runtime_run_keeps_large_structured_output():
+    import json, sys
+    result = mykos_runtime.run([sys.executable, '-c', 'import json; print(json.dumps({"data": "x" * 600000}))'])
+    assert json.loads(result) == {"data": "x" * 600000}
+
+
+def test_runtime_run_rejects_oversized_output_without_truncation(monkeypatch):
+    import sys
+    monkeypatch.setattr(mykos_runtime, 'OUTPUT_LIMIT', 8)
+    with pytest.raises(RuntimeError, match='output exceeds the safe read limit'):
+        mykos_runtime.run([sys.executable, '-c', 'print("x" * 9)'])

@@ -4,23 +4,101 @@ set -euo pipefail
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 exec 9>/run/lock/mykos-repo-sync.lock
 flock -n 9 || { echo 'A repository synchronization is already running' >&2; exit 1; }
-for release in 7 8 9 10; do
+releases=(6 7 8 9 10)
+if [ "$#" -gt 1 ]; then echo 'Usage: sync_repos [6|7|8|9|10]' >&2; exit 2; fi
+case "${1:-}" in
+    '') ;;
+    6|7|8|9|10) releases=("$1") ;;
+    *) echo 'Usage: sync_repos [6|7|8|9|10]' >&2; exit 2 ;;
+esac
+for release in "${releases[@]}"; do
     case "$release" in
-        7) image=registry.access.redhat.com/ubi7/ubi:7.9-1445 ;;
+        # UBI7 Yum can mirror RH6 RPMs without executing their contents.
+        6|7) image=registry.access.redhat.com/ubi7/ubi:7.9-1445 ;;
         8) image=registry.access.redhat.com/ubi8/ubi:8.10-1786322297 ;;
         9) image=registry.access.redhat.com/ubi9/ubi:9.8-1786631889 ;;
         10) image=registry.access.redhat.com/ubi10/ubi:1791894362 ;;
     esac
+    credential_mounts=()
+    if [ "$release" = 6 ] && [ -d /etc/pki/entitlement ] && [ -d /etc/rhsm/ca ]; then
+        # Reuse the host credentials that can access RH6, without copying keys
+        # into the mirror or the worker image.
+        credential_mounts=(--volume /etc/pki/entitlement:/run/mykos-entitlement:ro
+                           --volume /etc/rhsm/ca:/run/mykos-rhsm-ca:ro)
+    fi
     # No --replace: a conflicting worker must never be removed behind its owner.
     podman run --rm -i --name "mykos-repo-sync-rhel${release}" \
-        --security-opt label=disable -v /var/www/html:/var/www/html:rw \
+        --security-opt label=disable "${credential_mounts[@]}" -v /var/www/html:/var/www/html:rw \
         -w /var/www/html "$image" /bin/bash -s -- "$release" <<'WORKER'
 set -euo pipefail
 release=$1
-if [ "$release" = 7 ]; then
+if [ "$release" = 6 ] || [ "$release" = 7 ]; then
     yum -y install yum-utils createrepo
-    for repo in rhel-7-server-rpms rhel-7-server-optional-rpms rhel-7-server-extras-rpms; do
-        reposync -p /var/www/html --download-metadata --repo="$repo"
+    if [ "$release" = 6 ]; then
+        command -v curl >/dev/null || yum -y install curl
+        # Reposync initializes enabled repositories before applying --repo.
+        # Isolate RH6 sources so the UBI7 worker never evaluates RH7 URLs using
+        # an RH6 release value. Leave the worker's global Yum variables alone.
+        rh6_config=$(mktemp /tmp/mykos-rh6.XXXXXX.conf)
+        rh6_reposdir=$(mktemp -d /tmp/mykos-rh6-repos.XXXXXX)
+        python - "$rh6_config" "$rh6_reposdir" <<'RH6_CONFIG'
+from __future__ import print_function
+import glob, os, subprocess, sys
+try:
+    import ConfigParser as configparser
+except ImportError:
+    import configparser
+source = configparser.RawConfigParser()
+source.read(glob.glob('/etc/yum.repos.d/*.repo'))
+required = ['rhel-6-server-rpms', 'rhel-6-server-optional-rpms', 'rhel-6-server-extras-rpms']
+missing = [name for name in required if not source.has_section(name)]
+if missing:
+    # UBI7 may expose only RH7 definitions even though the host certificate
+    # authorizes RH6. Authenticate each missing source before using it.
+    ca = '/run/mykos-rhsm-ca/redhat-uep.pem'
+    pairs = [(cert, cert[:-4] + '-key.pem') for cert in sorted(glob.glob('/run/mykos-entitlement/*.pem'))
+             if not cert.endswith('-key.pem') and os.path.isfile(cert[:-4] + '-key.pem')]
+    if not pairs or not os.path.isfile(ca):
+        sys.exit('RH6 direct sync needs the host entitlement certificate/key and RHSM CA mounts')
+    paths = {'rhel-6-server-rpms': 'os', 'rhel-6-server-optional-rpms': 'optional/os',
+             'rhel-6-server-extras-rpms': 'extras/os'}
+    for name in missing:
+        url = 'https://cdn.redhat.com/content/dist/rhel/server/6/6Server/x86_64/' + paths[name]
+        for cert, key in pairs:
+            process = subprocess.Popen(['curl', '--silent', '--show-error', '--connect-timeout', '10',
+                '--max-time', '45', '--cert', cert, '--key', key, '--cacert', ca,
+                '--output', '/dev/null', '--write-out', '%{http_code}', url + '/repodata/repomd.xml'],
+                stdout=subprocess.PIPE)
+            status = process.communicate()[0].decode('ascii').strip()
+            if process.returncode == 0 and status == '200':
+                source.add_section(name)
+                for field, value in [('baseurl', url), ('sslclientcert', cert), ('sslclientkey', key),
+                                     ('sslcacert', ca), ('sslverify', '1'), ('gpgcheck', '1'),
+                                     ('gpgkey', 'file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release')]:
+                    source.set(name, field, value)
+                print('Authenticated RH6 source: ' + name)
+                break
+        else:
+            sys.exit('Could not authenticate RH6 metadata for ' + name + '; last HTTP status: ' + status)
+target = configparser.RawConfigParser()
+target.add_section('main')
+for key, value in [('reposdir', sys.argv[2]), ('plugins', '0'), ('gpgcheck', '1')]:
+    target.set('main', key, value)
+for name in required:
+    target.add_section(name)
+    for key, value in source.items(name):
+        target.set(name, key, value.replace('${releasever}', '6Server').replace('$releasever', '6Server'))
+    target.set(name, 'enabled', '1')
+with open(sys.argv[1], 'w') as handle:
+    target.write(handle)
+RH6_CONFIG
+    fi
+    for repo in "rhel-$release-server-rpms" "rhel-$release-server-optional-rpms" "rhel-$release-server-extras-rpms"; do
+        if [ "$release" = 6 ]; then
+            reposync --config="$rh6_config" --arch=x86_64 -p /var/www/html --download-metadata --repo="$repo"
+        else
+            reposync -p /var/www/html --download-metadata --repo="$repo"
+        fi
         createrepo --update "/var/www/html/$repo"
     done
 else

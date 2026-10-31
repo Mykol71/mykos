@@ -19,7 +19,7 @@ const context = vm.createContext({el, Date:FakeDate, assert, clock, mykosHostByt
     document:{createElement:tag => new Element(tag), createElementNS:(_,tag) => new Element(tag)},
     window:{addEventListener() {}}, requestAnimationFrame:() => 1, setInterval:() => 1});
 vm.runInContext(source + `
-assert.equal(new Set(mykosChartMetrics.map(m => m.color)).size, 6);
+assert.equal(new Set(mykosChartMetrics.map(m => m.color)).size, 7);
 assert.ok(!mykosChartMetrics.some(m => ['backups','repos'].includes(m.key)));
 assert.equal(mykosChartWindow, 300000);
 assert.equal(mykosCountPercent(15),100);
@@ -123,3 +123,5 @@ mykosDrawHostChart();
 assert.equal(mykosChartMetrics.find(m => m.key === 'cpu').points.length, 0, 'Data must expire after thirty minutes');
 `, context);
 console.log('Host chart checks passed: thresholds, healthy availability, colors, gaps, staleness, retention, scaling and reset.');
+
+vm.runInContext(`assert.equal(mykosHistoryValue({data:{percent:25,used_bytes:250,total_bytes:1000}}, "data").value,"25.0%"); assert.equal(mykosHistoryValue({}, "data").percent,null); assert.equal(mykosChartMetrics.find(m=>m.key==="disk").label,"Root");`,context);

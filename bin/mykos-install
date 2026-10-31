@@ -28,14 +28,21 @@ UNITS = ['mykos-host-history.service','mykos-web.service','mykos-container-admin
 PREFIXES = ('/opt/mykos-web/', '/usr/local/share/mykos/', '/etc/mykos/',
             '/etc/systemd/system/mykos-', '/usr/local/sbin/mykos-')
 # Keep the legacy path allowed for old recovery snapshots and upgrade cleanup.
-OPTIONAL_UNITS = ['mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service','mykos-vpn-gateway.timer']
-EXACT = {'/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
+OPTIONAL_UNITS = ['mykos-legacy-cgroups.service','mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service','mykos-vpn-gateway.timer']
+EXACT = {'/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
          '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
          '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
 PACKAGES = ['podman','httpd','python3','python3-pip','openssh-server','openssh-clients','rsync',
-            'iproute','net-tools','netavark','containernetworking-plugins','libreswan','curl','wget','jq','util-linux','tar','gzip',
+            'iproute','net-tools','netavark','containernetworking-plugins','libreswan','curl','wget','jq','util-linux','procps-ng','tar','gzip',
             'cronie','chrony','firewalld','policycoreutils-python-utils','ksh','unzip',
             'expect','nmap','time','ipset','iptables','git','criu','pykickstart']
+
+INOTIFY_INSTANCES = Path('/proc/sys/fs/inotify/max_user_instances')
+
+def ensure_container_limits():
+    # Raise the shared quota only when required; retain larger operator limits.
+    if int(INOTIFY_INSTANCES.read_text()) < 4096:
+        command(['/usr/sbin/sysctl','-w','fs.inotify.max_user_instances=4096'])
 
 def fail(message): raise ValueError(message)
 def sha(data): return hashlib.sha256(data).hexdigest()
@@ -54,6 +61,33 @@ def readable_venv(root,gid):
         if path.is_symlink():continue
         mode=0o750 if path.is_dir() or path.stat().st_mode&0o111 else 0o640
         os.chmod(path,mode);os.chown(path,0,gid)
+
+def provision_venv(venv, python, requirements, install=False, runner=None):
+    """Keep repeated installs stable; retain the old runtime on failed migration."""
+    runner=runner or command
+    venv=Path(venv)
+    if venv.is_symlink():fail('Preserving custom symlink Python environment')
+    def version(executable):
+        return json.loads(subprocess.check_output([str(executable),'-c','import json,sys; print(json.dumps(list(sys.version_info[:2])))'],text=True))
+    wanted=version(python);current=None;backup=None
+    if (venv/'bin/python').is_file():
+        try:current=version(venv/'bin/python')
+        except (OSError,subprocess.CalledProcessError,ValueError):pass
+    if venv.exists() and current!=wanted:
+        backup=Path(tempfile.mkdtemp(prefix='.venv-before-runtime-',dir=str(venv.parent)))
+        os.replace(venv,backup)
+    created=not (venv/'bin/python').is_file()
+    try:
+        if created:runner([python,'-m','venv',venv])
+        if install or created:runner([venv/'bin/python','-m','pip','install','-r',requirements])
+        runner([venv/'bin/python','-c','import fastapi,pydantic,uvicorn'])
+    except BaseException:
+        if backup:
+            if venv.exists():shutil.rmtree(venv)
+            os.replace(backup,venv)
+        raise
+    return backup
+
 
 class Installer:
     def __init__(self, args):
@@ -129,7 +163,8 @@ class Installer:
                 docs_readable = directory == 'docs'
                 add('/usr/local/share/mykos/'+str(rel),src.read_bytes(),
                     0o750 if os.access(src,os.X_OK) or directory=='bin' else 0o640,
-                    'web-read' if docs_readable else 'root')
+                    'web-read' if docs_readable else 'root',
+                    mutable=directory == 'pos' and rel.parent == Path('pos/ks') and src.suffix == '.ks')
         for name in ('MENU','README.md','AGENTS.md'):
             add('/usr/local/share/mykos/'+name,(SOURCE/name).read_bytes(),0o750 if name=='MENU' else 0o640)
         for src in sorted((SOURCE/'services/web').iterdir()):
@@ -145,6 +180,7 @@ class Installer:
             add('/usr/local/sbin/'+src.name,content,0o644 if src.suffix in ('.py','.conf') else 0o755)
         for src in sorted((SOURCE/'services/systemd').glob('*')):
             add('/etc/systemd/system/'+src.name,src.read_text().replace('@PYTHON@',python).encode())
+        add('/etc/sysctl.d/90-mykos-inotify.conf',(SOURCE/'services/sysctl/90-mykos-inotify.conf').read_bytes(),0o644,'root',True)
         add('/usr/bin/mykos',b'#!/usr/bin/env bash\nset -e\nif [ -x /usr/share/mykos/MENU ]; then\n  cd /usr/share/mykos\nelse\n  cd /usr/local/share/mykos\nfi\nexec ./MENU "$@"\n',0o755)
         # Legacy scripts expect these support paths; no cron jobs or email jobs are activated.
         for name in ('monthname.sh','strip.sh','recon.sh','cloud_pricing','backup_perf.sh'):
@@ -222,9 +258,9 @@ class Installer:
                     packages=[name for name in PACKAGES if name != 'containernetworking-plugins']
                 command(['dnf','install','-y',*packages])
                 # Image building tools are optional because repository availability varies.
-                if self.args.image_build_deps:command(['dnf','install','-y','lorax','anaconda-tui','pykickstart'])
-            result=subprocess.run([self.args.python,'-c','import sys,hashlib; assert sys.version_info >= (3,9), "Python 3.9+ required"; assert hasattr(hashlib, "scrypt"), "Python needs hashlib.scrypt/OpenSSL"'],check=False)
-            if result.returncode:fail('Select Python 3.9+ using --python; install that interpreter first')
+                if self.args.image_build_deps:command(['dnf','install','-y','lorax','lorax-lmc-novirt','anaconda-tui','pykickstart'])
+            result=subprocess.run([self.args.python,'-c','import sys,hashlib; assert sys.version_info >= (3,11), "Python 3.11+ required"; assert hasattr(hashlib, "scrypt"), "Python needs hashlib.scrypt/OpenSSL"'],check=False)
+            if result.returncode:fail('Select Python 3.11+ using --python; install that interpreter first')
         if self.live and self.args.enable and not self.path('/etc/mykos/web.env').exists() and self.args.public_origin=='https://mykos.example.com':
             fail('Supply the real --public-origin before activating a new installation')
         snap=self.snapshot([*selected,STATE,'/usr/local/bin/mykos'])
@@ -238,6 +274,9 @@ class Installer:
             if self.live:os.chown(dest,self.uid if name.endswith('/data') else 0,self.gid if not name.endswith('/jobs') else 0)
         for path,entry in selected.items():self.write(path,**{k:entry[k] for k in ('data','mode','owner')})
         docs=self.path('/usr/local/share/mykos/docs')
+        # A restrictive umask can leave the shared parent root-only even when
+        # the documents themselves have the intended web-readable permissions.
+        docs.parent.chmod(0o755)
         for path in [docs,*docs.rglob('*')]:
             if path.is_dir() and not path.is_symlink():path.chmod(0o755)
         notes_db=self.path('/opt/mykos-web/data/auth.db')
@@ -254,16 +293,16 @@ class Installer:
         if legacy.exists():legacy.unlink()
         if self.live:
             venv=self.path('/opt/mykos-web/.venv')
-            if not (venv/'bin/python').is_file():command([self.args.python,'-m','venv',venv])
-            if self.args.install_deps or self.args.python_deps:
-                command([venv/'bin/python','-m','pip','install','-r',SOURCE/'services/requirements.txt'])
-                frozen=subprocess.check_output([str(venv/'bin/python'),'-m','pip','freeze'])
-                self.write('/opt/mykos-web/installed-requirements.txt',frozen,0o640,'web-read')
+            provision_venv(venv,self.args.python,SOURCE/'services/requirements.txt',
+                           install=self.args.install_deps or self.args.python_deps)
+            frozen=subprocess.check_output([str(venv/'bin/python'),'-m','pip','freeze'])
+            self.write('/opt/mykos-web/installed-requirements.txt',frozen,0o640,'web-read')
             readable_venv(venv,self.gid)
             command([venv/'bin/python','-c','import fastapi,pydantic,uvicorn'])
             # Empty schema only; no archived accounts, passwords or API keys are imported.
             command(['runuser','-u','mykosweb','--',venv/'bin/python','/opt/mykos-web/manage.py','users','list'])
             command(['runuser','-u','mykosweb','--',venv/'bin/python','/opt/mykos-web/manage.py','keys','list'])
+            ensure_container_limits()
             command(['systemctl','daemon-reload'])
         manifest={'format':1,'python':self.args.python,'staging':not self.live,'snapshot':str(snap),'files':[]}
         for path,entry in entries.items():
@@ -280,12 +319,21 @@ class Installer:
         if self.live and self.args.enable:
             # Restart long-running services so an update takes effect.
             command(['systemctl','enable',*UNITS])
+            # A recreated service identity can leave an already-running socket
+            # owned by its former numeric group. Refresh only stale sockets.
+            for unit in ('mykos-container-admin.socket','mykos-terminal.socket'):
+                socket_path=Path('/run')/(unit.removesuffix('.socket')+'.sock')
+                if socket_path.exists():
+                    status=socket_path.stat()
+                    if status.st_uid!=0 or status.st_gid!=self.gid or stat.S_IMODE(status.st_mode)!=0o660:
+                        command(['systemctl','restart',unit])
             command(['systemctl','start','mykos-container-admin.socket','mykos-terminal.socket'])
             command(['systemctl','restart','mykos-web.service','mykos-host-history.service'])
             command(['systemctl','start','mykos-host-history.service','mykos-collector.timer','mykos-details.timer','mykos-extended.timer','mykos-command-collector.timer'])
         print('Installed. Snapshot:',snap)
         print('Configure HTTPS proxy, /etc/mykos settings, users, and prepared POS images before production use.')
         if not self.live:print('Staging only: no accounts, dependency installation, chown, or service changes were performed.')
+
 
     def quiescent(self):
         if not self.live:return
@@ -312,6 +360,15 @@ class Installer:
             if self.live and path.stat().st_uid!=0:errors.append('Expected root ownership '+e['path'])
         if self.live:
             user=pwd.getpwnam('mykosweb');group=grp.getgrnam('mykosweb')
+            for socket_name in ('mykos-container-admin.sock','mykos-terminal.sock'):
+                socket_path=Path('/run')/socket_name
+                if socket_path.exists():
+                    status=socket_path.stat()
+                    if status.st_uid!=0 or status.st_gid!=group.gr_gid or stat.S_IMODE(status.st_mode)!=0o660:
+                        errors.append('Socket ownership/mode mismatch '+str(socket_path))
+            command(['runuser','-u','mykosweb','--',self.path('/opt/mykos-web/.venv')/'bin/python',
+                     '-c','import sys; from pathlib import Path; Path(sys.argv[1]).read_bytes()',
+                     self.path('/usr/local/share/mykos/docs/rendered/README.html')])
             for entry in manifest['files']:
                 path=self.path(entry['path'])
                 expected_gid=group.gr_gid if entry.get('owner')=='web-read' else 0

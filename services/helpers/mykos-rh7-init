@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Give EL7 PID 1 a private named cgroup before executing its systemd."""
+from __future__ import print_function
+import ctypes
+import errno
+import os
+import re
+import stat
+import sys
+
+
+def container_id(text):
+    matches=re.findall(r'^id="([0-9a-f]{64})"\s*$',text,re.M)
+    if len(matches)!=1:raise ValueError('Missing runtime container identity')
+    return matches[0]
+
+
+def main():
+    if os.geteuid()!=0 or os.getpid()!=1:raise ValueError('RH7 initialization requires container PID 1')
+    with open('/run/.containerenv') as handle:identity=container_id(handle.read(8192))
+    target='/sys/fs/cgroup/systemd'
+    with open('/proc/self/mountinfo') as handle:
+        mounts=[line for line in handle if len(line.split())>5 and line.split()[4]==target]
+    if len(mounts)!=1 or ' - cgroup ' not in mounts[0] or 'name=systemd' not in mounts[0]:
+        raise ValueError('The private RH7 runtime requires the named systemd hierarchy')
+    libc=ctypes.CDLL(None,use_errno=True)
+    libc.mount.argtypes=[ctypes.c_char_p,ctypes.c_char_p,ctypes.c_char_p,ctypes.c_ulong,ctypes.c_void_p]
+    def mount(source,destination,flags):
+        result=libc.mount(source.encode('ascii') if source else None,destination.encode('ascii'),None,flags,None)
+        if result:raise OSError(ctypes.get_errno(),'Cannot isolate the legacy cgroup mount')
+    mount(None,target,(1<<18)|(1<<14))  # private recursive propagation
+    mount(None,target,4096|32)         # writable only in this private mount namespace
+    private=target+'/mykos/'+identity
+    for directory in (target+'/mykos',private):
+        try:os.mkdir(directory,0o755)
+        except OSError as error:
+            if error.errno!=errno.EEXIST:raise
+        info=os.lstat(directory)
+        if not stat.S_ISDIR(info.st_mode) or info.st_uid!=0 or info.st_mode&0o022:
+            raise ValueError('Unsafe private legacy cgroup')
+    with open(private+'/cgroup.procs','w') as handle:handle.write('0\n')
+    mount(private,target,4096)         # bind only this container's branch
+    if libc.unshare(0x02000000):raise OSError(ctypes.get_errno(),'Cannot isolate the legacy cgroup namespace')
+    os.execv('/usr/lib/systemd/systemd',['/sbin/init'])
+
+
+if __name__=='__main__':
+    try:main()
+    except Exception as error:
+        print('MYKOS RH7 initialization failed: '+str(error),file=sys.stderr);sys.exit(1)

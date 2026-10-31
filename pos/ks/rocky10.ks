@@ -31,35 +31,42 @@ repo --name="AppStream" --install --baseurl=https://dl.rockylinux.org/pub/rocky/
 repo --name="BaseOS" --install --baseurl=https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/
 
 # Package setup
-%packages --nocore --exclude-weakdeps
-@^minimal-environment
+%packages --nocore --excludedocs --inst-langs=en --exclude-weakdeps
+# Explicit runtime requirements; the solver adds only hard dependencies.
+rocky-release
 bash
-net-tools
-wget
-bind-utils
-telnet
-yum
-rsyslog
+coreutils
+grep
 sed
-rsync
-curl
+systemd
+openssh-server
+shadow-utils
+util-linux
+ca-certificates
+dnf
+libreswan
+iptables-nft
+# Host-managed networking, time, and performance need no guest daemons.
+-firewalld
 -tuned
-# Containers share the host kernel; do not install then erase kernel RPMs.
+-chrony
+-NetworkManager
+# Hardware and kernel support come from the container host.
 -kernel
 -kernel-core
 -kernel-modules
 -kernel-modules-core
 -kernel-modules-extra
-# MYKOS native VPN, SSH and download tools from this vendor.
-libreswan
-openssh-server
-curl
+-linux-firmware
+-*-firmware
+-microcode_ctl
 %end
 
 # RHEL 10 removed the installer OpenSCAP add-on and %anaconda section.
 # Apply any required RHEL 10 security profile after building the image.
 %post --erroronfail --log=/root/mykos-image-post.log
 set -eu
+mkdir -p /etc/rpm /etc/dnf/vars /etc/NetworkManager/conf.d
 
 # container customizations inside the chroot
 mkdir -p /etc/dnf/vars /etc/rpm
@@ -75,13 +82,9 @@ echo "%_install_langs $LANG" > /etc/rpm/macros.image-language-conf
 # systemd fixes
 systemd-tmpfiles --create --boot
 # mask mounts and login bits
-systemctl mask systemd-logind.service getty.target console-getty.service sys-fs-fuse-connections.mount systemd-remount-fs.service dev-hugepages.mount
+systemctl mask systemd-logind.service getty.target console-getty.service sys-fs-fuse-connections.mount systemd-remount-fs.service dev-hugepages.mount sys-kernel-config.mount systemd-udevd.service systemd-udevd-control.socket systemd-udevd-kernel.socket systemd-udev-trigger.service
 
 # Remove things we don't need
-rm -f /etc/udev/hwdb.bin
-rm -rf /usr/lib/udev/hwdb.d/
-rm -rf /boot
-rm -rf /var/lib/dnf/history.*
 
 # These paths may already be absent in a minimal image.
 rm -f /var/lib/systemd/random-seed
@@ -89,4 +92,35 @@ rm -f /var/lib/systemd/random-seed
 : > /etc/machine-id
 # /bin/sh is supplied by the distribution. Access accounts are provisioned later.
 
+
+# MYKOS checkpoint service profile: CRIU cannot save BPF program FDs.
+# Preserve vendor syscall/capability limits; avoid BPF and nested UTS in these services.
+checkpoint_services="systemd-journald"
+if [ -f /usr/lib/systemd/system/dbus-broker.service ]; then
+  checkpoint_services="$checkpoint_services dbus-broker"
+elif [ -f /usr/lib/systemd/system/dbus.service ]; then
+  checkpoint_services="$checkpoint_services dbus"
+fi
+for checkpoint_optional in systemd-userdbd systemd-hostnamed systemd-localed systemd-timedated logrotate; do
+  if [ -f "/usr/lib/systemd/system/$checkpoint_optional.service" ]; then
+    checkpoint_services="$checkpoint_services $checkpoint_optional"
+  fi
+done
+for checkpoint_service in $checkpoint_services; do
+  mkdir -p "/etc/systemd/system/$checkpoint_service.service.d"
+  cat > "/etc/systemd/system/$checkpoint_service.service.d/90-mykos-checkpoint.conf" <<'MYKOS_CHECKPOINT'
+[Service]
+PrivateDevices=no
+DevicePolicy=auto
+DeviceAllow=
+IPAccounting=no
+IPAddressAllow=
+IPAddressDeny=
+ProtectHostname=no
+MYKOS_CHECKPOINT
+done
+# End MYKOS checkpoint service profile.
+
+systemctl enable sshd
+rm -rf /var/cache/yum /var/cache/dnf
 %end

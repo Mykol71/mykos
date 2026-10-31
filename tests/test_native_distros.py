@@ -30,7 +30,12 @@ def test_native_kickstarts_keep_vendor_repos_and_guest_customizations(os_name):
         major=NEW[os_name][1];parent=(ROOT/'pos/ks'/('rh'+str(major)+'.ks')).read_text()
         original_packages=parent.split('%packages',1)[1].split('%end',1)[0].splitlines()[1:]
         derived_packages=source.split('%packages',1)[1].split('%end',1)[0].splitlines()[1:]
-        assert all(line in derived_packages for line in original_packages)
+        def seeds(lines):return {line for line in lines if line and not line.startswith(('#','-'))}
+        parent_runtime=seeds(original_packages)-{'redhat-release','curl','openssl','nmap-ncat'}
+        assert parent_runtime <= seeds(derived_packages)
+        assert 'redhat-release' not in seeds(derived_packages)
+        # Clones keep vendor release packages and omit our updateos-only tools.
+        assert not {'curl','openssl','nmap-ncat'} & seeds(derived_packages)
     assert 'rm -f /etc/yum.repos.d' not in source and 'libreswan' in source
     assert len(__import__('re').findall(r'^%post(?:\s|$)',source,flags=__import__('re').M))==1
     subprocess.run(['bash','-n'],input=__import__('re').split(r'^%post[^\n]*\n',source,flags=__import__('re').M,maxsplit=1)[1].split('%end',1)[0],text=True,check=True)

@@ -75,7 +75,7 @@ console.log('Separate same-browser windows and blocked-popup fallback passed.');
  const host={host:{vpn:'not_configured'}},renders=[];let requests=0;
  const permissions=vm.createContext({document:{readyState:'complete'},fetch:async()=>{requests++;return {ok:true,json:async()=>({allowed:true})};},
   mykosTerminalAllowed:false,mykosHostStatusData:host,mykosRenderHostStatus:data=>renders.push(data),
-  mykosLoadStageImages(){},mykosCloseTerminal(){},mykosRenderMykos(){},mykosRenderSnapshots(){},mykosRenderInventory(){}});
+  mykosSetPanePreviewAccess(){},mykosLoadStageImages(){},mykosCloseTerminal(){},mykosRenderMykos(){},mykosRenderSnapshots(){},mykosRenderInventory(){}});
  const check=html.slice(html.indexOf('async function mykosCheckTerminalPermission()'),html.indexOf('setTimeout(mykosCheckTerminalPermission'));
  vm.runInContext(check,permissions);
  await Promise.all([vm.runInContext('mykosCheckTerminalPermission()',permissions),vm.runInContext('mykosCheckTerminalPermission()',permissions)]);

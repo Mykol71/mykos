@@ -20,6 +20,9 @@ import monitor_api
 @pytest.fixture
 def environment(tmp_path,monkeypatch):
     base=tmp_path.resolve();data=base/'data';data.mkdir()
+    import host_history
+    monkeypatch.setattr(host_history,'LIVE',data/'host-metrics.json')
+    monkeypatch.setattr(host_history,'DATABASE',data/'host-history.sqlite3')
     monkeypatch.setattr(app,'BASE',base)
     monkeypatch.setattr(mykos_users,'DB',data/'auth.db')
     monkeypatch.setattr(mykos_api_keys,'DB',data/'api_keys.db')

@@ -18,8 +18,6 @@ def main():
     host = data_shop == 'host'
     image_shell = action == 'image-shell'
     if image_shell:
-        from mykos_image_admin import base_container
-        base_container(data_shop)
         name=data_shop
     else:
         name=None if host else target(data['shop'])
@@ -35,8 +33,12 @@ def main():
     session_fd=None
     if image_shell:
         from mykos_base_session import acquire
-        try:session_fd=acquire(data_shop)
-        except ValueError as error:
+        try:
+            session_fd=acquire(data_shop)
+            from mykos_image_admin import base_container
+            base_container(data_shop,start_native=True)
+        except Exception as error:
+            if session_fd is not None:os.close(session_fd)
             conn.sendall(('MYKOS_TERMINAL_ERROR '+str(error)+'\n').encode());conn.close();return
     pid,master=pty.fork()
     if pid==0:

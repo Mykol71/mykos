@@ -23,3 +23,17 @@ vm.runInContext(html.slice(html.indexOf('function mykosCloseHostDiagnostic('),ht
 context.mykosCloseHostDiagnostic(row);assert.equal(home.restored,mapElement);assert.equal(row.removed,true);
 assert.match(html,/data-host-action="geo"/);
 console.log('Host geographic map: ID/host points, safe hover metadata, green/red/yellow status, valid coordinates, map reuse and close cleanup passed.');
+context.mykosListMemory={'12345678':{vpn_topology:{links:[{meraki:{shop_name:'Flowers',router_name:'MX Shop',serial:'MX1',lat:33,lon:-88,address:'Main St'}}]}}};
+const geo=context.mykosGeoPoints();assert.equal(geo.filter(p=>p.kind==='router').length,1);
+assert.equal(geo.find(p=>p.kind==='router').lat,33);assert.equal(geo.find(p=>p.kind==='id'&&p.id==='12345678').lat,40);
+assert.equal(context.mykosGeoTooltip(geo.find(p=>p.kind==='router')).children[0].textContent,'Router · MX Shop');
+console.log('Meraki router location remains separate from container location.');
+
+assert.equal(geo.find(p=>p.kind==='router').status,'unknown');
+context.mykosListMemory['12345678'].vpn_topology.links[0].meraki.vpn_status='down';
+assert.equal(context.mykosGeoPoints().find(p=>p.kind==='router').status,'down');
+console.log('Router remains visible when VPN is down, with accurate status.');
+context.mykosMerakiSites=[{serial:'MX1',network_id:'N1',shop_name:'Known',lat:33,lon:-88},{serial:'MX2',network_id:'N2',shop_name:'Other site',lat:35,lon:-97}];
+const orgPoints=context.mykosGeoPoints().filter(p=>p.kind==='router');assert.equal(orgPoints.length,2);
+assert.equal(orgPoints.find(p=>p.serial==='MX1').status,'down');assert.equal(orgPoints.find(p=>p.serial==='MX2').status,'unknown');
+console.log('All organization sites are visible; linked VPN state overrides unknown organization state.');
