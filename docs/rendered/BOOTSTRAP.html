@@ -15,6 +15,7 @@ header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px
 <!-- contents:end -->
 
 <h2 id="install-from-the-signed-repository">Install from the signed repository</h2>
+<p><strong>Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).</strong> RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.</p>
 <p>With the signed MYKOS repository configured, a fresh installation needs only:</p>
 <pre><code class="language-bash">sudo dnf install mykos
 </code></pre>
@@ -62,7 +63,7 @@ HTTP/HTTPS in an active
 firewalld default zone when needed, obtains the certificate, configures an HTTP
 redirect and authenticated <code>/mykos/</code> HTTP/WebSocket proxy, then verifies HTTPS
 locally with domain and CA validation. In the standalone bootstrap flow, only after this succeeds does it install
-the signed <code>mykos</code> RPM from the matching EL8/EL9/EL10 repository and invoke:</p>
+the signed <code>mykos</code> RPM from the matching EL9 or EL10 repository and invoke:</p>
 <pre><code class="language-bash">mykos-setup --public-origin https://DOMAIN --enable
 </code></pre>
 <p>Repository signing keys are SHA-256 pinned in the bootstrap, and package

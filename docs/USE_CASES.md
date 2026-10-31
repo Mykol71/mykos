@@ -9,6 +9,8 @@ MYKOS prepares and manages operating-system environments; you install, configure
 and validate the application inside them. It does not automatically convert an
 old application, translate its code, or make every historical OS compatible.
 
+See the [screen examples](SCREENSHOTS.md) for the dashboard and snapshot workflows.
+
 ## 1. Keep an older application running on newer hardware
 
 ### The situation
@@ -218,3 +220,14 @@ For any of these cases, write down:
 
 A running container is a useful starting point. A working, tested application
 with a repeatable operating procedure is the outcome.
+
+
+## Inspect an incident without rolling back the running container
+
+**Snapshot Preview** gives an administrator a temporary console at a saved point
+in time while the current environment keeps running. Compare configuration,
+inspect application files, or demonstrate a reported issue without replacing
+current disks or losing newer work. VM previews restore saved memory and disks;
+native Linux previews provide a saved-filesystem shell rather than a live RAM
+restore. Networking is isolated and preview changes are discarded on close.
+See [Snapshot Preview](DESKTOPS.md#snapshot-preview) for access and cleanup details.

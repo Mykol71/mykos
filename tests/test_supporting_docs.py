@@ -67,3 +67,12 @@ def test_project_guides_and_pdf_downloads_are_public_and_licensing_stays_removed
         assert guide+'.html' in client.get('/docs/').text
     for name in ['LICENSING.md','LICENSING.html']:
         assert client.get('/docs/'+name).status_code==404
+
+
+def test_only_named_example_screenshots_are_public(client):
+    for name in ('example-dashboard.jpg','example-snapshot-actions.jpg','example-snapshot-preview.jpg'):
+        response=client.get('/docs/screenshots/'+name)
+        assert response.status_code==200 and response.headers['content-type'].startswith('image/jpeg')
+        assert response.content==(ROOT/'docs/screenshots'/name).read_bytes()
+    assert client.get('/docs/screenshots/private.jpg').status_code==404
+    assert client.get('/docs/screenshots/auth.db').status_code==404

@@ -94,7 +94,8 @@ connect as container root, and add/remove VPNs. It uses hidden files `.shopcode`
 those files during upgrades. Image creation uses `livemedia-creator`, kickstarts in
 `ks/rh7.ks` through `ks/rh10.ks`, Podman build/commit, and site repositories.
 
-The legacy menu's default `OS` is RH8 and its staging logic uses that global value;
+The legacy menu's default guest/image selection is RH8; this does not restore
+RHEL 8 host support. Its staging logic uses that global value;
 selecting another image does not comprehensively update all launch logic. Use the
 new configured API launcher for controlled, noninteractive staging, and validate
 legacy image workflows before relying on them across OS versions.

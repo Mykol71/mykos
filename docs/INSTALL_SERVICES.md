@@ -28,13 +28,14 @@ It does not read the historical archive during installation.
 
 ## Prerequisites and scope
 
-Use a RHEL-compatible **Linux** server with systemd and Python 3.9 or newer with `hashlib.scrypt`/OpenSSL; RHEL 9
-is the reference target. RHEL 8 needs a newer Python interpreter installed first.
-For example, where your enabled subscription provides it, install Python 3.11 and
-invoke `python3.11 bin/mykos-install install --python /usr/bin/python3.11` if the
-default `python3` is older than 3.9. RHEL 10 image kickstarts are included, but DHCP
-client/image-building package availability must be checked on that host. The
-installer does not silently add external repositories to obtain missing packages.
+**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
+
+Use systemd and the packaged interpreter: Python 3.11 on RHEL 9, and distribution
+`python3` on RHEL 10. Python must provide `hashlib.scrypt`/OpenSSL. For a direct
+RHEL 9 installation, invoke
+`python3.11 bin/mykos-install install --python /usr/bin/python3.11`. Check DHCP
+client and image-building package availability on the selected supported host.
+The installer does not silently add external repositories to obtain missing packages.
 
 Run `install --dry-run` to inspect the exact file plan and package list.
 `--install-deps` invokes `dnf`, creates a venv, installs `services/requirements.txt`,
@@ -406,11 +407,12 @@ Host has an orange personal-notes icon beside its white change-request icon. Bot
 
 The standard installer dependency set and RPM require `pykickstart`, which
 provides `ksvalidator`. `python3-kickstart` alone supplies only its Python
-library on EL8/EL9 and does not provide that command. Existing installations
+library on some RHEL releases and does not provide that command. Existing installations
 missing the CLI can install it with `sudo dnf install -y pykickstart`.
 
-All native Linux builds use the existing local Anaconda/Lorax workflow, including
-the operator's established RH9-on-RH8 method. The menu validates the prepared
+Native Linux images are built on the supported RHEL 9 or RHEL 10 host using
+the local Anaconda/Lorax workflow. The guest version can differ from the host.
+The menu validates the prepared
 kickstart against the installed parser without imposing a matching host release.
 Temporary copies adapt timesource and weak-dependency option spellings to that
 parser; saved kickstarts remain unchanged. Repository/package compatibility

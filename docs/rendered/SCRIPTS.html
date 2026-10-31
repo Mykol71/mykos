@@ -169,7 +169,8 @@ connect as container root, and add/remove VPNs. It uses hidden files <code>.shop
 <code>.SHOP.postype</code>, <code>.SHOP.imagetype</code>, <code>.SHOP.container</code>, and <code>.SHOP/</code> VPN data. Preserve
 those files during upgrades. Image creation uses <code>livemedia-creator</code>, kickstarts in
 <code>ks/rh7.ks</code> through <code>ks/rh10.ks</code>, Podman build/commit, and site repositories.</p>
-<p>The legacy menu&#39;s default <code>OS</code> is RH8 and its staging logic uses that global value;
+<p>The legacy menu&#39;s default guest/image selection is RH8; this does not restore
+RHEL 8 host support. Its staging logic uses that global value;
 selecting another image does not comprehensively update all launch logic. Use the
 new configured API launcher for controlled, noninteractive staging, and validate
 legacy image workflows before relying on them across OS versions.</p>

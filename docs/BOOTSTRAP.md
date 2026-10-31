@@ -16,6 +16,8 @@
 
 ## Install from the signed repository
 
+**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
+
 With the signed MYKOS repository configured, a fresh installation needs only:
 
 ```bash
@@ -79,7 +81,7 @@ HTTP/HTTPS in an active
 firewalld default zone when needed, obtains the certificate, configures an HTTP
 redirect and authenticated `/mykos/` HTTP/WebSocket proxy, then verifies HTTPS
 locally with domain and CA validation. In the standalone bootstrap flow, only after this succeeds does it install
-the signed `mykos` RPM from the matching EL8/EL9/EL10 repository and invoke:
+the signed `mykos` RPM from the matching EL9 or EL10 repository and invoke:
 
 ```bash
 mykos-setup --public-origin https://DOMAIN --enable

@@ -54,7 +54,9 @@ changed disks. `podman commit` alone does not save this QEMU execution state.
 
 ## Requirements and networking
 
-Use a Linux x86-64 host with usable `/dev/kvm` and `/dev/net/tun`, sufficient
+**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
+
+Use a supported Linux x86-64 host with usable `/dev/kvm` and `/dev/net/tun`, sufficient
 memory for each running guest (2048 MiB policy and 2 vCPUs), and at least 32 GiB of
 free storage for creation. Guest disks default to 64 GiB sparse disks. macOS
 also requires AVX2. Guest installation and licensing remain the operator's
@@ -99,6 +101,9 @@ In the POS menu:
 - `s`: select the eight-digit ID and OS.
 - `2`: start/stop that code's instance, retaining its disk and ports.
 - `3`: show desktop connection URLs; native RHEL still opens its root shell.
+
+The [complete VM command examples](IMAGE_BUILDS.md#all-supported-vm-types) cover
+every supported Windows, Windows Server, Ubuntu and macOS selection.
 
 Equivalent commands from either production toolkit's `pos` directory:
 
@@ -376,3 +381,40 @@ finish installation, boot the installed OS, apply setup, reboot and verify first
 macOS swap stays kernel-managed because a fixed total is not exposed by the
 stock OS. Its RAM allocation is 2048 MiB. Windows 11 at this allocation is below
 Microsoft's supported minimum.
+
+
+## Snapshot Preview
+
+> **Inspect saved state while production keeps running.** Snapshot Preview opens
+> a separate temporary session from the selected snapshot. It does not restore
+> over the original container, change the saved snapshot, or publish a new image.
+
+In the Snapshots pane, select a saved timestamp and choose the green monitor
+**Preview** action. Allow the new window, then wait for its private copy to start.
+The banner identifies the container, snapshot and kind of preview.
+
+| Snapshot type | Preview behavior |
+| --- | --- |
+| Windows, macOS or Ubuntu VM memory snapshot | Restores the saved RAM, device state and matching disks; verifies CPU execution state before resuming. |
+| Native Linux CRIU snapshot | Opens an administrator shell over a private copy of the saved filesystem and mounted data. Captured RAM, processes and services are not resumed. |
+
+Desktop guest traffic is blocked inside the temporary VM wrapper before saved
+CPUs resume. Native filesystem previews have no network. The desktop console is
+proxied through authenticated MYKOS; its underlying port binds only to host
+loopback. Preview sessions belong to the browser session that created them, and
+administrator authorization is checked on access. Preview storage uses private
+reflink copies where required; saved snapshots and live mounts are never writable
+preview mounts.
+
+Changes made in a preview are temporary. **Close preview** or close its window to
+request cleanup. A host cleanup timer removes its container, private disk copies,
+VM registry entry and temporary session records. If the browser disappears, the
+90-second lease expires and the timer collects it on its next one-minute pass.
+Previews have a 30-minute maximum lifetime and at most four may exist on a host.
+They are not customer containers and do not appear as extra customer IDs.
+
+Use this for incident investigation, configuration comparison, data inspection,
+or support demonstrations without interrupting the active customer environment.
+Network-dependent checks and native process/RAM recovery belong in a deliberate
+restore workflow, not this inspection session. The original **Restore** action
+remains separate and still asks before replacing a container's current state.

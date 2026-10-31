@@ -1,9 +1,23 @@
 # MYKOS documentation
 
-Documentation release **1.5.20261024-156**. Technical procedures are reviewed against the unchanged release146 runtime implementation.
+![MYKOS production dashboard](screenshots/production-dashboard.jpg)
+
+*Live production dashboard, October 30, 2026.*
+
+These maintained guides include current operational features. Historical design baselines are identified in the guides that retain them.
+
+**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
 Use these guides to install, operate, integrate, and recover MYKOS. Start with the
 guide for your task, then follow its prerequisites and verification steps.
+
+> **Highlighted feature: Snapshot Preview**
+> Inspect a saved point in time in a separate, temporary console without rolling
+> back the running container. Desktop previews resume captured RAM and disks;
+> native Linux previews open the saved filesystem in an isolated shell.
+> [How Snapshot Preview works](DESKTOPS.md#snapshot-preview).
+
+See the [screen examples gallery](SCREENSHOTS.md) for the dashboard, snapshot actions and a separate preview console.
 
 ## Project design and business value
 
@@ -11,13 +25,14 @@ Read the [two-paragraph business pitch](DEPLOYMENT_EFFICIENCY.md#the-business-ca
 
 | Guide | Use it for |
 | --- | --- |
+| [Screen examples](SCREENSHOTS.md) | Dashboard, VPN map and Snapshot Preview screenshots with example data |
 | [Example use cases](USE_CASES.md) | Practical workflows, starting with older applications on newer hardware |
 | [Security by design](SECURITY_BY_DESIGN.md) | Trust boundaries, identity, privileged operations, data protection, and deployment limits |
 | [Key innovations](KEY_INNOVATIONS.md) | Technical leadership overview of the design contributions |
 | [Performance by design](ENGINEERING_LESSONS.md) | Engineering milestones, difficult problems, and the whole-instance design rationale |
 | [Deployment efficiency and business value](DEPLOYMENT_EFFICIENCY.md) | Business scenarios, customer self-service, cost-saving mechanisms, and an illustrative savings model |
 
-The key innovations, performance by design, and deployment efficiency guides include downloadable PDFs. Capability statements retain their reviewed release146 implementation baseline; planned compliance scanning and alerts remain clearly marked as future work.
+The key innovations, performance by design, and deployment efficiency guides include downloadable PDFs retaining their reviewed release146 baseline. Current task guides describe later operational additions; planned compliance scanning and alerts remain clearly marked as future work.
 
 ## Installation and recovery
 
@@ -25,7 +40,7 @@ The key innovations, performance by design, and deployment efficiency guides inc
 | --- | --- |
 | [IP installation and optional domain HTTPS](BOOTSTRAP.md) | IP access, optional HTTPS, and bootstrap retries |
 | [Installation updates and recovery](INSTALL_SERVICES.md) | Source installation, updates, verification, backup, and restore |
-| [RHEL RPM packages](RPM.md) | Signed EL8, EL9, and EL10 packages and repositories |
+| [RHEL RPM packages](RPM.md) | Signed EL9 and EL10 host packages and repositories |
 | [Identity management](IDENTITY.md) | Browser accounts, permissions, passwords, and API keys |
 
 ## Images containers and networking

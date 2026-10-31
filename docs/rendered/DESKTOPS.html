@@ -52,7 +52,8 @@ changed disks. <code>podman commit</code> alone does not save this QEMU executio
 <!-- contents:end -->
 
 <h2 id="requirements-and-networking">Requirements and networking</h2>
-<p>Use a Linux x86-64 host with usable <code>/dev/kvm</code> and <code>/dev/net/tun</code>, sufficient
+<p><strong>Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).</strong> RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.</p>
+<p>Use a supported Linux x86-64 host with usable <code>/dev/kvm</code> and <code>/dev/net/tun</code>, sufficient
 memory for each running guest (2048 MiB policy and 2 vCPUs), and at least 32 GiB of
 free storage for creation. Guest disks default to 64 GiB sparse disks. macOS
 also requires AVX2. Guest installation and licensing remain the operator&#39;s
@@ -91,6 +92,8 @@ to the public Internet without a separately configured access gateway.</p>
 <li><code>2</code>: start/stop that code&#39;s instance, retaining its disk and ports.</li>
 <li><code>3</code>: show desktop connection URLs; native RHEL still opens its root shell.</li>
 </ul>
+<p>The <a href="IMAGE_BUILDS.html#all-supported-vm-types">complete VM command examples</a> cover
+every supported Windows, Windows Server, Ubuntu and macOS selection.</p>
 <p>Equivalent commands from either production toolkit&#39;s <code>pos</code> directory:</p>
 <pre><code class="language-bash">sudo python3 ./vm create win11
 sudo python3 ./vm create wns2025
@@ -308,4 +311,47 @@ finish installation, boot the installed OS, apply setup, reboot and verify first
 macOS swap stays kernel-managed because a fixed total is not exposed by the
 stock OS. Its RAM allocation is 2048 MiB. Windows 11 at this allocation is below
 Microsoft&#39;s supported minimum.</p>
+<h2 id="snapshot-preview">Snapshot Preview</h2>
+<blockquote>
+<p><strong>Inspect saved state while production keeps running.</strong> Snapshot Preview opens
+a separate temporary session from the selected snapshot. It does not restore
+over the original container, change the saved snapshot, or publish a new image.</p>
+</blockquote>
+<p>In the Snapshots pane, select a saved timestamp and choose the green monitor
+<strong>Preview</strong> action. Allow the new window, then wait for its private copy to start.
+The banner identifies the container, snapshot and kind of preview.</p>
+<table>
+<thead>
+<tr>
+<th>Snapshot type</th>
+<th>Preview behavior</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Windows, macOS or Ubuntu VM memory snapshot</td>
+<td>Restores the saved RAM, device state and matching disks; verifies CPU execution state before resuming.</td>
+</tr>
+<tr>
+<td>Native Linux CRIU snapshot</td>
+<td>Opens an administrator shell over a private copy of the saved filesystem and mounted data. Captured RAM, processes and services are not resumed.</td>
+</tr>
+</tbody></table>
+<p>Desktop guest traffic is blocked inside the temporary VM wrapper before saved
+CPUs resume. Native filesystem previews have no network. The desktop console is
+proxied through authenticated MYKOS; its underlying port binds only to host
+loopback. Preview sessions belong to the browser session that created them, and
+administrator authorization is checked on access. Preview storage uses private
+reflink copies where required; saved snapshots and live mounts are never writable
+preview mounts.</p>
+<p>Changes made in a preview are temporary. <strong>Close preview</strong> or close its window to
+request cleanup. A host cleanup timer removes its container, private disk copies,
+VM registry entry and temporary session records. If the browser disappears, the
+90-second lease expires and the timer collects it on its next one-minute pass.
+Previews have a 30-minute maximum lifetime and at most four may exist on a host.
+They are not customer containers and do not appear as extra customer IDs.</p>
+<p>Use this for incident investigation, configuration comparison, data inspection,
+or support demonstrations without interrupting the active customer environment.
+Network-dependent checks and native process/RAM recovery belong in a deliberate
+restore workflow, not this inspection session. The original <strong>Restore</strong> action
+remains separate and still asks before replacing a container&#39;s current state.</p>
 <footer>MYKOS documentation</footer></main></html>

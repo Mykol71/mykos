@@ -1,6 +1,11 @@
 # MYKOS
 
-MYKOS is a virtualization and host-management solution for RHEL 8 and RHEL 9.
+![MYKOS production dashboard](docs/screenshots/production-dashboard.jpg)
+
+*Live production dashboard, October 30, 2026.*
+
+MYKOS is a virtualization and host-management solution for RHEL 9 and RHEL 10.
+RHEL 8 is no longer a supported MYKOS host; RHEL 8 guest images remain available.
 It combines a web control center, authenticated API, and text administration
 menus for native Linux containers and QEMU-based Windows, macOS, and Ubuntu
 VMs managed through Podman.
@@ -8,6 +13,7 @@ VMs managed through Podman.
 The dashboard includes host performance history, OS-specific container panes,
 live snapshots, rsync accounts, repository management, and per-pane notes.
 Browser sessions and scoped API keys use separate authentication.
+See the [screen examples gallery](docs/SCREENSHOTS.md) for illustrated workflows.
 
 ## Installation
 
@@ -61,6 +67,40 @@ sudo /usr/share/mykos/pos/vm build wns2022
 sudo /usr/share/mykos/pos/vm build mac15
 ```
 
+### All supported VM types
+
+Each row is an alternative example. Run only the build you need.
+The commands below use the installed toolkit path.
+
+| Guest type | Unattended build command |
+| --- | --- |
+| Windows 11 | `sudo /usr/share/mykos/pos/vm build win11` |
+| Windows 10 | `sudo /usr/share/mykos/pos/vm build win10` |
+| Windows 8.1 Enterprise | `sudo /usr/share/mykos/pos/vm build win8e` |
+| Windows Server 2025 | `sudo /usr/share/mykos/pos/vm build wns2025` |
+| Windows Server 2022 | `sudo /usr/share/mykos/pos/vm build wns2022` |
+| Windows Server 2019 | `sudo /usr/share/mykos/pos/vm build wns2019` |
+| Windows Server 2016 | `sudo /usr/share/mykos/pos/vm build wns2016` |
+| Ubuntu 20.04 | `sudo /usr/share/mykos/pos/vm build ubuntu20.04` |
+| Ubuntu 22.04 | `sudo /usr/share/mykos/pos/vm build ubuntu22.04` |
+| Ubuntu 24.04 | `sudo /usr/share/mykos/pos/vm build ubuntu24.04` |
+| macOS 12 Monterey | `sudo /usr/share/mykos/pos/vm build mac12` |
+| macOS 13 Ventura | `sudo /usr/share/mykos/pos/vm build mac13` |
+| macOS 14 Sonoma | `sudo /usr/share/mykos/pos/vm build mac14` |
+| macOS 15 Sequoia | `sudo /usr/share/mykos/pos/vm build mac15` |
+
+Legacy Windows versions use interactive setup. Open the returned console, finish
+installation and reach the installed desktop, then run the matching Finish command.
+These selections use `create` and `prepare`, rather than the unattended builder.
+
+| Guest type | Create image | Finish after setup |
+| --- | --- | --- |
+| Windows 7 Ultimate | `sudo /usr/share/mykos/pos/vm create win7u` | `sudo /usr/share/mykos/pos/vm prepare win7u` |
+| Windows XP | `sudo /usr/share/mykos/pos/vm create winxp` | `sudo /usr/share/mykos/pos/vm prepare winxp` |
+| Windows Me | `sudo /usr/share/mykos/pos/vm create winme` | `sudo /usr/share/mykos/pos/vm prepare winme` |
+| Windows 2000 | `sudo /usr/share/mykos/pos/vm create win2k` | `sudo /usr/share/mykos/pos/vm prepare win2k` |
+| Windows 98 | `sudo /usr/share/mykos/pos/vm create win98` | `sudo /usr/share/mykos/pos/vm prepare win98` |
+
 Ubuntu uses autoinstall, Windows uses Autounattend.xml, and macOS uses
 startosinstall. Completed builds commit the installed payload under a readable
 OS image name and leave a generic base running for fast instance creation.
@@ -76,7 +116,7 @@ and [networking](docs/NETWORKING.md).
 - `services/helpers`: privileged lifecycle, storage, networking and monitoring.
 - `services/systemd`: sockets, services and collector timers.
 - `pos`, `back`, `repo`, `data`: operator menus and commands.
-- `packaging/rpm`: signed EL8/EL9 RPM build definitions.
+- `packaging/rpm`: signed EL9/EL10 RPM build definitions.
 - `tests`: Python and browser JavaScript regression checks.
 
 ```bash

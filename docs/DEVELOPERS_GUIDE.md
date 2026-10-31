@@ -5,8 +5,9 @@
 **A handoff for the person who has to understand, change, and support this code.**
 The baseline is **1.5.20261024-147**, Git commit
 `64f1c0ef725961f8be8d40e71c681a678713811d`, published 29 October 2026.
-This guide describes that released implementation. Local changes are not proof
-that a feature shipped. In particular, the separate PXE work is unpublished.
+The architectural walkthrough retains that baseline. Host-platform notes below
+reflect current RHEL 9/RHEL 10 support; RHEL 8 host support has been dropped.
+Local changes are not proof that a feature shipped. The separate PXE work is unpublished.
 
 **Find your way:** [Code map](#repository-map) · [Installed state](#source-code-versus-installed-state) · [Request walkthrough](#one-request-from-click-to-completion) · [Local setup](#get-a-safe-local-development-environment) · [Making changes](#how-to-make-a-change) · [Tests](#tests-and-what-they-establish) · [Troubleshooting](#debug-by-locating-the-boundary-that-failed) · [Release workflow](#from-a-change-to-an-installed-release)
 
@@ -219,9 +220,9 @@ python -m pip install -r services/requirements.txt pytest httpx
 python -c 'import hashlib; assert hasattr(hashlib, "scrypt")'
 ```
 
-Use Python 3.9+ for runtime compatibility; Python 3.12 is a useful workstation
-test interpreter. EL8 deployment selects Python 3.9; EL9/EL10 use their packaged
-`python3`. Runtime direct dependencies are pinned in `services/requirements.txt`;
+Use Python 3.12 as a workstation test interpreter. Supported hosts are RHEL 9
+with packaged Python 3.11 and RHEL 10 with distribution `python3`. RHEL 8 is no
+longer a supported host; its guest images are a separate compatibility target. Runtime direct dependencies are pinned in `services/requirements.txt`;
 test dependencies in the command above are not a complete locked environment.
 Record resolved versions when reproducing a failure. Node is used for the plain
 `.cjs` UI checks and documentation tooling; it is not the deployed web server.
@@ -558,7 +559,8 @@ be in Git yet absent from the package if it is outside the included directories.
 `SHA256SUMS` plus an archive checksum. Inspect the produced archive, not just the
 working directory. Never package a mixed checkout containing unpublished work.
 
-The RPM spec selects EL8/EL9/EL10 host requirements and Python paths. `noarch`
+The RPM spec selects EL9/EL10 host requirements and Python paths and rejects
+EL8 host builds. RHEL 8 guest images remain supported. `noarch`
 means the payload is not CPU-specific; it does not make a package interchangeable
 between host majors. Build and sign with the existing protected signing workflow;
 private signing keys stay outside source and packages. Verify the signed bytes

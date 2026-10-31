@@ -64,7 +64,7 @@ This structure supports both operators and automation while making trust boundar
 
 ## Delivery separated from customer state
 
-MYKOS packages its control plane independently of guest disks, snapshots, browser accounts, API credentials, and local configuration. Signed RH8, RH9, and RH10 RPMs provide a consistent delivery path. Managed-file manifests, rollback snapshots, lifecycle locks, and reference checks support deliberate updates and cleanup.
+MYKOS packages its control plane independently of guest disks, snapshots, browser accounts, API credentials, and local configuration. Signed RH9 and RH10 host RPMs provide a consistent delivery path. Managed-file manifests, rollback snapshots, lifecycle locks, and reference checks support deliberate updates and cleanup.
 
 Operator customizations are also treated as inputs. Generated build copies adapt maintained kickstarts without replacing the originals. Image removal checks references and active use; existing instance storage is retained when an operation cannot safely finish.
 

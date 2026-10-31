@@ -2,6 +2,15 @@
 
 [Documentation index](README.md)
 
+Installed Windows and a reusable MYKOS image are separate milestones. After
+installation completes, MYKOS captures startup RAM and commits the installed disk
+and memory together. If that capture fails, the installed disk stays available:
+rerun Build to finish it without reinstalling. The image builder briefly pauses
+during this startup capture so busy Windows guests cannot keep dirtying RAM faster
+than it can be compressed. The builder resumes on capture success or failure.
+Ordinary live snapshots retain their existing precopy behavior. Incomplete
+compressed streams are removed and never published as valid checkpoints.
+
 <!-- contents:start -->
 **Contents**
 
@@ -34,6 +43,40 @@ sudo /usr/local/sbin/mykos-image-build win10
 sudo /usr/local/sbin/mykos-image-build wns2022
 sudo /usr/local/sbin/mykos-image-build mac15
 ```
+
+### All supported VM types
+
+Each row is an alternative example. Run only the build you need.
+The commands below use the installed toolkit path.
+
+| Guest type | Unattended build command |
+| --- | --- |
+| Windows 11 | `sudo /usr/share/mykos/pos/vm build win11` |
+| Windows 10 | `sudo /usr/share/mykos/pos/vm build win10` |
+| Windows 8.1 Enterprise | `sudo /usr/share/mykos/pos/vm build win8e` |
+| Windows Server 2025 | `sudo /usr/share/mykos/pos/vm build wns2025` |
+| Windows Server 2022 | `sudo /usr/share/mykos/pos/vm build wns2022` |
+| Windows Server 2019 | `sudo /usr/share/mykos/pos/vm build wns2019` |
+| Windows Server 2016 | `sudo /usr/share/mykos/pos/vm build wns2016` |
+| Ubuntu 20.04 | `sudo /usr/share/mykos/pos/vm build ubuntu20.04` |
+| Ubuntu 22.04 | `sudo /usr/share/mykos/pos/vm build ubuntu22.04` |
+| Ubuntu 24.04 | `sudo /usr/share/mykos/pos/vm build ubuntu24.04` |
+| macOS 12 Monterey | `sudo /usr/share/mykos/pos/vm build mac12` |
+| macOS 13 Ventura | `sudo /usr/share/mykos/pos/vm build mac13` |
+| macOS 14 Sonoma | `sudo /usr/share/mykos/pos/vm build mac14` |
+| macOS 15 Sequoia | `sudo /usr/share/mykos/pos/vm build mac15` |
+
+Legacy Windows versions use interactive setup. Open the returned console, finish
+installation and reach the installed desktop, then run the matching Finish command.
+These selections use `create` and `prepare`, rather than the unattended builder.
+
+| Guest type | Create image | Finish after setup |
+| --- | --- | --- |
+| Windows 7 Ultimate | `sudo /usr/share/mykos/pos/vm create win7u` | `sudo /usr/share/mykos/pos/vm prepare win7u` |
+| Windows XP | `sudo /usr/share/mykos/pos/vm create winxp` | `sudo /usr/share/mykos/pos/vm prepare winxp` |
+| Windows Me | `sudo /usr/share/mykos/pos/vm create winme` | `sudo /usr/share/mykos/pos/vm prepare winme` |
+| Windows 2000 | `sudo /usr/share/mykos/pos/vm create win2k` | `sudo /usr/share/mykos/pos/vm prepare win2k` |
+| Windows 98 | `sudo /usr/share/mykos/pos/vm create win98` | `sudo /usr/share/mykos/pos/vm prepare win98` |
 
 From the text administration directory, `./vm build OS` and the existing
 Create Image menu use the same pipeline. Repeating the command resumes an
@@ -173,8 +216,8 @@ build/commit → running generic base workflow as RedHat. Recipes live in
 `rh8.ks`, `rh9.ks`, or `rh10.ks`, preserving its package list and post-install
 customizations. The original RedHat kickstarts remain unchanged. Use an
 Anaconda/Lorax build environment that accepts the prepared kickstart. All native
-Linux selections follow the operator's local workflow, including RH9-on-RH8,
-without a host-major restriction. Temporary build copies adapt timesource and
+Linux selections run on a supported RHEL 9 or RHEL 10 MYKOS host; guest/image
+versions are separate from host support. Temporary build copies adapt timesource and
 weak-dependency option spellings to the installed parser; saved kickstarts stay
 unchanged. Actual installer and repository compatibility is checked during the build.
 

@@ -35,12 +35,13 @@ for name,page in pages.items():
 values={}
 for item in ast.parse((ROOT/'services/web/supporting_docs.py').read_text()).body:
  if isinstance(item,ast.Assign) and isinstance(item.targets[0],ast.Name):
-  if item.targets[0].id in ('GUIDES','DIAGRAMS','DOWNLOADS'):values[item.targets[0].id]=ast.literal_eval(item.value)
+  if item.targets[0].id in ('GUIDES','DIAGRAMS','DOWNLOADS','SCREENSHOTS'):values[item.targets[0].id]=ast.literal_eval(item.value)
 public_guides=json.loads((ROOT/'tools/docs/guides.json').read_text())
 assert set(values['GUIDES'])==set(public_guides)
 assert all((DOCS/name).is_file() for name in public_guides)
 assert set(pages)=={p[:-3]+'.html' for p in values['GUIDES']}
 assert values['DIAGRAMS']=={p.name for p in (DOCS/'diagrams').iterdir()}
+assert values['SCREENSHOTS']=={p.name for p in (DOCS/'screenshots').iterdir()}
 models=json.loads((ROOT/'tools/docs/diagrams.json').read_text())
 for model in models:
  xml=ET.parse(DOCS/'diagrams'/(model['name']+'.svg'))

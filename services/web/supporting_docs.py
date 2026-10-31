@@ -4,6 +4,7 @@ from fastapi import APIRouter,HTTPException
 from fastapi.responses import FileResponse,RedirectResponse
 
 GUIDES={
+    'SCREENSHOTS.md':'Screen examples gallery',
     'SECURITY_BY_DESIGN.md':'Security by design',
     'USE_CASES.md':'Example use cases',
     'DEVELOPERS_GUIDE.md':'Developer handoff and source guide',
@@ -32,6 +33,7 @@ GUIDES={
 DOWNLOADS={'MYKOS_Key_Innovations.pdf':'application/pdf','MYKOS_Engineering_Lessons.pdf':'application/pdf','MYKOS_Deployment_Efficiency.pdf':'application/pdf','MYKOS_Administrator_Guide.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
            'openapi.json':'application/json','THIRD_PARTY_ICONS.txt':'text/plain'}
 DIAGRAMS={'vpn-host-shared.svg', 'vpn-direct.mmd', 'image-lifecycle.mmd', 'vpn-host-only.svg', 'vpn-direct.svg', 'vpn-native-gateway.mmd', 'architecture.mmd', 'architecture.svg', 'image-lifecycle.svg', 'vpn-native-gateway.svg', 'vpn-host-shared.mmd', 'vpn-host-only.mmd'}
+SCREENSHOTS={'production-dashboard.jpg','example-dashboard.jpg','example-snapshot-actions.jpg','example-snapshot-preview.jpg'}
 HEADERS={'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",'X-Content-Type-Options':'nosniff'}
 
 
@@ -52,6 +54,10 @@ def router(root):
     def diagram(name:str):
         if name not in DIAGRAMS:raise HTTPException(404,'Diagram not found')
         return FileResponse(file('diagrams/'+name),media_type='image/svg+xml' if name.endswith('.svg') else 'text/plain',headers=HEADERS)
+    @routes.get('/docs/screenshots/{name}',include_in_schema=False)
+    def screenshot(name:str):
+        if name not in SCREENSHOTS:raise HTTPException(404,'Screenshot not found')
+        return FileResponse(file('screenshots/'+name),media_type='image/jpeg',headers=HEADERS)
     @routes.get('/docs/{name}',include_in_schema=False)
     def document(name:str):
         if name in DOWNLOADS:

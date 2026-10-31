@@ -30,13 +30,13 @@ It does not read the historical archive during installation.</p>
 <!-- contents:end -->
 
 <h2 id="prerequisites-and-scope">Prerequisites and scope</h2>
-<p>Use a RHEL-compatible <strong>Linux</strong> server with systemd and Python 3.9 or newer with <code>hashlib.scrypt</code>/OpenSSL; RHEL 9
-is the reference target. RHEL 8 needs a newer Python interpreter installed first.
-For example, where your enabled subscription provides it, install Python 3.11 and
-invoke <code>python3.11 bin/mykos-install install --python /usr/bin/python3.11</code> if the
-default <code>python3</code> is older than 3.9. RHEL 10 image kickstarts are included, but DHCP
-client/image-building package availability must be checked on that host. The
-installer does not silently add external repositories to obtain missing packages.</p>
+<p><strong>Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).</strong> RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.</p>
+<p>Use systemd and the packaged interpreter: Python 3.11 on RHEL 9, and distribution
+<code>python3</code> on RHEL 10. Python must provide <code>hashlib.scrypt</code>/OpenSSL. For a direct
+RHEL 9 installation, invoke
+<code>python3.11 bin/mykos-install install --python /usr/bin/python3.11</code>. Check DHCP
+client and image-building package availability on the selected supported host.
+The installer does not silently add external repositories to obtain missing packages.</p>
 <p>Run <code>install --dry-run</code> to inspect the exact file plan and package list.
 <code>--install-deps</code> invokes <code>dnf</code>, creates a venv, installs <code>services/requirements.txt</code>,
 and records exact resolved packages in <code>/opt/mykos-web/installed-requirements.txt</code>.
@@ -334,10 +334,11 @@ manual cleanup is reported explicitly, without deleting its disks or image.</p>
 <h2 id="native-image-builder-prerequisite">Native image builder prerequisite</h2>
 <p>The standard installer dependency set and RPM require <code>pykickstart</code>, which
 provides <code>ksvalidator</code>. <code>python3-kickstart</code> alone supplies only its Python
-library on EL8/EL9 and does not provide that command. Existing installations
+library on some RHEL releases and does not provide that command. Existing installations
 missing the CLI can install it with <code>sudo dnf install -y pykickstart</code>.</p>
-<p>All native Linux builds use the existing local Anaconda/Lorax workflow, including
-the operator&#39;s established RH9-on-RH8 method. The menu validates the prepared
+<p>Native Linux images are built on the supported RHEL 9 or RHEL 10 host using
+the local Anaconda/Lorax workflow. The guest version can differ from the host.
+The menu validates the prepared
 kickstart against the installed parser without imposing a matching host release.
 Temporary copies adapt timesource and weak-dependency option spellings to that
 parser; saved kickstarts remain unchanged. Repository/package compatibility

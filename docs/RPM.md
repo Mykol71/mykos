@@ -1,16 +1,17 @@
-# Signed RHEL 8, RHEL 9 and RHEL 10 packages
+# Signed RHEL 9 and RHEL 10 host packages
 
 [Documentation index](README.md)
 
-The released baseline reviewed here is **1.5.20261024-146**. Each supported major
-has its own signed binary RPM, source RPM and repository. Choose the repository
+**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
+
+Each supported host major has its own signed binary RPM, source RPM and repository.
+Older EL8 package archives are historical artifacts, not a supported host-installation path. Choose the repository
 matching the **host**, not the OS you want to run inside a guest.
 
 ## Install from the matching repository
 
 | Host | Repository configuration |
 | --- | --- |
-| RHEL 8 | `https://mykol.com/mykos-1.5-for-x86_64-el8/mykos-el8.repo` |
 | RHEL 9 | `https://mykol.com/mykos-1.5-for-x86_64-el9/mykos-el9.repo` |
 | RHEL 10 | `https://mykol.com/mykos-1.5-for-x86_64-el10/mykos-el10.repo` |
 
@@ -23,7 +24,7 @@ rpm -q mykos
 sudo systemctl status mykos-firstboot.service --no-pager
 ```
 
-Use `el8` or `el10` in both URL and destination filename on those hosts. Keep
+On RHEL 10, use `el10` in both the URL and destination filename. Keep
 `gpgcheck=1`; confirm the signing fingerprint before accepting an imported key:
 `BC14191DE284100A246DD552F4384FD1AD974308`. The repository supplies
 `RPM-GPG-KEY-MYKOS`. Source and binary RPMs are signed; checksums describe the
@@ -40,8 +41,9 @@ Create the first browser administrator with:
 sudo /usr/local/sbin/mykos-users create NAME --role admin
 ```
 
-RHEL BaseOS/AppStream access and a Python package source are needed. EL8 uses
-`python39`; EL9/EL10 use distribution `python3`. The package has distinct host
+RHEL BaseOS/AppStream access and a Python package source are needed. EL9 uses
+Python 3.11 (`python3.11` and `python3.11-pip`); EL10 uses distribution `python3`
+and `python3-pip`. The package has distinct host
 release requirements. KVM checks open `/dev/kvm` and create an empty VM without
 starting a guest; unavailable KVM produces a warning and retains native Linux use.
 See [desktop prerequisites](DESKTOPS.md) before attempting VM lifecycle operations.
@@ -71,8 +73,8 @@ and back up guest disks and customer backup data separately. Then:
 ```bash
 sudo dnf upgrade mykos
 sudo mykos-setup --enable
-sudo python3 /usr/share/mykos/bin/mykos-install verify
-# On EL8, use python3.9 instead of python3 for this verification command.
+sudo python3.11 /usr/share/mykos/bin/mykos-install verify
+# On RHEL 10, use python3 for this verification command.
 rpm -q mykos
 ```
 
@@ -92,7 +94,8 @@ private bridge; old pipework/macvlan instances need a separately planned migrati
 
 ## Install a downloaded signed RPM
 
-Example for the reviewed EL9 baseline, after downloading the RPM and public key
+Historical EL9 filename example (release146); substitute the current signed
+release filename after downloading the RPM and public key
 from the matching trusted repository and verifying the key fingerprint:
 
 ```bash
@@ -101,7 +104,7 @@ rpm -Kv ./mykos-1.5.20261024-146.el9.noarch.rpm
 sudo dnf --setopt=localpkg_gpgcheck=1 install ./mykos-1.5.20261024-146.el9.noarch.rpm
 ```
 
-Use the matching `.el8` or `.el10` filename on those hosts. A checksum alone does
+On RHEL 10, use the matching `.el10` filename. A checksum alone does
 not authenticate the signer. Do not disable signature checks to bypass a failure.
 
 ## Build and repository maintenance
