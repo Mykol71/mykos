@@ -4,6 +4,7 @@ from fastapi import APIRouter,HTTPException
 from fastapi.responses import FileResponse,RedirectResponse
 
 GUIDES={
+    'PEERS.md':'Peer hosts and shared controls',
     'LICENSING.md':'Free use and licensing',
     'CREDITS.md':'Credits and acknowledgments',
     'REFERENCES.md':'References and upstream projects',

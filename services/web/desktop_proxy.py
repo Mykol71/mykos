@@ -18,6 +18,8 @@ SELECTION = re.compile(r'(?:preview-[0-9a-f]{32}|[0-9]{8}|(?:win|wns|mac|ubuntu)
 
 
 def authorize(connection, api=False):
+    from mykos_peers import principal, authenticate
+    if principal(connection): authenticate(connection.scope)
     if api:
         from api_v2 import administrator
         administrator(connection)

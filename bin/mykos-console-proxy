@@ -13,7 +13,7 @@ MARKER = '# MYKOS authenticated HTTPS console WebSockets'
 BLOCK = '''    # MYKOS authenticated HTTPS console WebSockets
     RewriteEngine On
     RewriteCond %{HTTP:Upgrade} =websocket [NC]
-    RewriteCond %{REQUEST_URI} ^/mykos/(api/v2/)?console/
+    RewriteCond %{REQUEST_URI} ^/mykos/((api/v2/)?console/|api/web/snapshot-preview/[0-9a-f]{32}/terminal$|api/web/peers/[0-9a-f]{32}/proxy/)
     RewriteRule ^/mykos/(.*)$ ws://127.0.0.1:8000/$1 [P,L]
 '''
 PROXY = re.compile(r'^\s*ProxyPass\s+["\']?/mykos/["\']?\s+["\']?http://127\.0\.0\.1:8000/', re.M | re.I)
@@ -22,18 +22,25 @@ PROXY = re.compile(r'^\s*ProxyPass\s+["\']?/mykos/["\']?\s+["\']?http://127\.0\.
 def transform(text):
     def vhost(match):
         value = match[0]
-        if not re.search(r'<VirtualHost\s+[^>]*:443\b', value, re.I) or MARKER in value:
+        if not re.search(r'<VirtualHost\s+[^>]*:443\b', value, re.I):
             return value
+        if MARKER in value:
+            return re.sub(r'(?m)^(\s*RewriteCond %\{REQUEST_URI\} )\^/mykos/[^\n]+$', lambda m: m[1] + '^/mykos/((api/v2/)?console/|api/web/snapshot-preview/[0-9a-f]{32}/terminal$|api/web/peers/[0-9a-f]{32}/proxy/)', value)
         proxy = PROXY.search(value)
         if proxy is None: return value
         start = value.rfind('\n', 0, proxy.start()) + 1
         return value[:start] + BLOCK + value[start:]
+    if '<VirtualHost' not in text and '# Managed by mykos-bootstrap' in text and PROXY.search(text):
+        return re.sub(r'(?m)^(\s*RewriteCond %\{REQUEST_URI\} )\^/mykos/[^\n]+$', lambda m: m[1] + '^/mykos/((api/v2/)?console/|api/web/snapshot-preview/[0-9a-f]{32}/terminal$|api/web/peers/[0-9a-f]{32}/proxy/)', text)
     return re.sub(r'<VirtualHost\b[^>]*>.*?</VirtualHost\s*>', vhost, text, flags=re.I | re.S)
 
 
 def apply(directory=Path('/etc/httpd/conf.d'), execute=False):
     changes=[]
-    for path in sorted(directory.glob('*.conf')):
+    candidates=sorted(directory.glob('*.conf'))
+    bootstrap_include=directory.parent/'mykos-proxy.inc'
+    if bootstrap_include.exists() or bootstrap_include.is_symlink():candidates.append(bootstrap_include)
+    for path in candidates:
         if path.is_symlink(): raise ValueError('Apache configuration symlink rejected: '+str(path))
         before=path.read_text();after=transform(before)
         if before!=after:changes.append((path,before,after))

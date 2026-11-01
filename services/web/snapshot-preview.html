@@ -15,7 +15,7 @@ function stop(){if(socket){socket.onclose=null;socket.close();socket=null;}if(te
 function close(){if(closed)return;closed=true;clearTimeout(timer);stop();fetch(base+'/close',{method:'POST',keepalive:true}).catch(()=>{});}
 function openConsole(){
  if(started)return;started=true;
- if(config.mode==='memory'){el('desktop').src='/mykos/console/preview-'+config.token+'/';el('desktop').hidden=false;}
+ if(config.mode==='memory'){const consoleURL='/mykos/console/preview-'+config.token+'/';el('desktop').src=window.mykosNodeURL?window.mykosNodeURL(consoleURL):consoleURL;el('desktop').hidden=false;}
  else{
   if(!window.Terminal)throw Error('Terminal display library unavailable');
   el('terminal').hidden=false;term=new Terminal({cursorBlink:true,scrollback:1000,cols:120,rows:30,theme:{background:'#050a12',foreground:'#e2e8f0'}});term.open(el('terminal'));term.focus();

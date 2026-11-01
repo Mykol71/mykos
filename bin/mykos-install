@@ -29,7 +29,7 @@ PREFIXES = ('/opt/mykos-web/', '/usr/local/share/mykos/', '/etc/mykos/',
             '/etc/systemd/system/mykos-', '/usr/local/sbin/mykos-')
 # Keep the legacy path allowed for old recovery snapshots and upgrade cleanup.
 OPTIONAL_UNITS = ['mykos-idle-bases.service','mykos-repository-inventory.service','mykos-repository-inventory.timer','mykos-snapshot-preview-gc.service','mykos-legacy-cgroups.service','mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service','mykos-vpn-gateway.timer']
-EXACT = {'/usr/local/sbin/mykos_idle_bases.py','/usr/local/sbin/mykos_snapshot_preview.py','/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
+EXACT = {'/usr/local/sbin/mykos_peer_vpn.py','/usr/local/sbin/mykos_idle_bases.py','/usr/local/sbin/mykos_snapshot_preview.py','/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
          '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
          '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
 PACKAGES = ['dmidecode','podman','httpd','python3','python3-pip','openssh-server','openssh-clients','rsync',
@@ -52,6 +52,15 @@ def allowed(path):
 def command(args):
     print('+', ' '.join(map(str,args)), flush=True)
     return subprocess.run(list(map(str,args)), check=True, text=True)
+
+
+def activate_apache(python):
+    # RPM owns runtime files, so it may replace the template before setup runs.
+    # Always activate managed proxy routes when an existing Apache is running.
+    if subprocess.run(['systemctl','is-active','--quiet','httpd']).returncode == 0:
+        command([python,str(SOURCE/'bin/mykos-console-proxy'),'--apply'])
+        command(['apachectl','configtest'])
+        command(['systemctl','reload','httpd'])
 
 
 def readable_venv(root,gid):
@@ -302,6 +311,7 @@ class Installer:
             command(['runuser','-u','mykosweb','--',venv/'bin/python','/opt/mykos-web/manage.py','keys','list'])
             ensure_container_limits()
             command(['systemctl','daemon-reload'])
+            activate_apache(self.args.python)
         manifest={'format':1,'python':self.args.python,'staging':not self.live,'snapshot':str(snap),'files':[]}
         for path,entry in entries.items():
             manifest['files'].append({'path':path,'sha256':sha(self.path(path).read_bytes()),

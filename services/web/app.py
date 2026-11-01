@@ -21,11 +21,15 @@ from mykos_users import connect as db, is_admin
 def digest(password,salt):
     return hashlib.scrypt(password.encode(),salt=bytes.fromhex(salt),n=16384,r=8,p=1).hex()
 def check(request):
+    from mykos_peers import principal
+    if principal(request): return
     token=request.cookies.get('mykos_session','')
     with db() as c:
         row=c.execute('SELECT sessions.name FROM sessions JOIN users ON users.name=sessions.name WHERE token=? AND expires>?',(hashlib.sha256(token.encode()).hexdigest(),int(time.time()))).fetchone() if token else None
     if not row: raise HTTPException(401,'Login required')
 def origin(request):
+    from mykos_peers import principal
+    if principal(request): return
     expected=os.getenv('MYKOS_PUBLIC_ORIGIN',str(request.base_url).rstrip('/'))
     if not request.headers.get('origin') or not hmac.compare_digest(request.headers['origin'],expected): raise HTTPException(403,'Invalid origin')
 class Credentials(BaseModel):
@@ -84,6 +88,9 @@ async def headers(request,call_next):
     response.headers['X-Content-Type-Options']='nosniff'
     # Snapshot desktops are embedded only by MYKOS's same-origin preview page.
     preview_frame = bool(_mykos_re.fullmatch(r'(?:/mykos)?/console/preview-[0-9a-f]{32}/.*', request.url.path))
+    peer_frame = bool(_mykos_re.fullmatch(r'(?:/mykos)?/api/web/peers/[0-9a-f]{32}/view', request.url.path))
+    peer_preview_frame = bool(_mykos_re.fullmatch(r'(?:/mykos)?/api/web/peers/[0-9a-f]{32}/proxy/console/preview-[0-9a-f]{32}/.*', request.url.path))
+    preview_frame = preview_frame or peer_frame or peer_preview_frame
     response.headers['X-Frame-Options']='SAMEORIGIN' if preview_frame else 'DENY'
     frame_ancestors = "'self'" if preview_frame else "'none'"
     response.headers['Cache-Control']='no-store'
@@ -170,6 +177,9 @@ app.include_router(supporting_docs_router(_DOCS_ROOT))
 
 @app.get("/api/web/current-user")
 def mykos_current_user(request: Request):
+    from mykos_peers import principal
+    peer = principal(request)
+    if peer: return {'username': 'peer:' + peer['node'], 'preview_all_panes': True}
     check(request)
 
     token = request.cookies.get("mykos_session", "")
@@ -301,6 +311,12 @@ import re as _mykos_re
 
 @app.get('/api/terminal/permission')
 def mykos_terminal_permission(request: Request, include_user: bool = False):
+    from mykos_peers import principal
+    peer = principal(request)
+    if peer:
+        result = {'allowed': True}
+        if include_user: result['username'] = 'peer:' + peer['node']
+        return result
     check(request)
     raw = request.cookies.get('mykos_session', '')
     with db() as connection:
@@ -323,7 +339,8 @@ def mykos_terminal_window(shop: str, request: Request, action: str = 'shell', fa
     elif shop != 'host' and not _mykos_re.fullmatch(r'[0-9]{8}', shop):
         raise HTTPException(400, 'Invalid ID')
     label = 'PowerShell' if family in ('windows','windows-server') else 'macOS shell' if family == 'macos' else 'root terminal'
-    payload = {'shop': shop, 'action': action, 'title': label+' — '+shop,
+    import socket
+    payload = {'shop': shop, 'action': action, 'title': label+' — '+shop+' @ '+socket.gethostname(),
                'username': permission['username'], 'run_sshbbx': bool(run_sshbbx)}
     config = json.dumps(payload).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
     html = Path(__file__).with_name('terminal-window.html').read_text().replace('__MYKOS_TERMINAL_CONFIG__', config)
@@ -351,7 +368,8 @@ async def mykos_terminal_websocket(ws: WebSocket, shop: str):
             'SELECT sessions.name FROM sessions JOIN users ON users.name=sessions.name WHERE token=? AND expires>?',
             (hashlib.sha256(token.encode()).hexdigest(), int(time.time()))
         ).fetchone() if token else None
-    if not row or not is_admin(row[0]):
+    from mykos_peers import principal
+    if not principal(ws) and (not row or not is_admin(row[0])):
         await ws.close(code=1008)
         return
 
@@ -411,6 +429,13 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell',
 
     tasks = [_mykos_asyncio.create_task(to_shell()),
              _mykos_asyncio.create_task(to_browser())]
+    from mykos_peers import principal, authenticate as peer_authenticate
+    if principal(ws):
+        async def peer_watch():
+            while True:
+                await _mykos_asyncio.sleep(15)
+                await _mykos_asyncio.to_thread(peer_authenticate, ws.scope)
+        tasks.append(_mykos_asyncio.create_task(peer_watch()))
     try:
         await _mykos_asyncio.wait(tasks, return_when=_mykos_asyncio.FIRST_COMPLETED)
     finally:
@@ -589,3 +614,31 @@ from desktop_proxy import routes as desktop_proxy_routes
 app.include_router(desktop_proxy_routes())
 from snapshot_preview_api import router as snapshot_preview_router
 app.include_router(snapshot_preview_router)
+
+# Peer machine credentials are separate from browser sessions and API keys.
+from mykos_peers import PeerAuthentication
+from peers_api import router as peers_router
+app.include_router(peers_router)
+app.add_middleware(PeerAuthentication)
+
+_peer_cleanup_task = None
+
+@app.on_event('startup')
+async def mykos_peer_cleanup_start():
+    global _peer_cleanup_task
+    async def worker():
+        from peers_api import cleanup_expired
+        while True:
+            try:
+                await _mykos_asyncio.to_thread(cleanup_expired)
+            except Exception:
+                import logging
+                logging.getLogger(__name__).warning('Peer cleanup deferred; retrying in 60 seconds')
+            await _mykos_asyncio.sleep(60)
+    _peer_cleanup_task = _mykos_asyncio.create_task(worker())
+
+@app.on_event('shutdown')
+async def mykos_peer_cleanup_stop():
+    if _peer_cleanup_task:
+        _peer_cleanup_task.cancel()
+        await _mykos_asyncio.gather(_peer_cleanup_task, return_exceptions=True)

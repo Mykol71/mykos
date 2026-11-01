@@ -15,6 +15,8 @@ guide for your task, then follow its prerequisites and verification steps.
 
 See the [screen examples gallery](SCREENSHOTS.md) for the dashboard, snapshot actions and a separate preview console.
 
+[Peer hosts](PEERS.md): pair MYKOS nodes and operate complete, separately labeled Host panes over a private VPN.
+
 ## Project design and business value
 
 Read the [two-paragraph business pitch](DEPLOYMENT_EFFICIENCY.md#the-business-case-in-two-paragraphs).

@@ -1809,7 +1809,7 @@ function mykosRenderSnapshots() {
                 const data=await mykosStageJSON('/mykos/api/web/containers/'+encodeURIComponent(code)+'/snapshots/'+encodeURIComponent(identifier)+'/preview',{method:'POST'});
                 const url=new URL(data.url,window.location.origin);
                 if(url.origin!==window.location.origin || !/^\/mykos\/api\/web\/snapshot-preview\/[0-9a-f]{32}\/page$/.test(url.pathname))throw Error('Invalid preview link');
-                popup.opener=null;popup.location.replace(url.href);
+                popup.opener=null;popup.location.replace(window.mykosNodeURL ? window.mykosNodeURL(url.href) : url.href);
             } catch(error){popup.close();alert('Preview failed: '+error.message);}
             finally{preview.disabled=!mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code);}
         };
@@ -2075,8 +2075,8 @@ async function mykosOpenDesktop(shop, action) {
         if (action === 'login' && data.login_supported === false) throw new Error('This Windows release has no built-in RDP server. Use its browser console.');
         const url = action === 'console' ? data.console_url
             : data.protocol === 'rdp' ? '/mykos/api/web/desktop/' + encodeURIComponent(shop) + '/rdp' : data.login_url;
-        if (popup) popup.location.replace(url);
-        else window.location.assign(url);
+        if (popup) popup.location.replace(window.mykosNodeURL ? window.mykosNodeURL(url) : url);
+        else window.location.assign(window.mykosNodeURL ? window.mykosNodeURL(url) : url);
     } catch (error) {
         if (popup) popup.close();
         alert('Desktop connection failed: ' + error.message);
@@ -3726,7 +3726,7 @@ function mykosRenderHostStatus(data) {
     const addVpn = host?.vpn === 'not_configured';
     vpnButton.dataset.hostAction = addVpn ? 'add-vpn' : 'ipsec';
     vpnButton.classList.toggle('mykos-add-vpn-button', addVpn);
-    vpnButton.title = addVpn ? 'Add host VPN' : 'View host IPsec status';
+    vpnButton.title = addVpn ? 'Connect another MYKOS host' : 'View host IPsec status';
     vpnButton.setAttribute('aria-label', vpnButton.title);
     vpnButton.disabled = addVpn && !mykosTerminalAllowed;
     vpnButton.innerHTML = addVpn
@@ -3805,7 +3805,7 @@ mykosHostStatusTable.addEventListener('click',async event=>{
     const action=button.dataset.hostAction;
     if (button.disabled) return;
     if (action==='remove-vpn') { mykosOpenTerminal('host', false, 'remove-vpn'); return; }
-    if (action==='add-vpn') { mykosOpenTerminal('host', false, 'add-vpn'); return; }
+    if (action==='add-vpn') { if (window.MYKOS_PEER_CONTEXT) { alert('Manage peer connections from the node’s own dashboard.'); } else { window.mykosOpenPeerDialog?.(); } return; }
     if (action==='terminal') { mykosOpenTerminal('host'); return; }
     if (action!=='reboot') { mykosShowHostDiagnostic(action); return; }
     const hostname=mykosHostStatusData?.host?.hostname;
@@ -3969,4 +3969,5 @@ document.getElementById('mykos-id-notes-form').addEventListener('submit',async e
     updateBackgroundMap();
 })();
 </script>
+<script src="/mykos/peer-ui.js"></script>
 </body></html>

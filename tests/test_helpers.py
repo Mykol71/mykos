@@ -544,6 +544,7 @@ def test_staging_includes_saved_desktop_without_container(monkeypatch):
 
 
 def test_persistent_podman_launches_escape_worker_cleanup(monkeypatch):
+    monkeypatch.setattr(mykos_runtime.os, 'getpriority', lambda *args: 0)
     monkeypatch.setattr(mykos_runtime.os, 'geteuid', lambda: 0)
     monkeypatch.setattr(mykos_runtime.Path, 'is_dir', lambda p: str(p) == '/run/systemd/system')
     commands = [[mykos_runtime.PODMAN, 'run', '-d', '--name', 'guest', 'local/image'],

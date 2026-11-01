@@ -29,6 +29,9 @@ def _dispatch(args):
     if not isinstance(args, list) or not args or not all(isinstance(x,str) for x in args):
         raise ValueError('args must be a nonempty array of strings')
     action = args[0]
+    if action in ('peer-vpn-status', 'peer-vpn-create', 'peer-vpn-connect', 'peer-vpn-remove'):
+        from mykos_peer_vpn import dispatch as peer_dispatch
+        return peer_dispatch(args)
     if action in ('command-put','command-get','command-list','command-cancel'):
         from mykos_commands import dispatch as command_dispatch
         return command_dispatch(args)

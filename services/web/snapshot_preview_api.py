@@ -13,6 +13,11 @@ TOKEN=re.compile(r'[0-9a-f]{32}\Z')
 
 
 def owner(request):
+    from mykos_peers import principal
+    peer = principal(request)
+    if peer:
+        if not peer['actor']: raise HTTPException(403, 'Peer browser session required')
+        return hashlib.sha256(('peer:' + peer['node'] + ':' + peer['actor']).encode()).hexdigest()
     raw=request.cookies.get('mykos_session','')
     if not raw:raise HTTPException(401,'Login required')
     return hashlib.sha256(raw.encode()).hexdigest()

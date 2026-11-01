@@ -32,3 +32,23 @@ def test_apache_console_rule_is_idempotent_tls_only_and_before_catchall():
     assert tls.index(module.MARKER)<tls.index('ProxyPass')
     assert 'ws://127.0.0.1:8000/$1' in tls and 'api/v2/' in tls
     assert text.split('<VirtualHost *:443>')[0]==result.split('<VirtualHost *:443>')[0]
+
+
+def test_existing_console_websocket_rule_upgrades_for_peer_broker():
+    path=Path(__file__).resolve().parents[1]/'bin/mykos-console-proxy'
+    loader=importlib.machinery.SourceFileLoader('console_apache_peer_setup',str(path));spec=importlib.util.spec_from_loader(loader.name,loader);module=importlib.util.module_from_spec(spec);loader.exec_module(module)
+    text='<VirtualHost *:443>\n'+module.MARKER+'\nRewriteEngine On\nRewriteCond %{HTTP:Upgrade} =websocket [NC]\nRewriteCond %{REQUEST_URI} ^/mykos/(api/v2/)?console/\nRewriteRule ^/mykos/(.*)$ ws://127.0.0.1:8000/$1 [P,L]\nProxyPass /mykos/ http://127.0.0.1:8000/\n</VirtualHost>'
+    updated=module.transform(text)
+    assert 'api/web/peers/[0-9a-f]{32}/proxy/' in updated
+    assert module.transform(updated)==updated
+    assert updated.count('RewriteRule')==1
+
+
+def test_managed_bootstrap_include_upgrade_preserves_other_settings():
+    path=Path(__file__).resolve().parents[1]/'bin/mykos-console-proxy'
+    loader=importlib.machinery.SourceFileLoader('console_apache_include_setup',str(path));spec=importlib.util.spec_from_loader(loader.name,loader);module=importlib.util.module_from_spec(spec);loader.exec_module(module)
+    text='# Managed by mykos-bootstrap\nProxyPreserveHost On\nRewriteEngine On\nRewriteCond %{HTTP:Upgrade} =websocket [NC]\nRewriteCond %{REQUEST_URI} ^/mykos/(api/v2/)?console/\nRewriteRule ^/mykos/(.*)$ ws://127.0.0.1:8000/$1 [P,L]\nProxyPass /mykos/ http://127.0.0.1:8000/\n'
+    updated=module.transform(text)
+    assert 'api/web/peers/[0-9a-f]{32}/proxy/' in updated
+    assert module.transform(updated)==updated
+    assert 'ProxyPreserveHost On' in updated
