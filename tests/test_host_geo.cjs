@@ -50,3 +50,13 @@ context.window.mykosGeoCurrentHost={hostname:'unlocated.example'};
 context.mykosListMemory['12345678'].vpn_topology.links[0].meraki.vpn_status='up';
 context.drawMap();assert.equal(lines.length,1,'Never connect from another saved host');
 console.log('Dim green VPN lines use the current host, connected remote sites only, and disappear on disconnect.');
+
+// Peer lines are dashed and disappear on disconnect; site lines stay solid.
+context.window.mykosGeoCurrentHost={hostname:'host.example'};
+context.window.mykosGeoPeers=[{kind:'peer',id:'peer1',hostname:'other.example',ip:'192.0.2.2',lat:37,lon:-91,status:'up'}];
+context.drawMap();const peerLine=lines.find(line=>line.options.className.includes('mykos-peer-map-line'));
+assert.ok(peerLine);assert.equal(peerLine.options.dashArray,'6 5');assert.equal(peerLine.options.color,'#22c55e');
+assert.equal(JSON.stringify(peerLine.coords),JSON.stringify([[35,-95],[37,-91]]));
+assert.ok(lines.filter(line=>!line.options.className.includes('mykos-peer-map-line')).every(line=>!line.options.dashArray));
+context.window.mykosGeoPeers=[];context.drawMap();assert.ok(removed.includes(peerLine));
+console.log('Connected peer map links are green/dashed, site links stay solid, disconnect removes peer line.');

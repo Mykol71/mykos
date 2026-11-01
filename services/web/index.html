@@ -356,6 +356,8 @@ body, button, input, select, textarea {
 .mykos-chart-plot { position: relative; }
 #mykos-host-chart { width: 100%; height: 104px; display: block; outline-offset: -2px; }
 /* Embedded peer hosts keep full controls with a shorter performance plot. */
+/* Embedded peers use the owning page's backdrop, never an opaque inner map. */
+.mykos-peer-compact :is(#mykos-page-background,#mykos-geo-background,#mykos-location-layer) { display:none!important; }
 .mykos-peer-compact #mykos-host-chart { height:80px; }
 .mykos-peer-compact #mykos-host-pane { padding-top:2px; padding-bottom:6px; }
 .mykos-peer-compact .mykos-host-metric { padding-top:3px; padding-bottom:3px; }
@@ -676,6 +678,7 @@ table:has(> .mykos-container-rows) > thead > tr > th:last-child { text-align:rig
 .mykos-location-bubble::after { content:""; position:absolute; top:100%; left:var(--arrow-left,50%); transform:translateX(-50%); border:6px solid transparent; border-top-color:var(--location-color); }
 .mykos-vpn-map-line { filter:drop-shadow(0 0 3px #22c55e88); pointer-events:none; }
 .mykos-location-bubble[data-placement="below"]::after { top:auto; bottom:100%; border-top-color:transparent; border-bottom-color:var(--location-color); }
+.mykos-peer-unlocated::after { display:none; }
 .mykos-location-site::before { content:""; display:inline-block; width:5px; height:5px; margin-right:4px; border-radius:50%; background:#facc15; }
 .mykos-location-site[data-status="up"]::before { background:#22c55e; }
 .mykos-location-site[data-status="down"]::before { background:#ef4444; }
@@ -1363,11 +1366,13 @@ function mykosGeoPoints() {
             }
         }
     }
-    return [...nodes.map(node=>({...node,kind:'id'})),...hosts.map(host=>({...host,kind:'host'})),...routers.values()];
+    const peers=Array.isArray(window.mykosGeoPeers)?window.mykosGeoPeers:[];
+    const peerNames=new Set(peers.map(peer=>peer.hostname));
+    return [...nodes.map(node=>({...node,kind:'id'})),...hosts.filter(host=>!peerNames.has(host.hostname)).map(host=>({...host,kind:'host'})),...peers,...routers.values()];
 }
 function mykosGeoTooltip(point) {
     const panel=document.createElement('div'),heading=document.createElement('strong');
-    heading.textContent=point.kind==='host'?'Host · '+(point.name || point.hostname || 'MYKOS'):point.kind==='router'?'Router · '+point.name:'ID '+point.id;
+    heading.textContent=point.kind==='peer'?'Connected peer · '+(point.hostname || point.name):point.kind==='host'?'Host · '+(point.name || point.hostname || 'MYKOS'):point.kind==='router'?'Router · '+point.name:'ID '+point.id;
     panel.append(heading);
     const detail=typeof mykosListDetails!=='undefined'?mykosListDetails[point.id] || {}:{};
     const extended=typeof mykosListMemory!=='undefined'?mykosListMemory[point.id] || {}:{};
@@ -1423,14 +1428,14 @@ function mykosSyncLocationPins() {
         }
         if(JSON.stringify(entry.point)!==JSON.stringify(point)) {
             const heading=document.createElement('strong');
-            heading.textContent=point.shop_name || point.name || point.hostname || ('ID '+point.id);
+            heading.textContent=point.kind==='peer'?'Peer · '+(point.hostname || point.name):point.shop_name || point.name || point.hostname || ('ID '+point.id);
             const lines=[heading];
             if(point.locations)for(const site of point.locations) {
                 const line=document.createElement('div');line.className='mykos-location-site';line.dataset.status=site.status;
                 line.textContent=site.shop_name || site.router_name || site.peer;lines.push(line);
             }
             // Keep the backdrop label compact; device details remain in the full map view.
-            for(const value of [point.address]) {
+            for(const value of [point.address,point.kind==='peer'?'Connected · '+point.ip:null]) {
                 if(!value)continue;
                 const line=document.createElement('div');line.textContent=value;lines.push(line);
             }
@@ -1440,12 +1445,29 @@ function mykosSyncLocationPins() {
         for(const item of [entry.pin,entry.bubble])item.dataset.status=status;
         entry.pin.style.left=position.x+'px';entry.pin.style.top=position.y+'px';
         const box=entry.bubble.getBoundingClientRect(),margin=8;
-        const left=Math.max(margin,Math.min(size.x-box.width-margin,position.x-box.width/2));
+        const colocatedPeer=point.kind==='peer' && groups.some(group=>group[0].kind==='host' && Math.hypot(group.x-position.x,group.y-position.y)<48);
+        const left=Math.max(margin,Math.min(size.x-box.width-margin,position.x+(colocatedPeer?20:-box.width/2)));
         entry.bubble.style.left=left+'px';
-        const below=point.kind==='host' && groups.some(group=>group[0].kind==='router' && Math.hypot(group.x-position.x,group.y-position.y)<48);
+        const below=['host','peer'].includes(point.kind) && groups.some(group=>group[0].kind==='router' && Math.hypot(group.x-position.x,group.y-position.y)<48);
         entry.bubble.dataset.placement=below?'below':'above';
         entry.bubble.style.top=(below?Math.max(margin,Math.min(size.y-box.height-margin,position.y+16)):Math.max(margin,position.y-box.height-16))+'px';
         entry.bubble.style.setProperty('--arrow-left',Math.max(8,Math.min(box.width-8,position.x-left))+'px');
+    }
+    // Connected peers without saved coordinates still get a truthful status box.
+    let unlocated=0;
+    for(const point of mykosGeoPoints().filter(point=>point.kind==='peer' && !mykosHasGeo(point))) {
+        const key='peer:'+point.id;visible.add(key);
+        let entry=mykosLocationLabels.get(key);
+        if(!entry) {
+            const pin=document.createElement('span'),bubble=document.createElement('div');
+            pin.hidden=true;bubble.className='mykos-location-bubble mykos-peer-unlocated';
+            layer.append(pin,bubble);entry={pin,bubble};mykosLocationLabels.set(key,entry);
+        }
+        const heading=document.createElement('strong'),detail=document.createElement('div'),notice=document.createElement('div');
+        heading.textContent='Peer · '+(point.hostname || point.name);
+        detail.textContent='Connected · '+point.ip;notice.textContent='Location unavailable';
+        entry.bubble.replaceChildren(heading,detail,notice);entry.bubble.dataset.status='up';
+        entry.bubble.style.left=Math.max(8,size.x-180)+'px';entry.bubble.style.top=Math.max(8,size.y-70-(unlocated++ * 65))+'px';
     }
     for(const [key,entry] of mykosLocationLabels)if(!visible.has(key)) {
         entry.pin.remove();entry.bubble.remove();mykosLocationLabels.delete(key);
@@ -1462,6 +1484,14 @@ function mykosGeoConnections(points) {
         (Number(point.lat)!==Number(host.lat) || Number(point.lon)!==Number(host.lon)))
         .map(point=>[[Number(host.lat),Number(host.lon)],[Number(point.lat),Number(point.lon)]]);
 }
+function mykosPeerGeoConnections(points) {
+    const hostname=window.mykosGeoCurrentHost?.hostname;
+    const host=points.find(point=>point.kind==='host' && point.hostname===hostname && mykosHasGeo(point));
+    if(!host)return [];
+    return points.filter(point=>point.kind==='peer' && point.status==='up' && mykosHasGeo(point) &&
+        (Number(point.lat)!==Number(host.lat) || Number(point.lon)!==Number(host.lon)))
+        .map(point=>[[Number(host.lat),Number(host.lon)],[Number(point.lat),Number(point.lon)]]);
+}
 const mykosVpnMapLines=[];
 function drawMap(){
     if(!window.L)return;
@@ -1470,10 +1500,11 @@ function drawMap(){
     mykosVpnMapLines.splice(0).forEach(line=>map.removeLayer(line));
     const points=mykosGeoPoints();
     for(const endpoints of mykosGeoConnections(points))mykosVpnMapLines.push(L.polyline(endpoints,{color:'#22c55e',weight:1.5,opacity:.3,interactive:false,className:'mykos-vpn-map-line'}).addTo(map));
+    for(const endpoints of mykosPeerGeoConnections(points))mykosVpnMapLines.push(L.polyline(endpoints,{color:'#22c55e',weight:1.5,opacity:.3,dashArray:'6 5',interactive:false,className:'mykos-vpn-map-line mykos-peer-map-line'}).addTo(map));
     for(const point of points){
         if(!mykosHasGeo(point))continue;
         const color=['online','up'].includes(point.status)?'#22c55e':['offline','down'].includes(point.status)?'#ef4444':'#facc15';
-        markers.push(L.circleMarker([Number(point.lat),Number(point.lon)],{radius:point.kind==='host'?9:7,color:point.kind==='host'?'#38bdf8':'#fff',weight:1,fillColor:color,fillOpacity:.95}).addTo(map).bindTooltip(mykosGeoTooltip(point),{sticky:true}));
+        markers.push(L.circleMarker([Number(point.lat),Number(point.lon)],{radius:['host','peer'].includes(point.kind)?9:7,color:['host','peer'].includes(point.kind)?'#38bdf8':'#fff',weight:1,fillColor:color,fillOpacity:.95}).addTo(map).bindTooltip(mykosGeoTooltip(point),{sticky:true}));
     }
     mykosSyncLocationPins();
 }

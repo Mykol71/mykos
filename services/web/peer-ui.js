@@ -65,6 +65,22 @@
         } catch (error) { output.textContent = error.message; }
         finally { busy = false; dialog.querySelectorAll('button').forEach(button => button.disabled = false); }
     });
+    function syncAppearance(item) {
+        const root=item.frame.contentDocument?.documentElement;
+        if(!root)return;
+        root.dataset.theme=document.documentElement.dataset.theme;
+        root.dataset.mykosMapBackground=document.documentElement.dataset.mykosMapBackground;
+    }
+    function updateMapPeers() {
+        window.mykosGeoPeers=[...frames.values()].filter(item=>item.peer.state==='active' && item.peer.connected).map(item=>{
+            const child=item.frame.contentWindow,host=child?.mykosGeoCurrentHost;
+            const saved=child?.mykosGeoPoints?.().find(point=>point.kind==='host' && point.hostname===host?.hostname);
+            return {...saved,...host,kind:'peer',id:item.peer.id,hostname:host?.hostname || item.peer.name,ip:item.peer.ip,status:'up'};
+        });
+        window.drawMap?.();
+    }
+    window.addEventListener('mykos-map-background-change',()=>{for(const item of frames.values())syncAppearance(item);});
+    new MutationObserver(()=>{for(const item of frames.values())syncAppearance(item);}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
     function attachActions(item) {
         const doc = item.frame.contentDocument;
         const actions = doc?.querySelector('#mykos-host-status-row .mykos-row-actions');
@@ -73,6 +89,7 @@
             doc.documentElement.classList.add('mykos-peer-compact');
             item.frame.contentWindow.mykosScheduleHostChart?.();
         }
+        syncAppearance(item);updateMapPeers();
         if (doc.getElementById('mykos-peer-open-node')) return;
         const link = doc.createElement('button'); link.type = 'button';
         link.id = 'mykos-peer-open-node'; link.className = 'mykos-icon';
@@ -149,12 +166,14 @@
             const identifiers = new Set(data.peers.map(peer => peer.id));
             for (const [id,item] of frames) if (!identifiers.has(id)) { item.section.remove(); frames.delete(id); }
             data.peers.forEach(render);
+            updateMapPeers();
             if (location.hash === '#add-peer') {
                 history.replaceState(null, '', location.pathname + location.search);
                 open();
             }
         } catch (error) {
             status.textContent = allowed ? 'Peer status unavailable' : ''; status.hidden = !allowed;
+            window.mykosGeoPeers=[];window.drawMap?.();
             for (const item of frames.values()) { item.state.hidden = false; item.state.textContent = item.peer.name + ' · Status unavailable'; item.frame.hidden = true; item.frame.removeAttribute('src'); }
         }
     }

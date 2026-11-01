@@ -4,6 +4,9 @@ These maintained guides include current operational features. Historical design 
 
 **Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
+Start with the [dashboard UI guide](UI_GUIDE.md) for the page layout, features,
+button-by-button reference, and common workflows.
+
 Use these guides to install, operate, integrate, and recover MYKOS. Start with the
 guide for your task, then follow its prerequisites and verification steps.
 

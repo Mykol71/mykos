@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const source=fs.readFileSync(path.join(__dirname,'../services/web/peer-ui.js'),'utf8');
+const root={dataset:{theme:'dark',mykosMapBackground:'on'}},childRoot={dataset:{}},events={};let mutation,draws=0;
+const child={mykosGeoCurrentHost:{hostname:'peer.example',internal_ip:'192.0.2.2'},mykosGeoPoints:()=>[{kind:'host',hostname:'peer.example',lat:36,lon:-90}]};
+const item={frame:{contentDocument:{documentElement:childRoot},contentWindow:child},peer:{id:'peer1',name:'peer.example',ip:'192.0.2.2',state:'active',connected:true}};
+const frames=new Map([['peer1',item]]),window={drawMap:()=>{draws++;},addEventListener:(event,fn)=>{events[event]=fn;}};
+const context=vm.createContext({window,document:{documentElement:root},frames,MutationObserver:class{constructor(fn){mutation=fn;}observe(){}}});
+vm.runInContext(source.slice(source.indexOf('    function syncAppearance('),source.indexOf('    function attachActions(')),context);
+context.syncAppearance(item);assert.equal(childRoot.dataset.mykosMapBackground,'on');
+root.dataset.mykosMapBackground='off';events['mykos-map-background-change']();assert.equal(childRoot.dataset.mykosMapBackground,'off');
+root.dataset.theme='light';mutation();assert.equal(childRoot.dataset.theme,'light');
+context.updateMapPeers();assert.equal(window.mykosGeoPeers.length,1);assert.equal(window.mykosGeoPeers[0].lat,36);assert.equal(window.mykosGeoPeers[0].status,'up');
+child.mykosGeoPoints=()=>[];context.updateMapPeers();assert.equal(window.mykosGeoPeers.length,1);assert.equal(window.mykosGeoPeers[0].lat,undefined,'No coordinates are invented');
+item.peer.connected=false;context.updateMapPeers();assert.equal(window.mykosGeoPeers.length,0);
+item.peer.connected=true;item.peer.state='pending';context.updateMapPeers();assert.equal(window.mykosGeoPeers.length,0);
+assert.ok(draws>=4);
+console.log('Peer iframe inherits live map/theme changes; connected map metadata, missing coordinates and disconnect cleanup passed.');

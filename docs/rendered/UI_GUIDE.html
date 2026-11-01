@@ -1,0 +1,662 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MYKOS dashboard UI guide</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}
+header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px}.docs-brand{display:inline-flex;align-items:center;gap:9px}.docs-brand .mykos-brand-flower{display:block;width:22px;height:31px;flex:0 0 22px}</style><header><span class="docs-brand"><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
+<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="mykos-dashboard-ui-guide">MYKOS dashboard UI guide</h1>
+<p><a href="README.html">Documentation index</a></p>
+<p>Use this guide to find a feature, identify an icon, and understand what happens
+when you select a control. It describes the dashboard through the peer compact
+UI and peer-map updates (hotfix188). Controls depend on your role, host configuration, available
+images, and resource state. Hover over an icon for its action name; keyboard users
+can move between controls with Tab and activate buttons with Enter or Space.</p>
+<h2 id="contents">Contents</h2>
+<ul>
+<li><a href="#start-here">Start here</a></li>
+<li><a href="#page-layout-and-navigation">Page layout and navigation</a></li>
+<li><a href="#host-monitoring-and-graph">Host monitoring and graph</a></li>
+<li><a href="#host-buttons">Host buttons</a></li>
+<li><a href="#peer-hosts">Peer hosts</a></li>
+<li><a href="#os-panes-and-container-rows">OS panes and container rows</a></li>
+<li><a href="#container-button-reference">Container button reference</a></li>
+<li><a href="#images-and-base-sessions">Images and base sessions</a></li>
+<li><a href="#snapshots">Snapshots</a></li>
+<li><a href="#vpn-and-network-information">VPN and network information</a></li>
+<li><a href="#rsync-backup-accounts">rsync backup accounts</a></li>
+<li><a href="#repositories">Repositories</a></li>
+<li><a href="#notes">Notes</a></li>
+<li><a href="#appearance-and-footer-controls">Appearance and footer controls</a></li>
+<li><a href="#common-workflows">Common workflows</a></li>
+<li><a href="#messages-and-troubleshooting">Messages and troubleshooting</a></li>
+</ul>
+<h2 id="start-here">Start here</h2>
+<p>Open <code>/mykos/</code> on your MYKOS host and sign in with your <strong>browser account</strong>.
+The login page also offers theme, API, and Docs links. Browser accounts, API keys,
+backup SSH accounts, and guest OS credentials are separate identities.</p>
+<p>A standard user can inspect monitoring and permitted inventories. Administrators
+also receive management controls; terminal-dependent actions require the host to
+enable browser terminals. Some notes controls are restricted to the designated
+operator. Missing buttons can therefore be expected. See <a href="IDENTITY.html">Identity management</a>.
+Browser account and API-key creation are host command-line operations, not
+buttons in this dashboard.</p>
+<p><strong>Check the target before acting:</strong> the local Host pane, an embedded peer Host
+pane, a prepared image row, an eight-digit container ID, and a saved snapshot
+represent different resources. A terminal on Host operates the server; a terminal
+on a container operates that instance. A peer&#39;s terminal operates that peer.</p>
+<h2 id="page-layout-and-navigation">Page layout and navigation</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>What it shows or does</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Header</td>
+<td>MYKOS branding, signed-in username, Logout, section links, API, Docs, and server time. Section links scroll to visible panes.</td>
+</tr>
+<tr>
+<td>Local Host pane</td>
+<td>Resource graph, history, host status row, actions, notes, and hardware details.</td>
+</tr>
+<tr>
+<td>Peer Host panes</td>
+<td>Connected MYKOS hosts below the local pane, each with its own graph and actions. Compact panes are slightly narrower and right aligned.</td>
+</tr>
+<tr>
+<td>OS panes</td>
+<td>Red Hat, Rocky Linux, AlmaLinux, Oracle Linux, CentOS Stream, Fedora, Ubuntu, Windows, Windows Server, and macOS; SQL Server has its own pane.</td>
+</tr>
+<tr>
+<td>Snapshots</td>
+<td>Saved states grouped by original container ID.</td>
+</tr>
+<tr>
+<td>rsync</td>
+<td>Backup accounts, storage use, and account/key actions.</td>
+</tr>
+<tr>
+<td>Repos</td>
+<td>Repository storage, dates, latest RPMs, links, and available management actions.</td>
+</tr>
+<tr>
+<td>Footer</td>
+<td>Appearance toggles, project/contact links, and host OS identification.</td>
+</tr>
+</tbody></table>
+<p>Panes appear automatically when relevant resources or image choices are present.
+The footer&#39;s pane preview control can reveal additional panes with <strong>Sample</strong>
+rows. Sample rows are examples with disabled actions; they are not deployed
+containers, snapshots, backups, or repositories. Available preview families
+also depend on access.</p>
+<p>The <a href="SCREENSHOTS.html">screen examples gallery</a> illustrates the dashboard and
+snapshot workflows using example data. Those pictures are illustrative and may
+predate the latest peer layout; the control descriptions here cover that layout.</p>
+<h2 id="host-monitoring-and-graph">Host monitoring and graph</h2>
+<p>Select a metric label to hide or show its series. This changes only the graph,
+not the server. Labels follow the selected time window; return to Live for the
+latest available readings.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CPU</td>
+<td>Host CPU utilization.</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>Host memory use, with usage/capacity details.</td>
+</tr>
+<tr>
+<td>Load</td>
+<td>Host load normalized to available processing capacity.</td>
+</tr>
+<tr>
+<td>System</td>
+<td>Usage of the host&#39;s system filesystem.</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>Usage of the data filesystem. System and Data may refer to the same filesystem on some installations.</td>
+</tr>
+<tr>
+<td>Containers</td>
+<td>Running customer instances plus snapshot previews against a 50-slot limit. The graph reaches 100% at 50.</td>
+</tr>
+<tr>
+<td>VPNs</td>
+<td>Reported connected VPNs; the graph&#39;s count scale reaches 100% at 15. This scale is not a 15-connection admission limit.</td>
+</tr>
+</tbody></table>
+<p>The graph shows a five-minute window. Drag the history slider left to inspect
+older windows within the retained 30 minutes; select <strong>Live</strong> to return to now.
+Hover or focus the graph to inspect readings. Horizontal scrolling, including
+Shift plus the mouse wheel, moves through history. Resource readings are marked
+high at 75% and critical at 90%. Count bars have their own scales.</p>
+<p>Each peer has independent history and metric visibility. Its compact graph is
+shorter than the local/full-node graph. With the map background on, embedded
+peer panes share its translucent appearance. Turning the map off restores their
+normal pane fill. The hardware line reports available
+machine/CPU information and one <strong>Memory</strong> label followed by installed memory
+type, configured speed, and DIMM capacity. Missing hardware values are omitted.
+This installed capacity differs from the live used-memory value in the row.</p>
+<h2 id="host-buttons">Host buttons</h2>
+<p>The Host table columns are <strong>Host, Status, Version, IP, Peer, Uptime, Memory,
+Actions</strong>. Host-specific controls appear before Console Log, root terminal, and
+reboot on the right. A diagnostic expands below the row; selecting the same
+control again, or its <strong>Close</strong> button, closes it.</p>
+<table>
+<thead>
+<tr>
+<th>Control or icon</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Host name/cube, or non-button row area</td>
+<td>Opens Host Details for that host.</td>
+</tr>
+<tr>
+<td>IP address — Geographic map</td>
+<td>Opens saved geographic locations. Hover over markers for system information; green means up, red down, yellow unknown.</td>
+</tr>
+<tr>
+<td>Peer <strong>+</strong> — Connect another MYKOS host</td>
+<td>Opens the peer invitation dialog when no connection status is shown.</td>
+</tr>
+<tr>
+<td>Peer status — View host IPsec status</td>
+<td>Opens reported host IPsec diagnostics.</td>
+</tr>
+<tr>
+<td>Actions <strong>+</strong> — Add another peer</td>
+<td>Opens the local host&#39;s peer enrollment dialog when available.</td>
+</tr>
+<tr>
+<td>Memory value — View host processes</td>
+<td>Opens the host process listing.</td>
+</tr>
+<tr>
+<td>Red trash can — Stop and remove host VPN</td>
+<td>Opens the host VPN removal terminal workflow. Read its prompts to identify the selected site VPN. Peer unlink is a separate control.</td>
+</tr>
+<tr>
+<td>Green document — Host Console Log</td>
+<td>Opens host log output.</td>
+</tr>
+<tr>
+<td>Blue terminal — Host root terminal</td>
+<td>Opens an interactive root shell on the selected server; administrator access is required.</td>
+</tr>
+<tr>
+<td>Red circular arrow — Reboot host</td>
+<td>Confirms the named host, then schedules its reboot. This interrupts all containers and connected users on that host.</td>
+</tr>
+</tbody></table>
+<h2 id="peer-hosts">Peer hosts</h2>
+<p>A peer is another MYKOS server paired for reciprocal administrator control over
+an IKEv2 VPN. Read the hostname and address before using any of its controls.
+A disconnected peer displays Offline and loses its actionable embedded pane.
+Connected peers also have a labeled background-map box. A dashed green line
+connects the local host to a peer when both have distinct saved coordinates.
+Peers without coordinates have a Connected box marked Location unavailable;
+no geographic position or line is invented. Boxes and lines disappear when the
+peer disconnects or its status becomes unavailable.</p>
+<table>
+<thead>
+<tr>
+<th>Peer control</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Small MYKOS flower — Open full node</td>
+<td>Opens that peer&#39;s full dashboard in another tab through the current host, including its OS, snapshot, and repository panes.</td>
+</tr>
+<tr>
+<td>Red broken-chain icon — Disconnect peer</td>
+<td>After confirmation, revokes this peer relationship and removes its MYKOS peer VPN/shared controls. Reachable remote revocation is also requested.</td>
+</tr>
+<tr>
+<td><strong>+</strong> — Add another peer on the named host</td>
+<td>Opens that host&#39;s own HTTPS dashboard for enrollment. Sign in there as its administrator; enrollment requires host-local approval.</td>
+</tr>
+<tr>
+<td>Console Log, terminal, reboot, IP, Memory</td>
+<td>Operate on the named peer, with the same meanings as the Host controls above.</td>
+</tr>
+</tbody></table>
+<p>The compact peer action order is <strong>flower, unlink, plus</strong>, followed by any site
+VPN removal control and then the common log, terminal, and reboot controls.</p>
+<p>To pair hosts, select the local <strong>Peer +</strong> or <strong>Add another peer</strong>, enter both
+reachable IPv4 addresses, and select <strong>Create invitation</strong>. Copy the private
+invitation into the other host&#39;s dialog and select <strong>Accept and connect</strong> within
+15 minutes. <strong>Close</strong> dismisses the dialog. Invitations grant reciprocal admin
+control and must stay private. Full prerequisites, certificate handling, and
+removal behavior are in <a href="PEERS.html">Peer hosts</a>.</p>
+<p>Personal, pane, and shared customer notes are not forwarded through peers.
+Browser/API-key administration and further peer management also remain local.</p>
+<h2 id="os-panes-and-container-rows">OS panes and container rows</h2>
+<p>An <strong>image</strong> is a prepared OS and any startup state required to launch it.
+A <strong>container</strong> is a particular ID-specific instance with its own writable state,
+IP, and hostname. VM-backed guests also run within MYKOS-managed containers.
+A <strong>snapshot</strong> saves an instance at a point in time.</p>
+<p>At the top of an OS pane, administrators can enter an <strong>eight-digit ID</strong>, choose
+an available <strong>OS image</strong>, and select the blue <strong>+ (Start)</strong>. This creates/starts
+an ID-specific instance from that image after confirmation. It does not install
+a missing OS image. Unavailable images cannot be selected. Use the row&#39;s green
+triangle to restart an existing stopped persistent container.</p>
+<p>For eligible native starts with an existing backup, MYKOS separately asks whether
+to mount the original backup folders <strong>read/write</strong>. Accepting means changes
+inside the container can change those backup files.</p>
+<table>
+<thead>
+<tr>
+<th>Column or clickable value</th>
+<th>Meaning or action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ID</td>
+<td>Eight-digit instance/customer identifier. Select the row&#39;s non-button area to expand details; select again to collapse.</td>
+</tr>
+<tr>
+<td>Leaf beside ID</td>
+<td>Shared customer notes for that ID; separate from pane notes.</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Reported online/offline/unknown state.</td>
+</tr>
+<tr>
+<td>Version</td>
+<td>Guest OS release, rather than host OS release.</td>
+</tr>
+<tr>
+<td>IP</td>
+<td>Opens network/interface/gateway information and topology.</td>
+</tr>
+<tr>
+<td>VPN</td>
+<td>Status/diagnostics or Add VPN, when supported for that guest. VM families without this control retain column alignment.</td>
+</tr>
+<tr>
+<td>Uptime</td>
+<td>Time since the instance started.</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>Used memory; select it for processes.</td>
+</tr>
+<tr>
+<td>Actions</td>
+<td>Available console, terminal, lifecycle, snapshot, and VPN controls.</td>
+</tr>
+</tbody></table>
+<p>Expanded details include the image, OS, resources, addresses, and monitoring
+freshness. Unknown or stale data is not proof that a container stopped.</p>
+<h2 id="container-button-reference">Container button reference</h2>
+<table>
+<thead>
+<tr>
+<th>Icon / tooltip</th>
+<th>Action and effect</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Green document — Console Log</td>
+<td>For native containers, opens log output.</td>
+</tr>
+<tr>
+<td>Green document — HTTP graphical desktop</td>
+<td>For desktop guests, opens the interactive graphical console in another window/tab. Despite the document-shaped icon, this is not a read-only log. Requires admin access and a running guest.</td>
+</tr>
+<tr>
+<td>Blue terminal — su - root</td>
+<td>Opens the instance&#39;s interactive root terminal for native Linux/Ubuntu.</td>
+</tr>
+<tr>
+<td>Blue terminal — PowerShell commands</td>
+<td>Opens Windows/Windows Server command access.</td>
+</tr>
+<tr>
+<td>Blue terminal — macOS shell</td>
+<td>Opens the macOS guest shell.</td>
+</tr>
+<tr>
+<td>Green triangle — Start container</td>
+<td>Starts an existing stopped persistent instance using its saved disks.</td>
+</tr>
+<tr>
+<td>Red square — Stop container</td>
+<td>Stops a persistent instance while retaining its disks. It does not save a new intentional snapshot.</td>
+</tr>
+<tr>
+<td>Blue camera — Snapshot container</td>
+<td>Captures live state and leaves the instance running after completion; a brief capture pause may occur.</td>
+</tr>
+<tr>
+<td>Red trash can — Delete container and saved data</td>
+<td>Requires typing the exact ID. Removes the container, its writable filesystem, MYKOS disks, and VPN settings. Images, intentional snapshots, rsync backups, and external/shared mounts are retained.</td>
+</tr>
+<tr>
+<td><strong>+</strong> — Add VPN / Add another VPN</td>
+<td>Opens the interactive VPN setup workflow for an eligible running instance.</td>
+</tr>
+<tr>
+<td>Red VPN trash can — Stop and remove VPN</td>
+<td>Opens the instance&#39;s VPN removal workflow. This is different from deleting the instance.</td>
+</tr>
+</tbody></table>
+<p>A saved native Linux memory snapshot currently requires its original container
+for restore. Keeping that snapshot does not make deleting its original container
+safe for a later restore. Legacy auto-remove containers must be converted to
+persistent storage before guarded start/stop/snapshot actions become available.</p>
+<h2 id="images-and-base-sessions">Images and base sessions</h2>
+<p>Image/build rows share OS panes with container rows. Their Status can show
+<strong>Queued, Installing, Preparing, Capturing, Failed</strong>, or <strong>Image</strong>. A prepared
+image displays its size and production time. A build still installing or
+capturing is not a ready image, even if its console is usable.</p>
+<table>
+<thead>
+<tr>
+<th>Image-row control</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Green document — Installation console</td>
+<td>Opens the selected installation&#39;s graphical console when provided.</td>
+</tr>
+<tr>
+<td>Green document — Desktop console</td>
+<td>Opens the prepared desktop/base graphical console when provided.</td>
+</tr>
+<tr>
+<td>Blue terminal — Edit base image / Connect to running base image</td>
+<td>Opens a generic base editing session. An idle base can be reopened on demand. This is not an ID-specific customer container.</td>
+</tr>
+<tr>
+<td>Amber circular arrow — Reset base to captured image</td>
+<td>Requires typing the OS name. Discards uncaptured changes to that generic base and recreates it from the saved image/startup state. Close its console first.</td>
+</tr>
+<tr>
+<td>Red trash can — Remove prepared image and generic base</td>
+<td>Requires the OS name. Removes the prepared image, generic base, and startup captures; dependent containers/snapshots block removal.</td>
+</tr>
+<tr>
+<td>Red trash can — Delete failed image build and disks</td>
+<td>Requires the OS name. Deletes that failed build and its private disks.</td>
+</tr>
+</tbody></table>
+<p><strong>Base edits must be captured before closing the editing session or logging out.</strong>
+A base-session disconnect queues a reset and discards uncaptured edits. To keep
+changes, leave the base session connected, open the host&#39;s <code>sudo mykos</code> text menu
+in a separate session, select <strong>f. Capture image</strong>, enter the OS, confirm, and wait
+for completion. Capture is a text-menu operation; there is no dashboard Capture
+button. Existing ID-specific instances keep their existing state.</p>
+<p>Idle generic bases can stop after five minutes without an active session. A
+prepared image remains available for new instances even when its generic base
+is stopped. Do not confuse a stopped base with a missing image.</p>
+<p>To build a missing image, use <strong>c. Build image</strong> in the host text menu and the
+correct OS identifier. See <a href="IMAGE_BUILDS.html">Image builds</a> for supported native
+and VM types, media requirements, capture behavior, and recovery.</p>
+<h2 id="snapshots">Snapshots</h2>
+<p>The Snapshots pane groups saved states by container. Choose the desired capture
+in its date/time selector before selecting an action. The displayed capture time
+and disk size follow that selection.</p>
+<table>
+<thead>
+<tr>
+<th>Icon / tooltip</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Blue circular arrow — Restore selected snapshot</td>
+<td>After confirmation, replaces the original container&#39;s current disks/live state and interrupts it. This is a rollback.</td>
+</tr>
+<tr>
+<td>Red trash can — Delete selected snapshot</td>
+<td>After confirmation, permanently removes only the selected saved state; leaves the current container unchanged.</td>
+</tr>
+<tr>
+<td>Green monitor — Preview selected snapshot</td>
+<td>Creates a separate temporary inspection session. The original instance and snapshot stay unchanged.</td>
+</tr>
+</tbody></table>
+<p>Desktop previews resume saved RAM and disks. Native Linux previews open the
+saved filesystem in an isolated shell; they do not resume captured RAM or
+services. Preview networking is blocked, changes are discarded on close, and
+sessions have a 30-minute maximum. <strong>Close preview</strong> explicitly ends the session.
+Previews consume capacity within the host&#39;s 50 running-instance/preview limit.</p>
+<p>See <a href="DESKTOPS.html#snapshot-preview">Snapshot Preview</a> for storage and isolation details.</p>
+<h2 id="vpn-and-network-information">VPN and network information</h2>
+<p>Select a container <strong>IP address</strong> to see its addresses, interface, networks,
+gateway, own VPN status, shared gateway, and default tunnel. <strong>Show connected
+guests</strong> expands or reduces the topology drawing. Solid green edges indicate a
+reported established SA; dashed gray edges are unconfirmed. Shared-network edges
+show membership, not a successful reachability test. A site SA alone does not
+prove full-tunnel internet connectivity.</p>
+<p>Selecting an <strong>Up VPN status</strong> opens IPsec diagnostics. The setup/removal plus
+and trash controls open interactive workflows; follow their prompts and check
+the target before accepting. Native direct VPNs, shared gateways, host site VPNs,
+and MYKOS peer VPNs serve different purposes. See <a href="NETWORKING.html">Networking</a>.
+The geographic background represents saved locations, not a packet-path test.</p>
+<h2 id="rsync-backup-accounts">rsync backup accounts</h2>
+<p>The rsync pane lists backup account ID, application type, OS, used disk, last
+modification, and subscriber state. These are backup SSH accounts, not browser
+login accounts. The inline creation controls take an eight-digit <strong>ID</strong> and the
+client <strong>SSH public key</strong>, then <strong>Create account</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Change key</td>
+<td>Opens the account public-key editor. <strong>Save</strong> replaces its authorized public key; <strong>Cancel</strong> dismisses the form.</td>
+</tr>
+<tr>
+<td>View / get keys</td>
+<td>Retrieves keys stored in the client&#39;s backup. The dialog may include a private key; <strong>Download keys</strong> saves a local copy. Treat it as secret.</td>
+</tr>
+<tr>
+<td>Remove backup account</td>
+<td>First requires the exact ID. A second prompt asks whether to delete all backup data: <strong>OK deletes the data; Cancel retains the data but still removes account access</strong>. Canceling the first ID prompt aborts removal.</td>
+</tr>
+<tr>
+<td>Close in Backup keys</td>
+<td>Dismisses the key display.</td>
+</tr>
+</tbody></table>
+<p>Account creation does not prove that a fresh rsync backup has run. Consult the
+last-modified and storage values, then verify the intended backup separately.</p>
+<h2 id="repositories">Repositories</h2>
+<p>The Repos pane shows repository name, disk use, last modification, and latest
+RPM. Select a <strong>repository name</strong> to browse its published directory in another
+tab. A configured remote source can make this pane read-only, with management
+buttons hidden; its Server label identifies the source.</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Up arrow — Enable repositories</td>
+<td>Confirms, then starts Apache.</td>
+</tr>
+<tr>
+<td>Down arrow — Disable repositories</td>
+<td>Confirms, then stops Apache. This can also disconnect the dashboard and other Apache sites; recovery may require the host CLI.</td>
+</tr>
+<tr>
+<td>Circular arrows — Sync repositories</td>
+<td>Confirms and queues the background repository sync workflow. It may install dependencies and use substantial disk/network capacity. Disabled while sync is active.</td>
+</tr>
+<tr>
+<td>Row trash can — Delete</td>
+<td>Requires typing the repository name, then permanently deletes that repository and its content.</td>
+</tr>
+</tbody></table>
+<p>The status line reports storage, Apache state, sync state, and collection time.
+Enabling Apache is different from starting a repository sync.</p>
+<h2 id="notes">Notes</h2>
+<p>Several small icons resemble one another. Their location and tooltip identify
+the kind of notes they open; a document in an Actions row can instead be a log
+or graphical console.</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>White document near a pane heading — Host notes, Windows notes, etc.</td>
+<td>Private operator requests/reference for that pane.</td>
+</tr>
+<tr>
+<td>Orange document in local Host — Personal notes</td>
+<td>Personal notes private to the designated operator.</td>
+</tr>
+<tr>
+<td>Leaf beside a container ID — Shared notes for that ID</td>
+<td>Customer/ID notes, separate from the operator work list.</td>
+</tr>
+<tr>
+<td>Terminal title-bar notes button, where present</td>
+<td>Notes associated with the terminal pane.</td>
+</tr>
+</tbody></table>
+<p><strong>Save</strong> writes the edited text. <strong>Reload</strong> retrieves the server version and asks
+before discarding unsaved edits. <strong>Close</strong> dismisses the dialog and asks before
+discarding unsaved text. Saving checks the revision so a concurrent edit is not
+silently overwritten. If a conflict occurs, keep a private copy of your pending
+text before reloading, then reconcile and save again.</p>
+<p>On this installation, the authorized hourly maintenance workflow uses personal
+and dashboard pane notes as requests. Saving a note does not itself execute a
+change. Shared customer notes and the documentation&#39;s historical operator notes
+are separate from that work list. Notes remain host-local and are excluded from
+peer forwarding and public documentation/release content.</p>
+<h2 id="appearance-and-footer-controls">Appearance and footer controls</h2>
+<table>
+<thead>
+<tr>
+<th>Control / tooltip</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Leaf — Dark theme; switch to light / reverse</td>
+<td>Switches the dashboard/login appearance. Documentation retains its permanent light theme.</td>
+</tr>
+<tr>
+<td>Leaf — Preview EL and utility panes / Preview all panes</td>
+<td>Shows additional eligible panes and Sample rows; the tooltip changes to <strong>Use automatic pane visibility</strong> while enabled. Select again to restore automatic visibility.</td>
+</tr>
+<tr>
+<td>Leaf — Hide background map / Show background map</td>
+<td>Hides or shows the geographic background without changing networking or saved locations.</td>
+</tr>
+<tr>
+<td>Contact address</td>
+<td>Opens the mail application.</td>
+</tr>
+<tr>
+<td>mykos project/version link</td>
+<td>Opens the project repository.</td>
+</tr>
+<tr>
+<td>Logout arrow beside the username</td>
+<td>Ends the browser login; it does not stop containers. Closing an active base-editing session can still trigger its reset behavior.</td>
+</tr>
+</tbody></table>
+<p>Appearance and preview preferences are remembered in the browser when local
+storage is available. Hover to distinguish the similar leaf icons.</p>
+<h2 id="common-workflows">Common workflows</h2>
+<h3 id="inspect-an-instance">Inspect an instance</h3>
+<ol>
+<li>Use the header&#39;s OS link to reach its pane.</li>
+<li>Select the ID row to inspect details; select IP for topology or Memory for processes.</li>
+<li>Open Console Log for native logs, or HTTP graphical desktop for an interactive desktop.</li>
+<li>Use the terminal only when you intend to issue commands to that instance.</li>
+</ol>
+<h3 id="start-a-new-instance-or-restart-an-existing-one">Start a new instance or restart an existing one</h3>
+<ol>
+<li>For a new instance, enter an unused eight-digit ID and select a prepared image.</li>
+<li>Select the pane&#39;s blue <strong>+ (Start)</strong>; read any backup-mount prompt, then confirm.</li>
+<li>Wait for the queued/running operation to finish and inspect the resulting row.</li>
+<li>For an existing stopped persistent instance, use its green <strong>Start container</strong> triangle instead.</li>
+</ol>
+<h3 id="save-and-inspect-a-point-in-time">Save and inspect a point in time</h3>
+<ol>
+<li>On a running persistent instance, select the camera and confirm.</li>
+<li>Wait for snapshot completion; find the ID in Snapshots and select its capture time.</li>
+<li>Use the green monitor for a separate preview, then <strong>Close preview</strong> when finished.</li>
+<li>Use Restore only when you intend to replace the original instance&#39;s current state.</li>
+</ol>
+<h3 id="operate-another-mykos-host">Operate another MYKOS host</h3>
+<ol>
+<li>Locate its compact Host pane and verify the hostname/IP.</li>
+<li>Use its Host controls for host diagnostics or terminal access.</li>
+<li>Select its small flower to open the full node for that host&#39;s guests and snapshots.</li>
+<li>Recheck the target name before lifecycle or destructive actions.</li>
+</ol>
+<h2 id="messages-and-troubleshooting">Messages and troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>What to check or do</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A pane or button is missing</td>
+<td>Check role, available images, automatic pane visibility, and whether the pane is a peer view. Sample preview does not grant privileges.</td>
+</tr>
+<tr>
+<td>A button is gray</td>
+<td>Check running/stopped state, an operation in progress, persistence support, image reset/removal state, or capacity. Read its tooltip.</td>
+</tr>
+<tr>
+<td>“Image storage is busy” / last successful inventory</td>
+<td>The UI retains a previous inventory during slow storage reads. Wait for fresh data before assuming an image disappeared.</td>
+</tr>
+<tr>
+<td>Unknown, stale, or unavailable monitoring</td>
+<td>Inspect collection time and connection errors. Avoid interpreting an old value as current state.</td>
+</tr>
+<tr>
+<td>Container limit reached</td>
+<td>There are 50 running customer instances/previews. Close an unneeded preview or deliberately stop an instance before starting another.</td>
+</tr>
+<tr>
+<td>A console/preview does not open</td>
+<td>Allow popups for the MYKOS origin, check admin/terminal permissions and guest state, and retry only after checking the original operation&#39;s status.</td>
+</tr>
+<tr>
+<td>Request returned an error while starting/snapshotting</td>
+<td>The action may already be queued. Inspect the row/job status before submitting it again. A failed status read is not proof the action failed.</td>
+</tr>
+<tr>
+<td>Peer Offline / Status unavailable</td>
+<td>Verify the peer host, VPN, HTTPS reachability, and certificate. Do not redirect commands to the local host as a substitute.</td>
+</tr>
+<tr>
+<td>Base reset/removal failed</td>
+<td>Read the image-row error and dependencies. Resolve it before retrying; do not delete dependent customer instances as a diagnostic step.</td>
+</tr>
+<tr>
+<td>You need to change a browser password or API key</td>
+<td>Use the host identity tools described in <a href="IDENTITY.html">Identity management</a>; backup key buttons affect a separate identity system.</td>
+</tr>
+</tbody></table>
+<p>For deeper procedures, use <a href="IMAGE_BUILDS.html">Images</a>, <a href="DESKTOPS.html">Desktops and snapshots</a>,
+<a href="NETWORKING.html">Networking</a>, <a href="PEERS.html">Peers</a>, and <a href="INSTALL_SERVICES.html">Installation/recovery</a>.</p>
+<footer>MYKOS documentation</footer></main></html>

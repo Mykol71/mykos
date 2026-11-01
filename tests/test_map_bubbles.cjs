@@ -16,3 +16,11 @@ parent={id:'mykos-geo-background'};points=[{kind:'host',hostname:'prod.example',
 ctx.mykosSyncLocationPins();const hostBubble=layer.children.find(p=>p.children.some(c=>c.textContent==='MYKOS'));
 assert.equal(hostBubble.dataset.placement,'below');assert.ok(hostBubble.children.some(c=>c.textContent==='Oklahoma City, OK'));
 console.log('Co-located MYKOS host label stays below its router label.');
+
+// An unlocated connected peer still gets a status box, never a false map pin.
+ctx.mykosHasGeo=point=>Number.isFinite(point.lat)&&Number.isFinite(point.lon);
+points=[{kind:'peer',id:'p1',hostname:'peer.example',ip:'192.0.2.2',status:'up'}];
+ctx.mykosSyncLocationPins();const peerBox=layer.children.find(p=>p.children.some(c=>c.textContent==='Peer · peer.example'));
+assert.ok(peerBox);assert.ok(peerBox.children.some(c=>c.textContent==='Location unavailable'));assert.equal(peerBox.dataset.status,'up');
+points=[];ctx.mykosSyncLocationPins();assert.equal(layer.children.length,0);
+console.log('Unlocated connected peer has an honest status box; disconnect removes box and pin.');
