@@ -14,13 +14,13 @@ matching the **host**, not the OS you want to run inside a guest.
 
 | Host | Repository configuration |
 | --- | --- |
-| RHEL 9 | `https://mykol.com/mykos-1.5-for-x86_64-el9/mykos-el9.repo` |
-| RHEL 10 | `https://mykol.com/mykos-1.5-for-x86_64-el10/mykos-el10.repo` |
+| RHEL 9 | `https://repo.myk.sh/mykos-1.5-for-x86_64-el9/mykos-el9.repo` |
+| RHEL 10 | `https://repo.myk.sh/mykos-1.5-for-x86_64-el10/mykos-el10.repo` |
 
 For example, on RHEL 9:
 
 ```bash
-sudo curl -fsSL https://mykol.com/mykos-1.5-for-x86_64-el9/mykos-el9.repo -o /etc/yum.repos.d/mykos-el9.repo
+sudo curl -fsSL https://repo.myk.sh/mykos-1.5-for-x86_64-el9/mykos-el9.repo -o /etc/yum.repos.d/mykos-el9.repo
 sudo dnf install mykos
 rpm -q mykos
 sudo systemctl status mykos-firstboot.service --no-pager
@@ -135,3 +135,35 @@ UBI init systems with repositories available. These checks cover installation,
 IP-first setup and authenticated HTTP sessions, not full bare-metal virtualization,
 physical NIC routing, CRIU compatibility or VM lifecycle validation. The user's
 vanilla RH9 server testing remains independent. See [validation record](VALIDATION.md).
+
+## Repository visibility and production storage
+
+The current deployment serves repository files directly from production
+(`prod.myk.sh`, LAN `192.168.222.80`), under `/home/mykos-repositories`.
+The trusted `/home/html` and `/var/www/html` aliases point to that same storage.
+Publish new accepted MYKOS releases there; the former repository server is no
+longer the publication destination.
+
+Public download trees are limited to:
+
+- [MYKOS EL9](https://repo.myk.sh/mykos-1.5-for-x86_64-el9/)
+- [MYKOS EL10](https://repo.myk.sh/mykos-1.5-for-x86_64-el10/)
+- [updateos](https://repo.myk.sh/updateos/)
+
+The same policy applies to the legacy `mykol.com` hostname and the
+[production repository listing](https://myk.sh/repos/). RHEL mirrors, historical
+EL8 MYKOS packages, `support`, `ostools` and the inventory endpoint remain local/LAN
+only. The repository root page lists the three public trees. Serving historical
+EL8 files on the LAN does not restore EL8 MYKOS host support.
+
+LAN repository clients resolve `repo.myk.sh` to `192.168.222.80`, keeping trusted
+HTTPS hostname verification while avoiding a public-address hairpin. Known
+production, dev and legacy-server clients use this mapping. Existing HTTP clients
+using the old server's `192.168.222.5` address receive a compatibility redirect to
+production's LAN IP; old repository data is preserved for rollback. Do not send
+new publication jobs to the old host.
+
+Production collects its own repository inventory. Dev reads production's
+LAN-only inventory endpoint. The old inventory timer is disabled. Package
+checks, metadata reads and repository cutover do not require guest/image builds,
+a web application restart, a physical NIC move or changes to customer disks.

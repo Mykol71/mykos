@@ -42,7 +42,24 @@ Press enter to continue..
 ---
 mgreen@teleflora.com
 
-## Separate repository server inventory
+## Current production repository storage
+
+Production now owns the repository data at `/home/mykos-repositories`, with
+`/home/html` and `/var/www/html` as trusted aliases. Use production for future
+MYKOS package publishing and existing repository operations. Public access is
+limited to MYKOS EL9, MYKOS EL10 and `updateos`; mirrors, EL8 MYKOS, `support`,
+`ostools` and inventory stay LAN-only. See the maintained
+[repository access and installation guide](../docs/RPM.md#repository-visibility-and-production-storage).
+The old server's HTTP endpoint redirects to production; its data remains for
+rollback, and its inventory timer is disabled. No physical NIC migration is part
+of this change.
+
+## Optional separate repository server inventory
+
+The following describes the optional remote-inventory arrangement for other
+deployments. The current production host uses its own local repository storage;
+dev consumes production's LAN inventory.
+
 
 A MYKOS application host can display mirrors stored on a separate repository
 server. Install `services/helpers/mykos-repo-inventory` as

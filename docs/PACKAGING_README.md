@@ -189,8 +189,10 @@ test does not establish bare-metal KVM, CRIU or guest installation success.
 
 1. Preserve the accepted source, final signed RPMs, public key, checksum manifest,
    source commit/release tag and compact validation receipts.
-2. Publish to the matching custom EL9/EL10 MYKOS repositories using the existing
-   release process. Refresh only those repositories' metadata. Preserve upstream
+2. Publish to the matching custom EL9/EL10 MYKOS repositories on production
+   `192.168.222.80`, under `/home/mykos-repositories`, using the existing release
+   process. The `/home/html` compatibility alias resolves to the same storage;
+   the old `192.168.222.5` host is no longer a publication destination. Refresh only those repositories' metadata. Preserve upstream
    mirror trees and active copies; do not mix application RPMs into them.
 3. Publish the reviewed source/release on GitHub. Check for concurrent changes
    first. Never force-push or replace an existing published release artifact.

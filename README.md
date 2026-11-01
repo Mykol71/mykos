@@ -192,3 +192,11 @@ More guides: [architecture](docs/ARCHITECTURE.md), [API](docs/API.md),
 
 - [Packaging README](docs/PACKAGING_README.md): source archives, EL9/EL10 RPMs, signing, staged installation and publication.
 - [Testing README](docs/TESTING_README.md): environment setup, Python and JavaScript checks, documentation validation, live verification and cleanup.
+
+## Repository downloads
+
+Production now serves the [EL9 MYKOS repository](https://repo.myk.sh/mykos-1.5-for-x86_64-el9/),
+[EL10 MYKOS repository](https://repo.myk.sh/mykos-1.5-for-x86_64-el10/), and
+[updateos](https://repo.myk.sh/updateos/) publicly. RHEL mirrors and other repository
+content remain LAN-only. See [repository access and installation](docs/RPM.md#repository-visibility-and-production-storage)
+for current storage, client settings and publication destinations.
