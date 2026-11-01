@@ -1,5 +1,7 @@
 # MYKOS documentation
 
+[Release209 notes](VALIDATION.md#release209-checkpoint--november12026) describe this signed application checkpoint and its validation limits.
+
 These maintained guides include current operational features. Historical design baselines are identified in the guides that retain them.
 
 **Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.

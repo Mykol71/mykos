@@ -1,5 +1,37 @@
 # Validation record and remaining integration work
 
+## Release209 checkpoint — November1,2026
+
+This release packages all accepted changes since signed release197.
+
+### Dashboard
+- Larger, aligned CentOS and Oracle Linux marks; CentOS uses transparent vector artwork with provenance. Oracle keeps the approved20px size with independently aligned icon and label columns.
+- Compact peer panes have an unlabeled performance graph behind the status/actions row, without the past-view slider. Gray hardware details sit outside the pane as a footer. Local/full-node graph controls retain their layout.
+- Peer hover remains transparent. Peer backgrounds are slightly more transparent in dark/light themes, with the map either on or off; text/actions remain fully visible.
+- Footer leaves alternate with text: theme, email, pane preview, version, map, host OS. Contact link is mgreen@mykol.com.
+- Container-count bar opacity is unchanged; the requested opacity change was canceled.
+
+### Network speed
+- Official Ookla checks run at midnight and noon America/Chicago; dev is staggered by30seconds. Prior minute/boot scheduling is cleared by the established host-local overrides.
+- Cached results remain available between checks, with an appropriate stale window and a separate short duplicate-attempt guard. Reading the dashboard never launches a speed test.
+
+### Packaging and operations
+- Signed application and source RPMs for RHEL9/10 hosts; RHEL8 remains a guest target only.
+- Existing containers, guest RAM, peers, VPNs, private notes, host-local credentials, network and repository access restrictions are preserved during promotion.
+- Only MYKOS EL9/EL10 repositories are public; updateos and other protected repositories stay LAN-only.
+- Includes source archive, public signing key, checksums and maintained documentation. Prior published releases remain immutable.
+
+Validation evidence accompanies this release: full Python/JavaScript regressions, documentation checks, signed staged installation, live dev then production installation/endpoint checks, repository metadata and GitHub asset verification, and test/staging cleanup. Exact results are recorded in the private release receipts; packaging is gated on their passing.
+
+### Known limits
+- No new guest OS image build or snapshot restore certification in this application release.
+- EL10 application RPMs are cross-target built and signed; no live EL10 host or complete native CRIU dependency installation has been validated.
+- Existing macOS upstream licensing/provenance limitations remain; bundled notices are preserved.
+- Twice-daily speed checks do not provide continuous bandwidth measurements; an unavailable/failed cached result remains marked stale.
+
+
+
+
 [Documentation index](README.md)
 
 ## Historical source validation — 23 October 2026
