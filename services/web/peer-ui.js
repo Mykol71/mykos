@@ -68,7 +68,12 @@
     function attachActions(item) {
         const doc = item.frame.contentDocument;
         const actions = doc?.querySelector('#mykos-host-status-row .mykos-row-actions');
-        if (!actions || doc.getElementById('mykos-peer-open-node')) return;
+        if (!actions) return;
+        if (!doc.documentElement.classList.contains('mykos-peer-compact')) {
+            doc.documentElement.classList.add('mykos-peer-compact');
+            item.frame.contentWindow.mykosScheduleHostChart?.();
+        }
+        if (doc.getElementById('mykos-peer-open-node')) return;
         const link = doc.createElement('button'); link.type = 'button';
         link.id = 'mykos-peer-open-node'; link.className = 'mykos-icon';
         link.title = link.ariaLabel = 'Open full node · ' + item.peer.name;
@@ -109,7 +114,7 @@
         // Keep the shared log, terminal and lifecycle controls at the right,
         // matching the OS panes. DOM order also preserves keyboard navigation.
         const firstHostAction = actions.querySelector('#mykos-host-remove-vpn,[data-host-action="logs"]');
-        for (const button of [link, addPeer, remove]) actions.insertBefore(button, firstHostAction);
+        for (const button of [link, remove, addPeer]) actions.insertBefore(button, firstHostAction);
     }
     function render(peer) {
         let item = frames.get(peer.id);
@@ -118,7 +123,7 @@
             section.setAttribute('aria-label', 'Peer host · ' + peer.name);
             const state = document.createElement('p'); state.className = 'mykos-status'; state.role = 'status';
             const frame = document.createElement('iframe'); frame.title = 'Complete Host pane · ' + peer.name;
-            frame.style.cssText = 'display:block;width:96%;height:420px;margin:8px auto 0;border:0;background:transparent';
+            frame.style.cssText = 'display:block;width:96%;height:360px;margin:8px 0 0 auto;border:0;background:transparent';
             section.append(state, frame); region.append(section);
             item = {section,state,frame,peer}; frames.set(peer.id, item);
             frame.addEventListener('load', () => attachActions(item));
@@ -157,7 +162,7 @@
         if (event.origin !== location.origin || event.data?.type !== 'mykos-peer-height') return;
         for (const [id,item] of frames) {
             if (event.source === item.frame.contentWindow && event.data.prefix === '/mykos/api/web/peers/' + id + '/proxy' && Number.isFinite(event.data.height))
-                item.frame.style.height = Math.max(260, Math.min(1800, event.data.height)) + 'px';
+                item.frame.style.height = Math.max(220, Math.min(1800, event.data.height)) + 'px';
         }
     });
     refresh(); window.setInterval(refresh, 15000);

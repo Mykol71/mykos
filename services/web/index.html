@@ -355,6 +355,10 @@ body, button, input, select, textarea {
 .mykos-chart-history button { border:0; background:none; padding:0 2px; font:inherit; color:#38bdf8; cursor:pointer; }
 .mykos-chart-plot { position: relative; }
 #mykos-host-chart { width: 100%; height: 104px; display: block; outline-offset: -2px; }
+/* Embedded peer hosts keep full controls with a shorter performance plot. */
+.mykos-peer-compact #mykos-host-chart { height:80px; }
+.mykos-peer-compact #mykos-host-pane { padding-top:2px; padding-bottom:6px; }
+.mykos-peer-compact .mykos-host-metric { padding-top:3px; padding-bottom:3px; }
 .mykos-chart-note { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 14px; color: #94a3b8; font-size: 10px; padding: 3px 0 0 34px; }
 .mykos-chart-warning { color: #fbbf24; }
 .mykos-chart-critical { color: #fb7185; }
@@ -2480,7 +2484,7 @@ function mykosDrawHostChart() {
         return (seconds < 0 ? '−' : '+') + (minutes ? minutes + 'm' : '') +
             (remainder ? (minutes ? ' ' : '') + remainder + 's' : '');
     });
-    const width = Math.max(200, svg.clientWidth || 1000), height = 104;
+    const width = Math.max(200, svg.clientWidth || 1000), height = svg.clientHeight || 104;
     const left = 34, right = width - 8, top = 9, bottom = height - 21;
     const alerts = [];
     let peak = 100;
