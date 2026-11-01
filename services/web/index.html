@@ -3749,8 +3749,8 @@ mykosHostHardware.id='mykos-host-hardware';
 mykosHostHardware.style.cssText='margin:6px 0 0;font-size:8px;line-height:1.4;color:#9098a3;overflow-wrap:anywhere';
 mykosHostHardware.hidden=true;
 el('mykos-host-pane').append(mykosHostHardware);
-function mykosHardwareSummary(hardware) {
-    if (!hardware || typeof hardware !== 'object') return '';
+function mykosHardwareSummary(hardware, networkSpeed) {
+    if (!hardware || typeof hardware !== 'object') hardware = {};
     const parts = [['manufacturer',''],['model','Model: '],['serial','Serial: '],['bios_version','BIOS version: '],['bios_date','BIOS date: ']]
         .filter(([key]) => typeof hardware[key] === 'string' && hardware[key].trim())
         .map(([key,label]) => label + hardware[key].trim());
@@ -3758,14 +3758,22 @@ function mykosHardwareSummary(hardware) {
         .filter(key => typeof hardware[key] === 'string' && hardware[key].trim())
         .map(key => hardware[key].trim()).join(' · ');
     if (memory) parts.push('Memory: ' + memory);
+    if (networkSpeed && Number.isFinite(networkSpeed.download_mbps) && Number.isFinite(networkSpeed.upload_mbps)) {
+        const stale = networkSpeed.stale ? ' (stale)' : '';
+        parts.push('Download: ' + networkSpeed.download_mbps.toFixed(1) + ' Mbps' + stale);
+        parts.push('Upload: ' + networkSpeed.upload_mbps.toFixed(1) + ' Mbps' + stale);
+    }
+
     return parts.join(' · ');
 }
 let mykosHostStatusData = null;
 function mykosRenderHostStatus(data) {
     mykosHostStatusData = data;
     const host = data?.host;
-    mykosHostHardware.textContent=mykosHardwareSummary(host?.hardware);
+    mykosHostHardware.textContent=mykosHardwareSummary(host?.hardware,host?.network_speed);
     mykosHostHardware.hidden=!mykosHostHardware.textContent;
+    const speedStamp=host?.network_speed?.measured_at;
+    mykosHostHardware.title=Number.isFinite(speedStamp) ? 'Internet speed test · '+new Date(speedStamp*1000).toLocaleString() : '';
     if(typeof window!=='undefined')window.mykosGeoCurrentHost=host || null;
     el('mykos-host-row-name').textContent = host?.hostname || 'Host';
     el('mykos-host-row-status').innerHTML = statusIcon('node', host?.status || 'unknown');

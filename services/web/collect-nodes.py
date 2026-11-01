@@ -12,6 +12,7 @@ from pathlib import Path
 from mykos_config import BASE
 from meraki_sites import organization_sites
 import host_monitoring as host
+from network_speed import public as network_speed
 DATA = BASE / "data"
 INVENTORY = BASE / "inventory.json"
 STATUS = DATA / "status.json"
@@ -152,6 +153,7 @@ def collect(shop_filter=None):
         "graph_totals": graph_totals(),
         "container_capacity": running_capacity(),
         "host_hardware": host.hardware(hardware_previous),
+        "host_network_speed": network_speed(),
         "host_vpn_status": host.query_vpn()["status"] if not shop_filter or host_only else old.get("host_vpn_status","unknown"),
         "host_certificate_domain": host.apache_certificate_domain() if not shop_filter or host_only else old.get("host_certificate_domain"),
         "vpn_samples": vpn_samples,

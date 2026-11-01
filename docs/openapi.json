@@ -3814,6 +3814,25 @@
           }
         }
       }
+    },
+    "/api/v2/host/network-speed": {
+      "get": {
+        "tags": [
+          "MYKOS API v2"
+        ],
+        "summary": "Cached Ookla download/upload Mbps; never starts a network test",
+        "operationId": "host_network_speed_api_v2_host_network_speed_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

@@ -234,6 +234,13 @@ def host_history(request: Request, since: float = 0):
     except ValueError as error: raise HTTPException(400, str(error))
 
 
+@router.get('/host/network-speed', summary='Cached Ookla download/upload Mbps; never starts a network test')
+def host_network_speed(request: Request):
+    authenticated(request)
+    from network_speed import public
+    return public()
+
+
 @router.get('/host/status', summary='Host status row including OS version and VPN state')
 def host_status(request: Request):
     return host_metrics(request)

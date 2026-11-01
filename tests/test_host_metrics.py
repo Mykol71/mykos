@@ -75,3 +75,10 @@ def test_hardware_memory_fields_are_allowlisted(tmp_path,monkeypatch):
     details={'memory_type':'DDR4','memory_speed':'2933 MT/s','memory_total':'32 GiB','private':'secret'}
     (tmp_path/'data/status.json').write_text(json.dumps({'collected_at':int(time.time()),'host_hardware':{'details':details}}))
     assert host_metrics.snapshot()['host']['hardware']=={k:v for k,v in details.items() if k!='private'}
+
+def test_speedtest_cached_measurement_in_host_api(tmp_path,monkeypatch):
+    import json,time,network_speed
+    monkeypatch.setattr(network_speed,'OUTPUT',tmp_path/'speed.json')
+    network_speed.OUTPUT.write_text(json.dumps({'schema':1,'status':'ok','last_success':{'download_mbps':800,'upload_mbps':120,'measured_at':int(time.time())}}))
+    monkeypatch.setattr(host_metrics.time,'sleep',lambda _:None)
+    assert host_metrics.snapshot()['host']['network_speed']['upload_mbps']==120

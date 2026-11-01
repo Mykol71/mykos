@@ -88,6 +88,7 @@ including leading zeros. The read column includes both `read` and `admin` keys.
 | `GET /host` | Read | Hostname, OS, kernel, uptime, backup storage, live `metrics` |
 | `GET /host/metrics` | Read | CPU, logical CPU count, memory, swap, load averages, root disk, uptime and `graph_totals` (`containers`, `vpns`) counted from installed POS metadata files; null if unavailable/stale |
 | `GET /host/status` | Read | Host row data: `host` contains hostname, status, OS/version/kernel, internal IP and collected VPN status; memory and uptime are top-level fields |
+| `GET /host/network-speed` | Read | Cached official Ookla result: download/upload in decimal Mbps, measurement time/age, status and stale flag; GET never runs a test |
 | `GET /host/diagnostics/{action}` | Read | Host `logs` (last 200 journal entries), `top` (processes), or `ipsec` status; fixed commands, no container execution |
 | `POST /host/reboot` | Admin | JSON `hostname` must exactly match the server hostname; schedules a reboot in five seconds; interrupts all containers/users |
 | `WS /terminal/host` | Admin | Interactive host root shell, or host VPN setup with `?action=add-vpn`; host `terminal_enabled` setting must be enabled; API key in handshake header |
@@ -776,3 +777,31 @@ out of URLs, logs and shell history. Use the live allowlisted OpenAPI endpoint f
 route details. The current API does not implement the requested configurable
 host/guest and RTI/Dove application alert-field system. Native VPN/shared routes
 are detailed in [VPN architecture and operations](NETWORKING.md#vpn-architecture-and-operations).
+
+
+### Host internet speed measurements
+
+When the existing official Ookla `speedtest` binary is installed at `/usr/bin/speedtest`,
+`mykos-speedtest-collector.timer` starts one bounded measurement per minute. The OS
+repository's `speedtest-cli` is not used or installed. Collection has a separate
+non-overlapping lock and a 45-second client timeout; ordinary inventory collection
+and API reads do not wait for it.
+
+`GET /api/v2/host/network-speed` requires the same read authentication as other host
+endpoints. The result also appears as `host.network_speed` in `/host/metrics` and
+`/host/status`, and as `host_network_speed` in the inventory collector cache.
+The small gray Host hardware footer shows `Download: … Mbps · Upload: … Mbps`.
+These are measured internet speeds, separate from the network graphs' live traffic.
+
+Example cache response:
+
+```json
+{"status":"ok","interval_seconds":60,"stale":false,"download_mbps":900.5,"upload_mbps":101.2,"measured_at":1793550000,"age_seconds":12}
+```
+
+Ookla JSON bandwidth values are bytes per second; MYKOS converts them to decimal
+megabits per second. Failed or timed-out attempts keep the last successful numbers,
+mark them stale, and expose a bounded error code. Results older than three minutes
+are stale even if the latest attempt was successful. No public IP, result-sharing
+URL, or raw client output is published. If the official client is missing or a
+different client occupies that path, no network test is run and no rates are invented.

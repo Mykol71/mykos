@@ -1,0 +1,50 @@
+# Repository production storage. Local/LAN by default, two explicit public trees.
+<Directory "/home/mykos-repositories">
+    AllowOverride None
+    Options +Indexes -ExecCGI -Includes -FollowSymLinks +SymLinksIfOwnerMatch
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+    IndexStyleSheet "/.mykos-index.css"
+    IndexOptions +FancyIndexing +HTMLTable Charset=UTF-8 NameWidth=*
+    IndexIgnore .mykos-index.css .mykos-flower.svg .rsync-partial .~tmp~
+    <FilesMatch "^\.(?!mykos-index\.css$|mykos-flower\.svg$)">
+        Require all denied
+    </FilesMatch>
+    <FilesMatch "^\.mykos-(?:index\.css|flower\.svg)$">
+        AuthMerging Off
+        Require all granted
+    </FilesMatch>
+</Directory>
+<Directory "/home/mykos-repositories/mykos-1.5-for-x86_64-el9">
+    AuthMerging Off
+    Require all granted
+</Directory>
+<Directory "/home/mykos-repositories/mykos-1.5-for-x86_64-el10">
+    AuthMerging Off
+    Require all granted
+</Directory>
+<Directory "/home/mykos-repositories/updateos">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+# Block transfer scratch even beneath a public tree.
+<DirectoryMatch "^/home/mykos-repositories/(?:.*/)?(?:\.rsync-partial|\.~tmp~)(?:/|$)">
+    Require all denied
+</DirectoryMatch>
+<Directory "/var/www/mykos-repository-root">
+    AllowOverride None
+    Options -Indexes -ExecCGI -Includes -FollowSymLinks -SymLinksIfOwnerMatch
+    Require all granted
+</Directory>
+<Directory "/var/www/mykos-repository-inventory">
+    AllowOverride None
+    Options -Indexes
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+
+# updateos is private across direct and /repos aliases, including index assets.
+<LocationMatch "^/(?:repos/)?updateos(?:/|$)">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</LocationMatch>

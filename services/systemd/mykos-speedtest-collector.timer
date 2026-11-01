@@ -1,0 +1,11 @@
+[Unit]
+Description=Measure MYKOS host internet speed once per minute
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+AccuracySec=1s
+Unit=mykos-speedtest-collector.service
+
+[Install]
+WantedBy=timers.target

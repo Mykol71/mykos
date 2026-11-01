@@ -233,6 +233,12 @@ To build a missing image, use **c. Build image** in the host text menu and the
 correct OS identifier. See [Image builds](IMAGE_BUILDS.md) for supported native
 and VM types, media requirements, capture behavior, and recovery.
 
+The small gray hardware line below the Host table includes measured internet
+`Download` and `Upload` speeds in Mbps when an official Ookla result is available.
+The collector refreshes once per minute. Hover over the line for the measurement
+time; failed or older results carry `(stale)`. These measurements are separate from
+current network traffic shown on the graphs.
+
 ## Snapshots
 
 The Snapshots pane groups saved states by container. Choose the desired capture

@@ -122,8 +122,9 @@ longer the publication destination.</p>
 <ul>
 <li><a href="https://repo.myk.sh/mykos-1.5-for-x86_64-el9/">MYKOS EL9</a></li>
 <li><a href="https://repo.myk.sh/mykos-1.5-for-x86_64-el10/">MYKOS EL10</a></li>
-<li><a href="https://repo.myk.sh/updateos/">updateos</a></li>
 </ul>
+<p><code>updateos</code> is LAN-only, along with the RHEL mirrors and other private trees.
+The only public repositories are MYKOS EL9 and MYKOS EL10.</p>
 <p>The same policy applies to the legacy <code>mykol.com</code> hostname and the
 <a href="https://myk.sh/repos/">production repository listing</a>. RHEL mirrors, historical
 EL8 MYKOS packages, <code>support</code>, <code>ostools</code> and the inventory endpoint remain local/LAN
@@ -147,7 +148,7 @@ missing standard RHEL 7–10 definitions are authenticated against fixed Red Hat
 CDN paths using the host entitlement certificate and CA mounted read-only.
 Production and dev use reflink-enabled XFS. Missing upstream access, keys, COW
 support or free space stops the job without publishing an incomplete repository.
-The public MYKOS/updateos access policy above is unchanged by mirror sync.</p>
+The public MYKOS-only and LAN-only <code>updateos</code> policy above is unchanged by mirror sync.</p>
 <p>Start the normal RHEL 7–10 job and follow its journal:</p>
 <pre><code class="language-bash">sudo systemctl start --no-block mykos-repo-sync.service
 sudo journalctl -fu mykos-repo-sync.service

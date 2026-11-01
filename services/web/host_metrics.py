@@ -74,6 +74,8 @@ def snapshot():
                        'os_codename': release.get('VERSION_CODENAME') or (re.search(r'\(([^)]+)\)',release.get('VERSION','')).group(1) if re.search(r'\(([^)]+)\)',release.get('VERSION','')) else None),
                        'kernel': platform.release(), 'internal_ip': internal_ip(), 'vpn': 'unknown'}}
     result['host'].update(location())
+    from network_speed import public as network_speed
+    result['host']['network_speed'] = network_speed()
     try:
         status = json.loads((BASE / 'data/status.json').read_text())
         entry=status.get('host_hardware')

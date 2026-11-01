@@ -461,3 +461,38 @@ Do not confuse these customer-data mounts with the installer's code/settings
 backup archive. A filesystem image commit does not include external mounted
 customer data. Preserve the backup set, instance-private identity files, VPN state,
 disks and intentional snapshots according to the intended recovery operation.
+
+
+### Optional installed Ookla internet speed collector
+
+MYKOS uses the already-installed official Ookla `/usr/bin/speedtest` client; the
+installer does not install or substitute the OS repository's `speedtest-cli`.
+Any client licensing/setup must already be completed normally on that host.
+The installed `mykos-speedtest-collector.timer` runs once per minute, with a
+non-overlapping root lock, a 45-second client limit and a 55-second unit limit.
+The root-owned, web-group-readable cache is `/opt/mykos-web/data/network-speed.json`.
+No API request initiates a bandwidth test. The last good result remains available
+with its timestamp and a stale flag if a later attempt fails.
+
+```sh
+sudo systemctl status mykos-speedtest-collector.timer
+sudo journalctl -u mykos-speedtest-collector.service -n 20 --no-pager
+```
+
+The scheduled tests deliberately generate download/upload traffic. Stop/disable the
+timer on validation hosts sharing the production internet link once their checks
+are complete, so they do not compete with production measurements.
+
+
+If the existing Ookla setup belongs to a normal Unix account, use a host-local
+service override rather than copying its setup into root or accepting terms again:
+
+```ini
+[Service]
+Environment=MYKOS_SPEEDTEST_USER=existing-licensed-user
+```
+
+The collector still publishes its root-owned cache; only the CLI child runs as
+that account, with its normal home/configuration. No passwords or client settings
+are exposed by the API. A root-managed test may additionally set
+`MYKOS_SPEEDTEST_HOME` to an isolated copy of that account's existing setup.

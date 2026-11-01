@@ -1,0 +1,20 @@
+[Unit]
+Description=MYKOS cached internet speed measurement using installed Ookla client
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=mykosweb
+WorkingDirectory=/opt/mykos-web
+EnvironmentFile=/etc/mykos/web.env
+ExecStart=@PYTHON@ /opt/mykos-web/collect-speedtest.py
+TimeoutStartSec=55s
+KillMode=control-group
+Nice=10
+CPUWeight=10
+IOWeight=10
+MemoryMax=256M
+TasksMax=64
+UMask=0027

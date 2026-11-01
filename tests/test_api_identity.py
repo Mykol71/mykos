@@ -1067,3 +1067,17 @@ def test_snapshot_console_allows_only_same_origin_framing(environment,monkeypatc
     assert page.headers['x-frame-options']=='DENY'
     anonymous=TestClient(app.app,base_url='https://testserver')
     assert anonymous.get('/console/preview-'+'a'*32+'/').status_code==401
+
+def test_speedtest_api_is_authenticated_cached_and_read_only(environment,monkeypatch):
+    import network_speed
+    base,_=environment;monkeypatch.setattr(network_speed,'OUTPUT',base/'data/network-speed.json')
+    network_speed.OUTPUT.write_text(json.dumps({'schema':1,'status':'ok','last_success':{'download_mbps':900,'upload_mbps':100,'measured_at':int(time.time())}}))
+    def forbidden(*args,**kwargs):raise AssertionError('GET must never start a speedtest')
+    monkeypatch.setattr(network_speed,'collect',forbidden)
+    anonymous=TestClient(app.app,base_url='https://testserver')
+    assert anonymous.get('/api/v2/host/network-speed').status_code==401
+    key=mykos_api_keys.create('speedtest-read','read')
+    client=TestClient(app.app,base_url='https://testserver')
+    for _ in range(3):
+        value=client.get('/api/v2/host/network-speed',headers={'X-MYKOS-API-Key':key});assert value.status_code==200
+        assert value.json()['download_mbps']==900 and value.json()['upload_mbps']==100

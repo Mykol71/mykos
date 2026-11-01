@@ -148,7 +148,9 @@ Public download trees are limited to:
 
 - [MYKOS EL9](https://repo.myk.sh/mykos-1.5-for-x86_64-el9/)
 - [MYKOS EL10](https://repo.myk.sh/mykos-1.5-for-x86_64-el10/)
-- [updateos](https://repo.myk.sh/updateos/)
+
+`updateos` is LAN-only, along with the RHEL mirrors and other private trees.
+The only public repositories are MYKOS EL9 and MYKOS EL10.
 
 The same policy applies to the legacy `mykol.com` hostname and the
 [production repository listing](https://myk.sh/repos/). RHEL mirrors, historical
@@ -177,7 +179,7 @@ missing standard RHEL 7–10 definitions are authenticated against fixed Red Hat
 CDN paths using the host entitlement certificate and CA mounted read-only.
 Production and dev use reflink-enabled XFS. Missing upstream access, keys, COW
 support or free space stops the job without publishing an incomplete repository.
-The public MYKOS/updateos access policy above is unchanged by mirror sync.
+The public MYKOS-only and LAN-only `updateos` policy above is unchanged by mirror sync.
 
 Start the normal RHEL 7–10 job and follow its journal:
 

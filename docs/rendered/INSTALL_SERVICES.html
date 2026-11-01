@@ -378,4 +378,28 @@ VM consoles have their separate prerequisites in <a href="NETWORKING.html">netwo
 backup archive. A filesystem image commit does not include external mounted
 customer data. Preserve the backup set, instance-private identity files, VPN state,
 disks and intentional snapshots according to the intended recovery operation.</p>
+<h3 id="optional-installed-ookla-internet-speed-collector">Optional installed Ookla internet speed collector</h3>
+<p>MYKOS uses the already-installed official Ookla <code>/usr/bin/speedtest</code> client; the
+installer does not install or substitute the OS repository&#39;s <code>speedtest-cli</code>.
+Any client licensing/setup must already be completed normally on that host.
+The installed <code>mykos-speedtest-collector.timer</code> runs once per minute, with a
+non-overlapping root lock, a 45-second client limit and a 55-second unit limit.
+The root-owned, web-group-readable cache is <code>/opt/mykos-web/data/network-speed.json</code>.
+No API request initiates a bandwidth test. The last good result remains available
+with its timestamp and a stale flag if a later attempt fails.</p>
+<pre><code class="language-sh">sudo systemctl status mykos-speedtest-collector.timer
+sudo journalctl -u mykos-speedtest-collector.service -n 20 --no-pager
+</code></pre>
+<p>The scheduled tests deliberately generate download/upload traffic. Stop/disable the
+timer on validation hosts sharing the production internet link once their checks
+are complete, so they do not compete with production measurements.</p>
+<p>If the existing Ookla setup belongs to a normal Unix account, use a host-local
+service override rather than copying its setup into root or accepting terms again:</p>
+<pre><code class="language-ini">[Service]
+Environment=MYKOS_SPEEDTEST_USER=existing-licensed-user
+</code></pre>
+<p>The collector still publishes its root-owned cache; only the CLI child runs as
+that account, with its normal home/configuration. No passwords or client settings
+are exposed by the API. A root-managed test may additionally set
+<code>MYKOS_SPEEDTEST_HOME</code> to an isolated copy of that account&#39;s existing setup.</p>
 <footer>MYKOS documentation</footer></main></html>

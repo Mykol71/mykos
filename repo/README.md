@@ -47,7 +47,7 @@ mgreen@teleflora.com
 Production now owns the repository data at `/home/mykos-repositories`, with
 `/home/html` and `/var/www/html` as trusted aliases. Use production for future
 MYKOS package publishing and existing repository operations. Public access is
-limited to MYKOS EL9, MYKOS EL10 and `updateos`; mirrors, EL8 MYKOS, `support`,
+limited to MYKOS EL9 and MYKOS EL10; `updateos`, mirrors, EL8 MYKOS, `support`,
 `ostools` and inventory stay LAN-only. See the maintained
 [repository access and installation guide](../docs/RPM.md#repository-visibility-and-production-storage).
 The old server's HTTP endpoint redirects to production; its data remains for
@@ -101,3 +101,7 @@ Downloads and RPM signature checks occur in private COW staging. Only complete,
 checksum-validated repository trees are published, using atomic exchange while
 preserving older immutable URLs. Service and CLI workers share the configured
 background slice; the live tree is never a writable worker mount.
+
+The [Apache access policy example](apache-repository-access.conf.example) keeps
+`updateos` LAN-only across direct and `/repos/` aliases, including index assets.
+Only the EL9 and EL10 MYKOS trees are public.
