@@ -33,5 +33,9 @@ console.log('Host VPN actions and status-row hostname retained without a title h
 
 context.mykosRenderHostStatus({host:{os:'Red Hat Enterprise Linux 8.10 (Ootpa)',version:'8.10'}});assert.equal(el('mykos-host-row-version').textContent,'8.10 Ootpa');
 
-assert.equal(context.mykosHardwareSummary({memory_type:'DDR4',memory_speed:'2933 MT/s',memory_total:'32 GiB'}),'Memory type: DDR4 · Memory speed: 2933 MT/s · Installed memory: 32 GiB');
+assert.equal(context.mykosHardwareSummary({memory_type:'DDR4',memory_speed:'2933 MT/s',memory_total:'32 GiB'}),'Memory: DDR4 · 2933 MT/s · 32 GiB');
 assert.equal(context.mykosHardwareSummary({memory_type:null,memory_total:''}),'');
+
+assert.equal(context.mykosHardwareSummary({manufacturer:'Example',memory_total:'32 GiB'}),'Example · Memory: 32 GiB');
+assert.equal(context.mykosHardwareSummary({memory_type:' DDR4 ',memory_speed:'',memory_total:null}),'Memory: DDR4');
+assert.equal(context.mykosHardwareSummary({model:'Example',memory_type:'',memory_speed:null}),'Model: Example');

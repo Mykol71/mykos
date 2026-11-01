@@ -3699,9 +3699,14 @@ mykosHostHardware.hidden=true;
 el('mykos-host-pane').append(mykosHostHardware);
 function mykosHardwareSummary(hardware) {
     if (!hardware || typeof hardware !== 'object') return '';
-    return [['manufacturer',''],['model','Model: '],['serial','Serial: '],['bios_version','BIOS version: '],['bios_date','BIOS date: '],['memory_type','Memory type: '],['memory_speed','Memory speed: '],['memory_total','Installed memory: ']]
+    const parts = [['manufacturer',''],['model','Model: '],['serial','Serial: '],['bios_version','BIOS version: '],['bios_date','BIOS date: ']]
         .filter(([key]) => typeof hardware[key] === 'string' && hardware[key].trim())
-        .map(([key,label]) => label + hardware[key].trim()).join(' · ');
+        .map(([key,label]) => label + hardware[key].trim());
+    const memory = ['memory_type','memory_speed','memory_total']
+        .filter(key => typeof hardware[key] === 'string' && hardware[key].trim())
+        .map(key => hardware[key].trim()).join(' · ');
+    if (memory) parts.push('Memory: ' + memory);
+    return parts.join(' · ');
 }
 let mykosHostStatusData = null;
 function mykosRenderHostStatus(data) {
