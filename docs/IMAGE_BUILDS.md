@@ -44,7 +44,54 @@ sudo /usr/local/sbin/mykos-image-build wns2022
 sudo /usr/local/sbin/mykos-image-build mac15
 ```
 
-### All supported VM types
+### All supported instance types
+
+MYKOS supports both native Linux containers and VM-backed instances. The native
+EL entries are listed here alongside the VM types; host OS support is separate.
+RHEL 7 and 8 remain guest choices even though MYKOS hosts require RHEL 9 or 10.
+These are the current accepted image/instance selections, not a claim that every
+fresh guest installation has been retested on every host.
+
+#### Native EL and other Linux containers
+
+Run `sudo mykos`, choose **c. Build image**, then enter one OS identifier from
+this table. Native builds use Kickstart/rootfs creation and Podman, rather than
+`pos/vm build` or the VM-only `mykos-image-build` command.
+
+| Native guest/image type | OS identifier entered at the menu |
+| --- | --- |
+| Red Hat Enterprise Linux 7 | `rh7` |
+| Red Hat Enterprise Linux 8 | `rh8` |
+| Red Hat Enterprise Linux 9 | `rh9` |
+| Red Hat Enterprise Linux 10 | `rh10` |
+| Rocky Linux 8 | `rocky8` |
+| Rocky Linux 9 | `rocky9` |
+| Rocky Linux 10 | `rocky10` |
+| AlmaLinux 8 | `alma8` |
+| AlmaLinux 9 | `alma9` |
+| AlmaLinux 10 | `alma10` |
+| Oracle Linux 8 | `oracle8` |
+| Oracle Linux 9 | `oracle9` |
+| Oracle Linux 10 | `oracle10` |
+| CentOS Stream 8 | `centos8` |
+| CentOS Stream 9 | `centos9` |
+| CentOS Stream 10 | `centos10` |
+| Fedora 43 | `fedora43` |
+| Fedora 44 | `fedora44` |
+| SQL Server 2022 on native Linux | `mssql2022` |
+| SQL Server 2025 on native Linux | `mssql2025` |
+
+For a new instance, choose **s. ID**, enter its eight-digit ID and OS selection,
+then use **2. Start/Stop**. Build the required base image first if it is not yet
+available. Repository access, installation media and applicable vendor licenses
+are still required for the chosen guest.
+
+The menu's `all` selection covers the **16 EL images**: RHEL 7–10 plus Rocky,
+AlmaLinux, Oracle and CentOS Stream 8–10. Fedora and SQL Server are individual
+selections. Each example is an alternative; do not start a full image batch just
+to check application or documentation changes.
+
+#### All supported VM types
 
 Each row is an alternative example. Run only the build you need.
 The commands below use the installed toolkit path.
