@@ -3747,7 +3747,8 @@ function mykosRenderHostStatus(data) {
         removeVpn.title='Stop and remove host VPN'; removeVpn.setAttribute('aria-label',removeVpn.title);
         removeVpn.style.color='#ef4444';
         removeVpn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>';
-        mykosHostStatusTable.querySelector('.mykos-row-actions').prepend(removeVpn);
+        const hostActions = mykosHostStatusTable.querySelector('.mykos-row-actions');
+        hostActions.insertBefore(removeVpn, hostActions.querySelector('[data-host-action="logs"]'));
     }
     removeVpn.hidden=!mykosTerminalAllowed || addVpn;
     const seconds = data?.uptime_seconds;

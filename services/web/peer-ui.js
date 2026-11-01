@@ -12,7 +12,8 @@
     add.dataset.hostAction = 'add-vpn';
     add.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
     add.title = add.ariaLabel = 'Add another peer'; add.hidden = true;
-    hostPane.querySelector('.mykos-row-actions').append(add);
+    const hostActions = hostPane.querySelector('.mykos-row-actions');
+    hostActions.insertBefore(add, hostActions.querySelector('#mykos-host-remove-vpn,[data-host-action="logs"]'));
     const status = document.createElement('p'); status.role = 'status';
     status.className = 'mykos-status'; status.hidden = true;
     region.append(status);
@@ -105,7 +106,10 @@
             const target = new URL('/mykos/#add-peer', item.peer.origin);
             if (target.protocol === 'https:') window.open(target.href, '_blank', 'noopener');
         };
-        actions.append(addPeer, link, remove);
+        // Keep the shared log, terminal and lifecycle controls at the right,
+        // matching the OS panes. DOM order also preserves keyboard navigation.
+        const firstHostAction = actions.querySelector('#mykos-host-remove-vpn,[data-host-action="logs"]');
+        for (const button of [link, addPeer, remove]) actions.insertBefore(button, firstHostAction);
     }
     function render(peer) {
         let item = frames.get(peer.id);
