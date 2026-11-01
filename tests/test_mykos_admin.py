@@ -22,6 +22,8 @@ def sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr(mykos_admin, 'BACKUPS', backups)
     monkeypatch.setattr(mykos_admin, 'REPOS', repos)
     monkeypatch.setattr(mykos_admin, 'LOCK', tmp_path/'lock')
+    monkeypatch.setattr(mykos_admin, 'REPO_SYNC_LOCK', tmp_path/'repo-sync.lock')
+    monkeypatch.setattr(mykos_admin, 'REPOSITORY_SOURCE', tmp_path/'repository-source.json')
     monkeypatch.setattr(mykos_admin, 'SIZE_CACHE', tmp_path/'cache')
     monkeypatch.setattr(mykos_admin.pwd, 'getpwall', lambda: [user])
     monkeypatch.setattr(mykos_admin.pwd, 'getpwnam', lambda name: user)
@@ -238,3 +240,27 @@ def test_remote_repository_inventory_and_action_guard(tmp_path, monkeypatch):
     with pytest.raises(ValueError,match='name'):mykos_admin.repo_status()
     config.chmod(0o666)
     with pytest.raises(ValueError,match='protected'):mykos_admin.repository_source()
+
+
+def test_cli_sync_blocks_delete_and_duplicate_dashboard_sync(sandbox, monkeypatch):
+    _, repos, calls = sandbox
+    (repos/'rhel-9-rpms').mkdir()
+    monkeypatch.setattr(mykos_admin, 'service_state', lambda unit: 'activating' if unit == 'mykos-repo-sync-cli.service' else 'inactive')
+    assert mykos_admin.repo_sync_state() == 'activating'
+    for action, target in [('delete', 'rhel-9-rpms'), ('sync', 'all')]:
+        with pytest.raises(ValueError):
+            mykos_admin.dispatch(['repo-action', action, target, '{}'])
+    assert (repos/'rhel-9-rpms').is_dir()
+    assert not calls
+
+
+def test_sync_lock_blocks_delete_even_between_service_state_checks(sandbox, monkeypatch):
+    import fcntl
+    _, repos, _ = sandbox
+    (repos/'rhel-9-rpms').mkdir()
+    monkeypatch.setattr(mykos_admin, 'service_state', lambda unit: 'inactive')
+    with mykos_admin.REPO_SYNC_LOCK.open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with pytest.raises(ValueError, match='sync is running'):
+            mykos_admin.dispatch(['repo-action', 'delete', 'rhel-9-rpms', '{}'])
+    assert (repos/'rhel-9-rpms').is_dir()

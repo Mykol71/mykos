@@ -1,42 +1,20 @@
 #!/bin/bash
-# Use each release's own repository tools, with one worker invocation per release.
+# Put direct CLI jobs in the same budget as dashboard/service jobs.
 set -euo pipefail
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
-exec 9>/run/lock/mykos-repo-sync.lock
-flock -n 9 || { echo 'A repository synchronization is already running' >&2; exit 1; }
-releases=(7 8 9 10)
 if [ "$#" -gt 1 ]; then echo 'Usage: sync_repos [7|8|9|10]' >&2; exit 2; fi
 case "${1:-}" in
-    '') ;;
-    7|8|9|10) releases=("$1") ;;
+    ''|7|8|9|10) ;;
+    -h|--help) exec /usr/bin/python3 "$(dirname "$(readlink -f "$0")")/sync_repos.py" --help ;;
     *) echo 'Usage: sync_repos [7|8|9|10]' >&2; exit 2 ;;
 esac
-for release in "${releases[@]}"; do
-    case "$release" in
-        7) image=registry.access.redhat.com/ubi7/ubi:7.9-1445 ;;
-        8) image=registry.access.redhat.com/ubi8/ubi:8.10-1786322297 ;;
-        9) image=registry.access.redhat.com/ubi9/ubi:9.8-1786631889 ;;
-        10) image=registry.access.redhat.com/ubi10/ubi:1791894362 ;;
-    esac
-    # No --replace: a conflicting worker must never be removed behind its owner.
-    podman run --rm -i --name "mykos-repo-sync-rhel${release}" \
-        --security-opt label=disable -v /var/www/html:/var/www/html:rw \
-        -w /var/www/html "$image" /bin/bash -s -- "$release" <<'WORKER'
-set -euo pipefail
-release=$1
-if [ "$release" = 7 ]; then
-    yum -y install yum-utils createrepo
-    for repo in "rhel-$release-server-rpms" "rhel-$release-server-optional-rpms" "rhel-$release-server-extras-rpms"; do
-        reposync -p /var/www/html --download-metadata --repo="$repo"
-        createrepo --update "/var/www/html/$repo"
-    done
-else
-    dnf -y install dnf-plugins-core createrepo_c
-    for component in baseos appstream; do
-        dnf reposync -p /var/www/html --download-metadata \
-            --repo="rhel-${release}-for-x86_64-${component}-rpms"
-    done
+helper="$(dirname "$(readlink -f "$0")")/sync_repos.py"
+if [ "${MYKOS_REPO_SYNC_MANAGED:-}" != 1 ]; then
+    exec systemd-run --wait --pipe --collect --unit=mykos-repo-sync-cli \
+        --slice=mykosreposync.slice --property=Type=oneshot \
+        --property=TimeoutStartSec=24h --property=Nice=15 \
+        --property=IOSchedulingClass=best-effort --property=IOSchedulingPriority=7 \
+        --property=CPUWeight=10 --property=IOWeight=10 --property=OOMScoreAdjust=500 \
+        /usr/bin/python3 "$helper" "$@"
 fi
-WORKER
-done
-echo 'Repository synchronization complete.'
+exec /usr/bin/python3 "$helper" "$@"

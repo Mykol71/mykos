@@ -388,3 +388,7 @@ storage is available. Hover to distinguish the similar leaf icons.
 
 For deeper procedures, use [Images](IMAGE_BUILDS.md), [Desktops and snapshots](DESKTOPS.md),
 [Networking](NETWORKING.md), [Peers](PEERS.md), and [Installation/recovery](INSTALL_SERVICES.md).
+
+Pane status summaries appear beside their pane labels after a middle dot, including
+live counts, refresh times and errors. They remain gray and update in place; the
+ID/start controls and table begin below the heading without a separate status row.

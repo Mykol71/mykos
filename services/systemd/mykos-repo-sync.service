@@ -10,3 +10,11 @@ ExecStart=/usr/bin/bash -e /usr/local/share/mykos/repo/bin/sync_repos
 TimeoutStartSec=24h
 KillMode=control-group
 UMask=0022
+Slice=mykosreposync.slice
+Nice=15
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUWeight=10
+IOWeight=10
+Environment=MYKOS_REPO_SYNC_MANAGED=1
+OOMScoreAdjust=500

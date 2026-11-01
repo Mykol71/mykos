@@ -167,3 +167,65 @@ Production collects its own repository inventory. Dev reads production's
 LAN-only inventory endpoint. The old inventory timer is disabled. Package
 checks, metadata reads and repository cutover do not require guest/image builds,
 a web application restart, a physical NIC move or changes to customer disks.
+
+## Safely synchronize the RHEL mirrors
+
+Run synchronization on the production repository host. It requires cgroup v2,
+root access, installed Podman, GNU `cp` with reflink-capable storage, and valid upstream
+RHEL entitlements. Workers use matching upstream definitions when available;
+missing standard RHEL 7–10 definitions are authenticated against fixed Red Hat
+CDN paths using the host entitlement certificate and CA mounted read-only.
+Production and dev use reflink-enabled XFS. Missing upstream access, keys, COW
+support or free space stops the job without publishing an incomplete repository.
+The public MYKOS/updateos access policy above is unchanged by mirror sync.
+
+Start the normal RHEL 7–10 job and follow its journal:
+
+```bash
+sudo systemctl start --no-block mykos-repo-sync.service
+sudo journalctl -fu mykos-repo-sync.service
+# Inspect the final result, including a failed/interrupted run:
+sudo systemctl show mykos-repo-sync.service -p ActiveState -p Result -p ExecMainStatus
+```
+
+To synchronize one major, for example RHEL 9:
+
+```bash
+sudo /usr/local/share/mykos/repo/bin/sync_repos 9
+```
+
+The direct command also enters the managed background slice and waits for its
+transient `mykos-repo-sync-cli.service`, collecting that unit after completion.
+Both entry points share the sync lock; the dashboard recognizes either one and
+blocks repository deletion while sync holds the lock. RH6 is rejected.
+
+The entire job receives one CPU of quota, a 2 GiB soft memory threshold and 3 GiB hard limit, CPU/IO weights of 10, nice value 15
+and best-effort IO priority 7. Each worker is additionally limited to one CPU,
+2 GiB RAM with no additional swap and 256 processes. Background processes have an increased OOM score so they are preferred
+for termination under memory pressure. Package-manager downloads
+use one parallel transfer and a 20 MiB/s throttle. Workers can write only private
+staging storage, not the served repository tree; normal host subscription secrets
+remain read-only. Required Red Hat RPM keys are imported inside the disposable
+worker, and reposync signature checking and TLS verification are explicitly enabled.
+
+The host verifies every referenced metadata file and package checksum before
+publication. Existing repository data is cloned using COW, never writable hard
+links; no full-copy fallback or package deletion is used. Prior immutable package
+and metadata URLs remain available for clients holding an older manifest. Each
+complete repository is switched with Linux atomic directory exchange. A failure
+in one component prevents publication of that major's staged components; already
+completed repository switches from earlier work remain valid.
+
+For a normal cancellation:
+
+```bash
+sudo systemctl stop mykos-repo-sync.service mykos-repo-sync-cli.service
+```
+
+The job stops only its recorded, labeled worker and removes unpublished scratch.
+A hard kill or power failure can leave a root-private `.mykos-sync-*` workspace.
+The next invocation recovers only recognized, root-owned workspaces and verifies
+worker ownership before cleanup; unknown entries are retained for inspection.
+Do not delete repository roots or shared images to clear a failed job. Worker
+images are reusable operational caches, not guest builds. A mirror sync does not
+refresh MYKOS application RPMs; publish those through the signed release workflow.

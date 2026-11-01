@@ -302,3 +302,21 @@ def test_rpm_payload_marks_source_and_installed_license_files(tmp_path):
         for name in ('LICENSE.txt','THIRD_PARTY_NOTICES.txt','docs/LICENSE.txt','docs/THIRD_PARTY_NOTICES.txt'):
             entry=next(line for line in listing if line.endswith(' '+base+'/'+name))
             assert entry.startswith('%license ')
+
+
+def test_sync_budget_slice_is_delivered_without_allowing_other_unit_names(tmp_path):
+    import importlib.machinery
+    import importlib.util
+    loader = importlib.machinery.SourceFileLoader('sync_budget_installer', str(INSTALL))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    assert module.allowed('/etc/systemd/system/mykosreposync.slice')
+    assert not module.allowed('/etc/systemd/system/unrelated.slice')
+    assert 'mykosreposync.slice' in module.OPTIONAL_UNITS
+    assert 'mykos-repo-sync.service' in module.OPTIONAL_UNITS
+    stage = tmp_path.resolve() / 'stage'
+    run(stage, 'install', '--python', '/usr/bin/python3.11')
+    assert 'CPUQuota=100%' in (stage / 'etc/systemd/system/mykosreposync.slice').read_text()
+    assert (stage / 'usr/local/share/mykos/repo/bin/sync_repos.py').is_file()
+    assert (stage / 'usr/local/share/mykos/repo/bin/sync_worker.sh').is_file()

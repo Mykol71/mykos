@@ -134,7 +134,7 @@ protocols; integrations should use authenticated HTTP API v2.
 | `./bin/list_repos` | Lists Apache-hosted repository URLs |
 | `./bin/repos_status` | Prints Apache active status |
 | `./bin/disable_repos` | Toggles the entire host Apache service, affecting more than mirrors if the host also proxies the dashboard |
-| `./bin/sync_repos [7\|8\|9\|10]` | Synchronizes RHEL 7–10 by default, or one selected major, using temporary UBI workers and installed Podman. RH6 is rejected; no Apache setup or enablement is performed. Runs reposync and, for RHEL 7, createrepo. |
+| `./bin/sync_repos [7\|8\|9\|10]` | Synchronizes RHEL 7–10 by default, or one selected major, using constrained UBI workers, explicit RPM signature checks and private COW staging. Publishes complete validated trees atomically. CLI and dashboard jobs share a background resource budget. RH6 is rejected. |
 
 Synchronization needs working registry/network/subscription access and enough disk.
 Pinned historical UBI tags may need review. The script is not invoked or scheduled

@@ -19,6 +19,7 @@ BACKUPS = Path('/backups')
 REPOS = Path('/var/www/html')
 TOOLKIT = Path('/usr/local/share/mykos')
 LOCK = Path('/run/mykos-admin.lock')
+REPO_SYNC_LOCK = Path('/run/lock/mykos-repo-sync.lock')
 REPOSITORY_SOURCE = Path('/etc/mykos/repository-source.json')
 
 
@@ -213,6 +214,14 @@ def service_state(unit):
         return 'unknown'
 
 
+def repo_sync_state():
+    state = service_state('mykos-repo-sync.service')
+    if state in ('active', 'activating', 'reloading'):
+        return state
+    cli = service_state('mykos-repo-sync-cli.service')
+    return cli if cli in ('active', 'activating', 'reloading') else state
+
+
 def latest_rpm(root):
     latest=None
     for directory, dirs, files in os.walk(root, followlinks=False):
@@ -277,7 +286,7 @@ def repo_status():
         except (OSError, ValueError):
             continue
     return {'repos': rows, 'storage': storage(REPOS), 'service': service_state('httpd'),
-            'sync': service_state('mykos-repo-sync.service'), 'collected_at': int(time.time())}
+            'sync': repo_sync_state(), 'collected_at': int(time.time())}
 
 
 def validate_key(key):
@@ -400,13 +409,18 @@ def dispatch(args):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if kind == 'backup-action': return backup_action(action, target, payload)
         if action == 'delete':
-            if service_state('mykos-repo-sync.service') in ('active', 'activating', 'reloading'):
+            if repo_sync_state() in ('active', 'activating', 'reloading'):
                 raise ValueError('Cannot delete while repository sync is running')
-            shutil.rmtree(repo_path(target))
+            with os.fdopen(os.open(REPO_SYNC_LOCK, os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o644), 'a') as sync_lock:
+                try:
+                    fcntl.flock(sync_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    raise ValueError('Cannot delete while repository sync is running')
+                shutil.rmtree(repo_path(target))
         elif action in ('enable', 'disable') and target == 'all':
             run(['/usr/bin/systemctl', 'start' if action == 'enable' else 'stop', 'httpd'])
         elif action == 'sync' and target == 'all':
-            if service_state('mykos-repo-sync.service') in ('active', 'activating', 'reloading'):
+            if repo_sync_state() in ('active', 'activating', 'reloading'):
                 raise ValueError('Repository sync is already running')
             run(['/usr/bin/systemctl', 'start', '--no-block', 'mykos-repo-sync.service'])
         else:

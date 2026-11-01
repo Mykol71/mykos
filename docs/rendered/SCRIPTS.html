@@ -239,7 +239,7 @@ protocols; integrations should use authenticated HTTP API v2.</p>
 </tr>
 <tr>
 <td><code>./bin/sync_repos [7|8|9|10]</code></td>
-<td>Synchronizes RHEL 7–10 by default, or one selected major, using temporary UBI workers and installed Podman. RH6 is rejected; no Apache setup or enablement is performed. Runs reposync and, for RHEL 7, createrepo.</td>
+<td>Synchronizes RHEL 7–10 by default, or one selected major, using constrained UBI workers, explicit RPM signature checks and private COW staging. Publishes complete validated trees atomically. CLI and dashboard jobs share a background resource budget. RH6 is rejected.</td>
 </tr>
 </tbody></table>
 <p>Synchronization needs working registry/network/subscription access and enough disk.

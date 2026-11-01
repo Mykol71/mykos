@@ -92,3 +92,12 @@ Run `./bin/sync_repos` from this directory to synchronize RHEL 7, 8, 9 and 10,
 or pass one major, for example `./bin/sync_repos 9`. RH6 synchronization is
 removed, including its entitlement fallback and credential mounts; passing `6`
 returns a usage error. Existing repository files are not deleted by this change.
+
+## Verified publication and background budget
+
+The [maintained synchronization instructions](../docs/RPM.md#safely-synchronize-the-rhel-mirrors)
+cover service/CLI invocation, prerequisites, limits, cancellation and recovery.
+Downloads and RPM signature checks occur in private COW staging. Only complete,
+checksum-validated repository trees are published, using atomic exchange while
+preserving older immutable URLs. Service and CLI workers share the configured
+background slice; the live tree is never a writable worker mount.
