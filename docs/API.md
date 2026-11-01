@@ -796,7 +796,7 @@ These are measured internet speeds, separate from the network graphs' live traff
 Example cache response:
 
 ```json
-{"status":"ok","interval_seconds":60,"stale":false,"download_mbps":900.5,"upload_mbps":101.2,"measured_at":1793550000,"age_seconds":12}
+{"status":"ok","interval_seconds":43200,"stale":false,"download_mbps":900.5,"upload_mbps":101.2,"measured_at":1793550000,"age_seconds":12}
 ```
 
 Ookla JSON bandwidth values are bytes per second; MYKOS converts them to decimal

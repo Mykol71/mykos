@@ -364,8 +364,8 @@ img.mykos-pane-logo { object-fit: contain; }
 /* Only the embedded peer strip overlays its live chart beneath status/actions. */
 .mykos-peer-compact #mykos-host-pane { display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(44px,auto) auto; isolation:isolate; padding-top:2px; padding-bottom:6px; }
 .mykos-peer-compact :is(.mykos-chart-legend,.mykos-chart-history,#mykos-chart-alert,#mykos-chart-tooltip) { display:none!important; }
-.mykos-peer-compact #mykos-host-pane > .mykos-chart-plot { grid-area:1/1; align-self:start; min-width:0; height:44px; overflow:hidden; opacity:.38; pointer-events:none; z-index:0; }
-.mykos-peer-compact #mykos-host-chart { height:44px; pointer-events:none; }
+.mykos-peer-compact #mykos-host-pane > .mykos-chart-plot { position:absolute; inset:0; width:100%; height:100%; overflow:hidden; border-radius:inherit; opacity:.38; pointer-events:none; z-index:0; }
+.mykos-peer-compact #mykos-host-chart { height:100%; pointer-events:none; }
 .mykos-peer-compact #mykos-host-chart text { display:none; }
 .mykos-peer-compact #mykos-host-pane > div:has(> table[aria-label="Host status"]) { grid-area:1/1; align-self:center; position:relative; z-index:1; margin-top:0!important; }
 .mykos-peer-compact #mykos-host-pane table[aria-label="Host status"] > thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
@@ -2545,7 +2545,8 @@ function mykosDrawHostChart() {
             (remainder ? (minutes ? ' ' : '') + remainder + 's' : '');
     });
     const width = Math.max(200, svg.clientWidth || 1000), height = svg.clientHeight || 104;
-    const left = 34, right = width - 8, top = 9, bottom = height - 21;
+    const compactPeer = !!document.documentElement?.classList?.contains('mykos-peer-compact');
+    const left = compactPeer ? 1 : 34, right = width - (compactPeer ? 1 : 8), top = compactPeer ? 1 : 9, bottom = height - (compactPeer ? 1 : 21);
     const alerts = [];
     let peak = 100;
     for (const metric of mykosChartMetrics) {

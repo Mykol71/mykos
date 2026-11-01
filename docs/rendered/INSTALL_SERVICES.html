@@ -382,8 +382,11 @@ disks and intentional snapshots according to the intended recovery operation.</p
 <p>MYKOS uses the already-installed official Ookla <code>/usr/bin/speedtest</code> client; the
 installer does not install or substitute the OS repository&#39;s <code>speedtest-cli</code>.
 Any client licensing/setup must already be completed normally on that host.
-The installed <code>mykos-speedtest-collector.timer</code> runs once per minute, with a
-non-overlapping root lock, a 45-second client limit and a 55-second unit limit.
+The installed <code>mykos-speedtest-collector.timer</code> runs at midnight and noon in
+<code>America/Chicago</code>, with a non-overlapping root lock, a 45-second client limit and
+a 55-second unit limit. The paired development host is offset by 30 seconds.
+Missed slots are not replayed when the timer restarts. Cached results remain
+fresh for 13 hours; a failed attempt marks the retained result stale immediately.
 The root-owned, web-group-readable cache is <code>/opt/mykos-web/data/network-speed.json</code>.
 No API request initiates a bandwidth test. The last good result remains available
 with its timestamp and a stale flag if a later attempt fails.</p>
@@ -391,8 +394,8 @@ with its timestamp and a stale flag if a later attempt fails.</p>
 sudo journalctl -u mykos-speedtest-collector.service -n 20 --no-pager
 </code></pre>
 <p>The scheduled tests deliberately generate download/upload traffic. Stop/disable the
-timer on validation hosts sharing the production internet link once their checks
-are complete, so they do not compete with production measurements.</p>
+timer on additional validation hosts unless measurements are explicitly wanted.
+The paired dev/prod timers intentionally remain enabled on their staggered twice-daily slots.</p>
 <p>If the existing Ookla setup belongs to a normal Unix account, use a host-local
 service override rather than copying its setup into root or accepting terms again:</p>
 <pre><code class="language-ini">[Service]

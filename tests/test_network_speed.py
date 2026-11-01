@@ -69,7 +69,7 @@ def test_invalid_cli_json_is_error(environment,monkeypatch,raw):
     assert ns.read_cache()['error']=='invalid_result'
 
 def test_age_and_reader_never_start_client(environment):
-    ns.collect(now=1000);assert ns.public(now=1181)['stale']
+    ns.collect(now=1000);assert ns.public(now=1000+ns.STALE_AFTER+1)['stale']
     for _ in range(5):ns.public(now=1010)
     assert len(environment)==2
 
@@ -109,3 +109,12 @@ def test_invalid_configured_user_is_rejected(environment,monkeypatch):
     def missing(_):raise KeyError('missing')
     monkeypatch.setattr(ns.pwd,'getpwnam',missing)
     with pytest.raises(RuntimeError):ns.execution_options()
+
+
+def test_twice_daily_interval_and_fresh_cache_between_slots(environment):
+    ns.collect(now=1000)
+    assert ns.public(now=1001)['interval_seconds']==12*60*60
+    assert not ns.public(now=1000+6*60*60)['stale']
+    assert not ns.public(now=1000+12*60*60)['stale']
+    assert ns.public(now=1000+13*60*60+1)['stale']
+    assert len(environment)==2, 'Cache reads must never launch a bandwidth test'

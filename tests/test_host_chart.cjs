@@ -125,3 +125,13 @@ assert.equal(mykosChartMetrics.find(m => m.key === 'cpu').points.length, 0, 'Dat
 console.log('Host chart checks passed: thresholds, healthy availability, colors, gaps, staleness, retention, scaling and reset.');
 
 vm.runInContext(`assert.equal(mykosHistoryValue({data:{percent:25,used_bytes:250,total_bytes:1000}}, "data").value,"25.0%"); assert.equal(mykosHistoryValue({}, "data").percent,null); assert.equal(mykosChartMetrics.find(m=>m.key==="disk").label,"System");`,context);
+
+vm.runInContext(`
+document.documentElement={classList:{contains:name=>name==='mykos-peer-compact'}};
+el('mykos-host-chart').clientHeight=70;mykosDrawHostChart();
+assert.equal(mykosChartLayout.left,1);assert.equal(mykosChartLayout.right,999);
+assert.equal(el('mykos-host-chart').attrs.viewBox,'0 0 1000 70');
+document.documentElement.classList.contains=()=>false;mykosDrawHostChart();
+assert.equal(mykosChartLayout.left,34);assert.equal(mykosChartLayout.right,992);
+`,context);
+console.log('Peer graph uses its whole pane while regular Host chart margins stay unchanged.');

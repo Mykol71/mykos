@@ -1,9 +1,9 @@
 [Unit]
-Description=Measure MYKOS host internet speed once per minute
+Description=Measure MYKOS host internet speed twice daily
 
 [Timer]
-OnBootSec=30s
-OnUnitActiveSec=60s
+OnCalendar=*-*-* 00,12:00:00 America/Chicago
+Persistent=false
 AccuracySec=1s
 Unit=mykos-speedtest-collector.service
 

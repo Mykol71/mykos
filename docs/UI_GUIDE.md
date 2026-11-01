@@ -91,7 +91,7 @@ Shift plus the mouse wheel, moves through history. Resource readings are marked
 high at 75% and critical at 90%. Count bars have their own scales.
 
 Each peer keeps independent live performance data. Its embedded pane shows an
-unlabeled performance strip behind the host status and action buttons, with no
+unlabeled performance graph filling the peer pane behind its host status and action buttons, with no
 metric labels, table-heading labels, or past-view slider. The small gray hardware
 and network information line remains below the row. Open the full node view to
 use the labeled graph, metric visibility controls, and history slider. With the map background on, embedded
@@ -238,7 +238,8 @@ and VM types, media requirements, capture behavior, and recovery.
 
 The small gray hardware line below the Host table includes measured internet
 `Download` and `Upload` speeds in Mbps when an official Ookla result is available.
-The collector refreshes once per minute. Hover over the line for the measurement
+The collector measures twice daily, at midnight and noon Central, with the dev
+peer offset by 30 seconds. Hover over the line for the measurement
 time; failed or older results carry `(stale)`. These measurements are separate from
 current network traffic shown on the graphs.
 

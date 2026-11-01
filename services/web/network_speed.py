@@ -15,9 +15,11 @@ from mykos_config import BASE
 OUTPUT = BASE / 'data/network-speed.json'
 LOCK = Path('/run/lock/mykos-network-speed.lock')
 BINARY = Path('/usr/bin/speedtest')
-INTERVAL = 60
+INTERVAL = 12 * 60 * 60
+# Calendar slots control the schedule; only duplicate launches use this cooldown.
+MIN_ATTEMPT_GAP = 60
 TIMEOUT = 45
-STALE_AFTER = 180
+STALE_AFTER = INTERVAL + 3600
 
 
 def read_cache(path=None):
@@ -115,7 +117,7 @@ def collect(now=None):
         stamp = int(time.time() if now is None else now)
         previous = read_cache()
         attempted = previous.get('last_attempt_at')
-        if number(attempted) and 0 <= stamp - attempted < INTERVAL:
+        if number(attempted) and 0 <= stamp - attempted < MIN_ATTEMPT_GAP:
             return {'state': 'not_due'}
         value = {'schema': 1, 'status': 'running', 'last_attempt_at': stamp}
         cached = public(previous, stamp)
