@@ -681,6 +681,12 @@ table:has(> .mykos-container-rows) > thead > tr > th:last-child { text-align:rig
 :root[data-mykos-map-background="off"] :is(#mykos-host-pane,#mykos-os-panes .panel,#mykos-snapshots-pane,#mykos-backups-pane,#mykos-repos-pane) { background:rgba(18,29,48,.9); }
 :root[data-theme="light"][data-mykos-map-background="off"] :is(#mykos-host-pane,#mykos-os-panes .panel,#mykos-snapshots-pane,#mykos-backups-pane,#mykos-repos-pane) { background:rgba(255,255,255,.9); }
 
+/* A small background-only transparency increase for embedded peer panes. */
+:root.mykos-peer-compact #mykos-host-pane { background:rgba(18,29,48,.28); }
+:root.mykos-peer-compact[data-theme="light"] #mykos-host-pane { background:rgba(255,255,255,.34); }
+:root.mykos-peer-compact[data-mykos-map-background="off"] #mykos-host-pane { background:rgba(18,29,48,.84); }
+:root.mykos-peer-compact[data-theme="light"][data-mykos-map-background="off"] #mykos-host-pane { background:rgba(255,255,255,.84); }
+
 /* Always-visible location labels; every pixel passes clicks through. */
 #mykos-location-layer { position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.45; }
 #mykos-location-layer * { pointer-events:none !important; }
