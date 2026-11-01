@@ -1,0 +1,183 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Packaging README — start here</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}
+header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px}.docs-brand{display:inline-flex;align-items:center;gap:9px}.docs-brand .mykos-brand-flower{display:block;width:22px;height:31px;flex:0 0 22px}</style><header><span class="docs-brand"><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
+<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="packaging-readme--start-here">Packaging README — start here</h1>
+<p><a href="README.html">Documentation index</a> · <a href="TESTING_README.html">Testing README</a> · <a href="RPM.html">Installing signed RPMs</a></p>
+<p>Follow these steps from reviewed MYKOS source to a verified source archive and
+host-specific RPMs. Run workstation steps as a normal user. Build RPMs on an
+allocated RHEL build host. A local archive or unsigned RPM is a candidate, not a
+published release. Packaging does not require building every guest OS.</p>
+<h2 id="1-select-and-preserve-the-source">1. Select and preserve the source</h2>
+<p>Start from the latest recorded working source, including deployed hotfixes, or a
+reviewed Git commit. Copy a frozen release to a new working directory before
+editing it. Do not reset a checkout containing unrelated or unpublished work.
+Record the baseline commit, intended changes and release number in your release
+record. Inspect <code>packaging/rpm/mykos.spec</code> for its current Version and Release;
+assign the next unused Release only when preparing a signed release. Preserve
+published release trees and never replace an existing release&#39;s files.</p>
+<p>Before editing or packaging, compare relative paths and hashes in both production
+locations, <code>/home/mgreen/mykos/docs</code> and <code>/usr/local/share/mykos/docs</code>, against the
+chosen baseline. Record an absent location explicitly. Privately fetch and
+reconcile operator edits before continuing. Preserve <code>KEY_ISSUES.md</code>, the original
+administrator guides and live <code>/usr/local/share/mykos/pos/pos</code> fixes. Repeat this
+comparison immediately before deployment. See the
+<a href="DOCUMENTATION_BUILD.html#protect-operator-edits-before-every-change-batch">operator-edit guard</a>.</p>
+<p>Exclude runtime databases, personal/pane notes, accounts, credentials, signing
+keys, VM disks, captures, caches and scratch from release source. Do not create a
+release by archiving an entire host directory or a mixed checkout.</p>
+<h2 id="2-validate-the-candidate">2. Validate the candidate</h2>
+<p>Follow the <a href="TESTING_README.html">Testing README</a> first. For a planned release, run
+the full Python and JavaScript regressions from the full checkout, regenerate
+and check documentation, and retain compact results with interpreter/dependency
+versions. Resolve failures before signing or publication.</p>
+<p>Confirm new files are in the installer plan: <code>bin/mykos-install</code> selects source
+payloads; Git membership alone does not ensure inclusion. New public guides must
+appear in both <code>tools/docs/guides.json</code> and <code>services/web/supporting_docs.py</code>.
+Rebuild their HTML rather than editing generated files directly.</p>
+<h2 id="3-build-and-inspect-a-source-archive">3. Build and inspect a source archive</h2>
+<p>Prerequisites: Python 3.9+ and the reviewed source tree. These commands target a
+Linux build host with <code>sha256sum</code>, <code>tar</code> and <code>mktemp</code>. Run the entire block from
+the source root in Bash. Its temporary archive is removed on failure or exit;
+set <code>release_output</code> to a new, private destination for the accepted candidate.</p>
+<pre><code class="language-bash">(
+  set -eu
+  umask 077
+  release_output=&quot;$PWD/release-output&quot;
+  mkdir -p &quot;$release_output&quot;
+  package_work=$(mktemp -d /tmp/mykos-package.XXXXXX)
+  trap &#39;rm -rf -- &quot;$package_work&quot;&#39; EXIT
+  trap &#39;exit 130&#39; INT
+  trap &#39;exit 143&#39; TERM
+  version=$(awk &#39;/^Version:/ {print $2; exit}&#39; packaging/rpm/mykos.spec)
+  archive=&quot;mykos-${version}.tar.gz&quot;
+  python3 bin/mykos-package --output &quot;$package_work/$archive&quot;
+  (cd &quot;$package_work&quot; &amp;&amp; sha256sum -c &quot;$archive.sha256&quot;)
+  mkdir &quot;$package_work/unpacked&quot;
+  tar -tzf &quot;$package_work/$archive&quot;
+  tar -xzf &quot;$package_work/$archive&quot; -C &quot;$package_work/unpacked&quot;
+  (cd &quot;$package_work/unpacked/mykos-$version&quot; &amp;&amp; sha256sum -c SHA256SUMS)
+  test -s &quot;$package_work/unpacked/mykos-$version/LICENSE.txt&quot;
+  test -s &quot;$package_work/unpacked/mykos-$version/THIRD_PARTY_NOTICES.txt&quot;
+  test -s &quot;$package_work/unpacked/mykos-$version/docs/rendered/PACKAGING_README.html&quot;
+  test -s &quot;$package_work/unpacked/mykos-$version/docs/rendered/TESTING_README.html&quot;
+  test ! -e &quot;$release_output/$archive&quot;
+  test ! -e &quot;$release_output/$archive.sha256&quot;
+  cp &quot;$package_work/$archive&quot; &quot;$package_work/$archive.sha256&quot; &quot;$release_output/&quot;
+)
+</code></pre>
+<p>Expected: the packager prints its file count and SHA-256; both checksum checks
+pass. Review the member list for required files and accidental private material.
+The archive basename must stay <code>mykos-VERSION.tar.gz</code>: it sets the top directory,
+which must match the RPM spec&#39;s <code>%setup</code>. The packager refuses existing output
+files. Preserve accepted archives and their checksum as release artifacts;
+remove rejected candidates by their exact paths.</p>
+<p>The archive contains managed installer payloads and selected support files. It
+is <strong>not the full regression checkout</strong>. Use the full reviewed checkout for the
+<a href="TESTING_README.html#3-run-python-regressions">Python and JavaScript test suites</a>.</p>
+<h2 id="4-build-el9-and-el10-rpm-candidates">4. Build EL9 and EL10 RPM candidates</h2>
+<p>Use a disposable/allocated RHEL builder with Python 3.9+, <code>rpm-build</code>, and the
+spec&#39;s build requirements. Install missing builder tools through your normal
+approved host setup. Building does not install the resulting application. Keep
+the RPM top directory separate from an operator&#39;s existing <code>~/rpmbuild</code>.</p>
+<p>Run this complete Bash block from the same source root. It retains only accepted
+binary/source RPMs and removes the private build tree on success or failure:</p>
+<pre><code class="language-bash">(
+  set -eu
+  umask 077
+  release_output=&quot;$PWD/release-output&quot;
+  version=$(awk &#39;/^Version:/ {print $2; exit}&#39; packaging/rpm/mykos.spec)
+  rpm_work=$(mktemp -d /tmp/mykos-rpmbuild.XXXXXX)
+  trap &#39;rm -rf -- &quot;$rpm_work&quot;&#39; EXIT
+  trap &#39;exit 130&#39; INT
+  trap &#39;exit 143&#39; TERM
+  mkdir -p &quot;$rpm_work&quot;/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+  cp &quot;$release_output/mykos-$version.tar.gz&quot; &quot;$rpm_work/SOURCES/&quot;
+  cp packaging/rpm/mykos.spec &quot;$rpm_work/SPECS/&quot;
+  test ! -e &quot;$release_output/rpms&quot;
+  for target in 9 10; do
+    rpmbuild -ba --define &quot;_topdir $rpm_work&quot; \
+      --define &quot;mykos_target_el $target&quot; --define &quot;dist .el$target&quot; \
+      &quot;$rpm_work/SPECS/mykos.spec&quot;
+  done
+  find &quot;$rpm_work/RPMS&quot; &quot;$rpm_work/SRPMS&quot; -type f -name &#39;*.rpm&#39; \
+    -exec rpm -qp --queryformat &#39;%{NAME} %{VERSION}-%{RELEASE} %{ARCH}\n&#39; &#39;{}&#39; \;
+  mkdir &quot;$release_output/rpms&quot;
+  cp &quot;$rpm_work&quot;/RPMS/noarch/*.rpm &quot;$rpm_work&quot;/SRPMS/*.rpm &quot;$release_output/rpms/&quot;
+)
+</code></pre>
+<p>Expected: two <code>.noarch.rpm</code> application packages and two <code>.src.rpm</code> packages,
+with matching versions/releases and distinct <code>.el9</code>/<code>.el10</code> targets. Inspect with
+<code>rpm -qpl FILE.rpm</code>, <code>rpm -qp --requires FILE.rpm</code>, and
+<code>rpm -qp --scripts FILE.rpm</code>; substitute an actual output path for <code>FILE.rpm</code>.
+Check license/notice delivery and host-specific Python/dependency requirements.
+<code>noarch</code> does not make one host-major package suitable for the other major.
+Cross-target spec builds do not establish native EL10 runtime compatibility.</p>
+<h2 id="5-sign-and-independently-verify">5. Sign and independently verify</h2>
+<p>Use the established protected MYKOS signing environment. Signing key location,
+passphrase and wrapper configuration remain host-local; never copy them into
+source or invent replacement keys. Once that environment is configured, run
+<code>rpmsign --addsign FILE.rpm</code> for each accepted binary and source RPM, using the
+approved wrapper/macros. Sign before generating final published checksums.</p>
+<p>Verify the public key fingerprint with <code>gpg --show-keys --with-fingerprint RPM-GPG-KEY-MYKOS</code>; compare it with the current
+<a href="RPM.html#install-from-the-matching-repository">trusted fingerprint</a>. Use a fresh,
+isolated RPM database for verification so a workstation&#39;s unrelated keyring does
+not determine the result:</p>
+<pre><code class="language-bash">(
+  set -eu
+  signature_work=$(mktemp -d /tmp/mykos-signature.XXXXXX)
+  trap &#39;rm -rf -- &quot;$signature_work&quot;&#39; EXIT
+  trap &#39;exit 130&#39; INT
+  trap &#39;exit 143&#39; TERM
+  rpm --dbpath &quot;$signature_work&quot; --initdb
+  rpmkeys --dbpath &quot;$signature_work&quot; --import ./RPM-GPG-KEY-MYKOS
+  rpmkeys --dbpath &quot;$signature_work&quot; --checksig ./release-output/rpms/*.rpm
+  (cd release-output/rpms &amp;&amp; sha256sum ./*.rpm &gt; SHA256SUMS &amp;&amp; sha256sum -c SHA256SUMS)
+)
+</code></pre>
+<p>Place the reviewed public key at <code>./RPM-GPG-KEY-MYKOS</code> before this block. Expected:
+every package reports valid digests and signatures, with no missing/untrusted key.
+A checksum alone does not authenticate a release. A mismatch stops publication;
+do not bypass it by disabling GPG checks.</p>
+<h2 id="6-validate-installation-on-dev-then-production">6. Validate installation on dev, then production</h2>
+<p>Follow <a href="TESTING_README.html#6-check-staged-installation">staged and live testing</a>.
+A staging-root install checks file plans without activating services. A separate
+signed-package install on a compatible dev host checks dependency resolution,
+setup, app/login behavior and the changed features. Use the
+<a href="RPM.html#upgrade-and-verify">RPM installation/update steps</a>, with a recorded
+rollback and current operator-edit guards. Protect active builds, containers,
+disks, notes, peers, host settings and repository copies.</p>
+<p>After dev passes, promote the same verified candidate to production and test the
+affected behavior there. Defer disruptive reloads while base editors are active.
+If production fails, restore the scoped application change and return to dev;
+do not publish a failing candidate. Never use a source backup as a substitute for
+customer-disk backups.</p>
+<p>Known limits: application RPM publication for EL10 does not prove a fresh EL10
+dependency installation; availability of the native MYKOS CRIU dependency and
+live EL10 validation must be checked separately. A mocked suite or UBI app/login
+test does not establish bare-metal KVM, CRIU or guest installation success.</p>
+<h2 id="7-publish-verify-and-close-the-batch">7. Publish, verify and close the batch</h2>
+<ol>
+<li>Preserve the accepted source, final signed RPMs, public key, checksum manifest,
+source commit/release tag and compact validation receipts.</li>
+<li>Publish to the matching custom EL9/EL10 MYKOS repositories using the existing
+release process. Refresh only those repositories&#39; metadata. Preserve upstream
+mirror trees and active copies; do not mix application RPMs into them.</li>
+<li>Publish the reviewed source/release on GitHub. Check for concurrent changes
+first. Never force-push or replace an existing published release artifact.</li>
+<li>Fetch published artifacts and metadata; compare their bytes/checksums with the
+accepted signed files. Check signatures, versions and public documentation
+links. Keep <code>gpgcheck=1</code>; package signing alone does not sign repo metadata.</li>
+<li>Verify dev/prod installed versions, installer manifests, affected endpoints
+and preservation of the pre-change workload/settings baseline.</li>
+<li>Remove this batch&#39;s test-only containers, unreferenced images with non-forced
+removal, snapshots, mounts, build trees, staging and caches. Compare inventory
+with the pre-test baseline. Retain only accepted release evidence and necessary
+scoped installer rollback records. See <a href="TESTING_README.html#8-clean-up-and-record-results">cleanup</a>.</li>
+<li>For the authorized hourly workflow, record completion evidence in its private
+ledger and send the completion email only after every required destination and
+cleanup check succeeds. Clear completed note items only under the established
+revision/text/timestamp compare-and-swap policy and after the email receipt.
+Leave unfinished, mixed or concurrently edited notes intact.</li>
+</ol>
+<p>If a step fails, record the exact unfinished step and resume there. Do not label a
+build signed, installed, published or tested until its corresponding check passes.</p>
+<footer>MYKOS documentation</footer></main></html>

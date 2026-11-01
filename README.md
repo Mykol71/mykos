@@ -187,3 +187,8 @@ certificates, accounts and administrator edits are preserved.
 
 More guides: [architecture](docs/ARCHITECTURE.md), [API](docs/API.md),
 [identity management](docs/IDENTITY.md), [snapshots and validation](docs/VALIDATION.md).
+
+## Packaging and testing: start here
+
+- [Packaging README](docs/PACKAGING_README.md): source archives, EL9/EL10 RPMs, signing, staged installation and publication.
+- [Testing README](docs/TESTING_README.md): environment setup, Python and JavaScript checks, documentation validation, live verification and cleanup.

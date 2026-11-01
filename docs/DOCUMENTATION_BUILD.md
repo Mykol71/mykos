@@ -2,6 +2,8 @@
 
 [Documentation index](README.md)
 
+Step-by-step starting points: [Packaging README](PACKAGING_README.md) · [Testing README](TESTING_README.md).
+
 The public guide list in `tools/docs/guides.json` must match the viewer allowlist.
 Only those Markdown files are rendered; extra draft guides are excluded.
 The maintained sources are those guides, `tools/docs/diagrams.json` and

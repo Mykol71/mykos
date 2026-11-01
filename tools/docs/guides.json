@@ -27,5 +27,7 @@
   "VALIDATION.md",
   "LICENSING.md",
   "PEERS.md",
-  "UI_GUIDE.md"
+  "UI_GUIDE.md",
+  "PACKAGING_README.md",
+  "TESTING_README.md"
 ]

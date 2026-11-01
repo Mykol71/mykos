@@ -4,6 +4,8 @@ from fastapi import APIRouter,HTTPException
 from fastapi.responses import FileResponse,RedirectResponse
 
 GUIDES={
+    'PACKAGING_README.md':'Packaging README: step-by-step release workflow',
+    'TESTING_README.md':'Testing README: step-by-step checks and cleanup',
     'UI_GUIDE.md':'Dashboard UI guide and button reference',
     'PEERS.md':'Peer hosts and shared controls',
     'LICENSING.md':'Free use and licensing',

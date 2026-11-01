@@ -2,6 +2,8 @@
 
 [Documentation index](README.md)
 
+Step-by-step starting points: [Packaging README](PACKAGING_README.md) · [Testing README](TESTING_README.md).
+
 **Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
 Each supported host major has its own signed binary RPM, source RPM and repository.

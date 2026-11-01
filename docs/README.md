@@ -84,6 +84,11 @@ The [original Word guide](MYKOS_Administrator_Guide.docx) is preserved.
 [Operator notes](KEY_ISSUES.md) retain the author's original text verbatim.
 They record context and proposals; they do not establish verified deployment behavior.
 
+## Packaging and testing
+
+Start with the [Packaging README](PACKAGING_README.md) to build and verify a source bundle or EL9/EL10 RPM.
+Use the [Testing README](TESTING_README.md) for step-by-step setup, regression checks, live validation and cleanup.
+
 ## Documentation build
 
 See [the maintained build workflow](DOCUMENTATION_BUILD.md) for dependencies,

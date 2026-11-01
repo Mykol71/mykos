@@ -1,6 +1,8 @@
 # MYKOS developer’s guide
 
-[Documentation index](README.md) · [Architecture](ARCHITECTURE.md) · [API](API.md)
+[Documentation index](README.md)
+
+Step-by-step starting points: [Packaging README](PACKAGING_README.md) · [Testing README](TESTING_README.md). · [Architecture](ARCHITECTURE.md) · [API](API.md)
 
 **A handoff for the person who has to understand, change, and support this code.**
 The baseline is **1.5.20261024-147**, Git commit
