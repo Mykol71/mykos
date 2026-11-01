@@ -87,7 +87,8 @@ def test_credits_logos_are_local_allowlisted_assets(client):
     for name in ('Dell','Teleflora','Codex','ChatGPT'):
         assert name in page.text
     for name in BRAND_LOGOS:
-        assert 'brands/'+name in page.text
+        if not name.endswith('-pane.png'):
+            assert 'brands/'+name in page.text
         response=client.get('/docs/brands/'+name)
         assert response.status_code==200
         assert response.headers['content-type'].startswith('image/')
@@ -104,3 +105,18 @@ def test_full_license_and_third_party_notices_are_exact_public_downloads(client)
         assert response.headers['content-type'].startswith('text/plain')
     assert 'LICENSING.html' in client.get('/docs/').text
     assert client.get('/docs/LICENSING-REVIEW.txt').status_code==404
+
+
+def test_dashboard_vendor_artwork_is_local_and_allowlisted(client):
+    page=(ROOT/'services/web/index.html').read_text()
+    for name in ('centos-pane.png','fedora-pane.png','oracle-linux-pane.png'):
+        assert '/mykos/docs/brands/'+name in page
+        response=client.get('/docs/brands/'+name)
+        assert response.status_code==200
+        assert response.content.startswith(b'\x89PNG\r\n\x1a\n')
+    import re
+    marks=re.findall(r'<svg[^>]*data-brand-icon="windows"[^>]*>.*?</svg>',page)
+    assert len(marks)==2
+    for mark in marks:
+        for color in ('#f25022','#7fba00','#00a4ef','#ffb900'):
+            assert 'fill="'+color+'"' in mark

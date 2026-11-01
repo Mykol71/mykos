@@ -83,3 +83,9 @@ openai
   File: brands/openai.svg
   Source: https://cdn.jsdelivr.net/npm/simple-icons@11.15.0/icons/openai.svg
   SHA256: 2b4a04ddc2395b20d168694d3850ce2050a702c4a0cdeb4d8b31b9a970481a8c
+
+Dashboard pane logos (user-selected vendor artwork; trademarks remain with their owners):
+centos-pane.png — https://wiki.centos.org/attachments/ArtWork(2f)Brand/centos-symbol.png
+fedora-pane.png — https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bd/Fedora-logo.svg/1280px-Fedora-logo.svg.png
+oracle-linux-pane.png — https://www.oracle.com/yum.oracle.com/a/yum/img/penguin-updated.png
+Windows and Windows Server: four-color Microsoft window mark; identification only.
