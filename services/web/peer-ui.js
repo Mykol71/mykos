@@ -114,7 +114,7 @@
             section.setAttribute('aria-label', 'Peer host · ' + peer.name);
             const state = document.createElement('p'); state.className = 'mykos-status'; state.role = 'status';
             const frame = document.createElement('iframe'); frame.title = 'Complete Host pane · ' + peer.name;
-            frame.style.cssText = 'display:block;width:100%;height:420px;border:0;background:transparent';
+            frame.style.cssText = 'display:block;width:96%;height:420px;margin:8px auto 0;border:0;background:transparent';
             section.append(state, frame); region.append(section);
             item = {section,state,frame,peer}; frames.set(peer.id, item);
             frame.addEventListener('load', () => attachActions(item));
