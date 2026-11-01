@@ -165,7 +165,7 @@ class Installer:
                     0o750 if os.access(src,os.X_OK) or directory=='bin' else 0o640,
                     'web-read' if docs_readable else 'root',
                     mutable=directory == 'pos' and rel.parent == Path('pos/ks') and src.suffix == '.ks')
-        for name in ('MENU','README.md','AGENTS.md'):
+        for name in ('MENU','README.md','AGENTS.md','LICENSE.txt','THIRD_PARTY_NOTICES.txt'):
             add('/usr/local/share/mykos/'+name,(SOURCE/name).read_bytes(),0o750 if name=='MENU' else 0o640)
         for src in sorted((SOURCE/'services/web').iterdir()):
             if src.is_file() and not src.name.startswith('.'):
@@ -232,6 +232,9 @@ class Installer:
         return output
 
     def install(self):
+        if self.live and not self.args.dry_run:
+            print('MYKOS is supplied under its free-use license; review:',SOURCE/'LICENSE.txt')
+            print('Third-party licenses remain separate:',SOURCE/'THIRD_PARTY_NOTICES.txt')
         if getattr(self.args,'configure_https',False):
             self.mutation()
             args=[self.args.python,str(SOURCE/'bin/mykos-bootstrap'),'--installed-rpm','--configure-https']

@@ -4,6 +4,7 @@ from fastapi import APIRouter,HTTPException
 from fastapi.responses import FileResponse,RedirectResponse
 
 GUIDES={
+    'LICENSING.md':'Free use and licensing',
     'CREDITS.md':'Credits and acknowledgments',
     'REFERENCES.md':'References and upstream projects',
     'SCREENSHOTS.md':'Screen examples gallery',
@@ -32,7 +33,7 @@ GUIDES={
     'VALIDATION.md':'Validation record',
     'MYKOS_Administrator_Guide.md':'Administrator guide reference edition',
 }
-DOWNLOADS={'BRAND_SOURCES.txt':'text/plain','MYKOS_Key_Innovations.pdf':'application/pdf','MYKOS_Engineering_Lessons.pdf':'application/pdf','MYKOS_Deployment_Efficiency.pdf':'application/pdf','MYKOS_Administrator_Guide.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+DOWNLOADS={'COMPONENT_LICENSES.json':'application/json','LICENSE.txt':'text/plain','THIRD_PARTY_NOTICES.txt':'text/plain','BRAND_SOURCES.txt':'text/plain','MYKOS_Key_Innovations.pdf':'application/pdf','MYKOS_Engineering_Lessons.pdf':'application/pdf','MYKOS_Deployment_Efficiency.pdf':'application/pdf','MYKOS_Administrator_Guide.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
            'openapi.json':'application/json','THIRD_PARTY_ICONS.txt':'text/plain'}
 DIAGRAMS={'vpn-host-shared.svg', 'vpn-direct.mmd', 'image-lifecycle.mmd', 'vpn-host-only.svg', 'vpn-direct.svg', 'vpn-native-gateway.mmd', 'architecture.mmd', 'architecture.svg', 'image-lifecycle.svg', 'vpn-native-gateway.svg', 'vpn-host-shared.mmd', 'vpn-host-only.mmd'}
 SCREENSHOTS={'example-dashboard.jpg','example-snapshot-actions.jpg','example-snapshot-preview.jpg'}

@@ -54,7 +54,7 @@ def test_document_index_redirect_does_not_expose_backend_host_or_scheme(client):
     assert response.status_code==307 and response.headers['location']=='docs/'
 
 
-def test_project_guides_and_pdf_downloads_are_public_and_licensing_stays_removed(client):
+def test_project_guides_and_pdf_downloads_are_public_with_current_licensing(client):
     for guide,pdf in [('KEY_INNOVATIONS','MYKOS_Key_Innovations.pdf'),
                       ('ENGINEERING_LESSONS','MYKOS_Engineering_Lessons.pdf'),
                       ('DEPLOYMENT_EFFICIENCY','MYKOS_Deployment_Efficiency.pdf')]:
@@ -66,7 +66,9 @@ def test_project_guides_and_pdf_downloads_are_public_and_licensing_stays_removed
         assert response.content==(ROOT/'docs'/pdf).read_bytes()
         assert guide+'.html' in client.get('/docs/').text
     for name in ['LICENSING.md','LICENSING.html']:
-        assert client.get('/docs/'+name).status_code==404
+        response=client.get('/docs/'+name)
+        assert response.status_code==200
+        assert 'MYKOL-DOT-COM' in response.text
 
 
 def test_only_named_example_screenshots_are_public(client):
@@ -92,3 +94,13 @@ def test_credits_logos_are_local_allowlisted_assets(client):
         assert "default-src 'none'" in response.headers['content-security-policy']
     assert client.get('/docs/brands/private.svg').status_code==404
     assert client.get('/docs/BRAND_SOURCES.txt').status_code==200
+
+
+def test_full_license_and_third_party_notices_are_exact_public_downloads(client):
+    for name in ('LICENSE.txt','THIRD_PARTY_NOTICES.txt'):
+        response=client.get('/docs/'+name)
+        assert response.status_code==200
+        assert response.content==(ROOT/name).read_bytes()==(ROOT/'docs'/name).read_bytes()
+        assert response.headers['content-type'].startswith('text/plain')
+    assert 'LICENSING.html' in client.get('/docs/').text
+    assert client.get('/docs/LICENSING-REVIEW.txt').status_code==404

@@ -15,9 +15,9 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        177%{?dist}
+Release:        179%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
-License: LicenseRef-Proprietary AND MIT
+License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
 Source0: %{name}-%{version}.tar.gz
 BuildArch: noarch
@@ -75,6 +75,7 @@ getent passwd mykosweb >/dev/null || useradd --system --gid mykosweb --home-dir 
 rm -f /usr/local/bin/mykos
 %{mykos_python} /usr/local/sbin/mykos-kvm-check || :
 systemctl daemon-reload >/dev/null 2>&1 || :
+echo 'MYKOS free-use license and third-party notices: /usr/share/mykos/LICENSE.txt and /usr/share/mykos/THIRD_PARTY_NOTICES.txt'
 echo 'MYKOS installed. Fresh installations configure IP access; domain HTTPS requires mykos-setup --configure-https.'
 
 %posttrans
@@ -110,6 +111,10 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-179
+- Deliver MYKOS free-use terms and preserved third-party notices with source/RPM installs
+- Document free business use and separately permissioned redistribution/management hosting
+
 * Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-177
 - Show installed memory type, configured speed and total capacity in the Host hardware line
 - Include validated idle-base and 50-instance capacity updates

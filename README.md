@@ -11,6 +11,17 @@ live snapshots, rsync accounts, repository management, and per-pane notes.
 Browser sessions and scoped API keys use separate authentication.
 See the [screen examples gallery](docs/SCREENSHOTS.md) for illustrated workflows.
 
+## Free use and licensing
+
+MYKOS is available at no license charge for personal and internal business use,
+including running your own customer-facing applications. Optional hosting,
+setup, migration and support services are separate. See the
+[MYKOS Free-Use License](LICENSE.txt) and [licensing guide](docs/LICENSING.md).
+Redistribution of covered MYKOS material and paid access to its management
+functions require separate permission. This is a proprietary free-use license,
+not an open-source license. [Third-party materials](THIRD_PARTY_NOTICES.txt)
+retain their own rights; previously granted rights are preserved.
+
 ## Installation
 
 After configuring the signed MYKOS repository for your RHEL release:

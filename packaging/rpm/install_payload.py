@@ -31,4 +31,10 @@ for path in [source_tree,*sorted(source_tree.rglob('*'))]:
     elif path.is_file():
         config='%config(noreplace) ' if '/pos/ks/' in name and name.endswith('.ks') else ''
         listing.append(config+'%%verify(not mtime) %%attr(%04o,root,root) %s' % (mode,name))
+# Mark installed license/notices as RPM license files in both source/runtime trees.
+license_paths={'/usr/share/mykos/LICENSE.txt','/usr/share/mykos/THIRD_PARTY_NOTICES.txt',
+               '/usr/local/share/mykos/LICENSE.txt','/usr/local/share/mykos/THIRD_PARTY_NOTICES.txt',
+               '/usr/share/mykos/docs/LICENSE.txt','/usr/share/mykos/docs/THIRD_PARTY_NOTICES.txt',
+               '/usr/local/share/mykos/docs/LICENSE.txt','/usr/local/share/mykos/docs/THIRD_PARTY_NOTICES.txt'}
+listing=[('%license '+line) if line.rsplit(' ',1)[-1] in license_paths else line for line in listing]
 Path('runtime.files').write_text('\n'.join(sorted(listing))+'\n')

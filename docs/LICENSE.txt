@@ -1,0 +1,160 @@
+MYKOS FREE-USE LICENSE
+Version 1.0 -- October 31, 2026
+Licensor: MYKOL-DOT-COM
+Permission requests: mgreen@mykol.com
+License identifier: LicenseRef-MYKOS-Free-Use-1.0
+
+1. Scope and separate third-party rights
+
+"Covered Software" means the original MYKOS code and documentation that
+MYKOL-DOT-COM has the authority to license and expressly distributes under the
+final version of this agreement. It excludes third-party software, third-party
+portions of modified files, separately licensed contributions, operating
+systems, guest images, map data, logos, and other separately licensed assets.
+An absence of a notice does not make third-party material Covered Software.
+
+Third-party materials retain their own licenses. Those licenses control those
+materials, including any rights to use, modify, redistribute, receive source
+code, or operate a service. Nothing in this agreement adds restrictions to
+rights under those licenses or mandatory law. If an applicable third-party
+license grants broader rights or requires terms inconsistent with this
+agreement for particular material, the third-party license controls that
+material. This agreement grants no authority to relicense someone else's work.
+
+2. Free personal and business use
+
+Subject to this agreement, MYKOL-DOT-COM grants you a worldwide, nonexclusive,
+royalty-free license to download, install, run, and make necessary copies of
+the Covered Software for your personal use and your organization's internal
+business operations. There is no license fee, deployment-count limit, or
+mandatory paid subscription under this grant. Compliance preserves your rights
+to the version you received; optional services are not required to retain them.
+
+You may use MYKOS to operate your own business applications, websites, and
+customer-facing products, including products you charge for, provided you do
+not provide a Restricted MYKOS Service as defined in section 4. Earning revenue
+from an application merely running on infrastructure managed with MYKOS does
+not, by itself, require a separate MYKOS license.
+
+You may retain backup and disaster-recovery copies. Employees and contractors
+may operate and access copies on your behalf, solely for your permitted use,
+under confidentiality and use obligations consistent with this agreement.
+They receive no independent redistribution or hosted-service rights.
+
+3. Source access and internal modification
+
+When MYKOS source is supplied or made available, you may inspect, build, test,
+and modify the Covered Software for your permitted use, including security
+review, repair, and integration. You may share those internal modifications
+with your employees and contractors for that purpose. Preserve applicable
+copyright, license, attribution, and third-party notices.
+
+This grant does not require public disclosure of your internal modifications,
+customer applications, or business data. Separate third-party obligations
+continue to apply. No automatic assignment of your original contributions to
+MYKOL-DOT-COM is required by this agreement.
+
+4. Activities requiring separate written permission
+
+Except where a separate license, platform agreement, or mandatory law permits
+otherwise, obtain MYKOL-DOT-COM's written permission before:
+
+(a) selling, sublicensing, publicly redistributing, mirroring, or distributing
+    copies of the Covered Software to unrelated third parties, whether
+    modified or unmodified, standalone or bundled into another product; or
+(b) providing a Restricted MYKOS Service for compensation.
+
+A "Restricted MYKOS Service" is a service in which you provide unrelated
+customers access to MYKOS's management interface, management API, or materially
+equivalent management functions exposed through your own interface, to create,
+administer, host, or manage their computing environments. Compensation includes
+charging for that access as part of a bundled hosting or management offering.
+Renaming or modifying MYKOS does not by itself change this definition.
+
+The restriction does not prohibit ordinary customer access to your applications,
+free demonstrations, or paid installation, training, troubleshooting, and
+consulting on a customer's own licensed MYKOS deployment. Those activities must
+not include unauthorized redistribution or a Restricted MYKOS Service.
+Contractors may administer customer-owned deployments on the customer's behalf
+under section 2. Link customers to an authorized MYKOS download when needed.
+
+A public repository's applicable platform terms may grant viewing, forking,
+or other platform-specific rights. This agreement does not revoke those rights
+or separate rights already granted for previously released material.
+
+5. Ownership, customer materials, and brand
+
+MYKOL-DOT-COM and the respective other rights holders retain their rights in
+their own materials. This is a license, not a transfer of ownership. Rights
+not granted here or under another applicable license or law are reserved.
+
+You retain your rights in your own applications, data, configurations, and
+original modifications. Using MYKOS does not give MYKOL-DOT-COM ownership of,
+or permission to access or transmit, those materials.
+
+You may identify MYKOS factually and accurately. No right to claim endorsement,
+use protected branding as your own product identity, or imply that you are an
+authorized MYKOS reseller or hosting provider is granted. Third-party brands
+remain subject to their owners' rights and applicable law.
+
+6. Optional services and third-party products
+
+Hosting, installation, migration, maintenance, training, support, and other
+services offered by MYKOL-DOT-COM may have separate prices and written terms.
+This free-use license includes no promised support hours, response times,
+uptime, continued updates, or future features. Buying services does not alter
+this license unless a separate written agreement expressly says so.
+
+You are responsible for obtaining rights required for the operating systems,
+applications, images, data, and third-party services you use. A MYKOS download
+or build recipe supplies no Microsoft, Apple, Red Hat, or other vendor license,
+and does not override vendor hardware, redistribution, or service restrictions.
+
+7. Duration, changes, and transfer
+
+The license to an identified version continues while you comply with its terms.
+A later license change does not retroactively replace that version's grant.
+Future releases may be offered under different terms, which must be disclosed
+with those releases. This agreement does not promise future releases or access
+to a download service indefinitely.
+
+MYKOL-DOT-COM may transfer its licensor rights with the relevant business or
+assets, subject to licenses already granted. You may transfer your license
+with a transfer of all or substantially all of the business or assets using
+it if the successor accepts these terms and you cease retaining independent
+use rights under the transferred license. Standalone license resale is not
+permitted by this clause. Third-party transfer rules remain separate.
+
+8. Breach and termination
+
+MYKOL-DOT-COM may terminate your Covered Software license if you materially
+breach these terms and do not cure the breach within 30 days after written
+notice describing it. On termination, stop exercising rights that depended
+on this agreement and delete the relevant Covered Software copies, except
+copies required for legal records. This does not require deleting customer
+data, your independently owned materials, or third-party software you may
+lawfully retain under its own terms. Applicable ownership, separate-license,
+and disclaimer provisions continue to the extent relevant after termination.
+
+9. Warranty and liability
+
+To the maximum extent permitted by applicable law, the Covered Software is
+provided as available, without warranties of merchantability, fitness for a
+particular purpose, noninfringement, uninterrupted operation, or error-free
+operation. Evaluate it and maintain suitable backups and recovery procedures.
+
+To the maximum extent permitted by applicable law, MYKOL-DOT-COM and its
+contributors are not liable under this agreement for indirect, consequential,
+special, incidental, or punitive damages, including lost profits or lost data.
+Nothing excludes liability or consumer rights that cannot lawfully be excluded.
+Any separately signed service agreement controls the services it covers.
+
+10. Application to releases and acceptance
+
+This license applies only to an identified MYKOS release supplied with it by
+MYKOL-DOT-COM. It does not retroactively replace an earlier or separate grant.
+Before installing or using the Covered Software under this license, review
+these terms. By exercising permissions granted by this license after receiving
+them, you accept its conditions to the extent recognized by applicable law.
+If you do not accept, do not exercise rights that depend on this grant; rights
+under separate licenses or mandatory law remain unaffected.

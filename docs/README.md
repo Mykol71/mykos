@@ -30,6 +30,12 @@ Read the [two-paragraph business pitch](DEPLOYMENT_EFFICIENCY.md#the-business-ca
 
 The key innovations, performance by design, and deployment efficiency guides include downloadable PDFs retaining their reviewed release146 baseline. Current task guides describe later operational additions; planned compliance scanning and alerts remain clearly marked as future work.
 
+## Free use and services
+
+MYKOS is free for personal and internal business use. Optional hosting, setup,
+migration and support are separate services. See [free use and licensing](LICENSING.md)
+for permissions and the preserved third-party terms.
+
 ## Installation and recovery
 
 | Guide | Use it for |

@@ -277,3 +277,28 @@ def test_failed_runtime_dependency_install_restores_original_environment(tmp_pat
         elif args[1:4]==['-m','pip','install']:raise RuntimeError('dependency download failed')
     with pytest.raises(RuntimeError,match='dependency download failed'):module.provision_venv(venv,'/selected/python',tmp_path/'requirements.txt',runner=runner)
     assert (venv/'old-library').read_text()=='original' and (venv/'bin/python').read_text()=='old'
+
+
+def test_license_delivery_survives_upgrade_and_is_verified(tmp_path):
+    root=tmp_path/'root';run(root,'install')
+    for name in ('LICENSE.txt','THIRD_PARTY_NOTICES.txt'):
+        assert (root/'usr/local/share/mykos'/name).read_bytes()==(REPO/name).read_bytes()
+        assert (root/'usr/local/share/mykos/docs'/name).read_bytes()==(REPO/name).read_bytes()
+    run(root,'install');run(root,'verify')
+    (root/'usr/local/share/mykos/LICENSE.txt').write_text('unexpected replacement')
+    failed=run(root,'verify',ok=False)
+    assert 'LICENSE.txt' in failed.stdout+failed.stderr
+    run(root,'uninstall',ok=False)
+    assert (root/'usr/local/share/mykos/LICENSE.txt').read_text()=='unexpected replacement'
+
+
+def test_rpm_payload_marks_source_and_installed_license_files(tmp_path):
+    import shutil
+    staged=tmp_path/'stage';source=staged/'usr/share/mykos';shutil.copytree(REPO,source)
+    result=subprocess.run([sys.executable,str(source/'packaging/rpm/install_payload.py'),str(staged),'/usr/bin/python3.11'],cwd=tmp_path,capture_output=True,text=True)
+    assert result.returncode==0,result.stdout+result.stderr
+    listing=(tmp_path/'runtime.files').read_text().splitlines()
+    for base in ('/usr/share/mykos','/usr/local/share/mykos'):
+        for name in ('LICENSE.txt','THIRD_PARTY_NOTICES.txt','docs/LICENSE.txt','docs/THIRD_PARTY_NOTICES.txt'):
+            entry=next(line for line in listing if line.endswith(' '+base+'/'+name))
+            assert entry.startswith('%license ')
