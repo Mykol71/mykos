@@ -146,7 +146,7 @@ def get(identifier, active=True):
 
 def listing():
     with connect() as conn:
-        rows = conn.execute("SELECT id,node,name,ip,state,expires FROM peers WHERE state != 'revoked' ORDER BY created").fetchall()
+        rows = conn.execute("SELECT id,node,name,ip,origin,state,expires FROM peers WHERE state != 'revoked' ORDER BY created").fetchall()
     result = []
     for row in rows:
         item = dict(row)

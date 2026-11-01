@@ -5,18 +5,20 @@ header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px
 an independent IKEv2 VPN. Both dashboards show a complete Host pane for each
 node, labeled by hostname and address. Each pane retains its own live performance
 graph, metric toggles, history slider, status, diagnostics and hardware details.
-Use <strong>Open full node</strong> for the peer&#39;s guest, image, snapshot and repository controls.
-All operations stay bound to that node, including terminals and desktop consoles.</p>
+Use the small MYKOS flower in the peer Host&#39;s <strong>Actions</strong> column for guest,
+image, snapshot and repository controls.
+All operations stay bound to that node, including terminals and desktop consoles.
+The peer + opens the selected host’s own signed-in dashboard for enrollment.</p>
 <h2 id="pair-two-hosts">Pair two hosts</h2>
 <ol>
 <li>Sign in as an administrator on each host. Both must have this peer-capable
 MYKOS version, HTTPS on port 443, Libreswan, and reachable IPv4 host addresses.</li>
-<li>Select the <strong>+</strong> beside Host, or the Host VPN <strong>+</strong>. Enter this host&#39;s address
-and the other host&#39;s address, then select <strong>Create invitation</strong>.</li>
+<li>Select the Host <strong>Peer +</strong>, or <strong>+</strong> in its <strong>Actions</strong> column when connected.
+Enter this host&#39;s address and the other host&#39;s address, then select <strong>Create invitation</strong>.</li>
 <li>Copy the private invitation to the other host&#39;s <strong>Connect a MYKOS host</strong> dialog
 and select <strong>Accept and connect</strong> within 15 minutes. Protect the invitation
 like an administrator credential; it grants reciprocal administrator controls.</li>
-<li>Confirm both dashboards show <strong>Connected</strong> and each node&#39;s distinct hostname,
+<li>Confirm both hosts show <strong>Up</strong> under <strong>Peer</strong> and their distinct hostnames,
 graph readings and hardware. A node with a disconnected VPN displays Offline;
 its previous controls are removed instead of being redirected to this host.</li>
 </ol>
@@ -36,7 +38,7 @@ peer API, as are browser login/logout, API-key administration and further peer
 management. Shared customer notes are also excluded. Peer credentials cannot
 forward through a second peer. An administrator of either paired machine has
 broad operating control of the other; pair only hosts you trust equally.</p>
-<p><strong>Disconnect</strong> immediately revokes local trust and removes this peer&#39;s tunnel and
+<p><strong>Disconnect peer</strong> immediately revokes local trust and removes this peer&#39;s tunnel and
 owned firewall rules. It also requests revocation on the other node when that
 node is reachable. If the other node is offline, disconnect it there separately.
 Expired invitations and revoked connections are cleaned by the web service&#39;s

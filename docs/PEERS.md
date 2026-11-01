@@ -4,19 +4,21 @@ A peer connection gives administrators reciprocal control of two MYKOS hosts ove
 an independent IKEv2 VPN. Both dashboards show a complete Host pane for each
 node, labeled by hostname and address. Each pane retains its own live performance
 graph, metric toggles, history slider, status, diagnostics and hardware details.
-Use **Open full node** for the peer's guest, image, snapshot and repository controls.
+Use the small MYKOS flower in the peer Host's **Actions** column for guest,
+image, snapshot and repository controls.
 All operations stay bound to that node, including terminals and desktop consoles.
+The peer + opens the selected host’s own signed-in dashboard for enrollment.
 
 ## Pair two hosts
 
 1. Sign in as an administrator on each host. Both must have this peer-capable
    MYKOS version, HTTPS on port 443, Libreswan, and reachable IPv4 host addresses.
-2. Select the **+** beside Host, or the Host VPN **+**. Enter this host's address
-   and the other host's address, then select **Create invitation**.
+2. Select the Host **Peer +**, or **+** in its **Actions** column when connected.
+   Enter this host's address and the other host's address, then select **Create invitation**.
 3. Copy the private invitation to the other host's **Connect a MYKOS host** dialog
    and select **Accept and connect** within 15 minutes. Protect the invitation
    like an administrator credential; it grants reciprocal administrator controls.
-4. Confirm both dashboards show **Connected** and each node's distinct hostname,
+4. Confirm both hosts show **Up** under **Peer** and their distinct hostnames,
    graph readings and hardware. A node with a disconnected VPN displays Offline;
    its previous controls are removed instead of being redirected to this host.
 
@@ -40,7 +42,7 @@ management. Shared customer notes are also excluded. Peer credentials cannot
 forward through a second peer. An administrator of either paired machine has
 broad operating control of the other; pair only hosts you trust equally.
 
-**Disconnect** immediately revokes local trust and removes this peer's tunnel and
+**Disconnect peer** immediately revokes local trust and removes this peer's tunnel and
 owned firewall rules. It also requests revocation on the other node when that
 node is reachable. If the other node is offline, disconnect it there separately.
 Expired invitations and revoked connections are cleaned by the web service's
