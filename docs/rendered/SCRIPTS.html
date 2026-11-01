@@ -238,8 +238,8 @@ protocols; integrations should use authenticated HTTP API v2.</p>
 <td>Toggles the entire host Apache service, affecting more than mirrors if the host also proxies the dashboard</td>
 </tr>
 <tr>
-<td><code>./bin/sync_repos</code></td>
-<td>Installs httpd/Podman as needed, enables Apache, creates privileged temporary UBI containers for RHEL 7–10, runs reposync/createrepo, removes containers</td>
+<td><code>./bin/sync_repos [7|8|9|10]</code></td>
+<td>Synchronizes RHEL 7–10 by default, or one selected major, using temporary UBI workers and installed Podman. RH6 is rejected; no Apache setup or enablement is performed. Runs reposync and, for RHEL 7, createrepo.</td>
 </tr>
 </tbody></table>
 <p>Synchronization needs working registry/network/subscription access and enough disk.

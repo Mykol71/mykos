@@ -85,3 +85,10 @@ states and storage figures. Inventories older than 15 minutes are rejected.
 Requests have an eight-second timeout, a 1 MiB limit, and do not follow redirects.
 Remote panes are read-only: sync, service and deletion operations must be performed
 on the repository server. Public download links use `public_base_url`.
+
+## Repository synchronization scope
+
+Run `./bin/sync_repos` from this directory to synchronize RHEL 7, 8, 9 and 10,
+or pass one major, for example `./bin/sync_repos 9`. RH6 synchronization is
+removed, including its entitlement fallback and credential mounts; passing `6`
+returns a usage error. Existing repository files are not deleted by this change.
