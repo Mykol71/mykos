@@ -89,3 +89,5 @@ centos-pane.png — https://wiki.centos.org/attachments/ArtWork(2f)Brand/centos-
 fedora-pane.png — https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bd/Fedora-logo.svg/1280px-Fedora-logo.svg.png
 oracle-linux-pane.png — https://www.oracle.com/yum.oracle.com/a/yum/img/penguin-updated.png
 Windows and Windows Server: four-color Microsoft window mark; identification only.
+
+CentOS transparent pane vector: CentOS Project, https://commons.wikimedia.org/wiki/File:CentOS_color_logo.svg ; original https://upload.wikimedia.org/wikipedia/commons/6/63/CentOS_color_logo.svg ; CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0/ . Original symbol paths/colors retained; presentation attributes added, no raster background. Oracle Linux PNG is unchanged; dashboard SVG viewport excludes surrounding transparent margins.

@@ -110,7 +110,8 @@ def test_full_license_and_third_party_notices_are_exact_public_downloads(client)
 def test_dashboard_vendor_artwork_is_local_and_allowlisted(client):
     page=(ROOT/'services/web/index.html').read_text()
     for name in ('centos-pane.png','fedora-pane.png','oracle-linux-pane.png'):
-        assert '/mykos/docs/brands/'+name in page
+        if name!='centos-pane.png':
+            assert '/mykos/docs/brands/'+name in page
         response=client.get('/docs/brands/'+name)
         assert response.status_code==200
         assert response.content.startswith(b'\x89PNG\r\n\x1a\n')
