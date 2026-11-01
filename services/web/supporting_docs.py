@@ -41,7 +41,7 @@ DOWNLOADS={'COMPONENT_LICENSES.json':'application/json','LICENSE.txt':'text/plai
            'openapi.json':'application/json','THIRD_PARTY_ICONS.txt':'text/plain'}
 DIAGRAMS={'vpn-host-shared.svg', 'vpn-direct.mmd', 'image-lifecycle.mmd', 'vpn-host-only.svg', 'vpn-direct.svg', 'vpn-native-gateway.mmd', 'architecture.mmd', 'architecture.svg', 'image-lifecycle.svg', 'vpn-native-gateway.svg', 'vpn-host-shared.mmd', 'vpn-host-only.mmd'}
 SCREENSHOTS={'example-dashboard.jpg','example-snapshot-actions.jpg','example-snapshot-preview.jpg'}
-BRAND_LOGOS={'centos-pane.png', 'fedora-pane.png', 'oracle-linux-pane.png', 'microsoft.png', 'ubuntu.svg', 'cisco.svg', 'python.svg', 'almalinux.svg', 'apple.svg', 'fastapi.svg', 'oracle.svg', 'centos.svg', 'github.svg', 'rockylinux.svg', 'redhat.svg', 'qemu.svg', 'dell.svg', 'podman.svg', 'apache.svg', 'fedora.svg', 'teleflora.png', 'openai.svg', 'canonical.svg'}
+BRAND_LOGOS={'centos-pane.svg', 'centos-pane.png', 'fedora-pane.png', 'oracle-linux-pane.png', 'microsoft.png', 'ubuntu.svg', 'cisco.svg', 'python.svg', 'almalinux.svg', 'apple.svg', 'fastapi.svg', 'oracle.svg', 'centos.svg', 'github.svg', 'rockylinux.svg', 'redhat.svg', 'qemu.svg', 'dell.svg', 'podman.svg', 'apache.svg', 'fedora.svg', 'teleflora.png', 'openai.svg', 'canonical.svg'}
 HEADERS={'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",'X-Content-Type-Options':'nosniff'}
 
 

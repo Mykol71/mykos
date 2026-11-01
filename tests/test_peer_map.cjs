@@ -15,3 +15,17 @@ item.peer.connected=false;context.updateMapPeers();assert.equal(window.mykosGeoP
 item.peer.connected=true;item.peer.state='pending';context.updateMapPeers();assert.equal(window.mykosGeoPeers.length,0);
 assert.ok(draws>=4);
 console.log('Peer iframe inherits live map/theme changes; connected map metadata, missing coordinates and disconnect cleanup passed.');
+
+// Compact frame height must shrink to the actual strip without accepting foreign messages.
+item.frame.style={};context.location={origin:'https://owner.example'};
+const resizeStart=source.indexOf("    window.addEventListener('message'");
+vm.runInContext(source.slice(resizeStart,source.indexOf('    refresh(); window.setInterval',resizeStart)),context);
+const resize={origin:'https://owner.example',source:child,data:{type:'mykos-peer-height',prefix:'/mykos/api/web/peers/peer1/proxy',height:72}};
+events.message(resize);assert.equal(item.frame.style.height,'72px');
+events.message({...resize,origin:'https://foreign.example',data:{...resize.data,height:400}});assert.equal(item.frame.style.height,'72px');
+events.message({...resize,source:{},data:{...resize.data,height:400}});assert.equal(item.frame.style.height,'72px');
+events.message({...resize,data:{...resize.data,prefix:'/wrong',height:400}});assert.equal(item.frame.style.height,'72px');
+events.message({...resize,data:{...resize.data,height:4000}});assert.equal(item.frame.style.height,'1800px');
+events.message({...resize,data:{...resize.data,height:0}});assert.equal(item.frame.style.height,'60px');
+events.message({...resize,data:{...resize.data,height:NaN}});assert.equal(item.frame.style.height,'60px');
+console.log('Compact peer frame shrink, bounds and origin/source/prefix guards passed.');

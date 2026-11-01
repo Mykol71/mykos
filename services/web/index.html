@@ -361,9 +361,15 @@ img.mykos-pane-logo { object-fit: contain; }
 /* Embedded peer hosts keep full controls with a shorter performance plot. */
 /* Embedded peers use the owning page's backdrop, never an opaque inner map. */
 .mykos-peer-compact :is(#mykos-page-background,#mykos-geo-background,#mykos-location-layer) { display:none!important; }
-.mykos-peer-compact #mykos-host-chart { height:80px; }
-.mykos-peer-compact #mykos-host-pane { padding-top:2px; padding-bottom:6px; }
-.mykos-peer-compact .mykos-host-metric { padding-top:3px; padding-bottom:3px; }
+/* Only the embedded peer strip overlays its live chart beneath status/actions. */
+.mykos-peer-compact #mykos-host-pane { display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(44px,auto) auto; isolation:isolate; padding-top:2px; padding-bottom:6px; }
+.mykos-peer-compact :is(.mykos-chart-legend,.mykos-chart-history,#mykos-chart-alert,#mykos-chart-tooltip) { display:none!important; }
+.mykos-peer-compact #mykos-host-pane > .mykos-chart-plot { grid-area:1/1; align-self:start; min-width:0; height:44px; overflow:hidden; opacity:.38; pointer-events:none; z-index:0; }
+.mykos-peer-compact #mykos-host-chart { height:44px; pointer-events:none; }
+.mykos-peer-compact #mykos-host-chart text { display:none; }
+.mykos-peer-compact #mykos-host-pane > div:has(> table[aria-label="Host status"]) { grid-area:1/1; align-self:center; position:relative; z-index:1; margin-top:0!important; }
+.mykos-peer-compact #mykos-host-pane table[aria-label="Host status"] > thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.mykos-peer-compact #mykos-host-hardware { grid-column:1; grid-row:2; position:relative; z-index:1; }
 .mykos-chart-note { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 14px; color: #94a3b8; font-size: 10px; padding: 3px 0 0 34px; }
 .mykos-chart-warning { color: #fbbf24; }
 .mykos-chart-critical { color: #fb7185; }

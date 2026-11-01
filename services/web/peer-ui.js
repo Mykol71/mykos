@@ -87,6 +87,9 @@
         if (!actions) return;
         if (!doc.documentElement.classList.contains('mykos-peer-compact')) {
             doc.documentElement.classList.add('mykos-peer-compact');
+            const chart=doc.getElementById('mykos-host-chart');
+            chart?.setAttribute('aria-hidden','true');
+            chart?.setAttribute('tabindex','-1');
             item.frame.contentWindow.mykosScheduleHostChart?.();
         }
         syncAppearance(item);updateMapPeers();
@@ -140,7 +143,7 @@
             section.setAttribute('aria-label', 'Peer host · ' + peer.name);
             const state = document.createElement('p'); state.className = 'mykos-status'; state.role = 'status';
             const frame = document.createElement('iframe'); frame.title = 'Complete Host pane · ' + peer.name;
-            frame.style.cssText = 'display:block;width:96%;height:360px;margin:8px 0 0 auto;border:0;background:transparent';
+            frame.style.cssText = 'display:block;width:96%;height:90px;margin:8px 0 0 auto;border:0;background:transparent';
             section.append(state, frame); region.append(section);
             item = {section,state,frame,peer}; frames.set(peer.id, item);
             frame.addEventListener('load', () => attachActions(item));
@@ -181,7 +184,7 @@
         if (event.origin !== location.origin || event.data?.type !== 'mykos-peer-height') return;
         for (const [id,item] of frames) {
             if (event.source === item.frame.contentWindow && event.data.prefix === '/mykos/api/web/peers/' + id + '/proxy' && Number.isFinite(event.data.height))
-                item.frame.style.height = Math.max(220, Math.min(1800, event.data.height)) + 'px';
+                item.frame.style.height = Math.max(60, Math.min(1800, event.data.height)) + 'px';
         }
     });
     refresh(); window.setInterval(refresh, 15000);

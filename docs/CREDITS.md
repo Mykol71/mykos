@@ -54,3 +54,5 @@ Brand icons are from [Simple Icons](https://simpleicons.org/); the Microsoft log
 Teleflora logo is credited to Teleflora through Wikimedia Commons. See the [asset source record](BRAND_SOURCES.txt)
 and existing [icon credits](THIRD_PARTY_ICONS.txt). Names and logos belong to their
 respective owners; this page acknowledges their work and does not imply endorsement.
+
+The dashboard also uses the [CentOS symbol vector](brands/centos-pane.svg) by the CentOS Project, distributed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). See [brand sources](BRAND_SOURCES.txt) for the original asset and presentation changes.

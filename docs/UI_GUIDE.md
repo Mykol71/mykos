@@ -90,8 +90,11 @@ Hover or focus the graph to inspect readings. Horizontal scrolling, including
 Shift plus the mouse wheel, moves through history. Resource readings are marked
 high at 75% and critical at 90%. Count bars have their own scales.
 
-Each peer has independent history and metric visibility. Its compact graph is
-shorter than the local/full-node graph. With the map background on, embedded
+Each peer keeps independent live performance data. Its embedded pane shows an
+unlabeled performance strip behind the host status and action buttons, with no
+metric labels, table-heading labels, or past-view slider. The small gray hardware
+and network information line remains below the row. Open the full node view to
+use the labeled graph, metric visibility controls, and history slider. With the map background on, embedded
 peer panes share its translucent appearance. Turning the map off restores their
 normal pane fill. The hardware line reports available
 machine/CPU information and one **Memory** label followed by installed memory
