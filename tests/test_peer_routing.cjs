@@ -29,3 +29,10 @@ assert.equal(opened[0].url,'https://local.example'+prefix+'/api/terminal/window/
 assert.equal(opened[1].url,'about:blank');
 assert.equal(window.mykosNodeURL('/mykos/api/web/snapshot-preview/'+'b'.repeat(32)+'/page'), 'https://local.example'+prefix+'/api/web/snapshot-preview/'+'b'.repeat(32)+'/page');
 console.log('Peer graph/history, HTTP mutations, terminal and console routing passed');
+
+const lifecycle={},heights=[];let footerBottom=72,reportResize;
+const footerWindow={fetch:()=>Promise.resolve({}),WebSocket:class{},open:()=>{},addEventListener:(name,fn)=>lifecycle[name]=fn,parent:{postMessage:value=>heights.push(value.height)}};
+const footerDocument={addEventListener:()=>{},body:{},getElementById:id=>id==='mykos-host-pane'?{getBoundingClientRect:()=>({bottom:50})}:id==='mykos-host-hardware'?{getBoundingClientRect:()=>({bottom:footerBottom})}:null};
+vm.runInNewContext(source,{window:footerWindow,document:footerDocument,URL,Request,location:context.location,ResizeObserver:class{constructor(fn){reportResize=fn;}observe(){}}});
+lifecycle.DOMContentLoaded();assert.equal(heights.at(-1),82);footerBottom=94;reportResize();assert.equal(heights.at(-1),104);
+console.log('Peer frame height includes the outside footer and follows wrapped info updates.');

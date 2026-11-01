@@ -29,3 +29,10 @@ events.message({...resize,data:{...resize.data,height:4000}});assert.equal(item.
 events.message({...resize,data:{...resize.data,height:0}});assert.equal(item.frame.style.height,'60px');
 events.message({...resize,data:{...resize.data,height:NaN}});assert.equal(item.frame.style.height,'60px');
 console.log('Compact peer frame shrink, bounds and origin/source/prefix guards passed.');
+
+const classes=new Set(),attrs={};let moved=0,resized=0;
+const main={},pane={after:footer=>{moved++;footer.parentElement=main;}},footer={parentElement:pane};
+const compactItem={frame:{contentDocument:{documentElement:{classList:{contains:v=>classes.has(v),add:v=>classes.add(v)}},getElementById:id=>({'mykos-host-pane':pane,'mykos-host-hardware':footer,'mykos-host-chart':{setAttribute:(k,v)=>attrs[k]=v}}[id])},contentWindow:{mykosScheduleHostChart:()=>resized++}}};
+context.compactPane(compactItem);context.compactPane(compactItem);
+assert.equal(footer.parentElement,main);assert.equal(moved,1);assert.equal(resized,1);assert.equal(attrs.tabindex,'-1');
+console.log('Peer gray footer moves outside once, preserving chart accessibility and resize behavior.');

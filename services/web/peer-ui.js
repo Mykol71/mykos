@@ -81,10 +81,12 @@
     }
     window.addEventListener('mykos-map-background-change',()=>{for(const item of frames.values())syncAppearance(item);});
     new MutationObserver(()=>{for(const item of frames.values())syncAppearance(item);}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-    function attachActions(item) {
-        const doc = item.frame.contentDocument;
-        const actions = doc?.querySelector('#mykos-host-status-row .mykos-row-actions');
-        if (!actions) return;
+    function compactPane(item) {
+        const doc=item.frame.contentDocument;
+        const pane=doc?.getElementById('mykos-host-pane');
+        if(!pane)return;
+        const footer=doc.getElementById('mykos-host-hardware');
+        if(footer?.parentElement===pane)pane.after(footer);
         if (!doc.documentElement.classList.contains('mykos-peer-compact')) {
             doc.documentElement.classList.add('mykos-peer-compact');
             const chart=doc.getElementById('mykos-host-chart');
@@ -92,6 +94,12 @@
             chart?.setAttribute('tabindex','-1');
             item.frame.contentWindow.mykosScheduleHostChart?.();
         }
+    }
+    function attachActions(item) {
+        const doc = item.frame.contentDocument;
+        const actions = doc?.querySelector('#mykos-host-status-row .mykos-row-actions');
+        if (!actions) return;
+        compactPane(item);
         syncAppearance(item);updateMapPeers();
         if (doc.getElementById('mykos-peer-open-node')) return;
         const link = doc.createElement('button'); link.type = 'button';

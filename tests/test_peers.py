@@ -148,7 +148,9 @@ def test_complete_pane_and_scoped_frame_headers(isolated, monkeypatch):
     assert '"/mykos/api/web/peers/' + identifier + '/proxy"' in result.text
     assert result.headers['X-Frame-Options'] == 'SAMEORIGIN'
     assert client.get('/').headers['X-Frame-Options'] == 'DENY'
-    assert 'main > :not(#mykos-host-pane) { display:none!important; }' not in client.get('/api/web/peers/' + identifier + '/view?full=true').text
+    selector='main > :not(#mykos-host-pane):not(#mykos-host-hardware) { display:none!important; }'
+    assert selector in result.text
+    assert selector not in client.get('/api/web/peers/' + identifier + '/view?full=true').text
 
 
 def test_expired_cleanup_removes_only_owned_peers(isolated):

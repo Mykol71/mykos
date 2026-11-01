@@ -146,11 +146,11 @@ def view(identifier: str, request: Request, full: bool = False):
 html,body { background:transparent!important; margin:0!important; padding:0!important; }
 header, body > aside, .mykos-notes-button { display:none!important; }
 main { max-width:none!important; padding:0!important; margin:0!important; }
-main > :not(#mykos-host-pane) { display:none!important; }
+main > :not(#mykos-host-pane):not(#mykos-host-hardware) { display:none!important; }
 #mykos-host-pane { margin:0!important; }
 </style>'''
     if full:
-        style = style.replace('main > :not(#mykos-host-pane) { display:none!important; }', '')
+        style = style.replace('main > :not(#mykos-host-pane):not(#mykos-host-hardware) { display:none!important; }', '')
     return HTMLResponse(html.replace('<head>', '<head>' + bootstrap(identifier) + style, 1))
 
 

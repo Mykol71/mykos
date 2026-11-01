@@ -36,7 +36,9 @@
         document.getElementById('logout')?.remove();
         const report = () => {
             const pane = document.getElementById('mykos-host-pane');
-            if (pane && window.parent !== window) window.parent.postMessage({type:'mykos-peer-height', prefix, height:Math.ceil(pane.getBoundingClientRect().bottom + 10)}, location.origin);
+            const footer=document.getElementById('mykos-host-hardware');
+            const bottom=Math.max(pane?.getBoundingClientRect().bottom || 0,footer?.getBoundingClientRect().bottom || 0);
+            if (pane && window.parent !== window) window.parent.postMessage({type:'mykos-peer-height', prefix, height:Math.ceil(bottom + 10)}, location.origin);
         };
         if (typeof ResizeObserver === 'function') new ResizeObserver(report).observe(document.body);
         report();
