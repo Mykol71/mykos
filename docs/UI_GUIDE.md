@@ -414,7 +414,7 @@ The four VU meters show actual CPU, memory, System and Data percentages from the
 
 ### Receiver control bank
 
-Receiver now uses the approved continuous faceplate layout. **Illumination** adjusts the blue meter lighting and remembers the browser setting; use the knob or arrow keys. **Slow / Normal / Fast** changes needle damping. **Display** turns the receiver meter lighting/needle display off and on; it does not control server power or stop collection. The original history fader and Live button retain their behavior. **History graph** reveals the detailed graph and metric controls. Dark/Light restore the original layout and original control nodes.
+Receiver now uses the approved continuous faceplate layout. Click **Illumination** to add 10 percentage points to the blue meter lighting, cycling from 100% back to 0%. Only the marker line moves; the knob body stays fixed. The percentage readout updates too, and the browser remembers the setting. Enter/Space also operate the knob. **Slow / Normal / Fast** changes needle damping. **Display** turns the receiver meter lighting/needle display off and on; it does not control server power or stop collection. The original history fader and Live button retain their behavior. **History graph** reveals the detailed graph and metric controls. Dark/Light restore the original layout and original control nodes.
 
 The black tuner shows the actual hostname and host information, with light-blue container and green VPN bars for a rolling five-minute window. The bars share recorded chart data and selected history, showing no invented readings. Counts are scaled to50 containers and15 VPNs; current counts show a dash when stale. The bars update at most once per second without additional collector/API polling.
 
@@ -423,4 +423,9 @@ The black tuner shows the actual hostname and host information, with light-blue 
 
 The smaller black VU faces sit inside the black performance window, with white needles/scales and blue light shining upward from the bottom. The hostname sits outside that window immediately above the recall controls, in royal blue. Paired container/VPN history columns are thicker and use light blue/green. Keyboard focus on knobs has a light-blue cue; pointer interaction has no red/orange focus ring.
 
-Turn the **Source** dial to show one available OS pane, or choose **All OS panes**. The adjacent dropdown provides the same choices for direct and keyboard selection. Only enabled, available panes appear. The selector preserves each pane’s configured visibility and permissions and automatically falls back to All if the selected pane becomes unavailable. Section links select their corresponding available OS pane. Other themes restore the original pane visibility.
+Click the **Source** knob to advance to the next available OS pane, cycling back through **All OS panes**. Each click moves only the marker line and updates the OS label; the knob body stays fixed. The adjacent dropdown provides the same choices for direct selection; the knob supports Enter/Space as a normal button. Only enabled, available panes appear. The selector preserves each pane’s configured visibility and permissions and automatically falls back to All if the selected pane becomes unavailable. Section links select their corresponding available OS pane. Other themes restore the original pane visibility.
+
+
+### Receiver performance enclosure
+
+The taller black performance enclosure groups the VU faces, five-minute count bars, Display switch, recall fader/Live control, needle-response switches, Illumination knob and OS Source dial/dropdown. The hostname remains outside above the enclosure. Control labels stay light against the dark background, while knobs/buttons retain their metal finish. Container-count columns are faded to35% opacity in Receiver; VPN columns and other themes retain their existing appearance. The original history controls and OS visibility rules remain intact.

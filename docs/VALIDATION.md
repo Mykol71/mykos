@@ -224,3 +224,8 @@ Restores the approved receiver control bank and continuous faceplate, including 
 ## Release215 — Receiver instrument and source dial refinements
 
 Covers black/white VU faces with bottom blue lighting, smaller meter placement inside the performance window, thicker light-blue/green count columns and the outside royal-blue hostname. Source-dial tests verify enabled-pane filtering, stable selection, safe fallback, equivalent dropdown/range behavior and original visibility preservation across themes. Existing real history/freshness, display/lighting/damping and server permission behavior remain unchanged.
+
+
+## Release216 — Receiver performance enclosure
+
+Verifies that Display, recall, Illumination and Source controls are inside the enlarged black enclosure, with dark-background label contrast and Receiver-only container-bar fading. Illumination advances in10-point steps and wraps100→0, with marker/readout/storage synchronization. The source knob is a click-to-advance button; the marker, OS label and dropdown update together, wrapping safely through available panes. Browser checks cover knob/fader behavior, source selection and restoration of original history controls on other themes. No server lifecycle changes.
