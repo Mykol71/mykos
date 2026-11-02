@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        209%{?dist}
+Release:        210%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -111,6 +111,10 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Mon Nov 02 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-210
+- Let Add Peer Cancel dismiss incomplete forms without submitting
+- Preserve busy-pairing guard and clear private invitation on close
+
 * Sun Nov 01 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-209
 - Consolidate dashboard logo, peer layout and footer refinements
 - Schedule official Ookla collector twice daily in America/Chicago

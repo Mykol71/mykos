@@ -62,3 +62,7 @@ bypass certificate validation to recover a peer connection. VPN setup failures
 leave existing VPNs and customer instances intact; review the dedicated
 `mykos-peer-<connection-id>` Libreswan connection and service logs without
 sharing its PSK or the private peer database.
+
+### Cancel enrollment
+
+Cancel closes Add Peer without validating the address fields or sending a pairing request, and clears the invitation text. Cancel and Escape are disabled while an invitation or acceptance request is in progress; wait for its result before closing.

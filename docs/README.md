@@ -1,5 +1,7 @@
 # MYKOS documentation
 
+[Release210 notes](VALIDATION.md#release210--add-peer-cancellation) cover the Add Peer Cancel repair.
+
 [Release209 notes](VALIDATION.md#release209-checkpoint--november12026) describe this signed application checkpoint and its validation limits.
 
 These maintained guides include current operational features. Historical design baselines are identified in the guides that retain them.

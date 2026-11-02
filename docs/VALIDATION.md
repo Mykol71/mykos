@@ -1,5 +1,17 @@
 # Validation record and remaining integration work
 
+## Release210 — Add Peer cancellation
+
+Fix Add Peer cancellation: Cancel closes the dialog even when required IPv4 fields are empty. It does not submit the form or send a pairing request. The private invitation is cleared on close. Cancel/Escape remain blocked while a pairing operation is in flight, avoiding misleading cancellation of a running operation.
+
+The original failure was reproduced in a real browser: Close triggered required-field validation and left the dialog open. The fixed dialog closed with empty required fields and cleared its synthetic invitation. A regression covers Cancel, invitation clearing, no backend request and busy/Escape protection.
+
+Includes all release209 behavior. Full regression, documentation, signed staged-install and live dev/prod checks gate publication; exact receipts are retained with the release. Running guest identities/processes, peers, host settings, notes and repository restrictions are preserved. Test/build/deployment scratch is cleaned.
+
+Limits: no new guest image build or snapshot restore certification; EL10 app RPMs are signed/published without live EL10/native CRIU dependency validation; existing macOS provenance limits remain.
+
+
+
 ## Release209 checkpoint — November1,2026
 
 This release packages all accepted changes since signed release197.

@@ -26,7 +26,7 @@
 <button type="button" data-peer="invite">Create invitation</button><p>Or paste an invitation from the other host:</p>
 <textarea name="invitation" rows="5" style="width:100%;box-sizing:border-box" autocomplete="off" spellcheck="false" aria-label="Private pairing invitation"></textarea>
 <p>Keep invitations private. They grant reciprocal administrator controls to the named host.</p>
-<button type="button" data-peer="accept">Accept and connect</button> <button value="close">Close</button><p data-peer="status" role="status"></p></form>`;
+<button type="button" data-peer="accept">Accept and connect</button> <button type="button" data-peer="cancel">Cancel</button><p data-peer="status" role="status"></p></form>`;
     dialog.querySelectorAll('label').forEach(item => item.style.cssText = 'display:block;margin:12px 0');
     document.body.append(dialog);
     async function request(path, options={}) {
@@ -47,6 +47,10 @@
     dialog.addEventListener('submit', event => { if (busy) event.preventDefault(); });
     dialog.addEventListener('click', async event => {
         const action = event.target.dataset.peer;
+        if (action === 'cancel') {
+            if (!busy) dialog.close();
+            return;
+        }
         if (!['invite','accept'].includes(action) || busy) return;
         const output = dialog.querySelector('[data-peer=status]');
         busy = true; dialog.querySelectorAll('button').forEach(button => button.disabled = true);
