@@ -214,3 +214,8 @@ operator change; the initial 41-file snapshot remains archived as evidence.
 ## Release213 — Receiver appearance
 
 Receiver adds an optional silver-face dashboard appearance. Validation covers three-way theme preference/controls, real and stale meter readings, overload display and unchanged history controls. Meters consume existing chart samples with no extra polling. Browser checks and signed install/promotion evidence are recorded with release213. This app release does not recertify OS image builds or restore guest state.
+
+
+## Release214 — Receiver layout correction
+
+Restores the approved receiver control bank and continuous faceplate, including functional illumination/damping/display controls. Validates original history-node preservation across themes, real count-history bounds, no fake stale readings, keyboard knob/fader interaction and warm count bars. No guest lifecycle changes.
