@@ -9,6 +9,7 @@ context.window.mykosReceiverCounts(metrics,1000,301000);
 assert.equal(get('receiver-container-count').textContent,'4');assert.equal(get('receiver-vpn-count').textContent,'1');
 assert.equal((get('receiver-count-bars').drawing.match(/data-series="containers"/g)||[]).length,2,'Only in-window nonzero past observations');
 assert.equal((get('receiver-count-bars').drawing.match(/data-series="vpns"/g)||[]).length,1);
+assert.match(get('receiver-count-bars').drawing,/width="7"/);assert.match(get('receiver-count-bars').drawing,/fill="#8ed5ff"/);assert.match(get('receiver-count-bars').drawing,/fill="#71de91"/);
 const before=writes;context.window.mykosReceiverCounts(metrics,1000,301100);assert.equal(writes,before,'Rendering bounded to1Hz');
 context.window.mykosReceiverCounts(metrics,100000,330000);assert.equal(get('receiver-container-count').textContent,'—','Old current count marked unavailable');
 root.dataset.theme='dark';const old=writes;context.window.mykosReceiverCounts(metrics,100000,332000);assert.equal(writes,old);

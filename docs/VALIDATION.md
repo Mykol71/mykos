@@ -219,3 +219,8 @@ Receiver adds an optional silver-face dashboard appearance. Validation covers th
 ## Release214 — Receiver layout correction
 
 Restores the approved receiver control bank and continuous faceplate, including functional illumination/damping/display controls. Validates original history-node preservation across themes, real count-history bounds, no fake stale readings, keyboard knob/fader interaction and warm count bars. No guest lifecycle changes.
+
+
+## Release215 — Receiver instrument and source dial refinements
+
+Covers black/white VU faces with bottom blue lighting, smaller meter placement inside the performance window, thicker light-blue/green count columns and the outside royal-blue hostname. Source-dial tests verify enabled-pane filtering, stable selection, safe fallback, equivalent dropdown/range behavior and original visibility preservation across themes. Existing real history/freshness, display/lighting/damping and server permission behavior remain unchanged.

@@ -407,13 +407,20 @@ ID/start controls and table begin below the heading without a separate status ro
 
 ## Receiver appearance
 
-Choose **Receiver** in the footer Theme selector (also available on the login screen). The leaf cycles Dark → Light → Receiver. The browser remembers the selection. Receiver uses a brushed aluminum face, warm analog VU meters, round metal action buttons and a recessed history fader with an engraved scale and ribbed handle. The larger flower has a transparent background.
+Choose **Receiver** in the footer Theme selector (also available on the login screen). The leaf cycles Dark → Light → Receiver. The browser remembers the selection. Receiver uses a brushed aluminum face, compact blue-lit black VU meters, round metal action buttons and a recessed history fader with an engraved scale and ribbed handle. The larger flower has a transparent background.
 
 The four VU meters show actual CPU, memory, System and Data percentages from the existing host collector, following the same selected history and freshness rules as the graph. Missing or stale readings show a dim face and a dash; needles stop at 100% while the value still reports overload. The original history graph, metric controls and all actions remain available. Compact peers inherit the appearance without adding meter height. This is an appearance option, not an audio interface or a change to host resource policy.
 
 
 ### Receiver control bank
 
-Receiver now uses the approved continuous faceplate layout. **Illumination** adjusts the warm meter lighting and remembers the browser setting; use the knob or arrow keys. **Slow / Normal / Fast** changes needle damping. **Display** turns the receiver meter lighting/needle display off and on; it does not control server power or stop collection. The original history fader and Live button retain their behavior. **History graph** reveals the detailed graph and metric controls. Dark/Light restore the original layout and original control nodes.
+Receiver now uses the approved continuous faceplate layout. **Illumination** adjusts the blue meter lighting and remembers the browser setting; use the knob or arrow keys. **Slow / Normal / Fast** changes needle damping. **Display** turns the receiver meter lighting/needle display off and on; it does not control server power or stop collection. The original history fader and Live button retain their behavior. **History graph** reveals the detailed graph and metric controls. Dark/Light restore the original layout and original control nodes.
 
-The black tuner shows the actual hostname and host information, with warm amber container and VPN bars for a rolling five-minute window. The bars share recorded chart data and selected history, showing no invented readings. Counts are scaled to50 containers and15 VPNs; current counts show a dash when stale. The bars update at most once per second without additional collector/API polling.
+The black tuner shows the actual hostname and host information, with light-blue container and green VPN bars for a rolling five-minute window. The bars share recorded chart data and selected history, showing no invented readings. Counts are scaled to50 containers and15 VPNs; current counts show a dash when stale. The bars update at most once per second without additional collector/API polling.
+
+
+### Receiver instruments and OS selector
+
+The smaller black VU faces sit inside the black performance window, with white needles/scales and blue light shining upward from the bottom. The hostname sits outside that window immediately above the recall controls, in royal blue. Paired container/VPN history columns are thicker and use light blue/green. Keyboard focus on knobs has a light-blue cue; pointer interaction has no red/orange focus ring.
+
+Turn the **Source** dial to show one available OS pane, or choose **All OS panes**. The adjacent dropdown provides the same choices for direct and keyboard selection. Only enabled, available panes appear. The selector preserves each pane’s configured visibility and permissions and automatically falls back to All if the selected pane becomes unavailable. Section links select their corresponding available OS pane. Other themes restore the original pane visibility.

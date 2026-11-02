@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(require('node:path').join(__dirname,'../services/web/index.html'),'utf8');
+const source=html.match(/function mykosReceiverSourceSelection\(panes,selected\)\{[\s\S]*?\n\}/)[0];const context=vm.createContext({});vm.runInContext(source,context);
+const panes=[{id:'redhat',label:'Red Hat',visible:true},{id:'windows-',label:'Windows',visible:true},{id:'macos-',label:'macOS',visible:false}];
+let s=context.mykosReceiverSourceSelection(panes,'windows-');assert.deepEqual(Array.from(s.choices,x=>x.id),['all','redhat','windows-']);assert.equal(s.index,2);
+s=context.mykosReceiverSourceSelection(panes,'macos-');assert.equal(s.index,0,'Unavailable OS must not be exposed or selected');
+panes[1].visible=false;s=context.mykosReceiverSourceSelection(panes,'windows-');assert.equal(s.index,0,'Refresh falls back safely');
+s=context.mykosReceiverSourceSelection([],'redhat');assert.equal(s.choices.length,1);assert.equal(s.choices[0].id,'all');assert.equal(s.index,0);
+assert.match(html,/visible:!p.panel.hidden&&!p.heading.hidden/);assert.match(html,/attributeFilter:\['hidden'\]/);assert.ok(!html.includes('p.panel.hidden=hidden'),'Appearance filtering must not overwrite configured visibility');
+console.log('OS source choices: enabled panes only, stable selection, unavailable fallback, empty choices and visibility preservation passed.');
