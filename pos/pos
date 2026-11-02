@@ -21,8 +21,7 @@ MERAKI_ORG_ID=${MERAKI_ORG_ID:-}
 # Only the fixed host entry point selects host VPN setup.
 MYKOS_VPN_HOST=0
 BUILDDATE=$(date +%Y%m%d)
-BUILDROOT=/var/tmp/containers/$BUILDDATE/$KSNAME
-mkdir -p $BUILDROOT/docker
+
 HOST_USER=`whoami`
 #[ "$HOST_USER" != "root" ] && echo "You must be root or in sudoers to run $0." && exit 1
 export ROOTDIR="$(pwd)"
@@ -46,12 +45,12 @@ check_image_builder() {
       command -v ksvalidator >/dev/null 2>&1 || { echo 'Install pykickstart on the builder.' >&2; return 1; }
       # Validate the temporary copy with the installed parser, independent of host release.
       create_ks || return 1
-      ksvalidator "/var/tmp/$OS.ks" || return 1 ;;
+      ksvalidator "${BUILD_KICKSTART:-/var/tmp/$OS.ks}" || return 1 ;;
   esac
 }
 
 create_ks() {
-"$MYKOS_PYTHON" ./prepare_ks.py "ks/$OS.ks" "/var/tmp/$OS.ks"
+"$MYKOS_PYTHON" ./prepare_ks.py "ks/$OS.ks" "${BUILD_KICKSTART:-/var/tmp/$OS.ks}"
 }
 
 create_dockerfile() {
@@ -157,16 +156,24 @@ build-image() (
   esac
   case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
   if podman image exists "$OS"; then echo "Image already built: $OS"; return 0; fi
+  local BUILDROOT BUILD_KICKSTART native_lock
+  mkdir -p -m 0700 /var/tmp/containers || return 1
+  "$MYKOS_PYTHON" -c 'import os,stat; p="/var/tmp/containers"; s=os.lstat(p); assert stat.S_ISDIR(s.st_mode) and s.st_uid==os.geteuid() and not s.st_mode & 0o022, "Unsafe native build directory"' || return 1
+  exec {native_lock}</var/tmp/containers || return 1
+  flock -n "$native_lock" || { echo 'Another native image build is running; wait for its capture/commit to finish.' >&2; return 1; }
+  BUILDROOT=$(mktemp -d "/var/tmp/containers/mykos-native-$OS.XXXXXXXX") || return 1
+  trap 'rm -rf -- "$BUILDROOT"' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM HUP
+  BUILD_KICKSTART="$BUILDROOT/$OS.ks"
+  mkdir -m 0700 "$BUILDROOT/docker" || return 1
   check_image_builder || return 1
-  rm -f "/var/tmp/$OS-docker.tar.xz" || return 1
   create_ks || return 1
-  if ! "$MYKOS_PYTHON" ./build_rootfs.py "$OS" "/var/tmp/$OS.ks"; then
+  if ! "$MYKOS_PYTHON" ./build_rootfs.py "$OS" "$BUILD_KICKSTART" --output-directory "$BUILDROOT/docker"; then
     echo "Image creation failed; see the installer diagnostics directory printed above. Podman build was not started." >&2
     return 1
   fi
-  [ -s "/var/tmp/$OS-docker.tar.xz" ] || { echo 'Image creator did not produce a rootfs archive' >&2; return 1; }
-  mkdir -p "$BUILDROOT/docker" || return 1
-  mv "/var/tmp/$OS-docker.tar.xz" "$BUILDROOT/docker" || return 1
+  [ -s "$BUILDROOT/docker/$OS-docker.tar.xz" ] || { echo 'Image creator did not produce a rootfs archive' >&2; return 1; }
   (
     cd "$BUILDROOT/docker" || exit 1
     create_dockerfile && podman build --tag "$OS" .

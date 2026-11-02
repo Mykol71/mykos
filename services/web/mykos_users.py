@@ -49,6 +49,8 @@ def password_minimum(name):
 def set_password(name, password, role=None, create=False):
     validate_name(name)
     minimum = password_minimum(name)
+    if len(password) > 4096:
+        raise ValueError('Use a password of at most 4096 characters')
     if len(password) < minimum:
         raise ValueError(f'Use a password of at least {minimum} characters')
     if role is not None and role not in ('user', 'admin'):

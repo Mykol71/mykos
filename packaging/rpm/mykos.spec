@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        210%{?dist}
+Release:        212%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -95,11 +95,10 @@ fi
 
 %preun
 if [ "$1" -eq 0 ]; then
+  %{mykos_python} /usr/share/mykos/bin/mykos-install stop_services || exit 1
   systemctl disable --now mykos-firstboot.service >/dev/null 2>&1 || :
   %{mykos_python} /usr/share/mykos/bin/mykos-bootstrap --uninstall || echo "MYKOS bootstrap cleanup needs attention; see /var/lib/mykos-installer/bootstrap.json"
   %{mykos_python} /usr/local/sbin/mykos-snapshot unhook || :
-  systemctl stop mykos-host-history.service mykos-web.service mykos-container-admin.socket mykos-terminal.socket mykos-collector.timer mykos-details.timer mykos-extended.timer mykos-command-collector.timer >/dev/null 2>&1 || :
-  systemctl disable mykos-host-history.service mykos-web.service mykos-container-admin.socket mykos-terminal.socket mykos-collector.timer mykos-details.timer mykos-extended.timer mykos-command-collector.timer >/dev/null 2>&1 || :
 fi
 
 %postun
@@ -111,6 +110,11 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Mon Nov 02 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-212
+- Reauthorize terminals and throttle login admission persistently
+- Isolate native builds through commit and share service removal lifecycle
+- Correct private-note OpenAPI authentication and speed-check documentation
+
 * Mon Nov 02 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-210
 - Let Add Peer Cancel dismiss incomplete forms without submitting
 - Preserve busy-pairing guard and clear private invitation on close

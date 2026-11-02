@@ -1,5 +1,20 @@
 # Validation record and remaining integration work
 
+## Release212 — Review repairs
+
+- Server-side terminal reauthorization before acceptance/input and every five seconds while idle; session/API-key revocation, expiry, role loss and invalid filesystem-preview leases close the transport.
+- Persistent bounded login admission before password hashing:20 attempts/source/minute,10 attempts/account/five minutes,429 plus Retry-After, automatic recovery, hashed bucket identities and bounded storage. Valid login resets only the account bucket. Username/password inputs are bounded; existing password minimum policy remains.
+- Native builds hold admission through final commit and use private generated kickstarts, archive destinations and Docker contexts, cleaned on every exit. Lifecycle protection recognizes both private and legacy kickstart paths. Source kickstarts are preserved.
+- RPM and source removal share the canonical complete control-plane stop/disable list, including idle-base, preview GC and speed timers, without targeting persistent guest scopes.
+- GET/PUT personal-note OpenAPI operations now declare the required owner browser-session authentication.
+- Speed documentation matches midnight/noon Central scheduling and13-hour successful-cache freshness; immediate staleness on failure remains. Identity/security/build/removal guides updated.
+
+Includes release210 behavior. Publication is gated on focused regression/concurrency/security tests, the full Linux/dev Python suite, JavaScript and docs checks, signed staged installation and live dev then production verification. Exact results and cleanup receipts accompany the release.
+
+Limits: no new guest OS image build or snapshot restore certification. EL10 application packages are signed/published without a live EL10 or complete native CRIU dependency installation test. Existing macOS provenance limitations remain. Login throttling is not MFA or comprehensive external edge protection.
+
+
+
 ## Release210 — Add Peer cancellation
 
 Fix Add Peer cancellation: Cancel closes the dialog even when required IPv4 fields are empty. It does not submit the form or send a pairing request. The private invitation is cleared on close. Cancel/Escape remain blocked while a pairing operation is in flight, avoiding misleading cancellation of a running operation.

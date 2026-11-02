@@ -4,8 +4,9 @@
 
 **How MYKOS separates trust, limits routine privileges, protects identities, and preserves customer state.**
 
-Implementation baseline: release **1.5.20261024-154**, reviewed for this guide on
-29 October 2026. This document explains implemented controls and their limits.
+Original implementation baseline: release **1.5.20261024-154** (29 October 2026).
+Terminal reauthorization and login admission were updated for release **212** on
+2 November 2026. This document explains implemented controls and their limits.
 It is not an independent security assessment, penetration-test report, or
 certification. Publishing it adds documentation, not new security enforcement.
 
@@ -69,8 +70,9 @@ The Secure cookie flag follows the configured HTTP/HTTPS deployment mode.
 
 Password resets, role changes, account deletion, and explicit session revocation
 invalidate that account’s stored sessions. This affects later authorization
-checks; an already connected terminal is not reauthorized on every byte and may
-need to be closed explicitly for immediate disconnection.
+checks. Terminal servers check authority before accepting and forwarding input,
+and at five-second intervals while idle; revocation or expiry closes the bridge.
+Desktop and peer proxies also perform recurring authorization checks.
 
 API v2 keys use random secrets and stored SHA-256 digests. Authentication compares
 the supplied key’s digest with the stored value using a constant-time comparison.
@@ -213,7 +215,8 @@ following protections automatically:
 
 - Strong isolation between hostile tenants on a shared privileged host.
 - A complete per-customer or per-application authorization model.
-- MFA, comprehensive login throttling, or every desired edge/network protection.
+- MFA or every desired edge/network protection. Login throttling is implemented
+  as described below; it is not a substitute for those other controls.
 - Automatic guest OS patching or remediation of an old application’s vulnerabilities.
 - Encryption of every disk, backup, capture, or secret store at rest.
 - A complete tamper-evident audit trail, independent security certification, or
@@ -242,3 +245,16 @@ When handing the change to another human, record the boundary it crosses, why th
 caller is allowed to cross it, what state must survive, how failure is reported,
 and how access can be revoked or the change recovered. See the
 [developer’s guide](DEVELOPERS_GUIDE.md) for the source map and change workflow.
+
+## Login admission
+
+Before password hashing, persistent SQLite admission permits at most 20 attempts
+per source per 60 seconds and 10 per account per 300 seconds. Throttled requests
+receive HTTP 429 and Retry-After. Successful login resets only that account bucket;
+it does not erase the source limit. Windows expire automatically, avoiding a
+permanent account lockout. Only hashed source/account bucket keys, counts and
+expiry timestamps are retained, with at most 10,000 active buckets. Database
+failures deny admission rather than bypassing limits. Source identity comes from
+the ASGI client address, not a client-supplied X-Forwarded-For value; preserve the
+loopback-only trusted proxy configuration. Login input bounds are 64 username
+characters and 4096 password characters; existing minimum-length policy remains.

@@ -223,7 +223,7 @@ def test_api_validation_freshness_and_openapi(environment):
     for path,entry in schema['paths'].items():
         for operation in entry.values():
             if isinstance(operation, dict) and 'responses' in operation:
-                assert operation['security']==[{'MYKOSNotesSession' if '/notes/' in path else 'MYKOSApiKey': []}]
+                assert operation['security']==[{'MYKOSNotesSession' if path == '/api/v2/personal-notes' or '/notes/' in path else 'MYKOSApiKey': []}]
 
 
 def test_image_os_details_available_to_dashboard_and_api(environment):

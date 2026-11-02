@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from html import escape as html_escape
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from mykos_config import BASE
 DB = BASE/'data/auth.db'
 # Use the toolkit root in a source checkout and the installed toolkit on prod.
@@ -33,8 +33,8 @@ def origin(request):
     expected=os.getenv('MYKOS_PUBLIC_ORIGIN',str(request.base_url).rstrip('/'))
     if not request.headers.get('origin') or not hmac.compare_digest(request.headers['origin'],expected): raise HTTPException(403,'Invalid origin')
 class Credentials(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=64)
+    password: str = Field(max_length=4096)
 
 from pane_notes import Pane, NoteUpdate, read as read_pane_note, save as save_pane_note, authorize as authorize_pane_notes
 from pane_notes import read_personal as read_personal_note, save_personal as save_personal_note
@@ -194,10 +194,15 @@ def mykos_current_user(request: Request):
 @app.post('/api/login')
 def login(data:Credentials,request:Request):
     origin(request)
+    from mykos_users import DB as identity_db
+    from login_guard import reserve, success
+    attempts = identity_db.with_name('login-attempts.db')
+    reserve(data.username, request.client.host if request.client else 'unknown', attempts)
     with db() as c:
         row=c.execute('SELECT salt,hash FROM users WHERE name=?',(data.username,)).fetchone()
         valid=row and hmac.compare_digest(digest(data.password,row[0]),row[1])
         if not valid: raise HTTPException(401,'Invalid login')
+        success(data.username, attempts)
         token=secrets.token_urlsafe(32)
         c.execute('INSERT INTO sessions VALUES(?,?,?)',(hashlib.sha256(token.encode()).hexdigest(),data.username,int(time.time())+28800))
     response=JSONResponse({'ok':True})
@@ -383,9 +388,32 @@ async def mykos_terminal_websocket(ws: WebSocket, shop: str):
         await mykos_terminal_bridge(ws, shop, action=action)
 
 
+TERMINAL_AUTH_INTERVAL = 5
+
+
+def mykos_terminal_authority(ws, shop, preview_owner=None):
+    """Revalidate the original authority; a stale peer principal is insufficient."""
+    from mykos_peers import principal, authenticate
+    path = ws.scope.get('path', '').removeprefix('/mykos')
+    if path.startswith('/api/v2/terminal/'):
+        from api_v2 import administrator
+        administrator(ws)
+    elif principal(ws):
+        authenticate(ws.scope)
+    elif not mykos_terminal_permission(ws).get('allowed'):
+        raise HTTPException(403, 'Administrator login required')
+    if preview_owner:
+        from container_admin import invoke
+        invoke('snapshot-preview-status', shop, preview_owner)
+
+
 async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell', preview_owner: str = None):
     """Common PTY transport; callers must authorize and validate the shop first."""
+    writer = None
+    async def authorized():
+        await _mykos_asyncio.wait_for(_mykos_asyncio.to_thread(mykos_terminal_authority, ws, shop, preview_owner), 5)
     try:
+        await authorized()
         reader, writer = await _mykos_asyncio.wait_for(
             _mykos_asyncio.open_unix_connection(os.environ.get('MYKOS_TERMINAL_SOCKET', '/run/mykos-terminal.sock')), 5)
         payload = {'shop': shop}
@@ -402,8 +430,12 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell',
             await writer.wait_closed()
             await ws.close(code=1011)
             return
-    except (OSError, TimeoutError, ValueError):
-        await ws.close(code=1011)
+        await authorized()
+    except (HTTPException, OSError, TimeoutError, ValueError):
+        if writer:
+            writer.close()
+            await writer.wait_closed()
+        await ws.close(code=1008)
         return
 
     await ws.accept()
@@ -417,6 +449,7 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell',
             if chunk is None and packet.get('text') is not None:
                 chunk = packet['text'].encode()
             if chunk:
+                await authorized()
                 writer.write(chunk[:4096])
                 await writer.drain()
 
@@ -429,15 +462,15 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell',
 
     tasks = [_mykos_asyncio.create_task(to_shell()),
              _mykos_asyncio.create_task(to_browser())]
-    from mykos_peers import principal, authenticate as peer_authenticate
-    if principal(ws):
-        async def peer_watch():
-            while True:
-                await _mykos_asyncio.sleep(15)
-                await _mykos_asyncio.to_thread(peer_authenticate, ws.scope)
-        tasks.append(_mykos_asyncio.create_task(peer_watch()))
+    async def authorization_watch():
+        while True:
+            await _mykos_asyncio.sleep(TERMINAL_AUTH_INTERVAL)
+            await authorized()
+    tasks.append(_mykos_asyncio.create_task(authorization_watch()))
+    denied = False
     try:
-        await _mykos_asyncio.wait(tasks, return_when=_mykos_asyncio.FIRST_COMPLETED)
+        done, _ = await _mykos_asyncio.wait(tasks, return_when=_mykos_asyncio.FIRST_COMPLETED)
+        denied = any(task.exception() is not None for task in done if not task.cancelled())
     finally:
         for task in tasks:
             task.cancel()
@@ -448,7 +481,7 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell',
         except OSError:
             pass
         try:
-            await ws.close()
+            await ws.close(code=1008 if denied else 1000)
         except (RuntimeError, OSError):
             pass
 

@@ -56,7 +56,7 @@ def watch(process,log,timeout):
     finally:terminate(process)
 
 
-def build(os_name,kickstart,check_platform=False,release_file=Path('/etc/os-release'),temporary_root='/var/tmp',timeout=7200,lock_root='/var/tmp'):
+def build(os_name,kickstart,check_platform=False,release_file=Path('/etc/os-release'),temporary_root='/var/tmp',timeout=7200,lock_root='/var/tmp',output_directory=None):
     if not SUPPORTED.fullmatch(os_name):raise ValueError('Unsupported native image OS')
     if os.geteuid()!=0:raise ValueError('Native image builds require root')
     kickstart=Path(kickstart)
@@ -97,7 +97,9 @@ def build(os_name,kickstart,check_platform=False,release_file=Path('/etc/os-rele
         candidates=list((directory/'result').rglob(archive))
         if len(candidates)!=1 or candidates[0].is_symlink() or not candidates[0].is_file() or not candidates[0].stat().st_size:
             raise RuntimeError('Image creator did not produce exactly one rootfs archive; see '+str(directory))
-        destination=Path(temporary_root)/archive
+        output=Path(output_directory) if output_directory is not None else Path(temporary_root)
+        if output.is_symlink() or not output.is_dir():raise ValueError('Unsafe image output directory')
+        destination=output/archive
         if destination.is_symlink():raise ValueError('Unsafe image archive destination')
         os.replace(candidates[0],destination)
         # Successful roots contain a second unpacked image and private sockets.
@@ -112,6 +114,7 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('os_name');parser.add_argument('kickstart')
     parser.add_argument('--check-platform',action='store_true')
+    parser.add_argument('--output-directory')
     args=parser.parse_args()
-    try:raise SystemExit(build(args.os_name,args.kickstart,args.check_platform))
+    try:raise SystemExit(build(args.os_name,args.kickstart,args.check_platform,output_directory=args.output_directory))
     except (ValueError,OSError,RuntimeError,subprocess.SubprocessError) as error:parser.exit(1,str(error)+'\n')

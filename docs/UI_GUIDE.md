@@ -146,7 +146,7 @@ VPN removal control and then the common log, terminal, and reboot controls.
 To pair hosts, select the local **Peer +** or **Add another peer**, enter both
 reachable IPv4 addresses, and select **Create invitation**. Copy the private
 invitation into the other host's dialog and select **Accept and connect** within
-15 minutes. **Close** dismisses the dialog. Invitations grant reciprocal admin
+15 minutes. **Cancel** dismisses the dialog without validating empty fields. Invitations grant reciprocal admin
 control and must stay private. Full prerequisites, certificate handling, and
 removal behavior are in [Peer hosts](PEERS.md).
 

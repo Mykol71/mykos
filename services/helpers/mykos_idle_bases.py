@@ -86,7 +86,8 @@ def busy(os_name):
     if images.job(os_name).get('state') in ('queued', 'deleting', 'resetting'): return True
     for process in prune.process_table().values():
         args = process['args']
-        if any('/var/tmp/' + os_name + '.ks' in arg for arg in args): return True
+        from mykos_runtime import native_build_os
+        if native_build_os(args) == os_name: return True
         if any(Path(arg).name == 'pos' for arg in args[:3]) and os_name in args: return True
         if any(Path(arg).name == 'podman' for arg in args[:2]):
             if any(arg in ('build', 'commit', 'exec', 'attach', 'checkpoint', 'restore') for arg in args[1:3]):

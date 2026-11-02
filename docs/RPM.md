@@ -231,3 +231,11 @@ worker ownership before cleanup; unknown entries are retained for inspection.
 Do not delete repository roots or shared images to clear a failed job. Worker
 images are reusable operational caches, not guest builds. A mirror sync does not
 refresh MYKOS application RPMs; publish those through the signed release workflow.
+
+### Control-plane removal
+
+RPM removal uses the canonical installer stop_services action before removing
+managed files. It stops/disables the complete maintained timer/service list,
+including idle-base, snapshot-preview garbage collection and speed measurement,
+and stops matching active control-plane workers. It does not target persistent
+Podman runtime scopes or remove guest disks, images, notes or intentional snapshots.

@@ -16,6 +16,7 @@ def test_image_build_stops_before_unsafe_followup(tmp_path,build_major):
     source=(HELPERS.parents[1]/'pos/pos').read_text()
     preflight=source[source.index('check_image_builder() {'):source.index('\ncreate_ks() {')]
     build=source[source.index('create-image() {'):source.index('\nset_working_shopcode() {')]
+    build=build.replace('/var/tmp/containers',str(tmp_path/'containers'))
     script=preflight+'\n'+build+'''
 renice() { :; }
 ionice() { :; }
@@ -26,12 +27,11 @@ podman() {
   echo unexpected-podman-operation
   return 1
 }
-rm() { :; }
+flock() { :; }
 create_ks() { :; }
-builder_python() { [ "$1" = ./build_rootfs.py ] || echo unexpected-python-operation; return 1; }
+builder_python() { [ "$1" = -c ] && return 0; [ "$1" = ./build_rootfs.py ] || echo unexpected-python-operation; return 1; }
 MYKOS_PYTHON=builder_python
 mv() { echo unexpected-file-move; return 1; }
-mkdir() { echo unexpected-directory-write; return 1; }
 create_dockerfile() { echo unexpected-dockerfile-write; return 1; }
 create-image
 '''
@@ -41,6 +41,9 @@ create-image
     assert result.returncode!=0
     assert 'Image creation failed' in result.stderr
     assert 'unexpected-' not in result.stdout+result.stderr
+    # Private preparation is allowed; failure must clean the owned workspace.
+    assert list((tmp_path/'containers').iterdir())==[]
+    (tmp_path/'containers').rmdir()
     assert not list(tmp_path.iterdir())
 
 def load(name):

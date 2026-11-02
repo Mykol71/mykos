@@ -953,7 +953,8 @@ host/guest and RTI/Dove application alert-field system. Native VPN/shared routes
 are detailed in <a href="NETWORKING.html#vpn-architecture-and-operations">VPN architecture and operations</a>.</p>
 <h3 id="host-internet-speed-measurements">Host internet speed measurements</h3>
 <p>When the existing official Ookla <code>speedtest</code> binary is installed at <code>/usr/bin/speedtest</code>,
-<code>mykos-speedtest-collector.timer</code> starts one bounded measurement per minute. The OS
+<code>mykos-speedtest-collector.timer</code> starts one bounded measurement at midnight and noon
+America/Chicago; dev is staggered by 30 seconds. Missed slots are not replayed. The OS
 repository&#39;s <code>speedtest-cli</code> is not used or installed. Collection has a separate
 non-overlapping lock and a 45-second client timeout; ordinary inventory collection
 and API reads do not wait for it.</p>
@@ -967,8 +968,10 @@ These are measured internet speeds, separate from the network graphs&#39; live t
 </code></pre>
 <p>Ookla JSON bandwidth values are bytes per second; MYKOS converts them to decimal
 megabits per second. Failed or timed-out attempts keep the last successful numbers,
-mark them stale, and expose a bounded error code. Results older than three minutes
+mark them stale, and expose a bounded error code. Successful results older than 13 hours
 are stale even if the latest attempt was successful. No public IP, result-sharing
 URL, or raw client output is published. If the official client is missing or a
 different client occupies that path, no network test is run and no rates are invented.</p>
+<h3 id="terminal-authorization-lifetime">Terminal authorization lifetime</h3>
+<p>Browser sessions and admin API keys are reauthorized by the server before accepting a terminal, before forwarding each input chunk, and every five seconds while idle. Revocation, expiry or loss of the admin role closes the transport and its helper connection. Snapshot filesystem previews also require a valid live preview lease. Client polling is an additional usability check, not the authorization boundary.</p>
 <footer>MYKOS documentation</footer></main></html>

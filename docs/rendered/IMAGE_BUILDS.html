@@ -490,4 +490,11 @@ guards are accidental-operation safeguards, not an authorization boundary.</p>
 must not perform hardware firmware updates or leave root console logins blocked.
 These edits apply to generated copies in <code>pos/prepare_ks.py</code>; retain the operator&#39;s
 original kickstarts, including local repository and application fixes.</p>
+<h3 id="native-build-workspace-ownership">Native build workspace ownership</h3>
+<p>Native image creation holds a single admission lock through rootfs installation,
+Podman build, base startup and final commit. A second native build exits with a
+busy message before modifying a kickstart or archive. Each job uses its own
+private generated kickstart, rootfs output and Docker context; original source
+kickstarts are not edited. The owned job workspace is removed on success, failure
+or interruption. Installer diagnostics remain in the printed diagnostic location.</p>
 <footer>MYKOS documentation</footer></main></html>

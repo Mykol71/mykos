@@ -616,7 +616,7 @@ def openapi_v2(request: Request):
     for path, entry in schema.get('paths', {}).items():
         for operation in entry.values():
             if isinstance(operation, dict) and 'responses' in operation:
-                operation['security'] = [{'MYKOSNotesSession' if '/notes/' in path else 'MYKOSApiKey': []}]
+                operation['security'] = [{'MYKOSNotesSession' if path == '/api/v2/personal-notes' or '/notes/' in path else 'MYKOSApiKey': []}]
     return schema
 
 

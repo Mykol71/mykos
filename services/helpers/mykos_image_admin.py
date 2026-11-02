@@ -3,7 +3,7 @@ import fcntl,json,os,shutil,subprocess,time,re
 from datetime import datetime,timezone
 from pathlib import Path
 import mykos_vm as vm
-from mykos_runtime import NATIVE_OS_NAMES,PODMAN,run
+from mykos_runtime import NATIVE_OS_NAMES,PODMAN,run,native_build_os
 
 STATE=Path('/var/lib/mykos/image-admin')
 
@@ -89,7 +89,7 @@ def remove(os_name,expected_id):
             args=process['args']
             if any(Path(arg).name=='podman' for arg in args[:2]) and any(arg in ('build','commit') for arg in args[1:3]) and any(arg in (os_name,os_name+':latest',reference(os_name)) for arg in args):
                 raise ValueError('Native image build or commit is still active')
-        if any(any('/var/tmp/'+os_name+'.ks' in arg for arg in proc['args']) for proc in mykos_prune.builders().values()):
+        if any(native_build_os(proc['args']) == os_name for proc in mykos_prune.builders().values()):
             raise ValueError('Native image build is still active')
         active=subprocess.run(['systemctl','is-active','mykos-image-build@'+os_name+'.service'],capture_output=True,text=True,timeout=10)
         if active.stdout.strip() in ('active','activating','deactivating','reloading'):raise ValueError('Image build is still active')
@@ -205,7 +205,7 @@ def capture(os_name,confirmation):
         if job(os_name).get('state') in ('queued','deleting','resetting'):
             raise ValueError('Image removal is active')
         import mykos_prune
-        if any(any('/var/tmp/'+os_name+'.ks' in arg for arg in proc['args']) for proc in mykos_prune.builders().values()):
+        if any(native_build_os(proc['args']) == os_name for proc in mykos_prune.builders().values()):
             raise ValueError('Native image build is still active')
         for process in mykos_prune.process_table().values():
             args=process['args']
@@ -253,7 +253,7 @@ def reset_base(os_name,expected_id=None,*,only_if_stopped=False):
         image=json.loads(run([PODMAN,'image','inspect',reference(os_name)],timeout=20))[0]
         if expected_id and image['Id']!=expected_id:raise ValueError('Captured image changed since reset was requested')
         import mykos_prune
-        if any(any('/var/tmp/'+os_name+'.ks' in arg for arg in proc['args']) for proc in mykos_prune.builders().values()):raise ValueError('Image build is still active')
+        if any(native_build_os(proc['args']) == os_name for proc in mykos_prune.builders().values()):raise ValueError('Image build is still active')
         for proc in mykos_prune.process_table().values():
             args=proc['args']
             if any(Path(arg).name=='podman' for arg in args[:2]) and any(arg in ('build','commit') for arg in args[1:3]) and any(arg in (os_name,os_name+':latest',reference(os_name)) for arg in args):raise ValueError('Image build or commit is still active')

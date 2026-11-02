@@ -782,7 +782,8 @@ are detailed in [VPN architecture and operations](NETWORKING.md#vpn-architecture
 ### Host internet speed measurements
 
 When the existing official Ookla `speedtest` binary is installed at `/usr/bin/speedtest`,
-`mykos-speedtest-collector.timer` starts one bounded measurement per minute. The OS
+`mykos-speedtest-collector.timer` starts one bounded measurement at midnight and noon
+America/Chicago; dev is staggered by 30 seconds. Missed slots are not replayed. The OS
 repository's `speedtest-cli` is not used or installed. Collection has a separate
 non-overlapping lock and a 45-second client timeout; ordinary inventory collection
 and API reads do not wait for it.
@@ -801,7 +802,11 @@ Example cache response:
 
 Ookla JSON bandwidth values are bytes per second; MYKOS converts them to decimal
 megabits per second. Failed or timed-out attempts keep the last successful numbers,
-mark them stale, and expose a bounded error code. Results older than three minutes
+mark them stale, and expose a bounded error code. Successful results older than 13 hours
 are stale even if the latest attempt was successful. No public IP, result-sharing
 URL, or raw client output is published. If the official client is missing or a
 different client occupies that path, no network test is run and no rates are invented.
+
+### Terminal authorization lifetime
+
+Browser sessions and admin API keys are reauthorized by the server before accepting a terminal, before forwarding each input chunk, and every five seconds while idle. Revocation, expiry or loss of the admin role closes the transport and its helper connection. Snapshot filesystem previews also require a valid live preview lease. Client polling is an additional usability check, not the authorization boundary.

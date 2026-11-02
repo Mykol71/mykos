@@ -454,6 +454,20 @@ class Installer:
         if self.live:command(['systemctl','daemon-reload'])
         print('Restored. Services remain stopped; verify and deliberately re-enable them.')
 
+    def stop_services(self):
+        """Stop MYKOS control-plane units; never target persistent Podman scopes."""
+        self.mutation()
+        if not self.live:fail('stop-services requires the live host')
+        units = list(dict.fromkeys(UNITS + OPTIONAL_UNITS + [
+            'mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service']))
+        workers = ['mykos-stage@*.service','mykos-command@*.service','mykos-terminal@*.service',
+                   'mykos-container-admin@*.service','mykos-image-build@*.service',
+                   'mykos-image-reset-*.service','mykos-image-remove-*.service','mykos-snapshot-preview-*.service']
+        if self.args.dry_run:
+            print(json.dumps({'stop':units+workers,'disable':UNITS+OPTIONAL_UNITS}));return
+        command(['systemctl','stop',*units,*workers])
+        command(['systemctl','disable',*UNITS,*OPTIONAL_UNITS])
+
     def uninstall(self):
         manifest=self.manifest()
         removable=[]
@@ -469,8 +483,7 @@ class Installer:
         self.mutation()
         self.quiescent()
         if self.live:
-            command(['systemctl','disable','--now',*UNITS,*OPTIONAL_UNITS])
-            command(['systemctl','stop','mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service'])
+            self.stop_services()
         self.snapshot([*removable,STATE])
         if self.live and self.path('/usr/local/sbin/mykos-snapshot').exists():
             command([self.args.python,'/usr/local/sbin/mykos-snapshot','unhook'])
@@ -484,7 +497,7 @@ class Installer:
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='action',required=True)
-    for action in ('install','verify','status','backup','restore','uninstall'):
+    for action in ('install','verify','status','backup','restore','uninstall','stop_services'):
         p=sub.add_parser(action)
         p.add_argument('--root',default='/',help='Alternate staging filesystem; never runs host operations')
         p.add_argument('--dry-run',action='store_true')

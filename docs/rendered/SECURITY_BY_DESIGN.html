@@ -3,8 +3,9 @@ header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px
 <span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="mykos-security-by-design">MYKOS security by design</h1>
 <p><a href="README.html">Documentation index</a> · <a href="ARCHITECTURE.html">Architecture</a> · <a href="IDENTITY.html">Identity and access</a> · <a href="DEVELOPERS_GUIDE.html">Developer’s guide</a></p>
 <p><strong>How MYKOS separates trust, limits routine privileges, protects identities, and preserves customer state.</strong></p>
-<p>Implementation baseline: release <strong>1.5.20261024-154</strong>, reviewed for this guide on
-29 October 2026. This document explains implemented controls and their limits.
+<p>Original implementation baseline: release <strong>1.5.20261024-154</strong> (29 October 2026).
+Terminal reauthorization and login admission were updated for release <strong>212</strong> on
+2 November 2026. This document explains implemented controls and their limits.
 It is not an independent security assessment, penetration-test report, or
 certification. Publishing it adds documentation, not new security enforcement.</p>
 <h2 id="the-design-starts-with-explicit-trust-boundaries">The design starts with explicit trust boundaries</h2>
@@ -86,8 +87,9 @@ Sessions expire after eight hours. Cookies are HttpOnly and SameSite=Strict.
 The Secure cookie flag follows the configured HTTP/HTTPS deployment mode.</p>
 <p>Password resets, role changes, account deletion, and explicit session revocation
 invalidate that account’s stored sessions. This affects later authorization
-checks; an already connected terminal is not reauthorized on every byte and may
-need to be closed explicitly for immediate disconnection.</p>
+checks. Terminal servers check authority before accepting and forwarding input,
+and at five-second intervals while idle; revocation or expiry closes the bridge.
+Desktop and peer proxies also perform recurring authorization checks.</p>
 <p>API v2 keys use random secrets and stored SHA-256 digests. Authentication compares
 the supplied key’s digest with the stored value using a constant-time comparison.
 The complete key is shown at creation, while listings omit both the secret and
@@ -199,7 +201,8 @@ following protections automatically:</p>
 <ul>
 <li>Strong isolation between hostile tenants on a shared privileged host.</li>
 <li>A complete per-customer or per-application authorization model.</li>
-<li>MFA, comprehensive login throttling, or every desired edge/network protection.</li>
+<li>MFA or every desired edge/network protection. Login throttling is implemented
+as described below; it is not a substitute for those other controls.</li>
 <li>Automatic guest OS patching or remediation of an old application’s vulnerabilities.</li>
 <li>Encryption of every disk, backup, capture, or secret store at rest.</li>
 <li>A complete tamper-evident audit trail, independent security certification, or
@@ -224,4 +227,15 @@ proof that host, network, backup, and guest isolation are all secure in producti
 caller is allowed to cross it, what state must survive, how failure is reported,
 and how access can be revoked or the change recovered. See the
 <a href="DEVELOPERS_GUIDE.html">developer’s guide</a> for the source map and change workflow.</p>
+<h2 id="login-admission">Login admission</h2>
+<p>Before password hashing, persistent SQLite admission permits at most 20 attempts
+per source per 60 seconds and 10 per account per 300 seconds. Throttled requests
+receive HTTP 429 and Retry-After. Successful login resets only that account bucket;
+it does not erase the source limit. Windows expire automatically, avoiding a
+permanent account lockout. Only hashed source/account bucket keys, counts and
+expiry timestamps are retained, with at most 10,000 active buckets. Database
+failures deny admission rather than bypassing limits. Source identity comes from
+the ASGI client address, not a client-supplied X-Forwarded-For value; preserve the
+loopback-only trusted proxy configuration. Login input bounds are 64 username
+characters and 4096 password characters; existing minimum-length policy remains.</p>
 <footer>MYKOS documentation</footer></main></html>

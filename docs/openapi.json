@@ -1,83 +1,23 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "FastAPI",
-    "version": "0.1.0"
+    "title": "MYKOS Infrastructure API v2",
+    "description": "Authenticated monitoring, lifecycle operations, and admin-only scheduled commands",
+    "version": "2.0.0"
   },
+  "servers": [
+    {
+      "url": "/mykos"
+    }
+  ],
   "paths": {
-    "/api/monitor/summary": {
+    "/api/v2/personal-notes": {
       "get": {
-        "summary": "Summary",
-        "operationId": "summary_api_monitor_summary_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/monitor/nodes": {
-      "get": {
-        "summary": "All Nodes",
-        "operationId": "all_nodes_api_monitor_nodes_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/monitor/nodes/{shop}": {
-      "get": {
-        "summary": "One Node",
-        "operationId": "one_node_api_monitor_nodes__shop__get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
+        "tags": [
+          "MYKOS API v2"
         ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/monitor/extended": {
-      "get": {
-        "summary": "Extended All",
-        "operationId": "extended_all_api_monitor_extended_get",
+        "summary": "Read personal notes (mgreen only)",
+        "operationId": "personal_note_api_v2_personal_notes_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -87,265 +27,26 @@
               }
             }
           }
-        }
-      }
-    },
-    "/api/monitor/extended/{shop}": {
-      "get": {
-        "summary": "Extended One",
-        "operationId": "extended_one_api_monitor_extended__shop__get",
-        "parameters": [
+        },
+        "security": [
           {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
+            "MYKOSNotesSession": []
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/notes/{pane}": {
-      "get": {
-        "summary": "Pane Note",
-        "operationId": "pane_note_api_web_notes__pane__get",
-        "parameters": [
-          {
-            "name": "pane",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "enum": [
-                "host",
-                "linux",
-                "ubuntu",
-                "windows",
-                "windows-server",
-                "macos",
-                "mssql",
-                "backups",
-                "repos",
-                "snapshots"
-              ],
-              "type": "string",
-              "title": "Pane"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
+        ]
       },
       "put": {
-        "summary": "Update Pane Note",
-        "operationId": "update_pane_note_api_web_notes__pane__put",
-        "parameters": [
-          {
-            "name": "pane",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "enum": [
-                "host",
-                "linux",
-                "ubuntu",
-                "windows",
-                "windows-server",
-                "macos",
-                "mssql",
-                "backups",
-                "repos",
-                "snapshots"
-              ],
-              "type": "string",
-              "title": "Pane"
-            }
-          }
+        "tags": [
+          "MYKOS API v2"
         ],
+        "summary": "Save personal notes (preserved through updates)",
+        "operationId": "update_personal_note_api_v2_personal_notes_put",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/NoteUpdate"
               }
             }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/host-metrics": {
-      "get": {
-        "summary": "Mykos Host Metrics",
-        "operationId": "mykos_host_metrics_api_web_host_metrics_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/host-history": {
-      "get": {
-        "summary": "Mykos Host History",
-        "operationId": "mykos_host_history_api_web_host_history_get",
-        "parameters": [
-          {
-            "name": "since",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 0,
-              "title": "Since"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/host-version": {
-      "get": {
-        "summary": "Mykos Host Version",
-        "operationId": "mykos_host_version_api_web_host_version_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/": {
-      "get": {
-        "summary": "Page",
-        "operationId": "page__get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/current-user": {
-      "get": {
-        "summary": "Mykos Current User",
-        "operationId": "mykos_current_user_api_web_current_user_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/login": {
-      "post": {
-        "summary": "Login",
-        "operationId": "login_api_login_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Credentials"
-              }
-            }
           },
           "required": true
         },
@@ -368,900 +69,12 @@
               }
             }
           }
-        }
-      }
-    },
-    "/api/logout": {
-      "post": {
-        "summary": "Logout",
-        "operationId": "logout_api_logout_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/nodes/{shop}/details": {
-      "get": {
-        "summary": "Node Details",
-        "operationId": "node_details_api_nodes__shop__details_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/host-uptime": {
-      "get": {
-        "summary": "Host Uptime",
-        "operationId": "host_uptime_api_web_host_uptime_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/extended": {
-      "get": {
-        "summary": "Web Extended",
-        "operationId": "web_extended_api_web_extended_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/nodes": {
-      "get": {
-        "summary": "Nodes",
-        "operationId": "nodes_api_nodes_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/desktop/{shop}": {
-      "get": {
-        "summary": "Desktop Connection",
-        "operationId": "desktop_connection_api_web_desktop__shop__get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/desktop/{shop}/rdp": {
-      "get": {
-        "summary": "Desktop Rdp",
-        "operationId": "desktop_rdp_api_web_desktop__shop__rdp_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/host/{action}": {
-      "get": {
-        "summary": "Host Diagnostic",
-        "operationId": "host_diagnostic_api_web_host__action__get",
-        "parameters": [
-          {
-            "name": "action",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Action"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/host/reboot": {
-      "post": {
-        "summary": "Reboot Host",
-        "operationId": "reboot_host_api_web_host_reboot_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/HostReboot"
-              }
-            }
-          },
-          "required": true
         },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/containers": {
-      "get": {
-        "summary": "List Containers",
-        "operationId": "list_containers_api_admin_containers_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/containers/{shop}/logs": {
-      "get": {
-        "summary": "Container Logs",
-        "operationId": "container_logs_api_admin_containers__shop__logs_get",
-        "parameters": [
+        "security": [
           {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
+            "MYKOSNotesSession": []
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/containers/{shop}/top": {
-      "get": {
-        "summary": "Container Top",
-        "operationId": "container_top_api_admin_containers__shop__top_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/containers/{shop}/checkit": {
-      "get": {
-        "summary": "Container Checkit",
-        "operationId": "container_checkit_api_admin_containers__shop__checkit_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/containers/{shop}/ipsec": {
-      "get": {
-        "summary": "Container Ipsec",
-        "operationId": "container_ipsec_api_admin_containers__shop__ipsec_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/mykos/backups": {
-      "get": {
-        "summary": "Backups",
-        "operationId": "backups_api_web_mykos_backups_get",
-        "parameters": [
-          {
-            "name": "refresh",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Refresh"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Backup Action",
-        "operationId": "backup_action_api_web_mykos_backups_post",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BackupAction"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/mykos/repos": {
-      "get": {
-        "summary": "Repos",
-        "operationId": "repos_api_web_mykos_repos_get",
-        "parameters": [
-          {
-            "name": "refresh",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Refresh"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "summary": "Repo Action",
-        "operationId": "repo_action_api_web_mykos_repos_post",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RepoAction"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/terminal/permission": {
-      "get": {
-        "summary": "Mykos Terminal Permission",
-        "operationId": "mykos_terminal_permission_api_terminal_permission_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/stage-images": {
-      "get": {
-        "summary": "Mykos Stage Images",
-        "operationId": "mykos_stage_images_api_web_stage_images_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/stage/{shop}/check": {
-      "get": {
-        "summary": "Mykos Stage Check",
-        "operationId": "mykos_stage_check_api_web_stage__shop__check_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/stage/{shop}/status": {
-      "get": {
-        "summary": "Mykos Stage Status",
-        "operationId": "mykos_stage_status_api_web_stage__shop__status_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/stage": {
-      "post": {
-        "summary": "Mykos Stage Start",
-        "operationId": "mykos_stage_start_api_web_stage_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MYKOSStageRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/containers/{shop}": {
-      "delete": {
-        "summary": "Mykos Delete Container",
-        "operationId": "mykos_delete_container_api_web_containers__shop__delete",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ContainerDelete"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/containers/{shop}/start": {
-      "post": {
-        "summary": "Mykos Start Container",
-        "operationId": "mykos_start_container_api_web_containers__shop__start_post",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/containers/{shop}/snapshot": {
-      "post": {
-        "summary": "Mykos Snapshot Container",
-        "operationId": "mykos_snapshot_container_api_web_containers__shop__snapshot_post",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/containers/{shop}/snapshots": {
-      "get": {
-        "summary": "Mykos Container Snapshots",
-        "operationId": "mykos_container_snapshots_api_web_containers__shop__snapshots_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/containers/{shop}/stop": {
-      "post": {
-        "summary": "Mykos Stop Container",
-        "operationId": "mykos_stop_container_api_web_containers__shop__stop_post",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/desktop": {
@@ -1301,7 +114,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/desktop/rdp": {
@@ -1341,7 +159,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/notes/{pane}": {
@@ -1358,8 +181,14 @@
             "required": true,
             "schema": {
               "enum": [
+                "terminal",
                 "host",
                 "linux",
+                "rocky",
+                "alma",
+                "oracle",
+                "centos",
+                "fedora",
                 "ubuntu",
                 "windows",
                 "windows-server",
@@ -1393,7 +222,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSNotesSession": []
+          }
+        ]
       },
       "put": {
         "tags": [
@@ -1408,8 +242,14 @@
             "required": true,
             "schema": {
               "enum": [
+                "terminal",
                 "host",
                 "linux",
+                "rocky",
+                "alma",
+                "oracle",
+                "centos",
+                "fedora",
                 "ubuntu",
                 "windows",
                 "windows-server",
@@ -1453,7 +293,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSNotesSession": []
+          }
+        ]
       }
     },
     "/api/v2/overview": {
@@ -1472,7 +317,36 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v2/geography": {
+      "get": {
+        "tags": [
+          "MYKOS API v2"
+        ],
+        "summary": "Saved ID and host locations with available system metadata",
+        "operationId": "geography_api_v2_geography_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/host": {
@@ -1491,7 +365,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/host/metrics": {
@@ -1510,7 +389,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/host/history": {
@@ -1551,7 +435,36 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v2/host/network-speed": {
+      "get": {
+        "tags": [
+          "MYKOS API v2"
+        ],
+        "summary": "Cached Ookla download/upload Mbps; never starts a network test",
+        "operationId": "host_network_speed_api_v2_host_network_speed_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/host/status": {
@@ -1570,7 +483,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/host/diagnostics/{action}": {
@@ -1610,7 +528,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/host/reboot": {
@@ -1649,7 +572,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/backups": {
@@ -1690,7 +618,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -1727,7 +660,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/backups/{code}": {
@@ -1777,7 +715,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/backups/{code}/keys": {
@@ -1817,7 +760,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/repos": {
@@ -1858,7 +806,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -1895,7 +848,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/repos/{name}": {
@@ -1945,7 +903,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/host/os": {
@@ -1964,7 +927,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/host/kernel": {
@@ -1983,7 +951,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/host/storage": {
@@ -2002,7 +975,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes": {
@@ -2091,7 +1069,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}": {
@@ -2131,7 +1114,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -2179,7 +1167,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/status": {
@@ -2219,7 +1212,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/network": {
@@ -2259,7 +1257,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/resources": {
@@ -2299,7 +1302,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/vpn": {
@@ -2339,7 +1347,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       },
       "put": {
         "tags": [
@@ -2387,7 +1400,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/details": {
@@ -2427,7 +1445,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/ipsec": {
@@ -2467,7 +1490,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/logs": {
@@ -2507,7 +1535,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/processes": {
@@ -2547,7 +1580,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/checkit": {
@@ -2587,7 +1625,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/containers": {
@@ -2606,7 +1649,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/actions": {
@@ -2625,7 +1673,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/images": {
@@ -2644,7 +1697,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/actions/stage/{shop}/check": {
@@ -2684,7 +1742,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/jobs/{shop}": {
@@ -2724,7 +1787,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/actions/stage": {
@@ -2763,7 +1831,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/start": {
@@ -2803,7 +1876,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/memory": {
@@ -2843,7 +1921,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       },
       "put": {
         "tags": [
@@ -2891,7 +1974,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/memory/allocation": {
@@ -2941,7 +2029,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/snapshot": {
@@ -2981,7 +2074,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/snapshots": {
@@ -3021,7 +2119,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/stop": {
@@ -3061,7 +2164,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/snapshots": {
@@ -3080,7 +2188,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/snapshots/{identifier}/restore": {
@@ -3129,7 +2242,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/nodes/{shop}/snapshots/{identifier}": {
@@ -3178,7 +2296,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/commands/{command_id}": {
@@ -3228,7 +2351,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       },
       "get": {
         "tags": [
@@ -3266,7 +2394,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/commands": {
@@ -3285,7 +2418,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/commands/{command_id}/cancel": {
@@ -3325,7 +2463,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/system/purge": {
@@ -3344,7 +2487,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -3381,7 +2529,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/system/purge/status": {
@@ -3400,7 +2553,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/console/{selection}/{path}": {
@@ -3450,7 +2608,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
     "/api/v2/images/{os_name}/build": {
@@ -3501,7 +2664,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       },
       "get": {
         "tags": [
@@ -3540,7 +2708,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -3589,92 +2762,86 @@
               }
             }
           }
-        }
-      }
-    },
-    "/api/web/snapshots": {
-      "get": {
-        "summary": "Mykos Snapshots",
-        "operationId": "mykos_snapshots_api_web_snapshots_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/web/containers/{shop}/snapshots/{identifier}/restore": {
-      "post": {
-        "summary": "Mykos Restore Snapshot",
-        "operationId": "mykos_restore_snapshot_api_web_containers__shop__snapshots__identifier__restore_post",
-        "parameters": [
+        },
+        "security": [
           {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          },
-          {
-            "name": "identifier",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Identifier"
-            }
+            "MYKOSApiKey": []
           }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
+        ]
       }
     },
-    "/api/web/containers/{shop}/snapshots/{identifier}": {
+    "/api/v2/images/{os_name}": {
       "delete": {
-        "summary": "Mykos Delete Snapshot",
-        "operationId": "mykos_delete_snapshot_api_web_containers__shop__snapshots__identifier__delete",
+        "tags": [
+          "MYKOS API v2",
+          "MYKOS API v2"
+        ],
+        "summary": "Remove a prepared OS image and generic base if unreferenced",
+        "operationId": "image_remove_api_v2_images__os_name__delete",
         "parameters": [
           {
-            "name": "shop",
+            "name": "os_name",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Shop"
+              "title": "Os Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBuildRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
             }
           },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
           {
-            "name": "identifier",
+            "MYKOSApiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v2/images/{os_name}/delete": {
+      "get": {
+        "tags": [
+          "MYKOS API v2",
+          "MYKOS API v2"
+        ],
+        "summary": "Read prepared-image removal progress",
+        "operationId": "image_remove_status_api_v2_images__os_name__delete_get",
+        "parameters": [
+          {
+            "name": "os_name",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Identifier"
+              "title": "Os Name"
             }
           }
         ],
@@ -3697,13 +2864,77 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
       }
     },
-    "/api/web/system/purge": {
+    "/api/v2/images/{os_name}/reset": {
+      "post": {
+        "tags": [
+          "MYKOS API v2",
+          "MYKOS API v2"
+        ],
+        "summary": "Reset only the generic base to its last captured image",
+        "operationId": "image_reset_api_v2_images__os_name__reset_post",
+        "parameters": [
+          {
+            "name": "os_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Os Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBuildRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v2/vpn/gateways": {
       "get": {
-        "summary": "Mykos Purge Plan",
-        "operationId": "mykos_purge_plan_api_web_system_purge_get",
+        "tags": [
+          "MYKOS API v2"
+        ],
+        "summary": "List configured shared native Linux VPN gateways",
+        "operationId": "vpn_gateways_api_v2_vpn_gateways_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3713,16 +2944,135 @@
               }
             }
           }
-        }
-      },
-      "post": {
-        "summary": "Mykos Purge Start",
-        "operationId": "mykos_purge_start_api_web_system_purge_post",
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/vpn/gateway": {
+      "put": {
+        "tags": [
+          "MYKOS API v2"
+        ],
+        "summary": "Route the MYKOS guest network through a native Linux VPN gateway",
+        "operationId": "vpn_gateway_configure_api_v2_nodes__shop__vpn_gateway_put",
+        "parameters": [
+          {
+            "name": "shop",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VPNGatewayRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/vpn/gateway/{connection}": {
+      "delete": {
+        "tags": [
+          "MYKOS API v2"
+        ],
+        "summary": "Remove only the selected shared gateway routing profile",
+        "operationId": "vpn_gateway_remove_api_v2_nodes__shop__vpn_gateway__connection__delete",
+        "parameters": [
+          {
+            "name": "shop",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop"
+            }
+          },
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connection"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ]
+      }
+    },
+    "/api/v2/host/vpn/gateway": {
+      "put": {
+        "tags": [
+          "MYKOS API v2"
+        ],
+        "summary": "Use an existing host VPN as shared guest and host internet gateway",
+        "operationId": "host_vpn_gateway_configure_api_v2_host_vpn_gateway_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/HostPurge"
+                "$ref": "#/components/schemas/VPNGatewayRequest"
               }
             }
           },
@@ -3747,49 +3097,29 @@
               }
             }
           }
-        }
-      }
-    },
-    "/api/web/system/purge/status": {
-      "get": {
-        "summary": "Mykos Purge Status",
-        "operationId": "mykos_purge_status_api_web_system_purge_status_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
           }
-        }
+        ]
       }
     },
-    "/console/{selection}/{path}": {
-      "get": {
+    "/api/v2/host/vpn/gateway/{connection}": {
+      "delete": {
         "tags": [
-          "Desktop consoles"
+          "MYKOS API v2"
         ],
-        "summary": "Authenticated browser console and assets",
-        "operationId": "console_http_console__selection___path__get",
+        "summary": "Remove the shared host VPN routing profile; retain its VPN configuration",
+        "operationId": "host_vpn_gateway_remove_api_v2_host_vpn_gateway__connection__delete",
         "parameters": [
           {
-            "name": "selection",
+            "name": "connection",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Selection"
-            }
-          },
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
+              "title": "Connection"
             }
           }
         ],
@@ -3812,26 +3142,12 @@
               }
             }
           }
-        }
-      }
-    },
-    "/api/v2/host/network-speed": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Cached Ookla download/upload Mbps; never starts a network test",
-        "operationId": "host_network_speed_api_v2_host_network_speed_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
           }
-        }
+        ]
       }
     }
   },
@@ -3937,24 +3253,6 @@
         ],
         "title": "ContainerDelete"
       },
-      "Credentials": {
-        "properties": {
-          "username": {
-            "type": "string",
-            "title": "Username"
-          },
-          "password": {
-            "type": "string",
-            "title": "Password"
-          }
-        },
-        "type": "object",
-        "required": [
-          "username",
-          "password"
-        ],
-        "title": "Credentials"
-      },
       "DeleteBuildRequest": {
         "properties": {
           "confirmation": {
@@ -4011,35 +3309,6 @@
           "hostname"
         ],
         "title": "HostReboot"
-      },
-      "MYKOSStageRequest": {
-        "properties": {
-          "shop": {
-            "type": "string",
-            "title": "Shop"
-          },
-          "restore": {
-            "type": "boolean",
-            "title": "Restore",
-            "default": false
-          },
-          "os": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Os"
-          }
-        },
-        "type": "object",
-        "required": [
-          "shop"
-        ],
-        "title": "MYKOSStageRequest"
       },
       "MemoryAllocation": {
         "properties": {
@@ -4225,6 +3494,30 @@
         ],
         "title": "UbuntuVPNRequest"
       },
+      "VPNGatewayRequest": {
+        "properties": {
+          "connection": {
+            "type": "string",
+            "title": "Connection"
+          },
+          "remote": {
+            "type": "string",
+            "title": "Remote"
+          },
+          "confirmation": {
+            "type": "string",
+            "title": "Confirmation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "connection",
+          "remote",
+          "confirmation"
+        ],
+        "title": "VPNGatewayRequest"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -4264,6 +3557,20 @@
           "type"
         ],
         "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "MYKOSApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-MYKOS-API-Key",
+        "description": "Create keys on the server using mykos-api-keys."
+      },
+      "MYKOSNotesSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "mykos_session",
+        "description": "Authenticated mgreen session required; API keys do not identify the note owner."
       }
     }
   }

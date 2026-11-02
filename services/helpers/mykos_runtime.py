@@ -45,6 +45,16 @@ def require_container_capacity(name=None):
 NATIVE_OS_NAMES = ('rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44')
 STAGE_OS_NAMES = ('mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12')
 
+def native_build_os(args):
+    """Recognize legacy and private-job kickstarts for lifecycle protection."""
+    for arg in args:
+        path = arg.removeprefix('--ks=').removeprefix('--kickstart=')
+        match = re.fullmatch(r'/var/tmp/(?:(?:containers/mykos-native-([a-z0-9]+)[.][A-Za-z0-9]+/))?([a-z0-9]+)[.]ks', path)
+        if match and match[2] in NATIVE_OS_NAMES and match[1] in (None, match[2]):
+            return match[2]
+    return None
+
+
 def shopcode(value):
     if not isinstance(value, str) or not SHOP.fullmatch(value):
         raise ValueError('ID must be exactly eight ASCII digits')

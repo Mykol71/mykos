@@ -423,3 +423,12 @@ Generated native build copies add `-linux-firmware`, `-*-firmware` and
 must not perform hardware firmware updates or leave root console logins blocked.
 These edits apply to generated copies in `pos/prepare_ks.py`; retain the operator's
 original kickstarts, including local repository and application fixes.
+
+### Native build workspace ownership
+
+Native image creation holds a single admission lock through rootfs installation,
+Podman build, base startup and final commit. A second native build exits with a
+busy message before modifying a kickstart or archive. Each job uses its own
+private generated kickstart, rootfs output and Docker context; original source
+kickstarts are not edited. The owned job workspace is removed on success, failure
+or interruption. Installer diagnostics remain in the printed diagnostic location.
