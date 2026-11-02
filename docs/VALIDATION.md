@@ -209,3 +209,8 @@ During final review, the user separately removed the licensing page and index
 entry in production and the local drafts. Both production copies were fetched
 again and matched after that removal (39 files). This revision preserves that
 operator change; the initial 41-file snapshot remains archived as evidence.
+
+
+## Release213 — Receiver appearance
+
+Receiver adds an optional silver-face dashboard appearance. Validation covers three-way theme preference/controls, real and stale meter readings, overload display and unchanged history controls. Meters consume existing chart samples with no extra polling. Browser checks and signed install/promotion evidence are recorded with release213. This app release does not recertify OS image builds or restore guest state.
