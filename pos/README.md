@@ -56,10 +56,7 @@ Whole instance rootless containers are also very secure. Existing hardening meth
 VPN connections use crypto that use kernel drivers. Leaving the kernel installed for each container, keeps that encryption segregated to the chroot envs usersspace.
 Built in VPN, rootless container production, .....???
 
-
-RTI
----
-~ RTI system running exclusively in the cloud on Redhat.
+Business-specific integration is provided by a separately installed local extension.
 
 Whole system RH container images are built with the POS software and a site-to-site vpn connection created to the stores router.
 All network traffic is routed from the container through the customers router on site.
@@ -69,40 +66,7 @@ Support processes and tools should not be different than a standard on-premise.
 Staging times in the secs. (With or without data from localhost.)
 Each POS system is independant from the other. (If one becomes corrupt, the others dont suffer.)
 
-10/02/2026  3:02 PM 
-┏━━━━━━━━
-┃ @ Mike's Store
-┃ )~ pos      v3.2
-┃━
-┃  prod.mykol.com
-┃ Space    : 474G
-┃
-┃ ID : 00000000
-┃ Type : rti
-┃ Stat : running
-┃
-┃  192.168.222.76 
-┃ <=> 192.168.10.0 
-┃
-┃-Containers
-┃ 1. Status
-┃ 2. Start/Stop
-┃ 3. Connect
-┃
-┃-VPNs
-┃ 4. Status
-┃ 5. Add
-┃ 6. Remove
-┃
-┃-System
-┃ s. ID
-┃ m. Images
-┃ i. Install
-┃ p. Purge
-┃ r. Readme
-┃ x. Exit
-┗━
-Select: 
+Business-specific integration is provided by a separately installed local extension.
 
 -> Startup time (staged with data and vpn): 1min 13secs.
 
@@ -118,7 +82,7 @@ Features
   o does not use epel or any other "extra" repos.
   - 
 
-  ? Primary/secondary: make 2 of these for cloud backup servers. the one labelled primary is the rti app server. 2ndary is cloud backup server.
+Business-specific integration is provided by a separately installed local extension.
 
 
 TODO
@@ -155,17 +119,7 @@ TODO
     - status page.
     -
 
- -> Container-side
-    - openscap padss4 scripts.
-    - add firewall setup.
-    - rule to block container network after startup.
-    + insights registration and scanning.
-    - default passwords.
-    - configure static ip address.
-    * rti start up post data restore.
-    ~ services startup post vanilla staging.
-    - issue: looses ip address in a random amount of time. can happen to an individual container and not others.
-    -
+Business-specific integration is provided by a separately installed local extension.
 
  -> Documentation/Reporting
     - billing.

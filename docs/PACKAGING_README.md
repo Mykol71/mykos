@@ -20,7 +20,7 @@ published release trees and never replace an existing release's files.
 Before editing or packaging, compare relative paths and hashes in both production
 locations, `/home/mgreen/mykos/docs` and `/usr/local/share/mykos/docs`, against the
 chosen baseline. Record an absent location explicitly. Privately fetch and
-reconcile operator edits before continuing. Preserve `KEY_ISSUES.md`, the original
+reconcile operator edits before continuing. Preserve `README.md`, the original
 administrator guides and live `/usr/local/share/mykos/pos/pos` fixes. Repeat this
 comparison immediately before deployment. See the
 [operator-edit guard](DOCUMENTATION_BUILD.md#protect-operator-edits-before-every-change-batch).
@@ -213,3 +213,11 @@ test does not establish bare-metal KVM, CRIU or guest installation success.
 
 If a step fails, record the exact unfinished step and resume there. Do not label a
 build signed, installed, published or tested until its corresponding check passes.
+
+## Separately packaged business extensions
+
+The public core source archive and RPM payload are built with installed extensions disabled. A business integration is supplied in a separate signed package and is never copied into a public core build from the build host. Historical business implementation documents are supplied with that extension; maintained generic documentation remains available as HTML.
+
+An extension stores its root-owned descriptor and payload beneath `/usr/share/mykos-extensions/NAME/`. Every runtime file declares its checksum, permissions and matching core checksum. The installer rejects changed payloads, mismatched core builds, overlapping extensions, symlinks and host data destinations. Extensions cannot provide credentials or identity stores. Use the matching extension/core RPM versions. Verify the RPM signature before installation, then run `sudo mykos-setup` during a safe application maintenance window and reload the web service when Python web files changed. The installed manifest records the extension and its descriptor hash.
+
+Core runtime files replaced by a separately signed extension will differ from the core RPM's digest. Verify the original core RPM, extension RPM, extension manifest and `mykos-install verify` together; do not suppress RPM verification. Customer images, running containers, backups and host settings stay outside the extension package.

@@ -27,13 +27,11 @@ def test_document_index_and_guides_render_light_pages(client):
     assert '--configure-https' in client.get('/docs/BOOTSTRAP.md').text
 
 
-def test_diagrams_and_preserved_word_guide_are_available(client):
+def test_diagrams_available_and_legacy_business_download_excluded(client):
     response=client.get('/docs/diagrams/architecture.svg')
     assert response.status_code==200 and response.headers['content-type'].startswith('image/svg+xml')
     assert client.get('/docs/diagrams/architecture.mmd').text.startswith('flowchart TD')
-    response=client.get('/docs/MYKOS_Administrator_Guide.docx')
-    assert response.status_code==200 and 'attachment' in response.headers['content-disposition']
-    assert response.content==(ROOT/'docs/MYKOS_Administrator_Guide.docx').read_bytes()
+    assert client.get('/docs/MYKOS_Administrator_Guide.docx').status_code==404
 
 
 @pytest.mark.parametrize('url',['/docs/app.py','/docs/diagrams/private.svg','/docs/auth.db','/docs/rendered/README.html'])
@@ -54,21 +52,15 @@ def test_document_index_redirect_does_not_expose_backend_host_or_scheme(client):
     assert response.status_code==307 and response.headers['location']=='docs/'
 
 
-def test_project_guides_and_pdf_downloads_are_public_with_current_licensing(client):
-    for guide,pdf in [('KEY_INNOVATIONS','MYKOS_Key_Innovations.pdf'),
-                      ('ENGINEERING_LESSONS','MYKOS_Engineering_Lessons.pdf'),
-                      ('DEPLOYMENT_EFFICIENCY','MYKOS_Deployment_Efficiency.pdf')]:
-        response=client.get('/docs/'+guide+'.html')
-        assert response.status_code==200 and pdf in response.text
-        response=client.get('/docs/'+pdf)
-        assert response.status_code==200
-        assert response.headers['content-type'].startswith('application/pdf')
-        assert response.content==(ROOT/'docs'/pdf).read_bytes()
+def test_maintained_guides_are_public_and_legacy_downloads_excluded(client):
+    for guide in ['KEY_INNOVATIONS','ENGINEERING_LESSONS','DEPLOYMENT_EFFICIENCY']:
+        assert client.get('/docs/'+guide+'.html').status_code==200
         assert guide+'.html' in client.get('/docs/').text
+    for name in ['MYKOS_Key_Innovations.pdf','MYKOS_Engineering_Lessons.pdf','MYKOS_Deployment_Efficiency.pdf']:
+        assert client.get('/docs/'+name).status_code==404
     for name in ['LICENSING.md','LICENSING.html']:
         response=client.get('/docs/'+name)
-        assert response.status_code==200
-        assert 'MYKOL-DOT-COM' in response.text
+        assert response.status_code==200 and 'MYKOL-DOT-COM' in response.text
 
 
 def test_only_named_example_screenshots_are_public(client):

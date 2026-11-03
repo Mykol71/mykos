@@ -48,12 +48,7 @@ from your approved wheelhouse before running install, for example:</p>
 <pre><code class="language-sh">sudo /usr/bin/python3 -m venv /opt/mykos-web/.venv
 sudo /opt/mykos-web/.venv/bin/pip install --no-index --find-links /srv/wheels -r services/requirements.txt
 </code></pre>
-<p><code>--image-build-deps</code> additionally requests Lorax, Anaconda TUI, and pykickstart;
-it requires <code>--install-deps</code>. Building POS images remains a separate operator
-workflow and needs working repository URLs and actual RTI software. Apache TLS,
-firewall policy, SELinux policy, subscription registration, image content, backup
-clients, Meraki configuration, DNS, and outbound email must be configured for the
-site. The installer does not disable SELinux or change global firewall/TLS policy.</p>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <h2 id="new-installation">New installation</h2>
 <p>For default <code>http://SERVER_IP/mykos/</code> access, use the signed-package
 <a href="BOOTSTRAP.html">bootstrap procedure</a>. The direct source examples below configure
@@ -116,8 +111,7 @@ initializes the home directory. The private installer package supplies the
 password through a hidden prompt, never a process argument. Its temporary
 credential and staging files are removed before the installed image is captured.</p>
 <p>For example, after validating the image and host NIC:</p>
-<pre><code class="language-json">{&quot;stage_image&quot;:&quot;localhost/rti-production:approved&quot;,&quot;network_device&quot;:&quot;ens192&quot;,&quot;terminal_enabled&quot;:false}
-</code></pre>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <p>No image is pulled during API staging (<code>--pull=never</code>). A blank image/NIC rejects
 staging. Terminal access is disabled by default. Keep config and POS secret files
 root-owned with mode 0600, and <code>web.env</code> root:<code>mykosweb</code> 0640. POS secrets are shell
@@ -356,7 +350,7 @@ upgrade the local installer. Using an already built image is a separate path.</p
 <h2 id="complete-customer-backup-mounts">Complete customer backup mounts</h2>
 <p>When native staging explicitly selects backup restore, available directories under
 <code>/backups/tfrsync-ID</code> (or configured <code>backup_root</code>) bind directly read/write at
-<code>/usr2</code>, <code>/d</code>, <code>/etc</code>, <code>/home</code> and <code>/usr/java</code>. This is live access to the backup
+configured application directories plus <code>/etc</code> and <code>/home</code>. This is live access to the backup
 set, not a copied restore. Application writes change that mounted data; preserve
 a separate recoverable backup before starting it. Missing paths are omitted;
 unsafe symlinks or paths outside the account directory are rejected.</p>

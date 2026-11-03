@@ -24,7 +24,7 @@ def main():
     installer = importlib.util.module_from_spec(spec); loader.exec_module(installer)
     instance = installer.Installer(SimpleNamespace(root='/', python='/usr/bin/python3.11', public_origin='https://mykos.example.com'))
     prefix = '/usr/local/share/mykos/'
-    files = {name[len(prefix):]: (entry['data'], entry['mode']) for name,entry in instance.entries().items() if name.startswith(prefix)}
+    files = {name[len(prefix):]: (entry['data'], entry['mode']) for name,entry in instance.entries(include_extensions=False).items() if name.startswith(prefix)}
     files['AGENTS.md'] = ((source/'AGENTS.md').read_bytes(), 0o644)
     files['INSTALL-RHEL9.md'] = ((source/'INSTALL-RHEL9.md').read_bytes(), 0o644)
     for path in sorted((source/'packaging/rpm').glob('*')):

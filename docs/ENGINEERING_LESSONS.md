@@ -1,6 +1,6 @@
 # MYKOS: performance by design
 
-[Documentation index](README.md) · [Download PDF](MYKOS_Engineering_Lessons.pdf)
+[Documentation index](README.md) · [Download PDF](ENGINEERING_LESSONS.md)
 
 **Making complete customer environments available quickly and keeping them responsive**
 

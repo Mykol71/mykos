@@ -82,50 +82,7 @@ Regenerate it when routes change; the running service remains authoritative.
 All paths below are relative to `/mykos/api/v2`. `shop` is exactly eight ASCII digits,
 including leading zeros. The read column includes both `read` and `admin` keys.
 
-| Method and path | Permission | Result / notes |
-|---|---|---|
-| `GET /overview` | Read | Host, counts, snapshot ages/freshness, joined nodes |
-| `GET /host` | Read | Hostname, OS, kernel, uptime, backup storage, live `metrics` |
-| `GET /host/metrics` | Read | CPU, logical CPU count, memory, swap, load averages, root disk, uptime and `graph_totals` (`containers`, `vpns`) counted from installed POS metadata files; null if unavailable/stale |
-| `GET /host/status` | Read | Host row data: `host` contains hostname, status, OS/version/kernel, internal IP and collected VPN status; memory and uptime are top-level fields |
-| `GET /host/network-speed` | Read | Cached official Ookla result: download/upload in decimal Mbps, measurement time/age, status and stale flag; GET never runs a test |
-| `GET /host/diagnostics/{action}` | Read | Host `logs` (last 200 journal entries), `top` (processes), or `ipsec` status; fixed commands, no container execution |
-| `POST /host/reboot` | Admin | JSON `hostname` must exactly match the server hostname; schedules a reboot in five seconds; interrupts all containers/users |
-| `WS /terminal/host` | Admin | Interactive host root shell, or host VPN setup with `?action=add-vpn`; host `terminal_enabled` setting must be enabled; API key in handshake header |
-| `GET /host/os` | Read | Hostname, OS, kernel |
-| `GET /host/kernel` | Read | Kernel string |
-| `GET /host/storage` | Read | Backup storage free/used/total bytes and readable free value |
-| `GET /nodes` | Read | `count`, `fresh`, `nodes`; optional filters below |
-| `GET /nodes/{shop}` | Read | Full joined node |
-| `GET /nodes/{shop}/status` | Read | Status, running flag, VPN state, start epoch/time, image, OS type/version |
-| `GET /nodes/{shop}/network` | Read | `eth1_ipv4`, collected address list |
-| `GET /nodes/{shop}/resources` | Read | CPU/memory display values from Podman |
-| `GET /nodes/{shop}/vpn` | Read | VPN status, Libreswan counters/connections when available |
-| `GET /nodes/{shop}/details` | Read | Container inspection details |
-| `GET /nodes/{shop}/ipsec` | Read | Live `ipsec status` output |
-| `GET /nodes/{shop}/logs` | Read | Last 200 Podman log lines; bounded output |
-| `GET /nodes/{shop}/processes` | Read | Live `podman top` output |
-| `GET /nodes/{shop}/checkit` | Admin | Runs `/usr/bin/checkit` inside the selected container |
-| `GET /containers` | Read | Managed rootful container list |
-| `GET /images` | Read | OS choices from running supported image containers; returns `os` and the local source `image` |
-| `GET /notes/{pane}` | mgreen session | Private plain-text pane notes (mgreen session only), revision, and last-saved timestamp |
-| `PUT /notes/{pane}` | mgreen session | Save notes with JSON `text` (up to 20,000 characters) and current `revision`; stale revisions return 409 |
-| `GET /personal-notes` | mgreen session | Read personal notes; separate from change requests and retained through updates |
-| `PUT /personal-notes` | mgreen session | Save personal notes with `text` and `revision`; stale revisions return 409 |
-| `GET /actions` | Read | Supported administrative operations and permissions |
-| `GET /actions/stage/{shop}/check` | Admin | Container existence, active job, RTI backup presence, host configuration readiness |
-| `GET /jobs/{shop}` | Admin | Staging state and bounded output; `idle` if no recorded job |
-| `POST /actions/stage` | Admin | Queue staging; JSON `shop`, `os` from `/images`, and optional `restore` boolean |
-| `POST /nodes/{shop}/stop` | Admin | Stop the unique selected managed container |
-| `GET /backups` | Read | Backup accounts, POS/OS, disk use, subscriber state and storage; optional `refresh=true` |
-| `GET /backups/{code}` | Read | One backup account; optional `refresh=true` |
-| `POST /backups` | Admin | Account creation/deletion, SSH key changes, subscriber updates and key retrieval |
-| `GET /backups/{code}/keys` | Admin | Backed-up public and private RSA keys; response is not cached |
-| `GET /repos` | Read | Repositories, disk use, modification times, Apache and sync state; optional `refresh=true` |
-| `GET /repos/{name}` | Read | One repository; optional `refresh=true` |
-| `POST /repos` | Admin | Delete, enable, disable or start repository sync |
-| `WS /terminal/{shop}` | Admin | Interactive terminal; key in WebSocket handshake header, host terminal setting must be enabled |
-| `GET /openapi.json`, `GET /docs` | Public | Machine/browser API reference; use Authorize for operations |
+Business-specific integration is provided by a separately installed local extension.
 
 `GET /nodes` filters: `status=online|offline|unknown`,
 `vpn=up|down|unknown|not_configured`, and `running=true|false`.
@@ -174,8 +131,7 @@ can produce `Unknown` backup storage in `/host` while the rest of the response w
 
 Use an admin-scoped key and a staging shop approved for these operations. Staging
 creates a privileged container. For native Linux images, `restore: true` mounts
-available `/backups/tfrsync-ID` trees `/usr2`, `/d`, `/etc`, `/home`, and
-`/usr/java` directly
+available `/backups/tfrsync-ID` trees configured application directories plus `/etc` and `/home` directly
 read/write; guest writes change the original backup. The application adapter need
 not be enabled. VM images do not support this restore option.
 
@@ -242,7 +198,7 @@ curl --fail-with-body -sS -H "X-MYKOS-API-Key: $MYKOS_KEY" "$BASE/backups"
 curl --fail-with-body -sS -H "X-MYKOS-API-Key: $MYKOS_KEY" "$BASE/repos?refresh=true"
 ```
 
-Backup account responses include `updated_at`, the Unix modification timestamp of the newest backed-up RTI/Daisy `tfrsync-summary.log`, or `null` when unavailable. This is the dashboard’s Last updated value, not a guarantee of a successful backup.
+Business-specific integration is provided by a separately installed local extension.
 
 Backup POST bodies share the dashboard's schema:
 
@@ -342,16 +298,7 @@ These browser-session endpoints sit outside API v2:
 | `POST /api/web/mykos/backups` | Browser admin + Origin | JSON `action`, eight-digit `code`, and action fields below |
 | `POST /api/web/mykos/repos` | Browser admin + Origin | JSON `action` and optional `name` (default `all`) |
 
-Backup actions: `create` (SSH public `key`, `subscriber`), `key` (replacement public
-`key`), `subscriber` (boolean `subscriber`), `delete` (boolean `remove_data`), and
-`keys` (read the backed-up client's public/private RSA keys). Account creation uses
-`useradd`, the existing forced-command `back/bin/tfrsync`, and restricted SSH key
-permissions. Delete can retain backup data while removing the account and SSH
-access. Retained directories appear only when an OS backup account exists and
-must be resolved by an operator before reusing that code. View/get keys opens a
-private-key dialog and supports browser download; it does not copy keys into the
-server's `/home/tfsupport/keys` directory. Closing the dialog or logging out clears
-its displayed key material.
+Business-specific integration is provided by a separately installed local extension.
 
 Repository storage may use a root-controlled symlink, such as
 `/var/www/html -> /home/html`, when its target and parent directories are trusted.
@@ -771,12 +718,7 @@ application health test. Resource values come from Podman; VM wrapper measuremen
 and in-guest memory are different observations. Host history is retained from
 actual samples and may be missing/stale after a collector interruption.
 
-Use separate least-privilege `read` keys for monitoring. An `admin` API key grants
-operations beyond observation and does not establish a browser session. Keep keys
-out of URLs, logs and shell history. Use the live allowlisted OpenAPI endpoint for
-route details. The current API does not implement the requested configurable
-host/guest and RTI/Dove application alert-field system. Native VPN/shared routes
-are detailed in [VPN architecture and operations](NETWORKING.md#vpn-architecture-and-operations).
+Business-specific integration is provided by a separately installed local extension.
 
 
 ### Host internet speed measurements

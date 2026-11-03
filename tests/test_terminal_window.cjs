@@ -4,7 +4,7 @@ const script=html.match(/<script>\s*([\s\S]*?)<\/script>/)[1];
 function client(shop,username='mgreen',action='shell') {
  const elements=new Map(),events={},sockets=[],terms=[],timers=[];let access={allowed:true,username};
  const el=id=>{if(!elements.has(id))elements.set(id,{id,value:'',textContent:'',disabled:false,hidden:false,open:false,handlers:{},addEventListener(name,fn){this.handlers[name]=fn;},showModal(){this.open=true;},close(){this.open=false;},focus(){}});return elements.get(id);};
- el('terminal-config').textContent=JSON.stringify({shop,username,action,title:'root terminal — '+shop,run_sshbbx:false});
+ el('terminal-config').textContent=JSON.stringify({shop,username,action,title:'root terminal — '+shop});
  class Terminal {constructor(){this.writes=[];terms.push(this);}open(){}focus(){}write(data){assert.ok(!this.disposed);this.writes.push(data);}onData(fn){this.input=fn;}dispose(){this.disposed=true;}}
  class WebSocket {static OPEN=1;constructor(url){this.url=String(url);sockets.push(this);this.readyState=1;}send(data){(this.sent??=[]).push(data);}close(){this.closed=true;}}
  const window={Terminal,location:{href:'https://mykol.com/mykos/api/terminal/window/'+shop},addEventListener:(name,fn)=>events[name]=fn,close(){this.closed=true;}};

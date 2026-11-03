@@ -61,17 +61,7 @@ gaps, not hidden features supplied by the installer.
 
 ## Backup accounts (`cd /usr/local/share/mykos/back`)
 
-| Script | Actual behavior / usage |
-|---|---|
-| `./bin/list_cloud_account` | Lists backup accounts, detected POS type/OS, disk usage |
-| `./bin/create_cloud_account` | Prompts for shopcode, client public SSH key, and subscriber flag; creates Linux user/home under `/backups/tfrsync-SHOP` and restricted authorized key |
-| `./bin/change_account_key` | Prompts for shopcode and public key; replaces that account's authorized key |
-| `./bin/view_cloud_key` | Prompts for shopcode; displays its authorized key |
-| `./bin/get_cloud_key` | Copies backed-up client public **and private** SSH keys to `/home/tfsupport/keys`; requires that account/directory; automatic nightly cleanup is not installed |
-| `./bin/delete_cloud_account` | Prompts for shopcode and whether to delete data; removes Linux user and optionally its home/data |
-| `./bin/is_subscriber` | Prompts for shopcode; reads/toggles `paying_customer` marker |
-| `./bin/tfrsync` | SSH forced-command wrapper; invoked by authorized_keys, accepts an rsync server command and rejects several shell metacharacters; not the backup client |
-| `./bin/install` | Compatibility forwarder to global installer; no longer changes SELinux or installs the old cron file |
+Business-specific integration is provided by a separately installed local extension.
 
 The legacy scripts have limited input validation and should be operated only by
 trusted host administrators. The account restriction is a legacy shell wrapper,
@@ -159,13 +149,7 @@ running it against production mirrors.
 | `back/bin/tsrs` | CGI HTML index linking published TSR reports; hostname is hard-coded |
 | `back/bin/crontab` | Historical schedule reference; first two entries lack the user field required by `/etc/cron.d`; not installed or enabled |
 
-Review report scripts before using them for billing decisions: the summary script
-can overwrite Daisy detection with Unknown, and success matching/counts have legacy
-assumptions. Reports use shared `/tmp` names. No guarantee of billing accuracy or
-secure publication is implied by copying these scripts. Email scripts must be
-reviewed for recipients, credentials, transport, and approvals before scheduling.
-The installer supplies support scripts at `/usr/local/bin` for compatibility but
-never executes them, publishes TSR content, or sends email.
+Business-specific integration is provided by a separately installed local extension.
 
 ## Host utilities
 

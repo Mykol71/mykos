@@ -362,9 +362,7 @@ state directory; scheduled commands have another queue; some bounded diagnostics
 return synchronously. Follow the actual action’s dispatch path before adding a
 new worker or assuming an existing response means the job finished.</p>
 <h2 id="authentication-and-privilege-boundaries">Authentication and privilege boundaries</h2>
-<p>Browser roles in this release are <code>user</code> and <code>admin</code>; API scopes are <code>read</code> and
-<code>admin</code>. The proposed application-specific role matrix is not implemented. Saved
-RTI/Dove labels and preview visibility do not establish backend access control.</p>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <p>Browser login stores scrypt password hashes and hashed session tokens. Sessions
 use HttpOnly, SameSite=Strict cookies; the Secure flag is enabled for HTTPS and
 disabled by default IP-only HTTP setup. Browser modifications require Origin.
@@ -508,7 +506,7 @@ persistent container monitor down when the worker exits. Preserve this when
 refactoring process launching.</p>
 <h2 id="areas-where-a-plausible-change-can-break-customers">Areas where a plausible change can break customers</h2>
 <h3 id="backup-data-and-accounts">Backup data and accounts</h3>
-<p>Native restore can mount <code>/usr2</code>, <code>/d</code>, complete <code>/etc</code>, <code>/home</code> and <code>/usr/java</code>
+<p>Native restore can mount configured application directories, complete <code>/etc</code> and <code>/home</code>
 directly read/write from a customer backup. It prepares only the new stopped
 guest’s image root and overlays private files for passwd/group/shadow/gshadow,
 host identity, mount tables, network ownership and PAM limits. UID/GID conflicts
@@ -604,7 +602,7 @@ python -m pytest -q tests/test_supporting_docs.py
 <p>The <code>.mmd</code> and <code>.svg</code> diagrams are generated from the same graph model; SVG layout
 uses Graphviz. Generated HTML and diagrams are bundled for servers without Node.
 Do not edit <code>docs/rendered</code> as the primary source or rerun the old one-time
-formatting migration. Preserve <code>KEY_ISSUES.md</code> and the historical Word guide.
+formatting migration. Preserve <code>README.md</code> and the historical Word guide.
 <a href="DOCUMENTATION_BUILD.html">Full documentation workflow</a>.</p>
 <h2 id="tests-and-what-they-establish">Tests and what they establish</h2>
 <p>From a full Git checkout, start with relevant tests:</p>

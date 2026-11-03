@@ -124,11 +124,7 @@ historical archive's token. Legacy tokens have read-only access to monitor endpo
 
 ## Backup SSH keys
 
-Use `mykos` → Backup to create an account and install its client public key. This is
-separate from API keys. `change_account_key` replaces its authorized key; it does not
-rotate API credentials. The legacy `get_cloud_key` script retrieves backed-up private
-SSH key material into `/home/tfsupport/keys`; its claimed nightly cleanup is not
-configured by this installer. See the script catalog before using it.
+Business-specific integration is provided by a separately installed local extension.
 
 Identity backups need explicit `backup --include-data`; store them encrypted off-host.
 Restoring one can replace passwords, roles, sessions, and revocations. Ordinary
@@ -136,12 +132,7 @@ source installs preserve identity databases and never import the original archiv
 
 ## Released permission boundary
 
-The reviewed release exposes browser roles `user`/`admin` and API scopes
-`read`/`admin`. POS labels such as RTI/Dove and saved map metadata do not establish
-application-specific access enforcement. The proposed multi-role permission grid,
-MYKOS-to-MYKOS peer workflow and configurable application alert fields are future
-work, not documented released procedures. Keep browser credentials, API keys,
-backup SSH keys, guest accounts and VPN PSKs separate during backup and rotation.
+Business-specific integration is provided by a separately installed local extension.
 
 ## Login throttling and active terminal revocation
 

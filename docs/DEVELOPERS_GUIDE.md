@@ -180,9 +180,7 @@ new worker or assuming an existing response means the job finished.
 
 ## Authentication and privilege boundaries
 
-Browser roles in this release are `user` and `admin`; API scopes are `read` and
-`admin`. The proposed application-specific role matrix is not implemented. Saved
-RTI/Dove labels and preview visibility do not establish backend access control.
+Business-specific integration is provided by a separately installed local extension.
 
 Browser login stores scrypt password hashes and hashed session tokens. Sessions
 use HttpOnly, SameSite=Strict cookies; the Secure flag is enabled for HTTPS and
@@ -358,7 +356,7 @@ refactoring process launching.
 
 ### Backup data and accounts
 
-Native restore can mount `/usr2`, `/d`, complete `/etc`, `/home` and `/usr/java`
+Native restore can mount configured application directories, complete `/etc` and `/home`
 directly read/write from a customer backup. It prepares only the new stopped
 guest’s image root and overlays private files for passwd/group/shadow/gshadow,
 host identity, mount tables, network ownership and PAM limits. UID/GID conflicts
@@ -480,7 +478,7 @@ python -m pytest -q tests/test_supporting_docs.py
 The `.mmd` and `.svg` diagrams are generated from the same graph model; SVG layout
 uses Graphviz. Generated HTML and diagrams are bundled for servers without Node.
 Do not edit `docs/rendered` as the primary source or rerun the old one-time
-formatting migration. Preserve `KEY_ISSUES.md` and the historical Word guide.
+formatting migration. Preserve `README.md` and the historical Word guide.
 [Full documentation workflow](DOCUMENTATION_BUILD.md).
 
 ## Tests and what they establish

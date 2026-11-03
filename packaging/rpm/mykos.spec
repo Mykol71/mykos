@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        226%{?dist}
+Release:        227%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -110,15 +110,10 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
-* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-226
-- Fit terminal text to drawable content with optional-addon fallback and PTY resizing.
-
-* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-225
-- Run RH8RTI staging before final commit and reject incomplete stage results
-- Add independent RTI pane with flower icon and scoped controls
-
-* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-224
-- Add separate RH8 RTI native guest package profile with updateos.
+* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-227
+- Add verified separately packaged extension payloads without including them in core builds.
+- Preserve valid UID-zero image roots using nonzero primary groups during backup restore.
+- Include terminal width fitting and generic application boundaries.
 
 * Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-223
 - Restore read-only updateos inventory and protected LAN download index.
@@ -304,7 +299,7 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 - Downward availability lines and guarded cold VM memory allocation
 
 * Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-50
-- Remove RTI/POS application monitoring from collectors, detail views and APIs.
+- Remove legacy application monitoring from collectors, detail views and APIs.
 - Prefer readable image references and resolve native snapshot OS from host image tags.
 
 * Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-49

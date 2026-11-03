@@ -50,10 +50,8 @@ for model in models:
  assert len([x for x in xml.iter() if x.attrib.get('class')=='node'])==len(model['nodes'])
  assert len([x for x in xml.iter() if x.attrib.get('class')=='edge'])==len(model['edges'])
  assert (DOCS/'diagrams'/(model['name']+'.mmd')).read_text().startswith('flowchart TD\n')
-protected={
- 'MYKOS_Administrator_Guide.docx':'c680ad5e198e7127683c811a9ed2b755d6314ea6210a782d9ba4be3e66b1f33b',
- 'KEY_ISSUES.md':'bc472241055012e2638dd7843075a60ffa1ea6ae078ded115960b6ce56538235',
- 'MYKOS_Administrator_Guide.md':'bc899eeaa339ac8e0811ad645fd130acc09acdce7268025349e321153adedaa3'}
+protected={}  # Historical business originals are packaged by their extension.
+
 for name,digest in protected.items():assert hashlib.sha256((DOCS/name).read_bytes()).hexdigest()==digest,name+' was changed'
 for name in pages:
  text=(DOCS/'rendered'/name).read_text()

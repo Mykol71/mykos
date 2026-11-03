@@ -23,61 +23,9 @@ this review did not execute diagnostic commands inside guests.</p>
 <p>Five managed containers were running: one native Linux container and four desktop
 VM wrappers. Last observed basic/details/extended collector durations were about
 1.9/4.2/9.8 seconds. Those are single observed runs, not benchmark medians.</p>
-<p>Before application-monitoring removal, configured 15/30/30-second intervals imply
-up to 56 container execs/minute for that workload. OnUnitInactiveSec waits for the
-previous run to finish, so actual rates are lower. Removing RTI polling eliminates
-12 of those nominal calls/minute, leaving up to 44. These counts estimate command
-frequency, not CPU savings or guaranteed latency improvement.</p>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <h2 id="prioritized-findings">Prioritized findings</h2>
-<table>
-<thead>
-<tr>
-<th>Priority</th>
-<th>Location</th>
-<th>Recommendation</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>High</td>
-<td>collect-nodes.py, collect-extended.py</td>
-<td>Skip Linux VPN and eth1 queries for Windows/macOS/VM Ubuntu wrappers. After RTI removal, these still account for up to 32 unnecessary execs/minute with four VMs. Wrapper state is not guest state.</td>
-</tr>
-<tr>
-<td>High</td>
-<td>All three collectors</td>
-<td>Collect native VPN status once and publish a shared timestamped result. Do not query each tunnel independently in every collector.</td>
-</tr>
-<tr>
-<td>High</td>
-<td>collect-details.py</td>
-<td>Use image labels, selected OS metadata, and cached image tags for OS identity. Avoid repeated cat/cp of os-release and per-container image inspection. Preserve immutable image IDs for correctness and readable names for display.</td>
-</tr>
-<tr>
-<td>High</td>
-<td>collect-extended.py</td>
-<td>Batch Podman inspect and non-streaming stats rather than spawning each command per container. StartedAt already exists in inspect data.</td>
-</tr>
-<tr>
-<td>Medium</td>
-<td>collect-extended.py, mykos_linux.py, pos/pos</td>
-<td>Read IP/MAC/interface existence with host iproute tools in the selected network namespace. Podman inspect alone does not reliably describe pipework eth1. Guest OS binaries are unnecessary for these checks.</td>
-</tr>
-<tr>
-<td>Medium</td>
-<td>Native lifecycle, pos/pos</td>
-<td>Replace filesystem existence/permission checks with trusted host metadata or mount-aware file access. Preserve bind mounts, symlink boundaries, and user namespace ownership mappings.</td>
-</tr>
-<tr>
-<td>Medium</td>
-<td>mykos-stage-pos, backup/menu helpers</td>
-<td>Legacy staging still knows RTI paths/services and backup types. Move these into explicit application adapters; the generic virtualization core must not assume their presence.</td>
-</tr>
-<tr>
-<td>Lower</td>
-<td>repo/bin/sync_repos</td>
-<td>Keep distribution-specific sync workers isolated. Build reusable worker images or use a single worker invocation per job instead of repeated setup execs; do not assume host yum tools can replace every release-specific workflow.</td>
-</tr>
-</tbody></table>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <h2 id="vpn-replacement-requires-protocol-validation">VPN replacement requires protocol validation</h2>
 <p>Libreswan supports a Unix control socket and status queries selecting that socket.
 A host-side client could query the container daemon without podman exec, provided
@@ -103,49 +51,9 @@ host graphs, snapshot-file management and backup filesystem listings already use
 host interfaces. QEMU monitor access does not run a guest command. The QEMU guest
 agent executes inside Windows only for explicit scheduled PowerShell commands.</p>
 <h2 id="changes-completed-with-this-review">Changes completed with this review</h2>
-<ul>
-<li>Removed RTI/POS application probing from both collectors, GUI/text detail views,
-current and stale monitoring responses, and the RTI-specific monitoring route.</li>
-<li>Kept generic CPU/memory, OS, network, VPN, uptime and snapshot information.</li>
-<li>Corrected stage image selection to prefer the readable image name over ImageID.</li>
-<li>Preferred native OS tags over snapshot pin tags when resolving legacy hashes.</li>
-<li>Resolved native snapshot OS from host-side image tags when its stored name is a
-hash. OS detection for this fix does not execute commands inside the guest.</li>
-</ul>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <h2 id="implemented-optimizations-release-51">Implemented optimizations (release 51)</h2>
-<ul>
-<li>Basic, details and extended monitoring no longer execute guest programs.</li>
-<li>Each collector batches container inspection. Extended batches all running
-container statistics and uses inspected StartedAt timestamps.</li>
-<li>Basic queries native Libreswan through the host client and selected container&#39;s
-control socket once per interval. Details/extended reuse timestamped results,
-bound to container ID/start time and expired after 60 seconds. VM wrappers are
-excluded. The production client/control protocol was verified; unsupported or
-inaccessible sockets report unknown, without falling back to guest execution.</li>
-<li>Native IP/MAC/interface checks use host iproute tools in the selected network
-namespace, with process lifetime checks. They do not enter its mount namespace
-or execute its binaries. Pipework remains in place pending a separate migration.</li>
-<li>OS/image identity uses batched host image metadata, readable tags and explicit
-VM labels. Immutable image IDs remain available for correctness. Native builds
-label their selected OS. This intentionally reports image identity, not an OS
-upgraded after the instance was created.</li>
-<li>Text-menu native staging now uses the same helper as web/API staging. Redundant
-guest filesystem tests and blanket ownership/SSH-key permission changes were
-removed. No replacement host chmod/chown is needed by generic staging; bind
-mounts retain their existing ownership and data.</li>
-<li>Generic staging does not assume an application stack or a running VPN service.
-Legacy restore mounts/services and backup classification are isolated in
-mykos_profiles.py, enabled only by root configuration
-<code>&quot;application_adapter&quot;: &quot;rti&quot;</code>. The default is <code>none</code>; enabling an adapter is
-an explicit operator choice. Existing backup accounts/data are preserved.</li>
-<li>Repo sync uses one isolated worker invocation per release, an exclusive host
-lock, and each release&#39;s own tools. It no longer starts privileged workers,
-executes a CLI command for every repo or replaces another worker&#39;s container.
-Installation of sync tools happens within that single job. Large network syncs
-have not been triggered as part of validation.</li>
-<li>Interactive terminals, requested service actions, image build preparation and
-explicitly scheduled guest shell/PowerShell commands remain intentional.</li>
-</ul>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <p>A production shadow run on the same five managed instances measured approximately
 0.115 / 0.099 / 0.127 seconds for basic/details/extended. These are observed runs,
 not controlled benchmark medians or guaranteed latency. The native LAN IP was

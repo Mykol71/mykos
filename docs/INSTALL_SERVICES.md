@@ -52,12 +52,7 @@ sudo /usr/bin/python3 -m venv /opt/mykos-web/.venv
 sudo /opt/mykos-web/.venv/bin/pip install --no-index --find-links /srv/wheels -r services/requirements.txt
 ```
 
-`--image-build-deps` additionally requests Lorax, Anaconda TUI, and pykickstart;
-it requires `--install-deps`. Building POS images remains a separate operator
-workflow and needs working repository URLs and actual RTI software. Apache TLS,
-firewall policy, SELinux policy, subscription registration, image content, backup
-clients, Meraki configuration, DNS, and outbound email must be configured for the
-site. The installer does not disable SELinux or change global firewall/TLS policy.
+Business-specific integration is provided by a separately installed local extension.
 
 ## New installation
 
@@ -122,9 +117,7 @@ credential and staging files are removed before the installed image is captured.
 
 For example, after validating the image and host NIC:
 
-```json
-{"stage_image":"localhost/rti-production:approved","network_device":"ens192","terminal_enabled":false}
-```
+Business-specific integration is provided by a separately installed local extension.
 
 No image is pulled during API staging (`--pull=never`). A blank image/NIC rejects
 staging. Terminal access is disabled by default. Keep config and POS secret files
@@ -436,7 +429,7 @@ upgrade the local installer. Using an already built image is a separate path.
 
 When native staging explicitly selects backup restore, available directories under
 `/backups/tfrsync-ID` (or configured `backup_root`) bind directly read/write at
-`/usr2`, `/d`, `/etc`, `/home` and `/usr/java`. This is live access to the backup
+configured application directories plus `/etc` and `/home`. This is live access to the backup
 set, not a copied restore. Application writes change that mounted data; preserve
 a separate recoverable backup before starting it. Missing paths are omitted;
 unsafe symlinks or paths outside the account directory are rejected.

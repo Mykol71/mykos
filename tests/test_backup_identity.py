@@ -32,12 +32,12 @@ def test_image_application_files_remap_to_customer_account_ids():
 
 
 def test_explicit_receiver_ids_and_old_backup_account_removed_without_source_change():
-    customer=data('tfsupport:x:1000:1000:support:/home/tfsupport:/bin/bash\ntfrsync-00003501:x:1004:1004:backup:/home/tfrsync-00003501:/bin/bash\n','rti:x:1000:tfsupport\ntfrsync-00003501:x:1004:\n')
+    customer=data('appsupport:x:1000:1000:support:/home/appsupport:/bin/bash\ntfrsync-01234567:x:1004:1004:backup:/home/tfrsync-01234567:/bin/bash\n','application:x:1000:appsupport\ntfrsync-01234567:x:1004:\n')
     before=dict(customer)
-    adjusted=identity.adjusted_customer(customer,{'users':{'tfsupport':1011},'groups':{'rti':1012}},exclude=['tfrsync-00003501'])
-    assert 'tfsupport:x:1011:1012:' in adjusted['passwd']
-    assert 'rti:x:1012:tfsupport' in adjusted['group']
-    assert 'tfrsync-00003501' not in repr(adjusted) and customer==before
+    adjusted=identity.adjusted_customer(customer,{'users':{'appsupport':1011},'groups':{'application':1012}},exclude=['tfrsync-01234567'])
+    assert 'appsupport:x:1011:1012:' in adjusted['passwd']
+    assert 'application:x:1012:appsupport' in adjusted['group']
+    assert 'tfrsync-01234567' not in repr(adjusted) and customer==before
 
 
 def test_acl_named_user_and_group_ids_are_reconciled():
@@ -64,3 +64,42 @@ def test_identity_reader_rejects_symlink_escape(tmp_path):
     root=tmp_path/'backup';root.mkdir();outside=tmp_path/'host';outside.mkdir();(outside/'passwd').write_text('host private')
     (root/'etc').symlink_to(outside,target_is_directory=True)
     with pytest.raises(OSError):identity.read_files(root)
+
+
+def test_uid_zero_root_keeps_nonzero_image_primary_group():
+    base=data(groups='appadmins:x:1003:root\n').copy()
+    base['passwd']=base['passwd'].replace('root:x:0:0:','root:x:0:1003:')
+    customer=data(root_hash='backup-root-not-used')
+    before=dict(customer)
+    plan=identity.merge(base,customer)
+    assert plan['files']['passwd'].startswith('root:x:0:1003:')
+    assert 'appadmins:x:1003:root' in plan['files']['group']
+    assert plan['files']['shadow'].startswith('root:base-root:')
+    assert 'backup-root-not-used' not in plan['files']['shadow']
+    assert customer==before
+
+
+def test_root_primary_group_follows_image_group_collision_mapping():
+    base=data(groups='appadmins:x:1003:root\n')
+    base['passwd']=base['passwd'].replace('root:x:0:0:','root:x:0:1003:')
+    customer=data('alice:x:1003:1003:A:/home/alice:/bin/bash\n','customer:x:1003:alice\n')
+    original=dict(customer);plan=identity.merge(base,customer);mapped=plan['gid_map'][1003]
+    assert mapped not in (0,1003)
+    assert plan['files']['passwd'].startswith(f'root:x:0:{mapped}:')
+    assert f'appadmins:x:{mapped}:root' in plan['files']['group']
+    assert 'alice:x:1003:1003:' in plan['files']['passwd']
+    assert 'customer:x:1003:alice' in plan['files']['group']
+    assert customer==original
+
+
+def test_image_root_group_must_exist_in_image_not_only_backup():
+    base=data();base['passwd']=base['passwd'].replace('root:x:0:0:','root:x:0:1003:')
+    customer=data(groups='customer:x:1003:root\n')
+    with pytest.raises(ValueError,match='Image root account references a missing primary group'):
+        identity.merge(base,customer)
+
+
+def test_nonzero_root_uid_still_rejected_with_nonzero_group():
+    base=data(groups='appadmins:x:1003:root\n');base['passwd']=base['passwd'].replace('root:x:0:0:','root:x:1003:1003:')
+    with pytest.raises(ValueError,match='valid root account'):
+        identity.merge(base,data())

@@ -44,12 +44,7 @@ installer clears this disposable change-request table on update. Separate
 `personal_notes` remain private and preserved, and are excluded from automated
 change-request scans.
 
-Shared customer-ID notes use `GET/PUT /mykos/api/web/id-notes/{id}` and the
-`shared_id_notes` table. Every signed-in user, including a read-only dashboard
-user, can edit them. Writes require Origin and revision; responses identify the
-last editor. They belong to an eight-digit ID and survive updates and container
-recreation. The release does not apply the proposed RTI/Dove role matrix to these
-routes; do not infer per-POS authorization from map labels or pane visibility.
+Business-specific integration is provided by a separately installed local extension.
 
 ## Host performance history
 
@@ -138,11 +133,7 @@ terminates HTTPS and proxies `/mykos/` to `127.0.0.1:8000/`. Internal route path
 `/mykos`; FastAPI advertises `/mykos` as its public root. The supplied Apache file is a
 VirtualHost **example**, deliberately not installed into an existing shared server.
 
-Root collectors discover Podman containers named eight-digit shopcodes, optionally
-followed by a hostname. They write JSON snapshots. The web application reads those
-snapshots and joins inventory, node state, network, VPN, resources, and RTI metadata.
-Snapshots older than 120 seconds are marked stale and their observations are omitted
-from API v2 data. Unknown values do not prove a node is healthy or unhealthy.
+Business-specific integration is provided by a separately installed local extension.
 
 Privileged actions use two separate Unix sockets. The app authenticates sessions,
 API keys, and roles before contacting them. systemd owns socket permissions and
@@ -187,16 +178,7 @@ describe the current privileged launch commands.
 
 ## systemd inventory
 
-| Unit | Behavior |
-|---|---|
-| `mykos-web.service` | Unprivileged Uvicorn, loopback port 8000, automatic failure restart |
-| `mykos-collector.service` / `.timer` | `collect-nodes.py`; inventory/status; 15 seconds after prior completion |
-| `mykos-details.service` / `.timer` | `collect-details.py`; inspection, IPs, RTI version; 30 seconds after completion |
-| `mykos-extended.service` / `.timer` | `collect-extended.py`; CPU/memory, eth1 IP, VPN, RTI; 30 seconds after completion |
-| `mykos-container-admin.socket` / `mykos-container-admin@.service` | Per-connection JSON operations |
-| `mykos-terminal.socket` / `mykos-terminal@.service` | Per-connection PTY bridge, maximum eight-hour lifetime |
-| `mykos-repo-sync.service` | On-demand background repository sync via the existing toolkit script; not enabled automatically |
-| `mykos-stage@SHOP.service` | Asynchronous per-shop worker; 31-minute systemd timeout |
+Business-specific integration is provided by a separately installed local extension.
 
 Timers start about 20 seconds after boot and do not overlap their own service.
 Their effective refresh rate includes execution time, which grows with node count.
@@ -210,23 +192,8 @@ manually rather than blindly renaming unrelated units.
 
 ## Staging workflow
 
-`POST /api/v2/actions/stage` validates an administrator, eight-digit shopcode,
-absence of an existing container, configured image/NIC, and optional RTI backup.
-It queues `mykos-stage@SHOP.service`; the request returns promptly. The worker runs
-`mykos-stage-pos`, records `queued`, `running`, `done`, or `failed`, and stores bounded
-output for `/jobs/SHOP`. Per-shop locks serialize start/stop requests.
+Business-specific integration is provided by a separately installed local extension.
 
-The supplied launcher creates a privileged, rootful system container with `/sbin/init`,
-mounts per-shop IPsec configuration, attaches `eth1` with the existing `pipework` and
-`dhclient`, and restarts IPsec. With restore enabled it mounts available legacy RTI
-backup paths read/write and restarts `tfremote`, Samba, CUPS, and RTI. This uses the
-backup as live storage; it does not copy or make a new backup. The created container
-is removed if a later setup step fails; existing customer data and VPN files remain.
-Successful containers persist when stopped, unlike the old CLI's `--rm` launch.
-The new helper refuses staging if a stopped container already exists.
+Business-specific integration is provided by a separately installed local extension.
 
-Prepared images, the RTI payload, valid backup content, network topology, working
-VPN configuration, subscription access, and in-container `/usr/bin/checkit` are
-external dependencies. The historical helper implementation was absent; these
-helpers are compatible replacements based on the extracted application's protocol,
-not recovered production binaries. Validate them in staging before enabling writes.
+Business-specific integration is provided by a separately installed local extension.

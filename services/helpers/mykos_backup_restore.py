@@ -11,7 +11,7 @@ import mykos_backup_identity as identity
 from mykos_runtime import shopcode
 
 BACKUPS=Path('/backups')
-DATA_PATHS=('usr2','d','etc','home','usr/java')
+DATA_PATHS=('etc','home')
 PRIVATE_FILES=('passwd','group','shadow','gshadow','hostname','hosts','machine-id','fstab','crypttab','NetworkManager/conf.d/90-mykos-podman.conf','security/limits.conf')
 
 
@@ -42,7 +42,11 @@ def mount_pairs(shop,settings):
     backup=directory(shop,settings)
     if backup is None:return []
     pairs=[]
-    for rel in DATA_PATHS:
+    paths=settings.get('backup_paths',DATA_PATHS)
+    if not isinstance(paths,(list,tuple)) or len(paths)>32:raise ValueError('Invalid backup paths')
+    for rel in paths:
+        if not isinstance(rel,str) or not rel or rel.startswith('/') or any(x in ('.','..') for x in rel.split('/')) or rel.split('/')[0] in ('proc','sys','dev','run'):
+            raise ValueError('Invalid backup path')
         path=source(backup,rel)
         if path:pairs.append((path,'/'+rel))
     if len(pairs)>512:raise ValueError('Too many backup mounts')
@@ -137,7 +141,7 @@ def prepare(shop,settings,root,hostname,address=None):
     # These paths refer only to the created guest root, before backup bind mounts
     # are attached. No deletion or ownership operation ever targets the backup.
     for home in homes:
-        if not home.startswith('/') or home in ('/','/home','/root','/usr2','/d','/etc'):
+        if not home.startswith('/') or home in ('/','/home','/root','/etc'):
             raise ValueError('Unsafe old backup-account home')
         path=guest_path(root,home.lstrip('/'))
         if path.exists():

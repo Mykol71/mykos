@@ -461,7 +461,3 @@ The radio band scrolls through a trailing five-minute window while Live is selec
 ### Terminal pane width
 
 Interactive terminals fit their text columns to the available pane or window width. Resizing updates the PTY dimensions without writing commands into the shell. Close/replacement disconnects the resize observer. Legacy API/raw terminal clients remain supported.
-
-### RTI pane
-
-The **RTI** pane has the MYKOS flower icon and groups `rh<number>rti` images and lists their instances separately from Red Hat instances. Choose **8 RTI** to stage the prepared image. Its summary, private pane note, controls and Receiver source follow the same behavior as other OS panes. Normal start/stop preserves the filesystem; RAM snapshot and restore actions remain disabled for RH8RTI.

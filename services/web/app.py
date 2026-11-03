@@ -334,7 +334,7 @@ def mykos_terminal_permission(request: Request, include_user: bool = False):
     return result
 
 @app.get('/api/terminal/window/{shop}', include_in_schema=False)
-def mykos_terminal_window(shop: str, request: Request, action: str = 'shell', family: str = 'linux', run_sshbbx: bool = False):
+def mykos_terminal_window(shop: str, request: Request, action: str = 'shell', family: str = 'linux'):
     permission = mykos_terminal_permission(request, include_user=True)
     if not permission['allowed']: raise HTTPException(403, 'Admin terminal required')
     if action not in ('shell', 'image-shell'): raise HTTPException(400, 'Invalid terminal window action')
@@ -346,7 +346,7 @@ def mykos_terminal_window(shop: str, request: Request, action: str = 'shell', fa
     label = 'PowerShell' if family in ('windows','windows-server') else 'macOS shell' if family == 'macos' else 'root terminal'
     import socket
     payload = {'shop': shop, 'action': action, 'title': label+' — '+shop+' @ '+socket.gethostname(),
-               'username': permission['username'], 'run_sshbbx': bool(run_sshbbx)}
+               'username': permission['username']}
     config = json.dumps(payload).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
     html = Path(__file__).with_name('terminal-window.html').read_text().replace('__MYKOS_TERMINAL_CONFIG__', config)
     return HTMLResponse(html)

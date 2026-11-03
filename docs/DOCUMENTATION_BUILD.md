@@ -48,7 +48,7 @@ Before editing, packaging, or promotion, compare hashes and relative paths in
 reviewed local baseline. Fetch and privately preserve new files/edits from either
 copy, reconcile them, then build again. Recheck immediately before promotion;
 abort if the baseline changed. A previously clean comparison does not authorize
-overwriting a later operator edit. `KEY_ISSUES.md` and the original Word guide
+overwriting a later operator edit. `README.md` and the original Word guide
 remain verbatim. The Markdown administrator edition is historical reference;
 correct maintained task guides and label historical material clearly.
 

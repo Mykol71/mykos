@@ -3,42 +3,8 @@ from pathlib import Path
 from fastapi import APIRouter,HTTPException
 from fastapi.responses import FileResponse,RedirectResponse
 
-GUIDES={
-    'PACKAGING_README.md':'Packaging README: step-by-step release workflow',
-    'TESTING_README.md':'Testing README: step-by-step checks and cleanup',
-    'UI_GUIDE.md':'Dashboard UI guide and button reference',
-    'PEERS.md':'Peer hosts and shared controls',
-    'LICENSING.md':'Free use and licensing',
-    'CREDITS.md':'Credits and acknowledgments',
-    'REFERENCES.md':'References and upstream projects',
-    'SCREENSHOTS.md':'Screen examples gallery',
-    'SECURITY_BY_DESIGN.md':'Security by design',
-    'USE_CASES.md':'Example use cases',
-    'DEVELOPERS_GUIDE.md':'Developer handoff and source guide',
-    'KEY_INNOVATIONS.md':'Key innovations',
-    'ENGINEERING_LESSONS.md':'Performance by design: engineering milestones',
-    'DEPLOYMENT_EFFICIENCY.md':'Deployment efficiency and business value',
-
-    'README.md':'MYKOS documentation',
-    'DOCUMENTATION_BUILD.md':'Documentation build and verification',
-    'BOOTSTRAP.md':'IP installation and optional domain HTTPS',
-    'RPM.md':'RHEL RPM packages',
-    'INSTALL_SERVICES.md':'Installation updates and recovery',
-    'ARCHITECTURE.md':'Architecture and components',
-    'NETWORKING.md':'Native networking and VPNs',
-    'DESKTOPS.md':'Windows macOS and Ubuntu desktops',
-    'IMAGE_BUILDS.md':'Unattended image builds',
-    'BALLOONING.md':'Guest memory ballooning',
-    'HOST_SIDE_REVIEW.md':'Host monitoring review',
-    'KEY_ISSUES.md':'Operator notes',
-    'IDENTITY.md':'Identity management',
-    'API.md':'API usage',
-    'SCRIPTS.md':'Operator script catalog',
-    'VALIDATION.md':'Validation record',
-    'MYKOS_Administrator_Guide.md':'Administrator guide reference edition',
-}
-DOWNLOADS={'COMPONENT_LICENSES.json':'application/json','LICENSE.txt':'text/plain','THIRD_PARTY_NOTICES.txt':'text/plain','BRAND_SOURCES.txt':'text/plain','MYKOS_Key_Innovations.pdf':'application/pdf','MYKOS_Engineering_Lessons.pdf':'application/pdf','MYKOS_Deployment_Efficiency.pdf':'application/pdf','MYKOS_Administrator_Guide.docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-           'openapi.json':'application/json','THIRD_PARTY_ICONS.txt':'text/plain'}
+GUIDES={'PACKAGING_README.md': 'Packaging README: step-by-step release workflow', 'TESTING_README.md': 'Testing README: step-by-step checks and cleanup', 'UI_GUIDE.md': 'Dashboard UI guide and button reference', 'PEERS.md': 'Peer hosts and shared controls', 'LICENSING.md': 'Free use and licensing', 'CREDITS.md': 'Credits and acknowledgments', 'REFERENCES.md': 'References and upstream projects', 'SCREENSHOTS.md': 'Screen examples gallery', 'SECURITY_BY_DESIGN.md': 'Security by design', 'USE_CASES.md': 'Example use cases', 'DEVELOPERS_GUIDE.md': 'Developer handoff and source guide', 'KEY_INNOVATIONS.md': 'Key innovations', 'ENGINEERING_LESSONS.md': 'Performance by design: engineering milestones', 'DEPLOYMENT_EFFICIENCY.md': 'Deployment efficiency and business value', 'README.md': 'MYKOS documentation', 'DOCUMENTATION_BUILD.md': 'Documentation build and verification', 'BOOTSTRAP.md': 'IP installation and optional domain HTTPS', 'RPM.md': 'RHEL RPM packages', 'INSTALL_SERVICES.md': 'Installation updates and recovery', 'ARCHITECTURE.md': 'Architecture and components', 'NETWORKING.md': 'Native networking and VPNs', 'DESKTOPS.md': 'Windows macOS and Ubuntu desktops', 'IMAGE_BUILDS.md': 'Unattended image builds', 'BALLOONING.md': 'Guest memory ballooning', 'HOST_SIDE_REVIEW.md': 'Host monitoring review', 'IDENTITY.md': 'Identity management', 'API.md': 'API usage', 'SCRIPTS.md': 'Operator script catalog', 'VALIDATION.md': 'Validation record'}
+DOWNLOADS={'COMPONENT_LICENSES.json': 'application/json', 'LICENSE.txt': 'text/plain', 'THIRD_PARTY_NOTICES.txt': 'text/plain', 'BRAND_SOURCES.txt': 'text/plain', 'openapi.json': 'application/json', 'THIRD_PARTY_ICONS.txt': 'text/plain'}
 DIAGRAMS={'vpn-host-shared.svg', 'vpn-direct.mmd', 'image-lifecycle.mmd', 'vpn-host-only.svg', 'vpn-direct.svg', 'vpn-native-gateway.mmd', 'architecture.mmd', 'architecture.svg', 'image-lifecycle.svg', 'vpn-native-gateway.svg', 'vpn-host-shared.mmd', 'vpn-host-only.mmd'}
 SCREENSHOTS={'example-dashboard.jpg','example-snapshot-actions.jpg','example-snapshot-preview.jpg'}
 BRAND_LOGOS={'centos-pane.svg', 'centos-pane.png', 'fedora-pane.png', 'oracle-linux-pane.png', 'microsoft.png', 'ubuntu.svg', 'cisco.svg', 'python.svg', 'almalinux.svg', 'apple.svg', 'fastapi.svg', 'oracle.svg', 'centos.svg', 'github.svg', 'rockylinux.svg', 'redhat.svg', 'qemu.svg', 'dell.svg', 'podman.svg', 'apache.svg', 'fedora.svg', 'teleflora.png', 'openai.svg', 'canonical.svg'}

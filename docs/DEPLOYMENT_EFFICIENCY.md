@@ -1,6 +1,6 @@
 # MYKOS: deployment efficiency and business value
 
-[Documentation index](README.md) · [Download PDF](MYKOS_Deployment_Efficiency.pdf)
+[Documentation index](README.md) · [Download PDF](DEPLOYMENT_EFFICIENCY.md)
 
 **Where complete customer environments can save time, reduce rework, and lower operating costs**
 

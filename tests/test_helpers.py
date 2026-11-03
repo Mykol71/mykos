@@ -136,7 +136,7 @@ def test_helper_allowlist_and_stage_protocol(tmp_path,monkeypatch):
     monkeypatch.setattr(mykos_runtime,'JOBS',tmp_path.resolve())
     monkeypatch.setattr(module,'active',lambda shop:False)
     monkeypatch.setattr(module,'containers',lambda:[])
-    monkeypatch.setattr(module,'config',lambda:{'stage_image':'localhost/rti:test','network_device':'eth0'})
+    monkeypatch.setattr(module,'config',lambda:{'stage_image':'localhost/application:test','network_device':'eth0'})
     calls=[]
     monkeypatch.setattr(module,'run',lambda args,**kw:calls.append(args) or '')
     for args in (['exec','01234567','id'],['logs','01234567','extra'],['stage-start','01234567','$(id)'],['stop-pos','--all']):

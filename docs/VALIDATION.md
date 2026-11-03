@@ -1,13 +1,5 @@
 # Validation record and remaining integration work
 
-## Release225 — staged RTI image and independent pane
-
-RH8RTI runs `updateos stage` before final commit, with strict missing-group and step-failure checks. The RTI pane is independent of Red Hat and uses the flower icon, including separate staging, instance grouping, summary, notes and Receiver source. Validation covers a real stage installation, installed application checks and cold start/stop, RAM-action rejection, failed-stage commit prevention, pane classification and note authorization, full regressions and signed dev/production promotion. Private vendor payload repairs remain LAN-only and outside public source artifacts.
-
-## Release224 — RHEL 8 RTI guest profile
-
-Adds a separate rh8rti native image and exact requested package groups/list with updateos. Native selection, EL8 platform/RPM database handling, image identity, staging/snapshots and dashboard classification are included. The normal rh8 recipe, published releases, host support matrix and existing workloads stay preserved. Package/group availability, a real dev image build and installed-package checks, native instance lifecycle, full regressions and signed dev/prod validation gate publication. The user explicitly selected publication with RH8RTI RAM snapshot/restore actions disabled pending a later CRIU compatibility fix. Disabled actions are enforced in the backend as well as the UI; other OS snapshots remain unchanged.
-
 ## Release223 — LAN-only updateos listing
 
 The dashboard inventory includes the updateos download tree as read-only while the destructive repository path continues to reject it. The download landing page selects a protected LAN index only for loopback and the existing two LAN ranges. Direct private-index requests and updateos downloads remain forbidden to public clients. Focused inventory/UI checks and isolated Apache LAN/public tests gate dev/prod promotion. Existing updater fixes and all release222 behavior are retained.
@@ -191,23 +183,9 @@ optional mail clients are excluded from the required system package list.
 This is a source/staging validation, not a claim that a production deployment ran.
 Before activation, validate on an approved compatible Linux staging host:
 
-1. Package availability, selected Python/venv, ownership, and `systemd-analyze verify`.
-2. HTTPS proxy prefix, Origin, cookies, WebSocket routing, TLS, and SELinux permissions.
-3. Collector freshness, rootful Podman discovery, snapshot ownership/readability,
-   duplicate-shop handling, and actual image OS metadata.
-4. Both socket-activated helper services, bounded live diagnostics, and authorization
-   denials for nonadmins/read keys.
-5. Prepared RTI image, correct NIC/DHCP behavior, IPsec configuration and reachability,
-   an approved staging job with and without read/write backup mounts, and stop behavior.
-6. Terminal opt-in, PTY behavior, disconnect cleanup, and session restrictions.
-7. Code rollback and identity-data recovery on a disposable host, including service
-   account numeric ownership and independent dependency/image/data backups.
+Business-specific integration is provided by a separately installed local extension.
 
-The historical helper source was absent. Supplied helpers are compatible replacements
-based on the app's protocol and existing POS commands; their integration behavior
-must be tested. The global installer does not fabricate RTI software, backups,
-images, subscription entitlements, networks, Meraki configuration, TLS certificates,
-or in-container Checkit. Legacy billing/TSR/blacklist jobs remain manual and unscheduled.
+Business-specific integration is provided by a separately installed local extension.
 
 ## Released baseline and this documentation review — 28 October 2026
 
@@ -216,7 +194,7 @@ The reviewed baseline is **1.5.20261024-146**, source archive SHA-256
 The installed production RPM was queried directly. Both production documentation
 folders were fetched, compared by relative path and SHA-256, and preserved before
 editing; their 41 files matched the clean released source. Historical Word and
-`KEY_ISSUES.md` remain byte-for-byte unchanged. The Markdown administrator reference
+`README.md` remain byte-for-byte unchanged. The Markdown administrator reference
 also remains a historical edition; current task guides take precedence.
 
 Source review covered VPN prompts/configuration/hooks, host and guest namespace

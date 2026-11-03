@@ -21,7 +21,7 @@ wearing out. Replacing that server is difficult because the application expects
 particular libraries, directory layouts, accounts, or OS behavior.
 
 For example, imagine a distributor with an older Linux order-entry program. Its
-application files live under `/usr2` and `/usr/java`, customer data is under `/d`,
+application files and data live in configured application directories,
 and staff depend on established accounts and numeric file ownership. The goal is
 to move useful service to a newer Linux host without first rewriting the program.
 

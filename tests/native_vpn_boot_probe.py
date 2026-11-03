@@ -43,11 +43,11 @@ for rel in ('usr2','home/alice','home/tfrsync-01234567'):(back/rel).mkdir(parent
 (back/'etc/shadow').write_text('root:source-root:1:0:99999:7:::\nalice:source-alice:1:0:99999:7:::\n')
 (back/'etc/shadow').chmod(0o600)
 (back/'etc/rc.d/init.d').mkdir(parents=True)
-(back/'etc/rc.d/init.d/rti').write_text('customer service definition')
+(back/'etc/rc.d/init.d/application').write_text('customer service definition')
 original={str(p.relative_to(back)):(p.read_bytes(),p.stat().st_uid,p.stat().st_gid,stat.S_IMODE(p.stat().st_mode)) for p in back.rglob('*') if p.is_file()}
 loader=importlib.machinery.SourceFileLoader('backup_stage',str(source/'mykos-stage-pos'));spec=importlib.util.spec_from_loader(loader.name,loader);stage=importlib.util.module_from_spec(spec);loader.exec_module(stage)
 stage.PODMAN=str(wrapper);stage.vm.locked=contextlib.nullcontext
-stage.config=lambda:{'backup_root':str(root/'backups')};stage.containers=lambda:[]
+stage.config=lambda:{'backup_root':str(root/'backups'),'backup_paths':['usr2','etc','home']};stage.containers=lambda:[]
 stage.socket.gethostname=lambda:'test.example';stage.network.arguments=lambda *args:['--network','none'];stage.profile.services=lambda:()
 # Redirect only fixed runtime record/VPN paths, keeping rootfs verification real.
 real_path=pathlib.Path
@@ -75,7 +75,7 @@ try:
  assert stat.S_IMODE((guest/'var/lib/daemon/owned').stat().st_mode)==0o4750
  actual_acl=os.getxattr(guest/'var/lib/daemon/acl-only','system.posix_acl_access');assert struct.unpack_from('<I',actual_acl,16)[0]==expected[0]
  assert (guest/'home/tfrsync-01234567/key-marker').read_text()=='not exposed to guest'
- assert (guest/'etc/rc.d/init.d/rti').read_text()=='customer service definition'
+ assert (guest/'etc/rc.d/init.d/application').read_text()=='customer service definition'
  assert 'locked-root' in (guest/'etc/shadow').read_text() and 'source-root' not in (guest/'etc/shadow').read_text()
  for _ in range(30):
   if (back/'usr2/from-guest').exists():break

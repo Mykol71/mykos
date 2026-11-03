@@ -93,7 +93,7 @@ print(json.dumps({'timesource': 'timesource' in makeVersion().commands, 'weakdep
 
 def native_rpmdb_post(text,source):
     """Use the native RPM database for old guests built by a SQLite installer."""
-    match=re.fullmatch(r'(rh7|rh8rti|(?:rh|rocky|alma|oracle|centos)8)\.ks',source.name)
+    match=re.fullmatch(r'(rh7|(?:rh|rocky|alma|oracle|centos)8)\.ks',source.name)
     if not match:return text
     major=7 if source.name=='rh7.ks' else 8
     helper=Path(__file__).with_name('rpmdb_compat.py').resolve(strict=True)

@@ -92,8 +92,14 @@ def merge(base,customer):
     groups=table(base.get('group',''),4,'image group')
     source_users=table(customer.get('passwd',''),7,'backup passwd')
     source_groups=table(customer.get('group',''),4,'backup group')
-    if not users or not groups or not any(r[0]=='root' and r[2]=='0' and r[3]=='0' for r in users):
+    root=next((r for r in users if r[0]=='root' and r[2]=='0'),None)
+    if root is None or not groups:
         raise ValueError('Image must contain a valid root account')
+    # UID zero identifies root. Images may legitimately use a nonzero primary group;
+    # retain that image group (and its normal collision mapping), never import
+    # the backup root password or substitute the backup root primary group.
+    if number(root[3]) not in {number(r[2]) for r in groups}:
+        raise ValueError('Image root account references a missing primary group')
     for row in users+source_users:
         number(row[2]);number(row[3])
         if not row[5].startswith('/') or not row[6].startswith('/'):

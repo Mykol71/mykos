@@ -78,225 +78,7 @@ Regenerate it when routes change; the running service remains authoritative.</p>
 <h2 id="endpoint-inventory">Endpoint inventory</h2>
 <p>All paths below are relative to <code>/mykos/api/v2</code>. <code>shop</code> is exactly eight ASCII digits,
 including leading zeros. The read column includes both <code>read</code> and <code>admin</code> keys.</p>
-<table>
-<thead>
-<tr>
-<th>Method and path</th>
-<th>Permission</th>
-<th>Result / notes</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>GET /overview</code></td>
-<td>Read</td>
-<td>Host, counts, snapshot ages/freshness, joined nodes</td>
-</tr>
-<tr>
-<td><code>GET /host</code></td>
-<td>Read</td>
-<td>Hostname, OS, kernel, uptime, backup storage, live <code>metrics</code></td>
-</tr>
-<tr>
-<td><code>GET /host/metrics</code></td>
-<td>Read</td>
-<td>CPU, logical CPU count, memory, swap, load averages, root disk, uptime and <code>graph_totals</code> (<code>containers</code>, <code>vpns</code>) counted from installed POS metadata files; null if unavailable/stale</td>
-</tr>
-<tr>
-<td><code>GET /host/status</code></td>
-<td>Read</td>
-<td>Host row data: <code>host</code> contains hostname, status, OS/version/kernel, internal IP and collected VPN status; memory and uptime are top-level fields</td>
-</tr>
-<tr>
-<td><code>GET /host/network-speed</code></td>
-<td>Read</td>
-<td>Cached official Ookla result: download/upload in decimal Mbps, measurement time/age, status and stale flag; GET never runs a test</td>
-</tr>
-<tr>
-<td><code>GET /host/diagnostics/{action}</code></td>
-<td>Read</td>
-<td>Host <code>logs</code> (last 200 journal entries), <code>top</code> (processes), or <code>ipsec</code> status; fixed commands, no container execution</td>
-</tr>
-<tr>
-<td><code>POST /host/reboot</code></td>
-<td>Admin</td>
-<td>JSON <code>hostname</code> must exactly match the server hostname; schedules a reboot in five seconds; interrupts all containers/users</td>
-</tr>
-<tr>
-<td><code>WS /terminal/host</code></td>
-<td>Admin</td>
-<td>Interactive host root shell, or host VPN setup with <code>?action=add-vpn</code>; host <code>terminal_enabled</code> setting must be enabled; API key in handshake header</td>
-</tr>
-<tr>
-<td><code>GET /host/os</code></td>
-<td>Read</td>
-<td>Hostname, OS, kernel</td>
-</tr>
-<tr>
-<td><code>GET /host/kernel</code></td>
-<td>Read</td>
-<td>Kernel string</td>
-</tr>
-<tr>
-<td><code>GET /host/storage</code></td>
-<td>Read</td>
-<td>Backup storage free/used/total bytes and readable free value</td>
-</tr>
-<tr>
-<td><code>GET /nodes</code></td>
-<td>Read</td>
-<td><code>count</code>, <code>fresh</code>, <code>nodes</code>; optional filters below</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}</code></td>
-<td>Read</td>
-<td>Full joined node</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}/status</code></td>
-<td>Read</td>
-<td>Status, running flag, VPN state, start epoch/time, image, OS type/version</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}/network</code></td>
-<td>Read</td>
-<td><code>eth1_ipv4</code>, collected address list</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}/resources</code></td>
-<td>Read</td>
-<td>CPU/memory display values from Podman</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}/vpn</code></td>
-<td>Read</td>
-<td>VPN status, Libreswan counters/connections when available</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}/details</code></td>
-<td>Read</td>
-<td>Container inspection details</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}/ipsec</code></td>
-<td>Read</td>
-<td>Live <code>ipsec status</code> output</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}/logs</code></td>
-<td>Read</td>
-<td>Last 200 Podman log lines; bounded output</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}/processes</code></td>
-<td>Read</td>
-<td>Live <code>podman top</code> output</td>
-</tr>
-<tr>
-<td><code>GET /nodes/{shop}/checkit</code></td>
-<td>Admin</td>
-<td>Runs <code>/usr/bin/checkit</code> inside the selected container</td>
-</tr>
-<tr>
-<td><code>GET /containers</code></td>
-<td>Read</td>
-<td>Managed rootful container list</td>
-</tr>
-<tr>
-<td><code>GET /images</code></td>
-<td>Read</td>
-<td>OS choices from running supported image containers; returns <code>os</code> and the local source <code>image</code></td>
-</tr>
-<tr>
-<td><code>GET /notes/{pane}</code></td>
-<td>mgreen session</td>
-<td>Private plain-text pane notes (mgreen session only), revision, and last-saved timestamp</td>
-</tr>
-<tr>
-<td><code>PUT /notes/{pane}</code></td>
-<td>mgreen session</td>
-<td>Save notes with JSON <code>text</code> (up to 20,000 characters) and current <code>revision</code>; stale revisions return 409</td>
-</tr>
-<tr>
-<td><code>GET /personal-notes</code></td>
-<td>mgreen session</td>
-<td>Read personal notes; separate from change requests and retained through updates</td>
-</tr>
-<tr>
-<td><code>PUT /personal-notes</code></td>
-<td>mgreen session</td>
-<td>Save personal notes with <code>text</code> and <code>revision</code>; stale revisions return 409</td>
-</tr>
-<tr>
-<td><code>GET /actions</code></td>
-<td>Read</td>
-<td>Supported administrative operations and permissions</td>
-</tr>
-<tr>
-<td><code>GET /actions/stage/{shop}/check</code></td>
-<td>Admin</td>
-<td>Container existence, active job, RTI backup presence, host configuration readiness</td>
-</tr>
-<tr>
-<td><code>GET /jobs/{shop}</code></td>
-<td>Admin</td>
-<td>Staging state and bounded output; <code>idle</code> if no recorded job</td>
-</tr>
-<tr>
-<td><code>POST /actions/stage</code></td>
-<td>Admin</td>
-<td>Queue staging; JSON <code>shop</code>, <code>os</code> from <code>/images</code>, and optional <code>restore</code> boolean</td>
-</tr>
-<tr>
-<td><code>POST /nodes/{shop}/stop</code></td>
-<td>Admin</td>
-<td>Stop the unique selected managed container</td>
-</tr>
-<tr>
-<td><code>GET /backups</code></td>
-<td>Read</td>
-<td>Backup accounts, POS/OS, disk use, subscriber state and storage; optional <code>refresh=true</code></td>
-</tr>
-<tr>
-<td><code>GET /backups/{code}</code></td>
-<td>Read</td>
-<td>One backup account; optional <code>refresh=true</code></td>
-</tr>
-<tr>
-<td><code>POST /backups</code></td>
-<td>Admin</td>
-<td>Account creation/deletion, SSH key changes, subscriber updates and key retrieval</td>
-</tr>
-<tr>
-<td><code>GET /backups/{code}/keys</code></td>
-<td>Admin</td>
-<td>Backed-up public and private RSA keys; response is not cached</td>
-</tr>
-<tr>
-<td><code>GET /repos</code></td>
-<td>Read</td>
-<td>Repositories, disk use, modification times, Apache and sync state; optional <code>refresh=true</code></td>
-</tr>
-<tr>
-<td><code>GET /repos/{name}</code></td>
-<td>Read</td>
-<td>One repository; optional <code>refresh=true</code></td>
-</tr>
-<tr>
-<td><code>POST /repos</code></td>
-<td>Admin</td>
-<td>Delete, enable, disable or start repository sync</td>
-</tr>
-<tr>
-<td><code>WS /terminal/{shop}</code></td>
-<td>Admin</td>
-<td>Interactive terminal; key in WebSocket handshake header, host terminal setting must be enabled</td>
-</tr>
-<tr>
-<td><code>GET /openapi.json</code>, <code>GET /docs</code></td>
-<td>Public</td>
-<td>Machine/browser API reference; use Authorize for operations</td>
-</tr>
-</tbody></table>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <p><code>GET /nodes</code> filters: <code>status=online|offline|unknown</code>,
 <code>vpn=up|down|unknown|not_configured</code>, and <code>running=true|false</code>.
 <code>include</code> is <code>all</code> or a comma-separated selection of
@@ -331,8 +113,7 @@ can produce <code>Unknown</code> backup storage in <code>/host</code> while the 
 <h3 id="administrative-examples">Administrative examples</h3>
 <p>Use an admin-scoped key and a staging shop approved for these operations. Staging
 creates a privileged container. For native Linux images, <code>restore: true</code> mounts
-available <code>/backups/tfrsync-ID</code> trees <code>/usr2</code>, <code>/d</code>, <code>/etc</code>, <code>/home</code>, and
-<code>/usr/java</code> directly
+available <code>/backups/tfrsync-ID</code> trees configured application directories plus <code>/etc</code> and <code>/home</code> directly
 read/write; guest writes change the original backup. The application adapter need
 not be enabled. VM images do not support this restore option.</p>
 <p>Before the new instance starts, its private account files are reconciled with the
@@ -385,7 +166,7 @@ Unavailable counters are <code>null</code>, rather than a fabricated zero.</p>
 curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/backups&quot;
 curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/repos?refresh=true&quot;
 </code></pre>
-<p>Backup account responses include <code>updated_at</code>, the Unix modification timestamp of the newest backed-up RTI/Daisy <code>tfrsync-summary.log</code>, or <code>null</code> when unavailable. This is the dashboard’s Last updated value, not a guarantee of a successful backup.</p>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <p>Backup POST bodies share the dashboard&#39;s schema:</p>
 <table>
 <thead>
@@ -535,16 +316,7 @@ type and version; missing or stale details show <code>OS unknown</code>.</p>
 <td>JSON <code>action</code> and optional <code>name</code> (default <code>all</code>)</td>
 </tr>
 </tbody></table>
-<p>Backup actions: <code>create</code> (SSH public <code>key</code>, <code>subscriber</code>), <code>key</code> (replacement public
-<code>key</code>), <code>subscriber</code> (boolean <code>subscriber</code>), <code>delete</code> (boolean <code>remove_data</code>), and
-<code>keys</code> (read the backed-up client&#39;s public/private RSA keys). Account creation uses
-<code>useradd</code>, the existing forced-command <code>back/bin/tfrsync</code>, and restricted SSH key
-permissions. Delete can retain backup data while removing the account and SSH
-access. Retained directories appear only when an OS backup account exists and
-must be resolved by an operator before reusing that code. View/get keys opens a
-private-key dialog and supports browser download; it does not copy keys into the
-server&#39;s <code>/home/tfsupport/keys</code> directory. Closing the dialog or logging out clears
-its displayed key material.</p>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <p>Repository storage may use a root-controlled symlink, such as
 <code>/var/www/html -&gt; /home/html</code>, when its target and parent directories are trusted.
 Symlinks inside the repository root are excluded from listing and deletion.</p>
@@ -945,12 +717,7 @@ status. A successful HTTP response or cached green VPN edge is not an end-to-end
 application health test. Resource values come from Podman; VM wrapper measurements
 and in-guest memory are different observations. Host history is retained from
 actual samples and may be missing/stale after a collector interruption.</p>
-<p>Use separate least-privilege <code>read</code> keys for monitoring. An <code>admin</code> API key grants
-operations beyond observation and does not establish a browser session. Keep keys
-out of URLs, logs and shell history. Use the live allowlisted OpenAPI endpoint for
-route details. The current API does not implement the requested configurable
-host/guest and RTI/Dove application alert-field system. Native VPN/shared routes
-are detailed in <a href="NETWORKING.html#vpn-architecture-and-operations">VPN architecture and operations</a>.</p>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <h3 id="host-internet-speed-measurements">Host internet speed measurements</h3>
 <p>When the existing official Ookla <code>speedtest</code> binary is installed at <code>/usr/bin/speedtest</code>,
 <code>mykos-speedtest-collector.timer</code> starts one bounded measurement at midnight and noon

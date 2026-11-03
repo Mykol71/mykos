@@ -144,21 +144,12 @@ API v2. If an existing integration requires it, create a random restricted token
 as <code>mykosweb</code>, update that consumer, and replace the file to rotate it. Do not copy the
 historical archive&#39;s token. Legacy tokens have read-only access to monitor endpoints.</p>
 <h2 id="backup-ssh-keys">Backup SSH keys</h2>
-<p>Use <code>mykos</code> → Backup to create an account and install its client public key. This is
-separate from API keys. <code>change_account_key</code> replaces its authorized key; it does not
-rotate API credentials. The legacy <code>get_cloud_key</code> script retrieves backed-up private
-SSH key material into <code>/home/tfsupport/keys</code>; its claimed nightly cleanup is not
-configured by this installer. See the script catalog before using it.</p>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <p>Identity backups need explicit <code>backup --include-data</code>; store them encrypted off-host.
 Restoring one can replace passwords, roles, sessions, and revocations. Ordinary
 source installs preserve identity databases and never import the original archive.</p>
 <h2 id="released-permission-boundary">Released permission boundary</h2>
-<p>The reviewed release exposes browser roles <code>user</code>/<code>admin</code> and API scopes
-<code>read</code>/<code>admin</code>. POS labels such as RTI/Dove and saved map metadata do not establish
-application-specific access enforcement. The proposed multi-role permission grid,
-MYKOS-to-MYKOS peer workflow and configurable application alert fields are future
-work, not documented released procedures. Keep browser credentials, API keys,
-backup SSH keys, guest accounts and VPN PSKs separate during backup and rotation.</p>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <h2 id="login-throttling-and-active-terminal-revocation">Login throttling and active terminal revocation</h2>
 <p>Login admission is persistent across web restarts: at most 20 attempts per source
 per minute and 10 per account per five minutes. A rejected attempt returns 429

@@ -60,7 +60,7 @@ def test_install_update_backup_restore_and_remove(tmp_path):
     assert '# pre-update marker' not in (app/'app.py').read_text()
     manifest=json.loads((root/'var/lib/mykos-installer/installed.json').read_text())
     guides = {'INSTALL_SERVICES.md', 'ARCHITECTURE.md', 'IDENTITY.md',
-              'API.md', 'SCRIPTS.md', 'VALIDATION.md', 'DESKTOPS.md', 'RPM.md', 'KEY_ISSUES.md'}
+              'API.md', 'SCRIPTS.md', 'VALIDATION.md', 'DESKTOPS.md', 'RPM.md', 'UI_GUIDE.md'}
     for entry in manifest['files']:
         if entry['path'].startswith('/usr/local/share/mykos/docs/') and Path(entry['path']).name in guides:
             assert entry['owner'] == 'web-read'

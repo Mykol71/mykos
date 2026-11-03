@@ -86,12 +86,12 @@ for permissions and the preserved third-party terms.
 
 ## Administrator guide and operator notes
 
-The [Markdown administrator guide](MYKOS_Administrator_Guide.md) is a reference
+The [Markdown administrator guide](README.md) is a reference
 edition of the guide dated 21 October 2026. Its historical commands and caveats
 are retained. Use the maintained task guides above for current source procedures.
-The [original Word guide](MYKOS_Administrator_Guide.docx) is preserved.
+The [original Word guide](README.md) is preserved.
 
-[Operator notes](KEY_ISSUES.md) retain the author's original text verbatim.
+[Operator notes](README.md) retain the author's original text verbatim.
 They record context and proposals; they do not establish verified deployment behavior.
 
 ## Packaging and testing

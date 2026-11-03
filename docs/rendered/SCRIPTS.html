@@ -110,50 +110,7 @@ are absent. The data menu displays Pricing, Insights, and Dell TSR items without
 handlers. Only Summary/Detail are implemented there. These are existing product
 gaps, not hidden features supplied by the installer.</p>
 <h2 id="backup-accounts-cd-usrlocalsharemykosback">Backup accounts (<code>cd /usr/local/share/mykos/back</code>)</h2>
-<table>
-<thead>
-<tr>
-<th>Script</th>
-<th>Actual behavior / usage</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>./bin/list_cloud_account</code></td>
-<td>Lists backup accounts, detected POS type/OS, disk usage</td>
-</tr>
-<tr>
-<td><code>./bin/create_cloud_account</code></td>
-<td>Prompts for shopcode, client public SSH key, and subscriber flag; creates Linux user/home under <code>/backups/tfrsync-SHOP</code> and restricted authorized key</td>
-</tr>
-<tr>
-<td><code>./bin/change_account_key</code></td>
-<td>Prompts for shopcode and public key; replaces that account&#39;s authorized key</td>
-</tr>
-<tr>
-<td><code>./bin/view_cloud_key</code></td>
-<td>Prompts for shopcode; displays its authorized key</td>
-</tr>
-<tr>
-<td><code>./bin/get_cloud_key</code></td>
-<td>Copies backed-up client public <strong>and private</strong> SSH keys to <code>/home/tfsupport/keys</code>; requires that account/directory; automatic nightly cleanup is not installed</td>
-</tr>
-<tr>
-<td><code>./bin/delete_cloud_account</code></td>
-<td>Prompts for shopcode and whether to delete data; removes Linux user and optionally its home/data</td>
-</tr>
-<tr>
-<td><code>./bin/is_subscriber</code></td>
-<td>Prompts for shopcode; reads/toggles <code>paying_customer</code> marker</td>
-</tr>
-<tr>
-<td><code>./bin/tfrsync</code></td>
-<td>SSH forced-command wrapper; invoked by authorized_keys, accepts an rsync server command and rejects several shell metacharacters; not the backup client</td>
-</tr>
-<tr>
-<td><code>./bin/install</code></td>
-<td>Compatibility forwarder to global installer; no longer changes SELinux or installs the old cron file</td>
-</tr>
-</tbody></table>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <p>The legacy scripts have limited input validation and should be operated only by
 trusted host administrators. The account restriction is a legacy shell wrapper,
 not a general SSH sandbox. Review SSH restrictions and backup-user permissions for
@@ -307,13 +264,7 @@ running it against production mirrors.</p>
 <td>Historical schedule reference; first two entries lack the user field required by <code>/etc/cron.d</code>; not installed or enabled</td>
 </tr>
 </tbody></table>
-<p>Review report scripts before using them for billing decisions: the summary script
-can overwrite Daisy detection with Unknown, and success matching/counts have legacy
-assumptions. Reports use shared <code>/tmp</code> names. No guarantee of billing accuracy or
-secure publication is implied by copying these scripts. Email scripts must be
-reviewed for recipients, credentials, transport, and approvals before scheduling.
-The installer supplies support scripts at <code>/usr/local/bin</code> for compatibility but
-never executes them, publishes TSR content, or sends email.</p>
+<p>Business-specific integration is provided by a separately installed local extension.</p>
 <h2 id="host-utilities">Host utilities</h2>
 <p><code>bin/updateos [groupname|scriptname|help] [dry]</code> is a legacy root script downloader
 and executor. It defaults to a historical HTTP backend, caches scripts under

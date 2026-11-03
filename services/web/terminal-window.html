@@ -64,7 +64,7 @@ function start() {
     const resize=()=>{if(closed)return;mykosFitTerminal(term,el('surface'),fitAddon);if(geometryReady&&socket?.readyState===WebSocket.OPEN)socket.send(new TextEncoder().encode('\x00MYKOS_RESIZE '+JSON.stringify({cols:Math.min(1000,Math.max(2,term.cols)),rows:Math.min(500,Math.max(1,term.rows))})));};
     resizeObserver=new ResizeObserver(resize);resizeObserver.observe(el('surface'));
     requestAnimationFrame(resize);document.fonts?.ready.then(resize);
-    socket.onopen=()=>{resize();el('status').textContent='Connected';term.onData(data=>{if(socket?.readyState===WebSocket.OPEN)socket.send(data);});if(config.run_sshbbx)socket.send('export TERM=linux; sshbbx\r');term.focus();};
+    socket.onopen=()=>{resize();el('status').textContent='Connected';term.onData(data=>{if(socket?.readyState===WebSocket.OPEN)socket.send(data);});term.focus();};
     socket.onmessage=event=>{if(event.data==='MYKOS_GEOMETRY_READY'){geometryReady=true;resize();return;}term.write(event.data instanceof ArrayBuffer?new Uint8Array(event.data):event.data);};
     socket.onerror=()=>{el('status').textContent='Terminal connection error';};
     socket.onclose=()=>stop('Terminal disconnected');

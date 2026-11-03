@@ -4,6 +4,7 @@ import argparse
 import datetime
 import hashlib
 import io
+import importlib.util
 import ipaddress
 import json
 import os
@@ -29,7 +30,7 @@ PREFIXES = ('/opt/mykos-web/', '/usr/local/share/mykos/', '/etc/mykos/',
             '/etc/systemd/system/mykos-', '/usr/local/sbin/mykos-')
 # Keep the legacy path allowed for old recovery snapshots and upgrade cleanup.
 OPTIONAL_UNITS = ['mykos-speedtest-collector.service','mykos-repo-sync.service','mykosreposync.slice','mykos-idle-bases.service','mykos-repository-inventory.service','mykos-repository-inventory.timer','mykos-snapshot-preview-gc.service','mykos-legacy-cgroups.service','mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service','mykos-vpn-gateway.timer']
-EXACT = {'/usr/local/sbin/mykos_fedora.py','/etc/systemd/system/mykosreposync.slice','/usr/local/sbin/mykos_peer_vpn.py','/usr/local/sbin/mykos_idle_bases.py','/usr/local/sbin/mykos_snapshot_preview.py','/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
+EXACT = {'/usr/local/sbin/mykos_extensions.py','/usr/local/sbin/mykos_fedora.py','/etc/systemd/system/mykosreposync.slice','/usr/local/sbin/mykos_peer_vpn.py','/usr/local/sbin/mykos_idle_bases.py','/usr/local/sbin/mykos_snapshot_preview.py','/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
          '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
          '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
 PACKAGES = ['dmidecode','podman','httpd','python3','python3-pip','openssh-server','openssh-clients','rsync',
@@ -157,7 +158,7 @@ class Installer:
         finally:
             if os.path.exists(tmp): os.unlink(tmp)
 
-    def entries(self):
+    def entries(self, include_extensions=True):
         entries={}
         def add(dest,data,mode=0o644,owner='root',mutable=False):
             if not allowed(dest):fail('Invalid installation path '+dest)
@@ -190,10 +191,7 @@ class Installer:
         for src in sorted((SOURCE/'services/systemd').glob('*')):
             add('/etc/systemd/system/'+src.name,src.read_text().replace('@PYTHON@',python).encode())
         add('/etc/sysctl.d/90-mykos-inotify.conf',(SOURCE/'services/sysctl/90-mykos-inotify.conf').read_bytes(),0o644,'root',True)
-        add('/usr/bin/mykos',b'#!/usr/bin/env bash\nset -e\nif [ -x /usr/share/mykos/MENU ]; then\n  cd /usr/share/mykos\nelse\n  cd /usr/local/share/mykos\nfi\nexec ./MENU "$@"\n',0o755)
-        # Legacy scripts expect these support paths; no cron jobs or email jobs are activated.
-        for name in ('monthname.sh','strip.sh','recon.sh','cloud_pricing','backup_perf.sh'):
-            add('/usr/local/bin/'+name,(SOURCE/'back/bin'/name).read_bytes(),0o750)
+        add('/usr/bin/mykos',b'#!/usr/bin/env bash\nset -e\nif [ -x /usr/local/share/mykos/MENU ]; then\n  cd /usr/local/share/mykos\nelse\n  cd /usr/share/mykos\nfi\nexec ./MENU "$@"\n',0o755)
         origin=self.args.public_origin
         parsed=urlsplit(origin)
         http_ip=False
@@ -207,6 +205,11 @@ class Installer:
         add('/etc/mykos/config.json',(SOURCE/'services/config.example.json').read_bytes(),0o600,'root',True)
         add('/etc/mykos/pos.env',(SOURCE/'services/pos.env.example').read_bytes(),0o600,'root',True)
         add('/opt/mykos-web/inventory.json',b'{"nodes": []}\n',0o640,'web-read',True)
+        self.extensions=[]
+        if include_extensions:
+            spec=importlib.util.spec_from_file_location('mykos_installer_extensions',SOURCE/'services/helpers/mykos_extensions.py')
+            extension=importlib.util.module_from_spec(spec);spec.loader.exec_module(extension)
+            entries,self.extensions=extension.merge(self.root,entries,allowed,self.live)
         return entries
 
     def snapshot(self, paths, output=None, include_data=False):
@@ -253,11 +256,19 @@ class Installer:
             command(args);return
         entries=self.entries()
         self.prepare_backups()
+        obsolete=[]
+        if self.path(STATE).is_file():
+            for entry in self.manifest()['files']:
+                if entry.get('extension') and entry['path'] not in entries:
+                    dest=self.path(entry['path'])
+                    if dest.exists():
+                        if not dest.is_file() or sha(dest.read_bytes())!=entry['sha256']:fail('Modified extension file needs review: '+entry['path'])
+                        obsolete.append(entry['path'])
         selected={p:e for p,e in entries.items() if not e['mutable'] or not self.path(p).exists()}
         if getattr(self.args,'set_public_origin',False):selected['/etc/mykos/web.env']=entries['/etc/mykos/web.env']
         print(('Live' if self.live else 'Staging')+' installation: %d files; %d preserved settings/data files' % (len(selected),len(entries)-len(selected)))
         if self.args.dry_run:
-            print(json.dumps({'root':str(self.root),'write':sorted(selected),'preserve':sorted(set(entries)-set(selected)),
+            print(json.dumps({'root':str(self.root),'write':sorted(selected),'remove_extension_files':sorted(obsolete),'preserve':sorted(set(entries)-set(selected)),
                 'system_packages_if_requested':PACKAGES,'activate_if_requested':UNITS,
                 'desktop_network_if_requested':self.args.desktop_network},indent=2));return
         self.mutation()
@@ -275,7 +286,7 @@ class Installer:
             if result.returncode:fail('Select Python 3.11+ using --python; install that interpreter first')
         if self.live and self.args.enable and not self.path('/etc/mykos/web.env').exists() and self.args.public_origin=='https://mykos.example.com':
             fail('Supply the real --public-origin before activating a new installation')
-        snap=self.snapshot([*selected,STATE,'/usr/local/bin/mykos'])
+        snap=self.snapshot([*selected,*obsolete,STATE,'/usr/local/bin/mykos'])
         self.identity()
         self.prepare_backups(create=True)
         for name in ('/opt/mykos-web','/opt/mykos-web/data','/etc/mykos','/var/lib/mykos/jobs'):
@@ -285,6 +296,7 @@ class Installer:
             os.chmod(dest,0o700 if name.endswith(('data','jobs')) else 0o750)
             if self.live:os.chown(dest,self.uid if name.endswith('/data') else 0,self.gid if not name.endswith('/jobs') else 0)
         for path,entry in selected.items():self.write(path,**{k:entry[k] for k in ('data','mode','owner')})
+        for path in obsolete:self.path(path).unlink()
         docs=self.path('/usr/local/share/mykos/docs')
         # A restrictive umask can leave the shared parent root-only even when
         # the documents themselves have the intended web-readable permissions.
@@ -312,10 +324,10 @@ class Installer:
             ensure_container_limits()
             command(['systemctl','daemon-reload'])
             activate_apache(self.args.python)
-        manifest={'format':1,'python':self.args.python,'staging':not self.live,'snapshot':str(snap),'files':[]}
+        manifest={'format':1,'python':self.args.python,'staging':not self.live,'snapshot':str(snap),'extensions':self.extensions,'files':[]}
         for path,entry in entries.items():
             manifest['files'].append({'path':path,'sha256':sha(self.path(path).read_bytes()),
-                                      'mode':entry['mode'],'mutable':entry['mutable'],'owner':entry['owner']})
+                                      'mode':entry['mode'],'mutable':entry['mutable'],'owner':entry['owner'],**({'extension':entry['extension']} if entry.get('extension') else {})})
         self.write(STATE,json.dumps(manifest,indent=2).encode(),0o600)
         if self.live:
             command([self.args.python,'/usr/local/sbin/mykos-snapshot','init'])

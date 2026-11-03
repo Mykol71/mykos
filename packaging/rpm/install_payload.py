@@ -13,7 +13,7 @@ runtime_python=sys.argv[2] if len(sys.argv)>2 else '/usr/bin/python3.9'
 if runtime_python not in ('/usr/bin/python3.9','/usr/bin/python3.11','/usr/bin/python3'):raise ValueError('Unsupported RPM Python runtime')
 installer=module.Installer(SimpleNamespace(root='/',python=runtime_python,public_origin='https://mykos.example.com'))
 root=Path(sys.argv[1]);listing=[]
-for name,entry in installer.entries().items():
+for name,entry in installer.entries(include_extensions=False).items():
     kickstart='/pos/ks/' in name and name.endswith('.ks')
     persistent_sysctl=name=='/etc/sysctl.d/90-mykos-inotify.conf'
     if entry['mutable'] and not (kickstart or persistent_sysctl):continue

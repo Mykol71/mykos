@@ -101,7 +101,7 @@ def read_at(root, relative):
 
 def backup_updated_at(path):
     timestamps = []
-    for relative in ('usr2/bbx/log/tfrsync-summary.log', 'd/daisy/log/tfrsync-summary.log'):
+    for relative in ('rsync-summary.log',):
         try:
             with os.fdopen(regular_file_at(path, relative)) as stream:
                 timestamps.append(int(os.fstat(stream.fileno()).st_mtime))

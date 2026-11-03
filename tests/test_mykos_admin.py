@@ -178,8 +178,8 @@ def test_repository_storage_parent_alias_and_untrusted_target(sandbox, tmp_path,
 def test_backup_last_updated_uses_summary_log(sandbox):
     home, _, _ = sandbox
     assert mykos_admin.backup_status()['accounts'][0]['updated_at'] is None
-    log = home/'usr2/bbx/log/tfrsync-summary.log'
-    log.parent.mkdir(parents=True)
+    log = home/'rsync-summary.log'
+    log.parent.mkdir(parents=True,exist_ok=True)
     log.write_text('backup summary')
     os.utime(log, (1700000000, 1700000000))
     assert mykos_admin.backup_status()['accounts'][0]['updated_at'] == 1700000000

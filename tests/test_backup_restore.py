@@ -17,7 +17,7 @@ def customer(tmp_path):
     root=tmp_path/'backups';account=root/'tfrsync-01234567';account.mkdir(parents=True)
     files(account,data('alice:x:1001:1002:A:/home/alice:/bin/bash\ntfrsync-01234567:x:1004:1004:B:/home/tfrsync-01234567:/bin/bash\n','app:x:1002:alice\ntfrsync-01234567:x:1004:\n'))
     for rel in ('usr2','home/alice','home/tfrsync-01234567'):(account/rel).mkdir(parents=True)
-    return account,{'backup_root':str(root)}
+    return account,{'backup_root':str(root),'backup_paths':['usr2','etc','home']}
 
 
 def test_mounts_are_complete_direct_rw_trees_with_separate_private_identities(customer):

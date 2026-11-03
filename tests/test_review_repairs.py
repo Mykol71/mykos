@@ -156,7 +156,6 @@ def test_native_pipeline_blocks_interleaving_and_cleans_each_context(tmp_path):
  import signal
  text=(ROOT/'pos/pos').read_text()
  functions=text[text.index('check_image_builder() {'):text.index('\nstop_container() {')]
- functions+='\n'+text[text.index('finalize_native_image() {'):text.index('\nbuild-image() (')]
  functions+='\n'+text[text.index('build-image() ('):text.index('\nbuild-all-images() {')]
  functions=functions.replace('/var/tmp/containers',str(tmp_path/'containers')).replace('/usr/local/sbin/mykos-native-image-start','native_start')
  (tmp_path/'prepare_ks.py').write_text('import sys;from pathlib import Path;Path(sys.argv[2]).write_text("generated copy")\n')

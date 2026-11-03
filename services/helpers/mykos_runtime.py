@@ -42,8 +42,8 @@ def require_container_capacity(name=None):
     if name is not None and name.lstrip('/') in names: return
     if len(names) >= CONTAINER_LIMIT:
         raise ValueError('Container limit reached (50 running instances/previews). Stop an instance or close a preview before starting another.')
-NATIVE_OS_NAMES = ('rh7','rh8','rh8rti','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44')
-STAGE_OS_NAMES = ('mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh8rti', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','fedora43vm','fedora44vm', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12')
+NATIVE_OS_NAMES = ('rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44')
+STAGE_OS_NAMES = ('mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','fedora43vm','fedora44vm', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12')
 
 def native_build_os(args):
     """Recognize legacy and private-job kickstarts for lifecycle protection."""
@@ -188,8 +188,6 @@ def stage_images():
         image = item.get('Image') or item.get('ImageID')
         if not isinstance(image, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9./_:@-]*', image):
             continue
-        build_labels=item.get('Labels') or {}
-        if isinstance(build_labels,dict) and build_labels.get('io.mykos.image.building')=='true':continue
         for name in names:
             if name in STAGE_OS_NAMES or re.fullmatch(r'ubuntu(?:[0-9]{2}(?:\.[0-9]{2})?)?', name):
                 labels = item.get('Labels') or {}

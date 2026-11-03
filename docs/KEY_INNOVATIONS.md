@@ -1,6 +1,6 @@
 # MYKOS key innovations
 
-[Documentation index](README.md) · [Download PDF](MYKOS_Key_Innovations.pdf)
+[Documentation index](README.md) · [Download PDF](KEY_INNOVATIONS.md)
 
 **A technical leadership overview**  
 Released design baseline: MYKOS 1.5.20261024-146
@@ -40,7 +40,7 @@ MYKOS also separates startup captures from intentional snapshots. Startup captur
 
 ## Customer backups composed into a runtime
 
-For compatible native Linux restores, MYKOS combines a prepared OS with customer application trees from an existing backup set. Available paths can include `/etc`, `/home`, `/usr2`, `/d`, and `/usr/java`. The data is mounted into the instance, avoiding a mandatory full copy before the environment can start.
+For compatible native Linux restores, MYKOS combines a prepared OS with customer application trees from an existing backup set. Available paths can include `/etc`, `/home`, and configured application directories. The data is mounted into the instance, avoiding a mandatory full copy before the environment can start.
 
 The difficult part is identity reconciliation. MYKOS preserves customer numeric account identities and relocates conflicting image accounts within the instance. It prepares private account files and machine-specific settings before startup, including hostname, machine ID, hosts entries, and selected boot and PAM configuration. This lets customer context and the base OS coexist without treating their configuration as interchangeable.
 

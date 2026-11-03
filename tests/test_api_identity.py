@@ -149,7 +149,7 @@ def test_key_scopes_revocation_and_browser_separation(environment):
         c.execute('UPDATE api_keys SET revoked_at=?',(int(time.time()),))
     assert client.get('/api/v2/nodes',headers=h).status_code==401
 
-@pytest.mark.parametrize('pane', ['repos','terminal','rti'])
+@pytest.mark.parametrize('pane', ['repos','terminal'])
 def test_pane_notes_private_to_mgreen_and_conflicts(environment,pane):
     anonymous=TestClient(app.app,base_url='https://testserver')
     for path in (f'/api/web/notes/{pane}',f'/api/v2/notes/{pane}'):
@@ -228,7 +228,7 @@ def test_api_validation_freshness_and_openapi(environment):
 
 def test_image_os_details_available_to_dashboard_and_api(environment):
     base, _ = environment
-    details = {'image': 'localhost/rti:9', 'os_type': 'Red Hat Enterprise Linux',
+    details = {'image': 'localhost/business:9', 'os_type': 'Red Hat Enterprise Linux',
                'os_version': '9.6', 'running': False}
     (base/'data/details.json').write_text(json.dumps({
         'collected_at': int(time.time()), 'details': {'01234567': details}}))
@@ -975,14 +975,14 @@ def test_two_terminal_connections_remain_independent_with_one_login(environment,
 
 def test_geography_read_api_retains_optional_metadata_without_host_secrets(environment):
     base,calls=environment
-    (base/'inventory.json').write_text(json.dumps({'nodes':[{'id':'01234567','name':'Store','shop_name':'Flower shop','pos_type':'rti','lat':41,'lon':-90,'app_info':{'version':'example'}}],
+    (base/'inventory.json').write_text(json.dumps({'nodes':[{'id':'01234567','name':'Store','shop_name':'Flower shop','pos_type':'example','lat':41,'lon':-90,'app_info':{'version':'example'}}],
         'hosts':[{'hostname':'host.example','lat':40,'lon':-91,'private_setting':'not-a-map-field'}]}))
     client=TestClient(app.app,base_url='https://testserver')
     assert client.get('/api/v2/geography').status_code==401
     key=mykos_api_keys.create('map-reader','read')
     response=client.get('/api/v2/geography',headers={'X-MYKOS-API-Key':key})
     assert response.status_code==200
-    value=response.json();assert value['nodes'][0]['pos_type']=='rti'
+    value=response.json();assert value['nodes'][0]['pos_type']=='example'
     assert value['nodes'][0]['shop_name']=='Flower shop'
     assert value['hosts']==[{'hostname':'host.example','lat':40,'lon':-91}]
     assert calls==[]

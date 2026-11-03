@@ -4,9 +4,8 @@ import mykos_runtime as runtime
 
 
 def adapter(settings=None):
-    value = (runtime.config() if settings is None else settings).get('application_adapter', 'none')
-    if value not in ('none', 'rti'):
-        raise ValueError('Unsupported application_adapter')
+    value=(runtime.config() if settings is None else settings).get('application_adapter','none')
+    if value!='none':raise ValueError('A business adapter requires its separately installed extension')
     return value
 
 
@@ -21,10 +20,8 @@ def mounts(shop, settings=None):
 
 
 def services():
-    return ('tfremote', 'smb', 'cups', 'rti') if adapter() == 'rti' else ()
+    return ()
 
 
 def backup_type(path):
-    if adapter() != 'rti':
-        return 'rsync'
-    return 'RTI' if (path/'usr2').is_dir() else 'Daisy' if (path/'d').is_dir() else 'rsync'
+    return 'rsync'
