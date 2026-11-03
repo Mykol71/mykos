@@ -233,3 +233,9 @@ Verifies that Display, recall, Illumination and Source controls are inside the e
 ## Release217 — Receiver radio controls
 
 Fixed container/VPN signal indicators replace the Receiver rolling count bars. Tests cover scale boundaries, zero/missing/stale/future readings, one-minute tuning steps/wrap and existing illumination steps. Browser checks verify count/VU/illumination placement, quarter-minute tick spacing, round response/Live buttons, recall/Live behavior, source selection and return to the original controls in other themes. Signed staged installation and guarded dev/prod live checks preserve workloads and host settings. No OS image builds or new guest lifecycle tests are part of this appearance release.
+
+## Release218 — Personal Receiver availability
+
+Receiver is offered only to authenticated `mgreen`. Regression tests cover signed-out/default rendering, saved Receiver preferences before identity verification, owner restoration, other usernames including other admins, direct selector rejection, account switching, logout and identity-generation guards against a late current-user response. No authentication policy, guest lifecycle, host build or repository access rules change.
+
+Receiver218 also standardizes the finish of Source, recall and Illumination knobs; browser computed-style checks compare all three faces/rims.

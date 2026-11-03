@@ -407,7 +407,7 @@ ID/start controls and table begin below the heading without a separate status ro
 
 ## Receiver appearance
 
-Choose **Receiver** in the footer Theme selector (also available on the login screen). The leaf cycles Dark → Light → Receiver. The browser remembers the selection. Receiver uses a brushed aluminum face, compact blue-lit black VU meters, round metal action buttons and a radio-style recall band with a one-minute tuning knob. The larger flower has a transparent background.
+**Receiver** is a personal theme available only after signing in as `mgreen`. Its footer leaf cycles Dark → Light → Receiver. Other logins and the signed-out login screen offer Dark and Light. A saved Receiver preference is restored only after the current-user API confirms `mgreen`; logout/session expiry removes it immediately. Preferences are remembered separately for each signed-in username. Receiver uses a brushed aluminum face, compact blue-lit black VU meters, round metal action buttons and a radio-style recall band with a one-minute tuning knob. The larger flower has a transparent background.
 
 The four VU meters show actual CPU, memory, System and Data percentages from the existing host collector, following the same selected history and freshness rules as the graph. Missing or stale readings show a dim face and a dash; needles stop at 100% while the value still reports overload. The original history graph, metric controls and all actions remain available. Compact peers inherit the appearance without adding meter height. This is an appearance option, not an audio interface or a change to host resource policy.
 
@@ -437,3 +437,5 @@ The black instrument panel shows two fixed, ascending signal-style bars to the l
 Illumination is centered to the right of the meters. Each click adds10 percentage points, with100 wrapping to0. The blue lamp gradient has twice its former gain across the knob range; the meter glass brightness reaches2× at100%. Display Off remains a separate visual-only control.
 
 The radio-style recall band has a vertical tick every15seconds, longer minute marks and labels in minutes back. Its knob on the right steps one minute earlier per click, through25minutes before wrapping to live. The band can still be dragged or adjusted with the keyboard; Live resets it. Slow, Normal, Fast and Live are small round brushed-metal buttons. Source still cycles available OS panes and keeps the displayed label synchronized. Other themes retain their original history controls.
+
+The Source, recall and Illumination knobs share the same brushed-aluminum finish and machined rim. Sizes and click/marker behavior are unchanged.
