@@ -3567,6 +3567,24 @@ function mykosCloseTerminal() {
     mykosTerminalOpener = null;
 }
 
+// Measure the drawable content, including padding and any scrollbar gutter.
+// Keep fitting available even when the optional CDN addon fails to load.
+function mykosFitTerminal(term,surface,addon) {
+    if(addon){try{addon.fit();}catch(_){}}
+    const root=term.element,screen=root?.querySelector('.xterm-screen');
+    if(!screen)return;
+    const bounds=screen.getBoundingClientRect(),style=getComputedStyle(surface),rootStyle=getComputedStyle(root);
+    const px=value=>parseFloat(value)||0,viewport=root.querySelector('.xterm-viewport');
+    const gutter=viewport?Math.max(0,viewport.offsetWidth-viewport.clientWidth):0;
+    const width=surface.clientWidth-px(style.paddingLeft)-px(style.paddingRight)-px(rootStyle.paddingLeft)-px(rootStyle.paddingRight)-gutter;
+    const height=surface.clientHeight-px(style.paddingTop)-px(style.paddingBottom)-px(rootStyle.paddingTop)-px(rootStyle.paddingBottom);
+    const cellWidth=bounds.width/term.cols,cellHeight=bounds.height/term.rows;
+    if(!(width>0&&height>0&&cellWidth>0&&cellHeight>0))return;
+    const cols=Math.min(1000,Math.max(2,Math.floor((width-1)/cellWidth)));
+    const rows=Math.min(500,Math.max(1,Math.floor((height-1)/cellHeight)));
+    if(cols!==term.cols||rows!==term.rows)term.resize(cols,rows);
+}
+
 function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
     if (!mykosTerminalAllowed) return;
     if ((action === 'shell' || action === 'image-shell') && typeof window.open === 'function') {
@@ -3625,20 +3643,21 @@ function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
     const fitAddon=typeof FitAddon!=='undefined'?new FitAddon.FitAddon():null;
     if(fitAddon)term.loadAddon(fitAddon);
     term.open(surface);
-    if(fitAddon){fitAddon.fit();if(term.element?.querySelector('.xterm-screen')?.getBoundingClientRect().width>term.element.clientWidth)term.resize(Math.max(2,term.cols-1),term.rows);}
+    mykosFitTerminal(term,surface,fitAddon);
     term.focus();
     if(action==='image-shell')term.write('Base session: shutdown/reboot disabled. Capture to keep edits. Closing this window resets the base.\r\n');
     term.write(action === 'add-vpn' ? 'Opening add_vpn...\r\n' : isPowerShell ? 'Connecting to PowerShell...\r\n' : isMacShell ? 'Connecting to macOS shell...\r\n' : 'Connecting to root...\r\n');
     const url = new URL('/mykos/api/terminal/' + encodeURIComponent(shop), window.location.href);
     url.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     if (action === 'add-vpn' || action === 'remove-vpn' || action === 'image-shell') url.searchParams.set('action', action);
-    if(fitAddon)url.searchParams.set('geometry','1');
+    url.searchParams.set('geometry','1');
     const ws = new WebSocket(url);
     mykosTerminalSocket = ws;
     ws.binaryType = 'arraybuffer';
     let geometryReady=false;
-    const resize=()=>{if(!fitAddon||mykosTerminalInstance!==term)return;fitAddon.fit();if(term.element?.querySelector('.xterm-screen')?.getBoundingClientRect().width>term.element.clientWidth)term.resize(Math.max(2,term.cols-1),term.rows);if(geometryReady&&ws.readyState===WebSocket.OPEN)ws.send(new TextEncoder().encode('\x00MYKOS_RESIZE '+JSON.stringify({cols:Math.min(1000,Math.max(2,term.cols)),rows:Math.min(500,Math.max(1,term.rows))})));};
-    if(fitAddon){const observer=new ResizeObserver(resize);observer.observe(surface);mykosTerminalResizeCleanup=()=>observer.disconnect();}
+    const resize=()=>{if(mykosTerminalInstance!==term)return;mykosFitTerminal(term,surface,fitAddon);if(geometryReady&&ws.readyState===WebSocket.OPEN)ws.send(new TextEncoder().encode('\x00MYKOS_RESIZE '+JSON.stringify({cols:Math.min(1000,Math.max(2,term.cols)),rows:Math.min(500,Math.max(1,term.rows))})));};
+    const observer=new ResizeObserver(resize);observer.observe(surface);mykosTerminalResizeCleanup=()=>observer.disconnect();
+    requestAnimationFrame(resize);document.fonts?.ready.then(resize);
     ws.onopen = () => {
         resize();
         term.write('\r\nConnected.\r\n');

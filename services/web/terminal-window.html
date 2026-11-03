@@ -34,17 +34,36 @@ async function permission() {
     } catch(_){stop('Unable to verify session. Reopen this terminal from MYKOS.');}
     finally {clearTimeout(timer);permissionBusy=false;}
 }
+// Measure the drawable content, including padding and any scrollbar gutter.
+// Keep fitting available even when the optional CDN addon fails to load.
+function mykosFitTerminal(term,surface,addon) {
+    if(addon){try{addon.fit();}catch(_){}}
+    const root=term.element,screen=root?.querySelector('.xterm-screen');
+    if(!screen)return;
+    const bounds=screen.getBoundingClientRect(),style=getComputedStyle(surface),rootStyle=getComputedStyle(root);
+    const px=value=>parseFloat(value)||0,viewport=root.querySelector('.xterm-viewport');
+    const gutter=viewport?Math.max(0,viewport.offsetWidth-viewport.clientWidth):0;
+    const width=surface.clientWidth-px(style.paddingLeft)-px(style.paddingRight)-px(rootStyle.paddingLeft)-px(rootStyle.paddingRight)-gutter;
+    const height=surface.clientHeight-px(style.paddingTop)-px(style.paddingBottom)-px(rootStyle.paddingTop)-px(rootStyle.paddingBottom);
+    const cellWidth=bounds.width/term.cols,cellHeight=bounds.height/term.rows;
+    if(!(width>0&&height>0&&cellWidth>0&&cellHeight>0))return;
+    const cols=Math.min(1000,Math.max(2,Math.floor((width-1)/cellWidth)));
+    const rows=Math.min(500,Math.max(1,Math.floor((height-1)/cellHeight)));
+    if(cols!==term.cols||rows!==term.rows)term.resize(cols,rows);
+}
+
 function start() {
     if(!window.Terminal){el('status').textContent='Terminal display library is unavailable';return;}
     term=new Terminal({cursorBlink:true,scrollback:1000,theme:{background:'#050a12',foreground:'#e2e8f0'},fontFamily:'monospace',fontSize:13});
     fitAddon=typeof FitAddon!=='undefined'?new FitAddon.FitAddon():null;if(fitAddon)term.loadAddon(fitAddon);
-    term.open(el('surface'));if(fitAddon){fitAddon.fit();if(term.element?.querySelector('.xterm-screen')?.getBoundingClientRect().width>term.element.clientWidth)term.resize(Math.max(2,term.cols-1),term.rows);}term.focus();
+    term.open(el('surface'));mykosFitTerminal(term,el('surface'),fitAddon);term.focus();
     const url=new URL('/mykos/api/terminal/'+encodeURIComponent(config.shop),window.location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';
     if(config.action!=='shell')url.searchParams.set('action',config.action);
-    if(fitAddon)url.searchParams.set('geometry','1');
+    url.searchParams.set('geometry','1');
     socket=new WebSocket(url);socket.binaryType='arraybuffer';
-    const resize=()=>{if(!fitAddon||closed)return;fitAddon.fit();if(term.element?.querySelector('.xterm-screen')?.getBoundingClientRect().width>term.element.clientWidth)term.resize(Math.max(2,term.cols-1),term.rows);if(geometryReady&&socket?.readyState===WebSocket.OPEN)socket.send(new TextEncoder().encode('\x00MYKOS_RESIZE '+JSON.stringify({cols:Math.min(1000,Math.max(2,term.cols)),rows:Math.min(500,Math.max(1,term.rows))})));};
-    if(fitAddon){resizeObserver=new ResizeObserver(resize);resizeObserver.observe(el('surface'));}
+    const resize=()=>{if(closed)return;mykosFitTerminal(term,el('surface'),fitAddon);if(geometryReady&&socket?.readyState===WebSocket.OPEN)socket.send(new TextEncoder().encode('\x00MYKOS_RESIZE '+JSON.stringify({cols:Math.min(1000,Math.max(2,term.cols)),rows:Math.min(500,Math.max(1,term.rows))})));};
+    resizeObserver=new ResizeObserver(resize);resizeObserver.observe(el('surface'));
+    requestAnimationFrame(resize);document.fonts?.ready.then(resize);
     socket.onopen=()=>{resize();el('status').textContent='Connected';term.onData(data=>{if(socket?.readyState===WebSocket.OPEN)socket.send(data);});if(config.run_sshbbx)socket.send('export TERM=linux; sshbbx\r');term.focus();};
     socket.onmessage=event=>{if(event.data==='MYKOS_GEOMETRY_READY'){geometryReady=true;resize();return;}term.write(event.data instanceof ArrayBuffer?new Uint8Array(event.data):event.data);};
     socket.onerror=()=>{el('status').textContent='Terminal connection error';};

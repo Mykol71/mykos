@@ -30,7 +30,7 @@ const opener=new Element('button');opener.isConnected=true;
 const document={body,activeElement:opener,createElement:tag=>new Element(tag)};
 const window={Terminal,location:{href:'https://mykol.com/mykos/',protocol:'https:'},addEventListener:(name,fn)=>events[name]=fn};
 const source=html.slice(html.indexOf('// MYKOS INTERACTIVE TERMINAL V1'),html.indexOf('</script>',html.indexOf('// MYKOS INTERACTIVE TERMINAL V1')));
-const context=vm.createContext({document,window,Terminal,WebSocket,URL,ArrayBuffer,Uint8Array,
+const context=vm.createContext({document,window,Terminal,WebSocket,URL,ArrayBuffer,Uint8Array,TextEncoder,ResizeObserver:class{observe(){}disconnect(){}},requestAnimationFrame(){},
  mykosNotesButton:(pane,label)=>{const b=new Element('button');b.notePane=pane;b.onclick=()=>notesOpened.push([pane,label]);return b;},
  mykosImageFamily:os=>os==='rh9'?'linux':os.startsWith('win')?'windows':'macos',
  mykosNodeFamily:node=>node.id==='11111111'?'windows':node.id==='22222222'?'macos':'ubuntu',
@@ -40,15 +40,15 @@ run(source);
 run("mykosOpenTerminal('host')");assert.equal(sockets.length,0,'Permission guard must remain');
 run("mykosTerminalAllowed=true;mykosOpenTerminal('host')");
 let dialog=body.children[0];assert.equal(dialog.tag,'dialog');assert.equal(dialog.open,true);assert.equal(dialog['aria-labelledby'],'mykos-terminal-title');
-assert.equal(sockets[0].url,'wss://mykol.com/mykos/api/terminal/host');
+assert.equal(sockets[0].url,'wss://mykol.com/mykos/api/terminal/host?geometry=1');
 assert.ok(terminals[0].focused);
 const notes=dialog.children[0].children[1];assert.equal(notes.notePane,'terminal');notes.onclick();assert.deepEqual(notesOpened,[['terminal','Terminal']]);assert.equal(dialog.open,true);assert.ok(!sockets[0].closed);assert.ok(!terminals[0].disposed,'Opening notes must preserve the terminal session');
 sockets[0].readyState=1;sockets[0].onopen();terminals[0].input('test input');assert.deepEqual(sockets[0].sent,['test input']);
 run("mykosOpenTerminal('01234567')");assert.equal(body.children.length,1);assert.ok(sockets[0].closed);assert.ok(terminals[0].disposed);assert.equal(sockets[0].onmessage,null);
-assert.equal(sockets[1].url,'wss://mykol.com/mykos/api/terminal/01234567');
+assert.equal(sockets[1].url,'wss://mykol.com/mykos/api/terminal/01234567?geometry=1');
 dialog=body.children[0];let prevented=false;dialog.listeners.cancel({preventDefault(){prevented=true;}});
 assert.ok(prevented);assert.equal(body.children.length,0);assert.ok(sockets[1].closed);assert.ok(terminals[1].disposed);assert.ok(opener.focused);
-run("mykosOpenTerminal('01234567',false,'add-vpn')");assert.equal(sockets[2].url,'wss://mykol.com/mykos/api/terminal/01234567?action=add-vpn');
+run("mykosOpenTerminal('01234567',false,'add-vpn')");assert.equal(sockets[2].url,'wss://mykol.com/mykos/api/terminal/01234567?action=add-vpn&geometry=1');
 body.children[0].children[0].children.at(-1).listeners.click();assert.ok(sockets[2].closed);assert.equal(body.children.length,0);
 run("mykosOpenTerminal('host')");events.pagehide();assert.ok(sockets[3].closed);assert.equal(body.children.length,0);
 assert.ok(!body.children.some(item=>item.tag==='tr'));
@@ -58,7 +58,7 @@ run("mykosOpenTerminal('11111111')");assert.equal(body.children[0].children[0].c
 run("mykosOpenTerminal('22222222')");assert.equal(body.children[0].children[0].children[0].textContent,'macOS shell — 22222222');
 
 run("mykosOpenTerminal('rh9',false,'image-shell')");
-assert.equal(sockets.at(-1).url,'wss://mykol.com/mykos/api/terminal/rh9?action=image-shell');
+assert.equal(sockets.at(-1).url,'wss://mykol.com/mykos/api/terminal/rh9?action=image-shell&geometry=1');
 
 // Successful same-browser windows do not replace an existing main-page session.
 const popouts=[];context.window.open=(url,name,features)=>{const popup={focus(){this.focused=true;}};popouts.push({url,name,features,popup});return popup;};

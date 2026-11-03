@@ -9,7 +9,7 @@ function client(shop,username='mgreen',action='shell') {
  class WebSocket {static OPEN=1;constructor(url){this.url=String(url);sockets.push(this);this.readyState=1;}send(data){(this.sent??=[]).push(data);}close(){this.closed=true;}}
  const window={Terminal,location:{href:'https://mykol.com/mykos/api/terminal/window/'+shop},addEventListener:(name,fn)=>events[name]=fn,close(){this.closed=true;}};
  const requests=[];
- const context=vm.createContext({document:{getElementById:el},window,location:{protocol:'https:'},Terminal,WebSocket,URL,ArrayBuffer,Uint8Array,AbortController,confirm:()=>true,
+ const context=vm.createContext({document:{getElementById:el},window,location:{protocol:'https:'},Terminal,WebSocket,URL,ArrayBuffer,Uint8Array,AbortController,TextEncoder,ResizeObserver:class{observe(){}disconnect(){}},requestAnimationFrame(){},confirm:()=>true,
   setTimeout(){return 1;},clearTimeout(){},setInterval(fn){timers.push(fn);return timers.length;},clearInterval(){},
   fetch:async(url,options)=>{requests.push([url,options]);return {ok:true,json:async()=>url.includes('/permission')?access:{text:'private notes',revision:4}};}});
  vm.runInContext(script,context);
@@ -18,7 +18,7 @@ function client(shop,username='mgreen',action='shell') {
 (async()=>{
  const first=client('12345678'),second=client('87654321','operator');
  assert.equal(first.sockets.length,1);assert.equal(second.sockets.length,1);
- assert.match(first.sockets[0].url,/terminal\/12345678$/);assert.match(second.sockets[0].url,/terminal\/87654321$/);
+ assert.match(first.sockets[0].url,/terminal\/12345678\?geometry=1$/);assert.match(second.sockets[0].url,/terminal\/87654321\?geometry=1$/);
  first.sockets[0].onopen();first.terms[0].input('one');assert.deepEqual(first.sockets[0].sent,['one']);
  assert.equal(first.el('notes-button').hidden,false);assert.equal(second.el('notes-button').hidden,true);
  first.el('notes').showModal();await first.run('loadNotes()');assert.equal(first.el('notes-text').value,'private notes');assert.ok(!first.sockets[0].closed);

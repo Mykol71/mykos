@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        225%{?dist}
+Release:        226%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -110,6 +110,9 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-226
+- Fit terminal text to drawable content with optional-addon fallback and PTY resizing.
+
 * Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-225
 - Run RH8RTI staging before final commit and reject incomplete stage results
 - Add independent RTI pane with flower icon and scoped controls
