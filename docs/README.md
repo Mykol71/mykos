@@ -1,5 +1,9 @@
 # MYKOS documentation
 
+[Release222 notes](VALIDATION.md#release222--fedora-gnome-desktop-vms) describe the Fedora GNOME VM addition and validation.
+
+[Fedora GNOME desktop VMs](IMAGE_BUILDS.md#fedora-gnome-desktop-vms) add separate `fedora43vm` and `fedora44vm` choices with normal guest logins, Xwayland and paired RAM/disk snapshots. Native Fedora choices remain available.
+
 [Release212 notes](VALIDATION.md#release212--review-repairs) cover the six review repairs.
 
 [Release210 notes](VALIDATION.md#release210--add-peer-cancellation) cover the Add Peer Cancel repair.

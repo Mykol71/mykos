@@ -317,6 +317,10 @@ def stage(os_name, values, image):
     complete=folder(os_name)/'complete'
     if complete.exists():complete.unlink()
     if kind=='macos':macos_assets(os_name,values,token,target)
+    elif kind=='fedora':
+        from mykos_fedora import userdata
+        write(target/'user-data',userdata(values))
+        write(target/'meta-data',json.dumps({'instance-id':'mykos-build-'+secrets.token_hex(12),'local-hostname':'mykos-base'}))
     elif kind=='ubuntu':
         setup=(Path(__file__).parents[1]/'web/ubuntu-image-setup.py')
         if not setup.exists():setup=Path('/opt/mykos-web/ubuntu-image-setup.py')
@@ -408,6 +412,7 @@ def launch_arguments(value, key):
     else:
         tools=Path(__file__).with_name('mykos-unattended-entry')
         args+=['-v',str(tools)+':/run/mykos-unattended-entry:ro']
+        if kind=='fedora':args+=['-v',str(Path(__file__).with_name('mykos-fedora-media'))+':/run/mykos-fedora-media:ro','-e','MYKOS_FEDORA_IMAGE_URL='+value['boot'],'-e','DISK_FMT=qcow2']
         if kind=='ubuntu':args+=['-v',str(Path(__file__).with_name('mykos-ubuntu-iso'))+':/run/mykos-ubuntu-iso:ro','-e','MYKOS_UBUNTU_ISO_URL='+value['boot']]
         if kind=='macos':args+=['-v',str(RECIPES/'macos/patch.py')+':/run/mykos-recovery-patch.py:ro']
     return args
@@ -438,6 +443,9 @@ def installed(value):
         result=powershell(value,"$ErrorActionPreference='Stop'; if (-not (Test-Path 'C:\\ProgramData\\MYKOS\\image-install-complete')) {throw 'Provisioning incomplete'}; if ((Get-ItemProperty 'HKLM:\\SYSTEM\\Setup').SystemSetupInProgress -ne 0) {throw 'Setup is active'}; Write-Output 'installed'",12,allow_image_builder=True)
         return result.get('exit_code')==0 and not result.get('timed_out')
     from mykos_ubuntu_vpn import execute
+    if kind=='fedora':
+        execute(value,'/usr/bin/test',('-f','/run/mykos-fedora-ready'),timeout=8)
+        return True
     execute(value,'/bin/sh',('-c','test -f /var/lib/mykos/image-install-complete && systemctl is-active --quiet display-manager.service && pgrep -x gnome-shell >/dev/null'),timeout=8)
     return True
 
@@ -479,7 +487,7 @@ def boot_installed(os_name):
         if kind=='macos':arm_second_boot(os_name)
         # Drop recovery/installer media only in the newly built image's own storage.
         storage=vm.storage(os_name)/'storage'
-        for name in ('autoinstall.iso','custom.iso','installer.iso'):
+        for name in ('autoinstall.iso','custom.iso','installer.iso','seed.iso','fedora-cloud.qcow2'):
             p=storage/name
             if p.is_file() and not p.is_symlink():p.unlink()
         if kind=='windows':
@@ -535,7 +543,7 @@ def build(os_name, username=None, password=None, replace=False):
                     shutil.rmtree(install_state)
                 result=vm.prepare(os_name,keep_running=True,embed_disk=True)
             try:
-                upstream='docker.io/qemux/qemu:latest' if os_name.startswith('ubuntu') else 'docker.io/dockurr/'+vm.VERSIONS[os_name][0]+':latest'
+                upstream='docker.io/qemux/qemu:latest' if os_name.startswith(('ubuntu','fedora')) else 'docker.io/dockurr/'+vm.VERSIONS[os_name][0]+':latest'
                 image_id=json.loads(vm.run([vm.PODMAN,'image','inspect',upstream],timeout=30))[0]['Id']
                 vm.run([vm.PODMAN,'untag',image_id,upstream],timeout=30)
             except (OSError,ValueError,RuntimeError,KeyError,IndexError):pass

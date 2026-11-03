@@ -186,6 +186,14 @@ The commands below use the installed toolkit path.</p>
 <td><code>sudo /usr/share/mykos/pos/vm build wns2016</code></td>
 </tr>
 <tr>
+<td>Fedora 43 GNOME desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build fedora43vm</code></td>
+</tr>
+<tr>
+<td>Fedora 44 GNOME desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build fedora44vm</code></td>
+</tr>
+<tr>
 <td>Ubuntu 20.04</td>
 <td><code>sudo /usr/share/mykos/pos/vm build ubuntu20.04</code></td>
 </tr>
@@ -325,6 +333,35 @@ containers or host package dependencies are needed for unattended installation.<
 stored, root-only, in <code>/var/lib/mykos/image-builds/OS/credentials.json</code> and reused
 for that OS on subsequent builds. They are not printed in progress messages.
 The authenticated API can optionally supply a different local account/password.</p>
+<h2 id="fedora-gnome-desktop-vms">Fedora GNOME desktop VMs</h2>
+<p>Use <code>fedora43vm</code> or <code>fedora44vm</code> for a GNOME desktop with X11 applications
+through Xwayland. These are separate KVM VM choices: existing native <code>fedora43</code>
+and <code>fedora44</code> images, kickstarts and instances remain unchanged.</p>
+<pre><code class="language-bash">sudo /usr/share/mykos/pos/vm build fedora43vm
+sudo /usr/share/mykos/pos/vm build fedora44vm
+</code></pre>
+<p>Run only the version you need. The builder downloads the matching official
+<a href="https://fedoraproject.org/cloud/download/">Fedora Cloud Generic disk</a>, checks its
+SHA256 against Fedora&#39;s checksum file over HTTPS, and installs explicit GNOME,
+GDM, Xwayland and QEMU guest-agent packages without weak dependencies. A private
+NoCloud seed provisions the account and 12 GiB swap. The VM uses 2 GiB RAM,
+2 vCPUs, standard 2D VGA and a 64 GiB sparse disk; no host GPU is required.
+Installation-only seed media is detached before
+capturing the startup state.</p>
+<p>The Fedora pane lists both native and desktop VM choices. On a desktop VM,
+<strong>Console</strong> opens the authenticated browser graphical console at Fedora&#39;s login
+screen. Use the image account credentials kept in the root-only
+<code>/var/lib/mykos/image-builds/fedora43vm/credentials.json</code> (or <code>fedora44vm</code>). The
+separate guest terminal uses a normal login prompt. An idle graphical console
+may be blank or locked: wake it and unlock the account; the saved applications
+remain in the session. Root login remains locked,
+and the provisioner does not enable automatic desktop or serial login.</p>
+<p>Desktop snapshots use QEMU RAM/device state paired with the matching disks,
+including separate snapshot previews. Running GNOME inside a native container
+cannot reliably pass the current CRIU profile, which is why the GNOME choice is
+a VM. Native Fedora&#39;s existing shell, VPN and snapshot paths are unchanged.
+The Ubuntu-specific direct guest VPN setup is not enabled for Fedora desktop
+VMs.</p>
 <h2 id="ubuntu-provisioning">Ubuntu provisioning</h2>
 <p>Ubuntu uses Canonical live-server media with autoinstall and installs the
 minimal desktop on its first installed boot, avoiding installer-chroot Snap

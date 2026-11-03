@@ -191,7 +191,7 @@ def image_name(info, image):
     if not re.fullmatch(r'(?:sha256:)?[0-9a-f]{12,64}', stored):
         return stored
     tags = image.get('RepoTags') or []
-    return next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|ubuntu[0-9.]*|win[^/:]+|wns[0-9]+|macos[0-9]+):[^/]+', tag)), next(iter(tags), stored))
+    return next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)(?:vm)?|ubuntu[0-9.]*|win[^/:]+|wns[0-9]+|macos[0-9]+):[^/]+', tag)), next(iter(tags), stored))
 
 
 def parse_os_release(text):
@@ -271,6 +271,7 @@ def image_os(info, image):
     for prefix, title in families:
         if ref.startswith(prefix) and re.fullmatch(r'[0-9][0-9.a-z]*', ref[len(prefix):]):
             version = ref[len(prefix):] if prefix == 'mssql' else labels.get('io.mykos.os.version') or labels.get('version') or ref[len(prefix):]
+            if prefix=='fedora' and re.fullmatch(r'fedora(?:43|44)vm',ref):version=ref[len(prefix):-2]
             if prefix in ('rh','rocky','alma','oracle') and not re.fullmatch(r'[0-9]+(?:\.[0-9]+)+', str(version)):
                 version = image_release(info.get('Image')) or version
             return {'os_type': title, 'os_version': version, 'os_codename':release_name(title,version),

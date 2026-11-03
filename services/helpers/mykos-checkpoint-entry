@@ -75,7 +75,7 @@ if [[ ${MYKOS_BUILD_NICE:-0} == 1 ]]; then
     renice -n 15 -p "$$" >/dev/null || echo 'Warning: Image build CPU priority could not be set' >&2
     ionice -c 2 -n 7 -p "$$" >/dev/null || echo 'Warning: Image build disk priority could not be set' >&2
 fi
-if [[ ${MYKOS_UNATTENDED:-} == ubuntu || ${MYKOS_UNATTENDED:-} == macos ]]; then
+if [[ ${MYKOS_UNATTENDED:-} == ubuntu || ${MYKOS_UNATTENDED:-} == fedora || ${MYKOS_UNATTENDED:-} == macos ]]; then
     exec /run/mykos-unattended-entry
 fi
 exec /run/entry.sh

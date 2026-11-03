@@ -1492,7 +1492,7 @@ const mykosOsChoices = {
     linux: ['rh7', 'rh8', 'rh9', 'rh10'],
     rocky: ['rocky8','rocky9','rocky10'],
     alma: ['alma8','alma9','alma10'],
-    fedora: ['fedora43','fedora44'],
+    fedora: ['fedora43','fedora44','fedora43vm','fedora44vm'],
     centos: ['centos8','centos9','centos10'],
     oracle: ['oracle8','oracle9','oracle10'],
     ubuntu: ['ubuntu20.04', 'ubuntu22.04', 'ubuntu24.04'],
@@ -1513,7 +1513,7 @@ function mykosImageFamily(os) {
     if (/^alma(?:8|9|10)$/i.test(os)) return 'alma';
     if (/^oracle(?:8|9|10)$/i.test(os)) return 'oracle';
     if (/^centos(?:8|9|10)$/i.test(os)) return 'centos';
-    if (/^fedora(?:43|44)$/i.test(os)) return 'fedora';
+    if (/^fedora(?:43|44)(?:vm)?$/i.test(os)) return 'fedora';
     if (/^rh\d+$/i.test(os)) return 'linux';
     if (/^ubuntu(?:\d{2}(?:\.\d{2})?)?$/i.test(os)) return 'ubuntu';
     if (/^wns\d+$/i.test(os)) return 'windows-server';
@@ -2399,10 +2399,10 @@ function mykosRenderInventory() {
             terminalButton.type = 'button';
             terminalButton.className = 'mykos-terminal-button';
             const terminalFamily = mykosNodeFamily(node);
-            const linuxTerminal = !desktop || terminalFamily === 'ubuntu';
+            const linuxTerminal = !desktop || ['ubuntu','fedora'].includes(terminalFamily);
             const powershellTerminal = desktop && ['windows','windows-server'].includes(terminalFamily);
             const macShell = desktop && terminalFamily === 'macos';
-            terminalButton.title = macShell ? 'macOS shell (admin only)' : powershellTerminal ? 'PowerShell commands (admin only)' : linuxTerminal ? 'su - root (admin only)' : 'Desktop login (VNC)';
+            terminalButton.title = desktop && terminalFamily === 'fedora' ? 'Fedora guest terminal (login required)' : macShell ? 'macOS shell (admin only)' : powershellTerminal ? 'PowerShell commands (admin only)' : linuxTerminal ? 'su - root (admin only)' : 'Desktop login (VNC)';
             terminalButton.setAttribute('aria-label', terminalButton.title);
             terminalButton.style.cssText = 'color:#38bdf8;margin-left:8px';
             terminalButton.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="m7 9 3 3-3 3M13 16h4"/></svg>';
@@ -3284,7 +3284,7 @@ function mykosRenderImageBuilds() {
                 if (mykosTerminalAllowed && url.origin === window.location.origin && url.pathname.startsWith('/mykos/console/') && !url.username && !url.password)
                     consoleLink = '<a class="mykos-icon mykos-logs-button" style="color:#4ade80" href="' + escape(url.href) + '" target="_blank" rel="noopener noreferrer" title="' + consoleLabel + '" aria-label="Open ' + consoleLabel.toLowerCase() + ' for ' + escape(item.os) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8"/></svg></a>';
             } catch (_) {}
-            const version = item.build_state==='ready' && !item.os.startsWith('mssql') && item.version ? item.version : item.os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '');
+            const version = /^fedora(?:43|44)vm$/.test(item.os) ? item.os.slice(6,-2)+' GNOME VM' : item.build_state==='ready' && !item.os.startsWith('mssql') && item.version ? item.version : item.os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '').replace(/vm$/, ' GNOME VM');
             const span = 4;
             const phase = ({queued:'Queued',building:'Installing',configuring:'Preparing',capturing:'Capturing',failed:'Failed',ready:'Image'})[item.build_state] || 'Installing';
             const produced=Number.isFinite(item.created_at) && item.created_at>0 ? new Date(item.created_at*1000).toLocaleString() : 'Unknown';
@@ -3345,7 +3345,7 @@ function mykosRefreshOsChoices() {
         const selected = select.value;
         select.replaceChildren(new Option(choices.length ? 'Ver' : mykosStageImagesError ? 'OS unavailable' : 'No OS templates running', ''));
         for (const os of choices) {
-            const label = os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '');
+            const label = os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '').replace(/vm$/, ' GNOME VM');
             const option = new Option(label, os);
             option.disabled = !available.has(os);
             option.title = option.disabled ? 'Image unavailable' : 'Image available';

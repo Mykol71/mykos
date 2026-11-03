@@ -26,7 +26,8 @@ STORAGE = Path('/home/mykos-vms')
 VERSIONS = {**{v: ('windows', v[3:]) for v in ('win11','win10','win8e','win7u','winxp','winme','win2k','win98')},
             **{v: ('windows', v[3:]) for v in ('wns2025','wns2022','wns2019','wns2016')},
             **{v: ('macos', v[3:]) for v in ('mac15','mac14','mac13','mac12')},
-            **{v: ('ubuntu', v[6:]) for v in ('ubuntu20.04','ubuntu22.04','ubuntu24.04')}}
+            **{v: ('ubuntu', v[6:]) for v in ('ubuntu20.04','ubuntu22.04','ubuntu24.04')},
+            **{'fedora'+v+'vm': ('fedora', v) for v in ('43','44')}}
 
 
 def run(args, timeout=3600, env=None):
@@ -231,7 +232,7 @@ def launch(key, value):
             '--security-opt=label=disable', '--stop-timeout=120', '--restart=' + ('no' if value['role'] in ('template','preview') else 'unless-stopped'), '--pull=never',
             '--label', 'io.mykos.vm.os=' + value['os'], '--label', 'io.mykos.vm.role=' + value['role'],
             '--label', 'io.mykos.vm.host=' + value['host'],
-            '-e', ('BOOT=' + value['boot']) if kind == 'ubuntu' else 'VERSION=' + version,
+            '-e', ('BOOT=' + ('none' if kind=='fedora' and (value.get('installation_complete') or value.get('ready')) else value['boot'])) if kind in ('ubuntu','fedora') else 'VERSION=' + version,
             '-e', 'RAM_SIZE=' + str(ram_mib) + 'M', '-e', 'RAM_MINIMUM=2G', '-e', 'CPU_CORES=2', '-e', 'DISK_SIZE=64G',
             '-v', str(storage(key) / 'storage') + ':/storage:rw',
             '-p', '%s:%s:8006/tcp' % (value['bind'], value['console_port']),
@@ -246,8 +247,9 @@ def launch(key, value):
     args += ['-e', 'MYKOS_BUILD_NICE=' + ('1' if building_image else '0')]
     if building_image and kind == 'windows':
         args += ['--cap-add=SYS_NICE']
-    if kind == 'ubuntu':
+    if kind in ('ubuntu','fedora'):
         args += ['-e', 'SERIAL=unix:/dev/shm/mykos-serial.sock,server=on,wait=off']
+    if kind=='fedora':args+=['-e','DISK_FMT=qcow2','-e','VGA=std']
     # Never inherit an installation entry point from a committed build image.
     args += ['-e', 'MYKOS_UNATTENDED=']
     if value.get('unattended'):
@@ -265,7 +267,7 @@ def launch(key, value):
         oem = storage(key if value['role']=='preview' else value['os']) / 'oem'
         if oem.is_dir() and not oem.is_symlink():
             args += ['-v', str(oem) + ':/oem:ro']
-    if value.get('guest_agent') and kind in ('windows','ubuntu'):
+    if value.get('guest_agent') and kind in ('windows','ubuntu','fedora'):
         args += ['-e', 'QGA=/dev/shm/mykos-qga.sock']
     for key,setting in value.get('cpu_env', {}).items():
         if key not in ('CPU_MODEL','CPU_FLAGS','HV','VMX'): raise ValueError('Unsupported CPU profile setting')
@@ -312,11 +314,12 @@ def console_target(key):
 def links(value):
     return {k: value[k] for k in ('os','name','role','host','console_port','desktop_port','ready')} | {
         'ram_mib': value.get('ram_mib', 2048),
+        'guest_login_required': value['os'].startswith('fedora'),
         'unattended': value.get('unattended', False),
         'capture_mode': value.get('capture_mode', 'disk'),
         'last_start': value.get('last_start'),
-        'terminal_transport': 'serial' if value['os'].startswith('ubuntu') else 'powershell' if VERSIONS[value['os']][0] == 'windows' else 'ssh' if value['os'].startswith('mac') else None,
-        'root_terminal_url': '/mykos/api/v2/terminal/' + value['name'][:8] if value['os'].startswith('ubuntu') and value['role'] == 'instance' else None,
+        'terminal_transport': 'serial' if value['os'].startswith(('ubuntu','fedora')) else 'powershell' if VERSIONS[value['os']][0] == 'windows' else 'ssh' if value['os'].startswith('mac') else None,
+        'root_terminal_url': '/mykos/api/v2/terminal/' + value['name'][:8] if value['os'].startswith(('ubuntu','fedora')) and value['role'] == 'instance' else None,
         'console_url': console_path(value),
         'direct_console_url': 'http://%s:%s/' % (value['host'], value['console_port']),
         'login_supported': value['os'] not in ('win98','winme','win2k'),
@@ -327,7 +330,7 @@ def links(value):
 def checkpoint_cpu_profile(os_name):
     kind = VERSIONS[os_name][0]
     if kind == 'macos': return {'CPU_FLAGS':'-invtsc'}
-    if kind not in ('windows', 'ubuntu'): return {}
+    if kind not in ('windows', 'ubuntu','fedora'): return {}
     profile = {'CPU_MODEL':'host', 'CPU_FLAGS':'migratable=on,-invtsc'}
     if kind == 'windows': profile['HV'] = 'N'
     return profile
@@ -356,8 +359,11 @@ def create(os_name, username=None, password=None, ram_mib=None, unattended=False
         kind, _ = VERSIONS[os_name]
         if kind == 'windows' and (not username or not password or any(c in username + password for c in '\r\n\x00')):
             raise ValueError('Supply a Windows username and nonempty single-line password')
-        image = 'docker.io/qemux/qemu:latest' if kind == 'ubuntu' else 'docker.io/dockurr/' + kind + ':latest'
+        image = 'docker.io/qemux/qemu:latest' if kind in ('ubuntu','fedora') else 'docker.io/dockurr/' + kind + ':latest'
         boot = (ubuntu_iso(VERSIONS[os_name][1], unattended=True) if unattended else ubuntu_iso(VERSIONS[os_name][1])) if kind == 'ubuntu' else None
+        if kind=='fedora':
+            from mykos_fedora import cloud_image
+            boot=cloud_image(VERSIONS[os_name][1])
         run([PODMAN, 'pull', image])
         image_id = json.loads(run([PODMAN, 'image', 'inspect', image]))[0]['Id']
         image_name = template_image(os_name)
@@ -370,7 +376,7 @@ def create(os_name, username=None, password=None, ram_mib=None, unattended=False
             with os.fdopen(fd, 'w') as handle: handle.write('USERNAME=' + username + '\nPASSWORD=' + password + '\n')
         value = dict(os=os_name, name=os_name, image=image_id, image_name=image_name, role='template', host=host, bind=bind,
                      console_port=console, desktop_port=desktop, ready=False, boot=boot)
-        if kind in ('windows','ubuntu'):
+        if kind in ('windows','ubuntu','fedora'):
             value['guest_agent'] = True
         if kind == 'windows' and os_name not in ('win98','winme','win2k','winxp','win7u'):
             oem = storage(os_name) / 'oem'
@@ -659,7 +665,7 @@ def checkpoint_enable(os_name):
     if os_name not in VERSIONS: raise ValueError('Select a template OS')
     with locked():
         value = read(os_name)
-        if VERSIONS[os_name][0] not in ('windows', 'ubuntu', 'macos'): return links(value)
+        if VERSIONS[os_name][0] not in ('windows', 'ubuntu', 'fedora', 'macos'): return links(value)
         profile = checkpoint_cpu_profile(os_name)
         if value.get('cpu_env') == profile: return links(value)
         old_value = dict(value)
@@ -710,7 +716,7 @@ def cleanup_unused_base_images():
     removed=[]
     for item in json.loads(run([PODMAN,'images','--format','json'],timeout=30)):
         for name in item.get('Names') or []:
-            if not re.fullmatch(r'localhost/(?:rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|macos[0-9]+|win[0-9a-z]+|wns[0-9]+|ubuntu[0-9.]+):base',name):continue
+            if not re.fullmatch(r'localhost/(?:rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)(?:vm)?|macos[0-9]+|win[0-9a-z]+|wns[0-9]+|ubuntu[0-9.]+):base',name):continue
             image=json.loads(run([PODMAN,'image','inspect',name],timeout=30))[0]['Id']
             if image.removeprefix('sha256:') in used:continue
             try:run([PODMAN,'image','rm',name],timeout=120)
@@ -983,7 +989,8 @@ def commit_capture(os_name,value,captured,keep_running=False,embed_disk=False):
     else:
         commit=[PODMAN,'commit']
         if value.get('unattended'):
-            commit+=['--change','ENV MYKOS_UNATTENDED=','--change','ENV MYKOS_UBUNTU_ISO_URL=','--change','ENV MYKOS_WINDOWS_ASSET=']
+            commit+=['--change','ENV MYKOS_UNATTENDED=','--change','ENV MYKOS_UBUNTU_ISO_URL=','--change','ENV MYKOS_FEDORA_IMAGE_URL=','--change','ENV MYKOS_WINDOWS_ASSET=']
+        if VERSIONS[os_name][0]=='fedora':commit+=['--change','LABEL io.mykos.os='+os_name,'--change','LABEL io.mykos.os.version='+VERSIONS[os_name][1]]
         if VERSIONS[os_name][0]=='windows':commit+=['--change','ENV USERNAME=','--change','ENV PASSWORD=']
         print('Committing installed image '+image_name,flush=True)
         with tempfile.TemporaryDirectory(prefix='.commit-',dir=str(storage(os_name))) as scratch:

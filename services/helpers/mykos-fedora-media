@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Prepare a checksum-verified official Fedora cloud disk and private NoCloud seed."""
+import hashlib
+import os
+from pathlib import Path
+import re
+import subprocess
+import urllib.request
+
+def prepare(root,url):
+    root=Path(root);state=root/'.mykos-installstate'
+    match=re.fullmatch(r'https://dl[.]fedoraproject[.]org/pub/fedora/linux/releases/(43|44)/Cloud/x86_64/images/(Fedora-Cloud-Base-Generic-\1-([0-9.]+)[.]x86_64[.]qcow2)',url)
+    if not match:raise ValueError('Expected official Fedora 43/44 Generic cloud disk')
+    name=match[2];base=url.rsplit('/',1)[0]+'/'
+    checksum='Fedora-Cloud-'+match[1]+'-'+match[3]+'-x86_64-CHECKSUM'
+    with urllib.request.urlopen(base+checksum,timeout=30) as response:checks=response.read(1024*1024).decode('utf-8')
+    expected=re.search(r'(?m)^SHA256 \('+re.escape(name)+r'\) = ([0-9a-f]{64})$',checks)
+    if not expected:raise ValueError('Official Fedora SHA256 unavailable')
+    source=root/'fedora-cloud.qcow2';disk=root/'data.qcow2';converted=root/'.data.qcow2.installing'
+    for path in (source,disk,converted,root/'seed.iso'):
+        if path.is_symlink():raise ValueError('Unsafe Fedora media path')
+    if not disk.exists():
+        temporary=source.with_suffix('.download')
+        if temporary.is_symlink():raise ValueError('Unsafe media download')
+        try:
+            digest=hashlib.sha256();size=0
+            with urllib.request.urlopen(url,timeout=60) as response,temporary.open('wb') as output:
+                while True:
+                    chunk=response.read(4*1024*1024)
+                    if not chunk:break
+                    size+=len(chunk)
+                    if size>8*1024**3:raise ValueError('Fedora cloud disk exceeds download limit')
+                    digest.update(chunk);output.write(chunk)
+            if digest.hexdigest()!=expected[1]:raise ValueError('Fedora cloud disk SHA256 mismatch')
+            os.chmod(temporary,0o600);os.replace(temporary,source)
+            subprocess.run(['qemu-img','convert','-f','qcow2','-O','qcow2',str(source),str(converted)],check=True)
+            os.chmod(converted,0o600);os.replace(converted,disk);source.unlink()
+        finally:
+            temporary.unlink(missing_ok=True);converted.unlink(missing_ok=True)
+    seed=root/'seed.iso';temporary=root/'.seed.iso'
+    try:
+        subprocess.run(['xorriso','-as','mkisofs','-quiet','-V','cidata','-J','-r','-o',str(temporary),str(state/'user-data'),str(state/'meta-data')],check=True)
+        os.chmod(temporary,0o600);os.replace(temporary,seed)
+    finally:temporary.unlink(missing_ok=True)
+
+
+if __name__=='__main__':
+    prepare(Path('/storage'),os.environ['MYKOS_FEDORA_IMAGE_URL'])

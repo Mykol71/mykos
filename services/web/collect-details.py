@@ -55,9 +55,9 @@ def collect(shop_filter=None):
 
         started = state.get("StartedAt", "")
         vm_os = (info.get('Config', {}).get('Labels') or {}).get('io.mykos.vm.os', '')
-        desktop = bool(re.fullmatch(r'(?:win(?:11|10|8e|7u|xp|me|2k|98)|wns(?:2025|2022|2019|2016)|mac(?:15|14|13|12)|ubuntu(?:20|22|24)\.04)', vm_os))
-        vm_type = 'Windows Server' if vm_os.startswith('wns') else 'Windows' if vm_os.startswith('win') else 'macOS' if vm_os.startswith('mac') else 'Ubuntu'
-        os_info = {'os_type': vm_type, 'os_version': re.sub(r'^(?:ubuntu|wns|win|mac)', '', vm_os)} if desktop else host.image_os(info, host.image_info(info, catalog))
+        desktop = bool(re.fullmatch(r'(?:win(?:11|10|8e|7u|xp|me|2k|98)|wns(?:2025|2022|2019|2016)|mac(?:15|14|13|12)|ubuntu(?:20|22|24)\.04|fedora(?:43|44)vm)', vm_os))
+        vm_type = 'Windows Server' if vm_os.startswith('wns') else 'Windows' if vm_os.startswith('win') else 'macOS' if vm_os.startswith('mac') else 'Fedora' if vm_os.startswith('fedora') else 'Ubuntu'
+        os_info = {'os_type': vm_type, 'os_version': re.sub(r'vm$', '', re.sub(r'^(?:ubuntu|wns|win|mac|fedora)', '', vm_os))} if desktop else host.image_os(info, host.image_info(info, catalog))
 
         os_info['os_codename']=host.release_name(os_info.get('os_type'),os_info.get('os_version'))
         details[shop] = {

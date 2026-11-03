@@ -14,7 +14,7 @@ from websockets.asyncio.client import connect
 
 LIMIT = 16 * 1024 * 1024
 AUTH_INTERVAL = 15
-SELECTION = re.compile(r'(?:preview-[0-9a-f]{32}|[0-9]{8}|(?:win|wns|mac|ubuntu)[A-Za-z0-9.]+)\Z')
+SELECTION = re.compile(r'(?:preview-[0-9a-f]{32}|[0-9]{8}|(?:win|wns|mac|ubuntu|fedora)[A-Za-z0-9.]+)\Z')
 
 
 def authorize(connection, api=False):

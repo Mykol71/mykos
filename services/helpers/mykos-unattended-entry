@@ -1,6 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 state=/storage/.mykos-installstate
+if [[ ${MYKOS_UNATTENDED:-} == fedora ]]; then
+    python3 /run/mykos-fedora-media
+    export BOOT=none
+    export ARGUMENTS="${ARGUMENTS:-} -drive file=/storage/seed.iso,format=raw,if=none,id=mykosseed,readonly=on -device virtio-scsi-pci,id=mykosseedscsi -device scsi-cd,drive=mykosseed,bus=mykosseedscsi.0"
+    exec /run/entry.sh
+fi
 if [[ ${MYKOS_UNATTENDED:-} == ubuntu ]]; then
     if [[ ! -f "$state/boot-installed" ]]; then
         python3 /run/mykos-ubuntu-iso

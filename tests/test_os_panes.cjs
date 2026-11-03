@@ -38,6 +38,14 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         }
         assert.equal(mykosImageFamily('centos7'),null);
         assert.equal(mykosImageFamily('fedora45'),null);
+        for (const os of ['fedora43vm','fedora44vm']) {
+            assert.equal(mykosImageFamily(os),'fedora');
+            assert.ok(mykosOsChoices.fedora.includes(os));
+        }
+        el('fedora-mykos-image-builds').querySelectorAll=()=>[];
+        mykosCapturedImages=[{os:'fedora43vm',version:'43',size_bytes:1024,created_at:1793060009,delete_state:'idle'}];
+        mykosRenderImageBuilds();
+        assert.match(el('fedora-mykos-image-builds').innerHTML,/43 GNOME VM/);
         for (const os of ['rh7','rh8','rh9','rh10']) assert.equal(mykosImageFamily(os), 'linux');
         for (const os of ['ubuntu','ubuntu22','ubuntu24','ubuntu24.04','ubuntu26.04']) assert.equal(mykosImageFamily(os), 'ubuntu');
         for (const os of ['win10','win11','win8e','win7u','winxp','winme','win2k','win98']) assert.equal(mykosImageFamily(os), 'windows');

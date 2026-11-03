@@ -54,7 +54,7 @@ def main():
         if record_path(data['shop']).is_file():
             from mykos_vm import read
             vm_os=read(data['shop']).get('os','')
-            if not vm_os.startswith(('ubuntu','win','wns','mac')) or (action != 'shell' and not vm_os.startswith('ubuntu')):
+            if not vm_os.startswith(('ubuntu','fedora','win','wns','mac')) or (action != 'shell' and not vm_os.startswith('ubuntu')):
                 raise ValueError('Use the desktop browser console or RDP/VNC login for this VM')
     if not host and action in ('add-vpn','remove-vpn') and not any(item['name'] == name and item['state'].lower() == 'running' for item in containers()):
         raise ValueError('Start the container before adding a VPN')
@@ -90,7 +90,7 @@ def main():
             from mykos_vm import record_path,VERSIONS
             if (not image_shell or data_shop in VERSIONS) and record_path(data['shop']).is_file():
                 from mykos_vm import read
-                if read(data['shop'])['os'].startswith('ubuntu'):
+                if read(data['shop'])['os'].startswith(('ubuntu','fedora')):
                     from mykos_serial import open_terminal
                 elif read(data['shop'])['os'].startswith('mac'):
                     from mykos_ssh import open_terminal

@@ -1,15 +1,18 @@
-# Windows, macOS and Ubuntu desktops
+# Windows, macOS, Ubuntu and Fedora desktops
 
 [Documentation index](README.md)
 
 MYKOS runs KVM virtual machines inside rootful Podman containers. Windows uses
-`docker.io/dockurr/windows`, macOS uses `docker.io/dockurr/macos`, and Ubuntu uses
+`docker.io/dockurr/windows`, macOS uses `docker.io/dockurr/macos`, and Ubuntu/Fedora use
 `docker.io/qemux/qemu`. Upstream instructions:
 
 - <https://github.com/dockur/windows>
 - <https://github.com/dockur/macos>
 - <https://github.com/qemus/qemu>
 - <https://releases.ubuntu.com/>
+
+Fedora GNOME desktop choices are `fedora43vm` and `fedora44vm`; native Fedora
+choices remain `fedora43` and `fedora44`. See [Fedora provisioning](IMAGE_BUILDS.md#fedora-gnome-desktop-vms) for the account/login and snapshot behavior.
 
 For new images, use the [unattended image build](IMAGE_BUILDS.md) pipeline.
 One command installs and provisions the guest, verifies a clean installed boot,
@@ -380,7 +383,7 @@ The image creation menu records the allocation so live state captures remain com
 that state. Existing instances can be cold-resized through `vm memory-configure`;
 see BALLOONING.md for recovery, driver and API details.
 
-The Windows/Ubuntu pagefile or swap target is 12 GiB, configured inside the
+The Windows/Ubuntu/Fedora desktop pagefile or swap target is 12 GiB, configured inside the
 installed guest before capture. The Ubuntu helper rejects the live installer;
 finish installation, boot the installed OS, apply setup, reboot and verify first.
 macOS swap stays kernel-managed because a fixed total is not exposed by the
@@ -400,7 +403,7 @@ The banner identifies the container, snapshot and kind of preview.
 
 | Snapshot type | Preview behavior |
 | --- | --- |
-| Windows, macOS or Ubuntu VM memory snapshot | Restores the saved RAM, device state and matching disks; verifies CPU execution state before resuming. |
+| Windows, macOS, Ubuntu or Fedora desktop VM memory snapshot | Restores the saved RAM, device state and matching disks; verifies CPU execution state before resuming. |
 | Native Linux CRIU snapshot | Opens an administrator shell over a private copy of the saved filesystem and mounted data. Captured RAM, processes and services are not resumed. |
 
 Desktop guest traffic is blocked inside the temporary VM wrapper before saved

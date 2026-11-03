@@ -942,3 +942,24 @@ def test_legacy_windows_requires_explicit_installed_desktop_confirmation(tmp_pat
         vm.verify_windows_installation({'os':os_name,'legacy_installation_confirmed':True})
         with pytest.raises(ValueError):
             vm.verify_windows_installation({'os':os_name,'legacy_installation_confirmed':'true'})
+
+
+def test_fedora_vm_uses_qemu_and_detaches_seed_before_runtime(desktop, monkeypatch):
+    import mykos_fedora,mykos_image_build
+    root,calls=desktop
+    monkeypatch.setattr(mykos_fedora,'cloud_image',lambda v:'https://dl.fedoraproject.org/pub/fedora/linux/releases/'+v+'/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-'+v+'-1.6.x86_64.qcow2')
+    monkeypatch.setattr(mykos_image_build,'stage',lambda *a:None)
+    vm.create('fedora43vm','mykos','private-password',unattended=True)
+    value=vm.read('fedora43vm')
+    launch=next(c for c in calls if c[1]=='run')
+    assert any(c[:3]==[vm.PODMAN,'pull','docker.io/qemux/qemu:latest'] for c in calls)
+    assert 'MYKOS_UNATTENDED=fedora' in launch and 'DISK_FMT=qcow2' in launch and 'VGA=std' in launch
+    assert 'QGA=/dev/shm/mykos-qga.sock' in launch
+    assert 'SERIAL=unix:/dev/shm/mykos-serial.sock,server=on,wait=off' in launch
+    assert 'private-password' not in ' '.join(launch)
+    value['installation_complete']=True
+    vm.launch('fedora43vm',value)
+    launch=[c for c in calls if c[1]=='run'][-1]
+    assert 'BOOT=none' in launch and 'MYKOS_UNATTENDED=fedora' not in launch
+    assert not any('/run/mykos-fedora-media' in x for x in launch)
+    assert value['ram_mib']==2048 and vm.links(value)['guest_login_required'] is True

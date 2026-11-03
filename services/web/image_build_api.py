@@ -7,7 +7,7 @@ from container_admin import invoke
 
 router=APIRouter()
 api_router=APIRouter()
-OS=re.compile(r'(?:ubuntu(?:20\.04|22\.04|24\.04)|mac1[2-5]|win(?:10|11|8e)|wns(?:2016|2019|2022|2025))\Z')
+OS=re.compile(r'(?:fedora(?:43|44)vm|ubuntu(?:20\.04|22\.04|24\.04)|mac1[2-5]|win(?:10|11|8e)|wns(?:2016|2019|2022|2025))\Z')
 
 class BuildRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')

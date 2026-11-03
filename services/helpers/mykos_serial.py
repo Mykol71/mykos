@@ -17,7 +17,7 @@ def serial_path(key, *, allow_image=False):
     if allow_image:
         from mykos_image_admin import base_container
         base_container(key)
-    if value.get('role') != role or not value.get('os', '').startswith('ubuntu'):
+    if value.get('role') != role or not value.get('os', '').startswith(('ubuntu','fedora')):
         raise ValueError('Only Ubuntu guests use this serial terminal')
     state = vm.inspect(value['name'])
     labels = state.get('Config', {}).get('Labels') or {}
@@ -38,8 +38,9 @@ def serial_path(key, *, allow_image=False):
 
 def open_terminal(key, *, allow_image=False):
     path, pid, token = serial_path(key, allow_image=True) if allow_image else serial_path(key)
+    fedora=vm.read(key).get('os','').startswith('fedora')
     marker=None
-    if allow_image:
+    if allow_image and not fedora:
         import secrets
         marker='MYKOSBASELOGOUT'+secrets.token_hex(16)
     lock = os.open(vm.storage(key)/'.serial-console.lock', os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW, 0o600)
@@ -49,12 +50,12 @@ def open_terminal(key, *, allow_image=False):
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as serial:
             serial.settimeout(10); serial.connect(str(path)); serial.settimeout(None)
             if process_token(pid) != token: raise ValueError('Ubuntu VM restarted; reconnect')
-            print('Direct Ubuntu guest console: su - root. If blank, run Ubuntu image setup --console-only in the guest before capture.', flush=True)
+            print('Fedora guest console: sign in with the image account; use sudo -i for root.' if fedora else 'Direct Ubuntu guest console: su - root. If blank, run Ubuntu image setup --console-only in the guest before capture.', flush=True)
             original = termios.tcgetattr(0)
             try:
                 tty.setraw(0)
                 serial.sendall(b'\r')
-                if allow_image:
+                if allow_image and not fedora:
                     from mykos_base_session import shell_command
                     serial.sendall((shell_command(logout_marker=marker)+'\r').encode())
                     serial.settimeout(10)
@@ -65,7 +66,7 @@ def open_terminal(key, *, allow_image=False):
                         startup+=part
                         if len(startup)>32768:raise ValueError('Could not start a guarded base console')
                     os.write(1,startup[startup.index(banner):]);serial.settimeout(None)
-                else:
+                elif not fedora:
                     # A memory image can contain the base console process. Replace
                     # that login shell so ID-specific guests do not inherit its guards.
                     serial.sendall(b'trap - EXIT; exec /bin/su - root\r')

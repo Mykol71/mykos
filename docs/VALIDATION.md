@@ -1,5 +1,33 @@
 # Validation record and remaining integration work
 
+## Release222 — Fedora GNOME desktop VMs
+
+Adds separate `fedora43vm` and `fedora44vm` selections, preserving both native
+Fedora recipes and existing instances. The GNOME desktop includes Xwayland for
+X11 applications. Console opens the authenticated MYKOS graphical console;
+Fedora retains its normal account login. The serial console also requires normal
+guest login. SELinux stays enforcing; only a non-secret readiness marker receives
+the vendor QGA runtime-file label.
+
+Both official Fedora Cloud images were built on RHEL9 dev with 2 GiB RAM,
+2 vCPUs and 12 GiB swap. Clean installed boot, committed startup RAM, independent
+instance start, live RAM snapshot/restore and isolated memory preview passed.
+A guest tmpfs sentinel returned to its saved value after restore. GNOME login
+and an X11 GNOME Console application were checked directly. Active-desktop
+snapshot checks, final regressions, signed staged installation and live dev/prod
+verification gate publication; exact receipts remain with the release.
+
+The standard-VGA GNOME/X11 desktop was checked after restore through the actual
+browser console. Fedora retains its normal idle blanking and screen lock: wake
+the console and unlock the account to return to the saved application session.
+Interrupted disk conversion cannot publish a partial VM disk. No guest disks,
+RAM, credentials or generated seeds enter the application packages. Existing
+updateos 2.2.7 repairs, terminal fitting, repository LAN restrictions and all prior
+release221 behavior remain. Fedora desktop direct guest VPN setup is not enabled;
+native Fedora's existing VPN path is unchanged. Live EL10 host/native-CRIU fresh
+installation and existing macOS provenance limitations remain unverified.
+
+
 ## Release212 — Review repairs
 
 - Server-side terminal reauthorization before acceptance/input and every five seconds while idle; session/API-key revocation, expiry, role loss and invalid filesystem-preview leases close the transport.

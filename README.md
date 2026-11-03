@@ -135,6 +135,8 @@ The commands below use the installed toolkit path.
 | Windows Server 2022 | `sudo /usr/share/mykos/pos/vm build wns2022` |
 | Windows Server 2019 | `sudo /usr/share/mykos/pos/vm build wns2019` |
 | Windows Server 2016 | `sudo /usr/share/mykos/pos/vm build wns2016` |
+| Fedora 43 GNOME desktop | `sudo /usr/share/mykos/pos/vm build fedora43vm` |
+| Fedora 44 GNOME desktop | `sudo /usr/share/mykos/pos/vm build fedora44vm` |
 | Ubuntu 20.04 | `sudo /usr/share/mykos/pos/vm build ubuntu20.04` |
 | Ubuntu 22.04 | `sudo /usr/share/mykos/pos/vm build ubuntu22.04` |
 | Ubuntu 24.04 | `sudo /usr/share/mykos/pos/vm build ubuntu24.04` |
@@ -159,7 +161,7 @@ Ubuntu uses autoinstall, Windows uses Autounattend.xml, and macOS uses
 startosinstall. Completed builds commit the installed payload under a readable
 OS image name and leave a generic base running for fast instance creation.
 Native RedHat images use the kickstarts in `pos/ks`. VM guests use 2 GiB RAM;
-Windows and Ubuntu use 12 GiB pagefile/swap, while macOS manages its swap.
+Windows, Ubuntu and Fedora desktop VMs use 12 GiB pagefile/swap, while macOS manages its swap.
 Native Linux containers share host memory without a fixed VM RAM allocation.
 See [image builds](docs/IMAGE_BUILDS.md), [desktop lifecycle](docs/DESKTOPS.md),
 and [networking](docs/NETWORKING.md).
