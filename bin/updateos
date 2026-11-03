@@ -5,7 +5,7 @@ ID=$(/usr/bin/id -u)
 [ $ID -ne 0 ] && echo "You must be root to run $0." && exit 1
 
 #Init
-VERSION="2.2.7"
+VERSION="2.2.8"
 LOG_FILE="/tmp/updateos.log"
 export BACKEND="${MYKOS_UPDATEOS_BACKEND:-https://repo.myk.sh/updateos}"
 [ "`echo $#`" -ge "2" ] && export CMDLINEVARS="`echo $@ | cut -d" " -f2-`" || export CMDLINEVARS=""
@@ -84,15 +84,24 @@ run_subgroup() {
     [ "$NETUP" != "Y" ] && log "Internet down. No subgroups without internet." && return 0
     [ "`echo $HELP | grep -i dry`" != "" ] || [ "`echo $HELP | grep -i help`" != "" ] && HELP="`curl -s $BACKEND/$GROUP/$SUBGROUP/README.md | grep ^#HELP | sed -e 's/^#HELP\ //g'`" && echo "$HELP" && echo && /usr/bin/curl -ls $BACKEND/$GROUP/$file | grep -v $file | directory_links | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v \/ | grep -v .md5 | grep -v README.md && exit $EXIT
     [ "`echo $HELP`" != "" ] && log "updateos - $VERSION - USAGE: sudo updateos (groupname|scriptname|help) [dry]" && exit 0 
-    for SCRIPT in `/usr/bin/curl -ls $BACKEND/$GROUP/$file | grep -v $file | directory_links | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v \/ | grep -v .md5 | grep -v README.md` 
+    local listing scripts
+    listing=$(/usr/bin/curl --fail --location --silent --show-error --connect-timeout 15 --max-time 120 "$BACKEND/$GROUP/$file") || { log "Could not read subgroup $GROUP/$SUBGROUP; no subgroup was completed."; exit 1; }
+    scripts=$(printf '%s\n' "$listing" | directory_links | grep -v / | grep -v '[.]md5$' | grep -v '^README[.]md$')
+    [ -n "$scripts" ] || { log "No scripts found for $GROUP/$SUBGROUP; no subgroup was completed."; exit 1; }
+    for SCRIPT in $scripts 
   do
       log "----> `date` - Running $GROUP $SUBGROUP $SCRIPT..."
       download_script || exit $?
       [ "`echo $SCRIPT | grep crypt`" != "" ] && openssl enc -d -aes-256-cbc -pbkdf2 -in /usr/bin/.updateos/$SCRIPT -out /usr/bin/.updateos/`echo $SCRIPT | cut -d"_" -f1-3`
       SCRIPT="`echo $SCRIPT | cut -d"_" -f1-3`"
       chmod +x /usr/bin/.updateos/$SCRIPT
-      /usr/bin/.updateos/${SCRIPT} 2>&1 | tee -a $LOG_FILE
-      EXIT="${PIPESTATUS[0]}"
+      if [ "${MYKOS_UPDATEOS_STRICT:-0}" = 1 ] && head -n 1 "/usr/bin/.updateos/$SCRIPT" | grep -qE '^#!.*/(env +)?(ba)?sh([[:space:]]|$)'; then
+        /bin/bash -e "/usr/bin/.updateos/$SCRIPT" 2>&1 | tee -a "$LOG_FILE"
+        EXIT="${PIPESTATUS[0]}"
+      else
+        /usr/bin/.updateos/${SCRIPT} 2>&1 | tee -a "$LOG_FILE"
+        EXIT="${PIPESTATUS[0]}"
+      fi
       [ "$EXIT" != "0" ] && log "Failed." && exit $EXIT
       log "----> `date` - Success."
     done
@@ -153,6 +162,7 @@ download_script () {
     [ "`echo $CMDLINEVARS | grep -i help`" != "" ] && script_help
     [ "`echo $file | grep -v \/`" != "" ] && run_script
   done 
+     [ "${MYKOS_UPDATEOS_STRICT:-0}" != 1 ] || { log "Requested update group/script was not found; image staging was not completed."; exit 1; }
      log "updateos - $VERSION - USAGE: sudo updateos (groupname|scriptname|help) [dry]"
      rm -f /usr/bin/.updateos/$SCRIPT
 exit 0

@@ -36,6 +36,16 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
             for (const version of versions) assert.equal(mykosImageFamily(family+version), family);
             assert.equal(mykosNodeFamily({id:'test',os_type:family,image:'localhost/'+family+versions[0]+':latest'}),family);
         }
+        assert.equal(mykosOsFamilies[0],'rti');
+        assert.ok(html.indexOf('id="rti-mykos-containers-pane"')<html.indexOf('id="mykos-containers-pane"'));
+        for (const os of ['rh7rti','rh8rti','rh9rti','rh10rti']) {
+            assert.equal(mykosImageFamily(os),'rti');
+            assert.equal(mykosNodeFamily({id:os,image:'localhost/'+os+':latest',os_type:'Red Hat Enterprise Linux'}),'rti');
+        }
+        assert.equal(mykosNodeFamily({id:'rti',image:'localhost/rh8rti:latest',os_type:'Red Hat Enterprise Linux'}),'rti');
+        assert.ok(!mykosOsChoices.linux.includes('rh8rti'));
+        assert.equal(JSON.stringify(mykosOsChoices.rti),JSON.stringify(['rh8rti']));
+        assert.ok(html.includes('class="mykos-pane-logo mykos-rti-flower"'));
         assert.equal(mykosImageFamily('centos7'),null);
         assert.equal(mykosImageFamily('fedora45'),null);
         for (const os of ['fedora43vm','fedora44vm']) {
@@ -46,7 +56,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         mykosCapturedImages=[{os:'fedora43vm',version:'43',size_bytes:1024,created_at:1793060009,delete_state:'idle'}];
         mykosRenderImageBuilds();
         assert.match(el('fedora-mykos-image-builds').innerHTML,/43 GNOME VM/);
-        for (const os of ['rh7','rh8','rh8rti','rh9','rh10']) assert.equal(mykosImageFamily(os), 'linux');
+        for (const os of ['rh7','rh8','rh9','rh10']) assert.equal(mykosImageFamily(os), 'linux');
         for (const os of ['ubuntu','ubuntu22','ubuntu24','ubuntu24.04','ubuntu26.04']) assert.equal(mykosImageFamily(os), 'ubuntu');
         for (const os of ['win10','win11','win8e','win7u','winxp','winme','win2k','win98']) assert.equal(mykosImageFamily(os), 'windows');
         for (const os of ['wns2025','wns2022','wns2019','wns2016']) assert.equal(mykosImageFamily(os), 'windows-server');
@@ -95,7 +105,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         responseCapturedImages=[];
         mykosTerminalAllowed=true;mykosCapturedImages=[];
 
-        for (const images of [[], ['rh9'], ['ubuntu24.04'], ['win11'], ['wns2022'], ['mac15'], ['mssql2022'], ['rocky9'], ['alma10'], ['oracle8'], ['centos10'], ['fedora44'], ['rh10','ubuntu24','win10','wns2025','mac14']]) {
+        for (const images of [[], ['rh8rti'], ['rh9'], ['ubuntu24.04'], ['win11'], ['wns2022'], ['mac15'], ['mssql2022'], ['rocky9'], ['alma10'], ['oracle8'], ['centos10'], ['fedora44'], ['rh10','ubuntu24','win10','wns2025','mac14']]) {
             responseImages = images.map(os => ({os, image:'image-'+os})); mykosStageImagesLoadedAt = 0;
             await mykosLoadStageImages();
             for (const family of mykosOsFamilies) {

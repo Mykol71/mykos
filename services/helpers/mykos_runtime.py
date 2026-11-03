@@ -188,6 +188,8 @@ def stage_images():
         image = item.get('Image') or item.get('ImageID')
         if not isinstance(image, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9./_:@-]*', image):
             continue
+        build_labels=item.get('Labels') or {}
+        if isinstance(build_labels,dict) and build_labels.get('io.mykos.image.building')=='true':continue
         for name in names:
             if name in STAGE_OS_NAMES or re.fullmatch(r'ubuntu(?:[0-9]{2}(?:\.[0-9]{2})?)?', name):
                 labels = item.get('Labels') or {}

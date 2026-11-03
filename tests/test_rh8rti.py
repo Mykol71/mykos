@@ -21,7 +21,7 @@ def test_rti_packages_groups_and_exclusions_are_explicit():
  assert '@^minimal-environment' in lines and '@system-tools' in lines and '-firewalld' in lines
  assert lines.count('java')==1 and 'rootpw --lock' in source
  assert '-NetworkManager' not in lines and '-chrony' not in lines
- assert 'systemctl mask chronyd.service tuned.service' in source
+ assert 'systemctl mask chronyd.service tuned.service auditd.service' in source
  assert 'COPY updateos /usr/bin/updateos' in (ROOT/'pos/pos').read_text()
 
 def test_rti_uses_el8_native_rpmdb_conversion(monkeypatch):

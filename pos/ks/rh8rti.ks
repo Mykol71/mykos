@@ -103,7 +103,7 @@ systemd-tmpfiles --create --boot
 systemctl mask systemd-logind.service getty.target console-getty.service sys-fs-fuse-connections.mount systemd-remount-fs.service dev-hugepages.mount sys-kernel-config.mount systemd-udevd.service systemd-udevd-control.socket systemd-udevd-kernel.socket systemd-udev-trigger.service
 
 # Keep the requested chrony tools, while the native container shares host time.
-systemctl mask chronyd.service tuned.service
+systemctl mask chronyd.service tuned.service auditd.service
 systemctl enable sshd
 rm -rf /var/cache/yum /var/cache/dnf
 : > /etc/machine-id

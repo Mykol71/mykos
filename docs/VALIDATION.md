@@ -1,5 +1,9 @@
 # Validation record and remaining integration work
 
+## Release225 — staged RTI image and independent pane
+
+RH8RTI runs `updateos stage` before final commit, with strict missing-group and step-failure checks. The RTI pane is independent of Red Hat and uses the flower icon, including separate staging, instance grouping, summary, notes and Receiver source. Validation covers a real stage installation, installed application checks and cold start/stop, RAM-action rejection, failed-stage commit prevention, pane classification and note authorization, full regressions and signed dev/production promotion. Private vendor payload repairs remain LAN-only and outside public source artifacts.
+
 ## Release224 — RHEL 8 RTI guest profile
 
 Adds a separate rh8rti native image and exact requested package groups/list with updateos. Native selection, EL8 platform/RPM database handling, image identity, staging/snapshots and dashboard classification are included. The normal rh8 recipe, published releases, host support matrix and existing workloads stay preserved. Package/group availability, a real dev image build and installed-package checks, native instance lifecycle, full regressions and signed dev/prod validation gate publication. The user explicitly selected publication with RH8RTI RAM snapshot/restore actions disabled pending a later CRIU compatibility fix. Disabled actions are enforced in the backend as well as the UI; other OS snapshots remain unchanged.

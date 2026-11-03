@@ -149,7 +149,7 @@ def test_key_scopes_revocation_and_browser_separation(environment):
         c.execute('UPDATE api_keys SET revoked_at=?',(int(time.time()),))
     assert client.get('/api/v2/nodes',headers=h).status_code==401
 
-@pytest.mark.parametrize('pane', ['repos','terminal'])
+@pytest.mark.parametrize('pane', ['repos','terminal','rti'])
 def test_pane_notes_private_to_mgreen_and_conflicts(environment,pane):
     anonymous=TestClient(app.app,base_url='https://testserver')
     for path in (f'/api/web/notes/{pane}',f'/api/v2/notes/{pane}'):
