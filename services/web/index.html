@@ -3851,13 +3851,13 @@ function mykosRenderMykos() {
                 const cell = mykosCell(row, '');
                 const link = document.createElement('a');
                 const url = new URL(encodeURIComponent(item.name) + '/', new URL(data.public_base_url || '/', window.location.origin));
-                link.href = url.href; link.textContent = item.name; link.target = '_blank'; link.rel = 'noopener';
+                link.href = url.href; link.textContent = item.name; if (item.access === 'LAN-only') link.title = 'LAN-only repository'; link.target = '_blank'; link.rel = 'noopener';
                 cell.append(link);
                 mykosCell(row, mykosHostBytes(item.used_bytes));
                 mykosCell(row, new Date(item.modified_at * 1000).toLocaleString());
                 mykosCell(row, item.latest_rpm ? item.latest_rpm.split('/').pop() : '—');
                 const actions = mykosActionGroup(row, 'Repository actions');
-                if (mykosTerminalAllowed && !data.read_only) actions.append(mykosButton('Delete', async () => {
+                if (mykosTerminalAllowed && !data.read_only && !item.read_only) actions.append(mykosButton('Delete', async () => {
                     if (prompt('Permanently delete repository ' + item.name + ' and its content? Type the repository name to confirm:') !== item.name) return;
                     await mykosAction('repos', {action: 'delete', name: item.name});
                 }));

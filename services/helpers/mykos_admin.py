@@ -279,10 +279,15 @@ def repo_status():
     root = directory(REPOS)
     for path in sorted(root.iterdir()):
         try:
-            repo_path(path.name)
-            package=latest_rpm(path)
-            rows.append({'name': path.name, 'used_bytes': usage.get(path.name),
-                         'latest_rpm': Path(package).name if package else None, 'latest_rpm_path':package, 'modified_at': int(path.stat().st_mtime)})
+            # updateos is a LAN download tree, visible without granting destructive management.
+            readonly = path.name == 'updateos'
+            if readonly: directory(path)
+            else: repo_path(path.name)
+            package=None if readonly else latest_rpm(path)
+            row={'name': path.name, 'used_bytes': usage.get(path.name),
+                 'latest_rpm': Path(package).name if package else None, 'latest_rpm_path':package, 'modified_at': int(path.stat().st_mtime)}
+            if readonly: row.update(read_only=True, access='LAN-only')
+            rows.append(row)
         except (OSError, ValueError):
             continue
     return {'repos': rows, 'storage': storage(REPOS), 'service': service_state('httpd'),

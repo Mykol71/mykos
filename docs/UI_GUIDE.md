@@ -310,6 +310,8 @@ buttons hidden; its Server label identifies the source.
 | Circular arrows — Sync repositories | Confirms and queues the background repository sync workflow. It may install dependencies and use substantial disk/network capacity. Disabled while sync is active. |
 | Row trash can — Delete | Requires typing the repository name, then permanently deletes that repository and its content. |
 
+The `updateos` download tree appears as a read-only entry; it is not an RPM repository and has no Delete action. Its directory remains LAN-only. The repository download landing page shows an updateos link to permitted LAN clients; public visitors see only MYKOS EL9/EL10.
+
 The status line reports storage, Apache state, sync state, and collection time.
 Enabling Apache is different from starting a repository sync.
 

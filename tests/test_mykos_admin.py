@@ -137,7 +137,10 @@ def test_repository_listing_excludes_support_directories(sandbox, monkeypatch):
         (root/name).mkdir()
     monkeypatch.setattr(mykos_admin, 'sizes', lambda _: {})
     result = mykos_admin.repo_status()
-    assert [row['name'] for row in result['repos']] == ['rhel-9-rpms']
+    assert [row['name'] for row in result['repos']] == ['rhel-9-rpms', 'updateos']
+    updateos=next(row for row in result['repos'] if row['name']=='updateos')
+    assert updateos['read_only'] is True and updateos['access']=='LAN-only'
+    with pytest.raises(ValueError):mykos_admin.repo_path('updateos')
     assert all((root/name).is_dir() for name in names)
 
 

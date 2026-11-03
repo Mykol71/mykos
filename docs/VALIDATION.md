@@ -1,5 +1,9 @@
 # Validation record and remaining integration work
 
+## Release223 — LAN-only updateos listing
+
+The dashboard inventory includes the updateos download tree as read-only while the destructive repository path continues to reject it. The download landing page selects a protected LAN index only for loopback and the existing two LAN ranges. Direct private-index requests and updateos downloads remain forbidden to public clients. Focused inventory/UI checks and isolated Apache LAN/public tests gate dev/prod promotion. Existing updater fixes and all release222 behavior are retained.
+
 ## Release222 — Fedora GNOME desktop VMs
 
 Adds separate `fedora43vm` and `fedora44vm` selections, preserving both native
