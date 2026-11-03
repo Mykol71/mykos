@@ -5,9 +5,9 @@ ID=$(/usr/bin/id -u)
 [ $ID -ne 0 ] && echo "You must be root to run $0." && exit 1
 
 #Init
-VERSION="2.2.6"
+VERSION="2.2.7"
 LOG_FILE="/tmp/updateos.log"
-export BACKEND="http://rhel8repo.centralus.cloudapp.azure.com/updateos"
+export BACKEND="${MYKOS_UPDATEOS_BACKEND:-https://repo.myk.sh/updateos}"
 [ "`echo $#`" -ge "2" ] && export CMDLINEVARS="`echo $@ | cut -d" " -f2-`" || export CMDLINEVARS=""
 export SCRIPT="$1"
 export SUBGROUP="$1"
@@ -30,6 +30,11 @@ log() {
   echo >> $LOG_FILE
 }
 
+directory_links() {
+  LC_ALL=C sed -nE 's/.*<[aA][[:space:]]+[hH][rR][eE][fF]="([^"]+)".*/\1/p' |
+    LC_ALL=C grep -E '^[A-Za-z0-9][A-Za-z0-9._-]*/?$'
+}
+
 usage() {
   SUBGROUP=""
     LGGRN='\033[1;32m'
@@ -40,10 +45,10 @@ usage() {
     echo "usage: sudo updateos (groupname|scriptname|help) [dry]"
     echo "$GROUP                       p desc"
     echo "---                       - ----"
-  [ "$NETUP" == "Y" ] && SCRIPT_LIST=`/usr/bin/curl -ls $BACKEND/$GROUP/ | sed 's/<a\ href=/~/g'  | grep -v colspan | cut -d~ -f2 | cut -d\" -f2 | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v \/ | grep -v .md5 | grep -v nopub` || SCRIPT_LIST=`ls /usr/bin/.updateos/`
+  [ "$NETUP" == "Y" ] && SCRIPT_LIST=`/usr/bin/curl -ls $BACKEND/$GROUP/ | directory_links | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v \/ | grep -v .md5 | grep -v nopub` || SCRIPT_LIST=`ls /usr/bin/.updateos/`
   for SCRIPT in $SCRIPT_LIST
     do
-      download_script
+      download_script || exit $?
       DESC="`grep ^#DESC /usr/bin/.updateos/$SCRIPT | sed -e 's/^#DESC\ //g'`"
       [ "`grep ^#PRDno /usr/bin/.updateos/${SCRIPT} 2>/dev/null`" != "" ] && PRD="-" || PRD='^'
       SCRIPT="$SCRIPT$(printf '%*s' "$n" "")"        
@@ -56,7 +61,7 @@ usage() {
     done
 
 #subgroup list
-    [ "$NETUP" == "Y" ] && GROUP_LIST=`/usr/bin/curl -ls $BACKEND/$GROUP/ | sed 's/<a\ href=/~/g'  | grep -v colspan | cut -d~ -f2 | cut -d\" -f2 | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep \/ | grep -v .md5 | grep -v nopub`
+    [ "$NETUP" == "Y" ] && GROUP_LIST=`/usr/bin/curl -ls $BACKEND/$GROUP/ | directory_links | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep \/ | grep -v .md5 | grep -v nopub`
     echo "group                     p desc"
     echo "-----                     - ----"
  for SUBGROUP in $GROUP_LIST
@@ -77,12 +82,12 @@ exit 0
 
 run_subgroup() {
     [ "$NETUP" != "Y" ] && log "Internet down. No subgroups without internet." && return 0
-    [ "`echo $HELP | grep -i dry`" != "" ] || [ "`echo $HELP | grep -i help`" != "" ] && HELP="`curl -s $BACKEND/$GROUP/$SUBGROUP/README.md | grep ^#HELP | sed -e 's/^#HELP\ //g'`" && echo "$HELP" && echo && /usr/bin/curl -ls $BACKEND/$GROUP/$file | grep -v $file | sed 's/<a\ href=/~/g'  | grep -v colspan | cut -d~ -f2 | cut -d\" -f2 | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v \/ | grep -v .md5 | grep -v README.md && exit $EXIT
+    [ "`echo $HELP | grep -i dry`" != "" ] || [ "`echo $HELP | grep -i help`" != "" ] && HELP="`curl -s $BACKEND/$GROUP/$SUBGROUP/README.md | grep ^#HELP | sed -e 's/^#HELP\ //g'`" && echo "$HELP" && echo && /usr/bin/curl -ls $BACKEND/$GROUP/$file | grep -v $file | directory_links | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v \/ | grep -v .md5 | grep -v README.md && exit $EXIT
     [ "`echo $HELP`" != "" ] && log "updateos - $VERSION - USAGE: sudo updateos (groupname|scriptname|help) [dry]" && exit 0 
-    for SCRIPT in `/usr/bin/curl -ls $BACKEND/$GROUP/$file | grep -v $file | sed 's/<a\ href=/~/g'  | grep -v colspan | cut -d~ -f2 | cut -d\" -f2 | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v \/ | grep -v .md5 | grep -v README.md` 
+    for SCRIPT in `/usr/bin/curl -ls $BACKEND/$GROUP/$file | grep -v $file | directory_links | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v \/ | grep -v .md5 | grep -v README.md` 
   do
       log "----> `date` - Running $GROUP $SUBGROUP $SCRIPT..."
-      download_script
+      download_script || exit $?
       [ "`echo $SCRIPT | grep crypt`" != "" ] && openssl enc -d -aes-256-cbc -pbkdf2 -in /usr/bin/.updateos/$SCRIPT -out /usr/bin/.updateos/`echo $SCRIPT | cut -d"_" -f1-3`
       SCRIPT="`echo $SCRIPT | cut -d"_" -f1-3`"
       chmod +x /usr/bin/.updateos/$SCRIPT
@@ -96,7 +101,7 @@ exit $EXIT
 
 run_script() {
   SUBGROUP=""
-  download_script
+  download_script || exit $?
   [ "`echo $HELP | grep -i dry`" != "" ] && cat /usr/bin/.updateos/${SCRIPT} && exit $EXIT
       [ "`echo $SCRIPT | grep crypt`" != "" ] && openssl enc -d -aes-256-cbc -pbkdf2 -in /usr/bin/.updateos/$SCRIPT -out /usr/bin/.updateos/`echo $SCRIPT | cut -d"_" -f1-3`
       SCRIPT="`echo $SCRIPT | cut -d"_" -f1-3`"
@@ -116,14 +121,32 @@ exit 0
 }
 
 download_script () {
-  [ "$NETUP" != "Y" ] && return 0 
-  [ ! -f /usr/bin/.updateos/$SCRIPT ] && touch /usr/bin/.updateos/$SCRIPT
-  [ "`curl -s $BACKEND/$GROUP/$SCRIPT.md5`" != "`md5sum /usr/bin/.updateos/$SCRIPT | cut -d" " -f1`" ] && rm -f /usr/bin/.updateos/$SCRIPT && /usr/bin/curl -s $BACKEND/$GROUP/$SUBGROUP/$SCRIPT -o /usr/bin/.updateos/$SCRIPT && chmod +x /usr/bin/.updateos/$SCRIPT
+  [ "$NETUP" != "Y" ] && return 0
+  case "$SCRIPT" in ''|*[!A-Za-z0-9._-]*) log "Invalid script name: $SCRIPT"; return 2 ;; esac
+  case "$SUBGROUP" in *[!A-Za-z0-9._-]*) log "Invalid subgroup name"; return 2 ;; esac
+  local url="$BACKEND/$GROUP/${SUBGROUP:+$SUBGROUP/}$SCRIPT"
+  local expected actual temporary
+  expected=$(/usr/bin/curl --fail --location --silent "$url.md5" 2>/dev/null) || expected=""
+  actual=$(md5sum "/usr/bin/.updateos/$SCRIPT" 2>/dev/null | cut -d" " -f1)
+  if [[ "$expected" =~ ^[[:xdigit:]]{32}$ ]] && [ "$expected" = "$actual" ]; then return 0; fi
+  temporary=$(mktemp "/usr/bin/.updateos/.${SCRIPT}.XXXXXX") || return 1
+  if ! /usr/bin/curl --fail --location --silent --show-error "$url" -o "$temporary"; then
+    rm -f "$temporary"
+    log "Could not download $GROUP/${SUBGROUP:+$SUBGROUP/}$SCRIPT; no script was executed."
+    return 1
+  fi
+  if [ ! -s "$temporary" ] || head -c 512 "$temporary" | grep -qiE '<!doctype[[:space:]]+html|<html([[:space:]>])'; then
+    rm -f "$temporary"; log "Rejected empty or HTML response for $SCRIPT"; return 1
+  fi
+  if [[ "$expected" =~ ^[[:xdigit:]]{32}$ ]] && [ "$(md5sum "$temporary" | cut -d" " -f1)" != "$expected" ]; then
+    rm -f "$temporary"; log "Checksum mismatch for $SCRIPT"; return 1
+  fi
+  chmod +x "$temporary" && mv -f "$temporary" "/usr/bin/.updateos/$SCRIPT" || { rm -f "$temporary"; return 1; }
 }
 
 # main
   [ "$#" == "0" ] || [ "`echo $1 | grep -i help 2>/dev/null`" != "" ] && usage
-  [ "$NETUP" == "Y" ] && SCRIPT_LIST=`/usr/bin/curl -ls $BACKEND/$GROUP/ | sed 's/<a\ href=/~/g'  | grep -v colspan | cut -d~ -f2 | cut -d\" -f2 | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v .md5 | grep -v nopub | grep $SCRIPT` || SCRIPT_LIST=`ls /usr/bin/.updateos/ | grep $SCRIPT`
+  [ "$NETUP" == "Y" ] && SCRIPT_LIST=`/usr/bin/curl -ls $BACKEND/$GROUP/ | directory_links | grep -v \< | grep -v \/\/ | grep -v \? | grep -v ^/ | grep -v .md5 | grep -v nopub | grep $SCRIPT` || SCRIPT_LIST=`ls /usr/bin/.updateos/ | grep $SCRIPT`
   for file in $SCRIPT_LIST
   do
     [ "`echo $file | grep \/`" != "" ] && run_subgroup

@@ -478,7 +478,7 @@ body { isolation: isolate; }
 .mykos-terminal-titlebar strong { flex:1; font-size:14px; overflow-wrap:anywhere; }
 .mykos-terminal-titlebar button { color:#38bdf8; }
 .mykos-terminal-titlebar .mykos-notes-button { color:#fff; }
-.mykos-terminal-surface { height:min(60vh,400px); max-width:100%; overflow:auto; background:#050a12; padding:8px; border:1px solid #334155; border-radius:8px; }
+.mykos-terminal-surface { width:100%;box-sizing:border-box; height:min(60vh,400px); max-width:100%; overflow:auto; background:#050a12; padding:8px; border:1px solid #334155; border-radius:8px; }
 .mykos-dialog::backdrop { background: #0009; }
 .mykos-dialog label { display: block; margin: 16px 0; font-size: 13px; }
 .mykos-dialog input:not([type=checkbox]), .mykos-dialog textarea { display: block; box-sizing: border-box; width: 100%; margin-top: 6px; background: #0b1120; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 10px; }
@@ -1065,6 +1065,7 @@ table:has(> .mykos-container-rows) > thead > tr > th:last-child { text-align:rig
 @media(max-width:760px){:root[data-theme="receiver"] :is(#mykos-host-pane,#mykos-snapshots-pane,#mykos-backups-pane,#mykos-repos-pane,#mykos-os-panes>.panel)::before,:root[data-theme="receiver"] :is(#mykos-host-pane,#mykos-snapshots-pane,#mykos-backups-pane,#mykos-repos-pane,#mykos-os-panes>.panel)::after{width:86px;height:32px;bottom:-23px}}
 </style><link rel="stylesheet" href="https://unpkg.com/@xterm/xterm@5.5.0/css/xterm.css">
 <script src="https://unpkg.com/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+<script src="https://unpkg.com/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
 </head><body><div id="mykos-page-background" aria-hidden="true"></div><p id="mykos-session-status" role="status" style="padding:24px;color:#94a3b8">Checking session…</p><section id="login" hidden><form class="loginbox" id="form"><h1><span class="mykos-original-banner"><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg><span class="mykos-store-title" aria-label="__MYKOS_BRAND_NAME__">__MYKOS_BRAND_DISPLAY__</span>
 
 </span></h1><input id="user" placeholder="Username" required autocomplete="username"><input id="pass" type="password" placeholder="Password" required autocomplete="current-password"><button>Log in</button><p id="error"></p><nav class="mykos-login-links" aria-label="Documentation"><button id="mykos-login-theme-toggle" type="button" title="Dark theme; switch to light" aria-label="Dark theme; switch to light" aria-pressed="false"><svg class="mykos-footer-leaf mykos-theme-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4C13 3 6 6 6 13a6 6 0 0 0 6 6c7 0 10-8 8-15Z"/><path d="M4 21 17 8M9 16l-1-5M12 13l5 1M14 11l-1-4"/></svg></button><select class="mykos-theme-select" aria-label="Login theme"><option value="dark">Dark</option><option value="light">Light</option><option value="receiver" hidden disabled>Receiver</option></select> · <a class="mykos-login-api" href="/mykos/api/v2/docs">API</a> · <a class="mykos-login-api" href="/mykos/docs">Docs</a></nav></form></section><section id="dashboard" hidden><div id="mykos-geo-background" aria-label="Geographic map background"></div><div id="mykos-location-layer" aria-label="Map locations" hidden></div><header><div class="mykos-receiver-wordmark"><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
@@ -3503,6 +3504,7 @@ for (const family of mykosOsFamilies) {
 let mykosTerminalAllowed = false;
 let mykosTerminalSocket = null;
 let mykosTerminalInstance = null;
+let mykosTerminalResizeCleanup = null;
 let mykosTerminalPanel = null;
 let mykosTerminalOpener = null;
 let mykosTerminalBase = false;
@@ -3537,6 +3539,7 @@ setTimeout(mykosCheckTerminalPermission, 0);
 setInterval(mykosCheckTerminalPermission, 5000);
 
 function mykosCloseTerminal() {
+    if(mykosTerminalResizeCleanup){mykosTerminalResizeCleanup();mykosTerminalResizeCleanup=null;}
     const closedBase=mykosTerminalBase;mykosTerminalBase=false;
     if(closedBase)setTimeout(()=>mykosLoadStageImages(true),1500);
     const socket = mykosTerminalSocket;
@@ -3615,17 +3618,25 @@ function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
         fontFamily:'monospace', fontSize:13
     });
     mykosTerminalInstance = term;
+    const fitAddon=typeof FitAddon!=='undefined'?new FitAddon.FitAddon():null;
+    if(fitAddon)term.loadAddon(fitAddon);
     term.open(surface);
+    if(fitAddon){fitAddon.fit();if(term.element?.querySelector('.xterm-screen')?.getBoundingClientRect().width>term.element.clientWidth)term.resize(Math.max(2,term.cols-1),term.rows);}
     term.focus();
     if(action==='image-shell')term.write('Base session: shutdown/reboot disabled. Capture to keep edits. Closing this window resets the base.\r\n');
     term.write(action === 'add-vpn' ? 'Opening add_vpn...\r\n' : isPowerShell ? 'Connecting to PowerShell...\r\n' : isMacShell ? 'Connecting to macOS shell...\r\n' : 'Connecting to root...\r\n');
     const url = new URL('/mykos/api/terminal/' + encodeURIComponent(shop), window.location.href);
     url.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     if (action === 'add-vpn' || action === 'remove-vpn' || action === 'image-shell') url.searchParams.set('action', action);
+    if(fitAddon)url.searchParams.set('geometry','1');
     const ws = new WebSocket(url);
     mykosTerminalSocket = ws;
     ws.binaryType = 'arraybuffer';
+    let geometryReady=false;
+    const resize=()=>{if(!fitAddon||mykosTerminalInstance!==term)return;fitAddon.fit();if(term.element?.querySelector('.xterm-screen')?.getBoundingClientRect().width>term.element.clientWidth)term.resize(Math.max(2,term.cols-1),term.rows);if(geometryReady&&ws.readyState===WebSocket.OPEN)ws.send(new TextEncoder().encode('\x00MYKOS_RESIZE '+JSON.stringify({cols:Math.min(1000,Math.max(2,term.cols)),rows:Math.min(500,Math.max(1,term.rows))})));};
+    if(fitAddon){const observer=new ResizeObserver(resize);observer.observe(surface);mykosTerminalResizeCleanup=()=>observer.disconnect();}
     ws.onopen = () => {
+        resize();
         term.write('\r\nConnected.\r\n');
         term.onData(data => {
             if (ws.readyState === WebSocket.OPEN) ws.send(data);
@@ -3637,6 +3648,7 @@ function mykosOpenTerminal(shop, runSshbbx = false, action = 'shell') {
         }
     };
     ws.onmessage = event => {
+        if(event.data==='MYKOS_GEOMETRY_READY'){geometryReady=true;resize();return;}
         if (event.data instanceof ArrayBuffer)
             term.write(new Uint8Array(event.data));
         else term.write(event.data);

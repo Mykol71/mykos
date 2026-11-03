@@ -257,3 +257,7 @@ Component219 checks cover black beveled cases/round feet across visible Host/OS/
 Release219 packages the final component layout and one-hour recall. Validation covers JavaScript controls, history retention/API authorization, the complete development Python suite, signed staged installation and guarded live promotion. No guest lifecycle or OS image-build tests are used for this theme release.
 
 One-hour recall tests verify65-minute persistence/read coverage, the oldest full window, bounded sample count, sixty one-minute steps/wrap and scrolling tick motion. History API authorization remains unchanged.
+
+## Updateos and terminal width repair221
+
+Regression tests reproduce a styled Apache stage listing with harmless synthetic scripts, reject404/HTML downloads and traversal, and preserve a cached good script on failed downloads. Terminal tests cover fragmented/coalesced frames, dimension bounds, real PTY window sizes, authorized WebSocket forwarding and legacy raw input. Browser checks use the real xterm/FitAddon display with a synthetic transport, avoiding live user shell input.

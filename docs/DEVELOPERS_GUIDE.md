@@ -610,3 +610,7 @@ rollback behavior. Include exact test commands and current results, a source
 commit/digest and any environment limitation. For UI work include an actual
 screenshot; for a traffic change include the namespace and return path. This is
 more useful than a list of edited filenames or a transcript of implementation.
+
+### updateos directory listing compatibility
+
+The updater extracts only relative anchor targets from Apache listings; stylesheet links and heading/table attributes are not scripts. Downloads use HTTP failure checks and an atomic temporary file. Empty/HTML responses and a mismatched available checksum are rejected before execution. Repository defaults use `https://repo.myk.sh/updateos`; `MYKOS_UPDATEOS_BACKEND` can override it. `updateos` remains LAN-only across direct and `/repos/` URLs. Existing published OS images are preserved; rebuild images or refresh their updater to include this repair. No real staging payload is run by regression tests.

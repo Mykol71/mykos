@@ -455,3 +455,7 @@ Host, OS and utility panes are black stereo-style components with beveled cases,
 The Source section has a compact, right-justified amber seven-segment Host uptime display labeled in days, hours, minutes and seconds; it refreshes from actual collector uptime. Missing data shows a dash. Decorative OS detail, Host Monitor/Synchronized, Monitor/Online, the History graph rectangle and OS Pane Selector label are removed from Receiver. Host OS information remains in its normal status/footer views.
 
 The radio band scrolls through a trailing five-minute window while Live is selected. Recall browses back up to one hour; the collector retains65 minutes to include the oldest window. Existing discarded history cannot be recovered, so the larger interval fills as new samples arrive. White quarter-minute tick bars move across a blue-lit window, with a green history scrollbar and bright amber recalled-time marker. Display/response buttons have raised metal faces. Larger feet are half tucked beneath each component.
+
+### Terminal pane width
+
+Interactive terminals fit their text columns to the available pane or window width. Resizing updates the PTY dimensions without writing commands into the shell. Close/replacement disconnects the resize observer. Legacy API/raw terminal clients remain supported.

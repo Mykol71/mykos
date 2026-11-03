@@ -5,13 +5,36 @@ import pty
 import selectors
 import signal
 import sys
+import struct,fcntl,termios
+
+class TerminalFrames:
+    """Bounded optional input framing; legacy terminal sockets remain raw."""
+    def __init__(self): self.buffer=bytearray()
+    def feed(self,data):
+        self.buffer.extend(data)
+        if len(self.buffer)>65536: raise ValueError("Terminal frame buffer exceeded")
+        result=[]
+        while len(self.buffer)>=5:
+            kind=self.buffer[:1];size=int.from_bytes(self.buffer[1:5],"big")
+            if kind not in (b"I",b"R") or size>4096 or (kind==b"R" and size!=4):raise ValueError("Invalid terminal frame")
+            if len(self.buffer)<5+size:break
+            value=bytes(self.buffer[5:5+size]);del self.buffer[:5+size]
+            if kind==b"R":
+                cols,rows=struct.unpack("!HH",value)
+                if not 2<=cols<=1000 or not 1<=rows<=500:raise ValueError("Invalid terminal size")
+            result.append((bytes(kind),value))
+        return result
+
 from mykos_runtime import PODMAN, config, connection, request, target, containers
 
 def main():
     conn=connection()
     if not config().get('terminal_enabled',False): raise ValueError('Terminal disabled in configuration')
     data=request(conn)
-    if set(data) not in ({'shop'}, {'shop', 'action'}, {'shop','action','owner'}): raise ValueError('Expected shop and optional action')
+    if set(data)-{'protocol'} not in ({'shop'}, {'shop', 'action'}, {'shop','action','owner'}): raise ValueError('Expected shop and optional action')
+    framed=data.get('protocol')=='framed-v1'
+    if 'protocol' in data and not framed:raise ValueError('Unsupported terminal protocol')
+    frames=TerminalFrames() if framed else None
     action = data.get('action', 'shell')
     if action not in ('shell', 'add-vpn', 'remove-vpn', 'image-shell','preview-shell'): raise ValueError('Unsupported terminal action')
     preview_shell=action=='preview-shell'
@@ -94,9 +117,15 @@ def main():
                     if key.fileobj==conn:
                         data=conn.recv(4096)
                         if not data:return
-                        view=memoryview(data)
-                        while view:
-                            written=os.write(master,view);view=view[written:]
+                        packets=frames.feed(data) if frames else [(b'I',data)]
+                        for kind,value in packets:
+                            if kind==b'R':
+                                cols,rows=struct.unpack('!HH',value)
+                                fcntl.ioctl(master,termios.TIOCSWINSZ,struct.pack('HHHH',rows,cols,0,0))
+                            else:
+                                view=memoryview(value)
+                                while view:
+                                    written=os.write(master,view);view=view[written:]
                     else:
                         try:data=os.read(master,4096)
                         except OSError:return

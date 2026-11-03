@@ -416,7 +416,9 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell',
         await authorized()
         reader, writer = await _mykos_asyncio.wait_for(
             _mykos_asyncio.open_unix_connection(os.environ.get('MYKOS_TERMINAL_SOCKET', '/run/mykos-terminal.sock')), 5)
+        framed=getattr(ws,'query_params',{}).get('geometry')=='1'
         payload = {'shop': shop}
+        if framed:payload['protocol']='framed-v1'
         if action != 'shell': payload['action'] = action
         if action=='preview-shell':payload['owner']=preview_owner
         writer.write((json.dumps(payload) + '\n').encode())
@@ -439,6 +441,7 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell',
         return
 
     await ws.accept()
+    if framed:await ws.send_text('MYKOS_GEOMETRY_READY')
 
     async def to_shell():
         while True:
@@ -450,7 +453,15 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell',
                 chunk = packet['text'].encode()
             if chunk:
                 await authorized()
-                writer.write(chunk[:4096])
+                if framed and packet.get('bytes') is not None and chunk.startswith(b'\x00MYKOS_RESIZE '):
+                    size=json.loads(chunk[len(b'\x00MYKOS_RESIZE '):])
+                    cols,rows=size.get('cols'),size.get('rows')
+                    if type(cols) is not int or type(rows) is not int or not 2<=cols<=1000 or not 1<=rows<=500:raise ValueError('Invalid terminal size')
+                    value=cols.to_bytes(2,'big')+rows.to_bytes(2,'big')
+                    writer.write(b'R'+len(value).to_bytes(4,'big')+value)
+                else:
+                    value=chunk[:4096]
+                    writer.write((b'I'+len(value).to_bytes(4,'big') if framed else b'')+value)
                 await writer.drain()
 
     async def to_browser():
