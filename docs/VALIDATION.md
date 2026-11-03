@@ -229,3 +229,7 @@ Covers black/white VU faces with bottom blue lighting, smaller meter placement i
 ## Release216 — Receiver performance enclosure
 
 Verifies that Display, recall, Illumination and Source controls are inside the enlarged black enclosure, with dark-background label contrast and Receiver-only container-bar fading. Illumination advances in10-point steps and wraps100→0, with marker/readout/storage synchronization. The source knob is a click-to-advance button; the marker, OS label and dropdown update together, wrapping safely through available panes. Browser checks cover knob/fader behavior, source selection and restoration of original history controls on other themes. No server lifecycle changes.
+
+## Release217 — Receiver radio controls
+
+Fixed container/VPN signal indicators replace the Receiver rolling count bars. Tests cover scale boundaries, zero/missing/stale/future readings, one-minute tuning steps/wrap and existing illumination steps. Browser checks verify count/VU/illumination placement, quarter-minute tick spacing, round response/Live buttons, recall/Live behavior, source selection and return to the original controls in other themes. Signed staged installation and guarded dev/prod live checks preserve workloads and host settings. No OS image builds or new guest lifecycle tests are part of this appearance release.
