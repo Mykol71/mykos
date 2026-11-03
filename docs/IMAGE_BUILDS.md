@@ -470,3 +470,14 @@ busy message before modifying a kickstart or archive. Each job uses its own
 private generated kickstart, rootfs output and Docker context; original source
 kickstarts are not edited. The owned job workspace is removed on success, failure
 or interruption. Installer diagnostics remain in the printed diagnostic location.
+
+
+## RHEL 8 RTI native image
+
+Use `rh8rti` for the separate RHEL 8 RTI package profile. Run `sudo mykos`, choose **c. Build image**, and enter `rh8rti`. After a successful build, select **8 RTI** in the Red Hat pane to stage an instance. The ordinary `rh8` image and its Kickstart are unchanged. This is guest-image support; it does not restore dropped RHEL 8 host support. The bulk EL image batch remains unchanged.
+
+The profile installs `@^minimal-environment`, `@system-tools`, and every explicit package in `pos/ks/rh8rti.ks`, including Node.js, USB tools and audit. The duplicate Java request is included once. `firewalld` is excluded. RHEL 8 repository module defaults resolve unversioned runtime requests. The host continues providing the native container kernel, firmware and clock. Chrony and system-tools packages are installed, but `chronyd.service` and `tuned.service` are masked: native guests share the host clock and hardware tuning, and a tuned latency-device handle prevents CRIU snapshots.
+
+The existing RHEL Dockerfile path installs the current validated `updateos` script at `/usr/bin/updateos`; the updateos repository remains LAN-only. The image retains locked build-time accounts, normal MYKOS instance provisioning, host-owned Podman network configuration and EL8-native RPM database conversion. Installing a package does not promise physical hardware access or a separately bootable kernel inside a native container.
+
+RAM snapshot and RAM restore actions are intentionally disabled for `rh8rti` in this release, in the dashboard and backend. Its full service profile boots and stages normally, but native CRIU restore has unresolved mount/inotify-handle failures. Start/stop preserves the container filesystem; stopping does not save running application RAM. Other image types retain their existing snapshot behavior.

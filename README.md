@@ -92,6 +92,7 @@ this table. Native builds use Kickstart/rootfs creation and Podman, rather than
 | --- | --- |
 | Red Hat Enterprise Linux 7 | `rh7` |
 | Red Hat Enterprise Linux 8 | `rh8` |
+| Red Hat Enterprise Linux 8 RTI package profile | `rh8rti` |
 | Red Hat Enterprise Linux 9 | `rh9` |
 | Red Hat Enterprise Linux 10 | `rh10` |
 | Rocky Linux 8 | `rocky8` |

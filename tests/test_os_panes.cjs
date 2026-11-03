@@ -46,7 +46,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         mykosCapturedImages=[{os:'fedora43vm',version:'43',size_bytes:1024,created_at:1793060009,delete_state:'idle'}];
         mykosRenderImageBuilds();
         assert.match(el('fedora-mykos-image-builds').innerHTML,/43 GNOME VM/);
-        for (const os of ['rh7','rh8','rh9','rh10']) assert.equal(mykosImageFamily(os), 'linux');
+        for (const os of ['rh7','rh8','rh8rti','rh9','rh10']) assert.equal(mykosImageFamily(os), 'linux');
         for (const os of ['ubuntu','ubuntu22','ubuntu24','ubuntu24.04','ubuntu26.04']) assert.equal(mykosImageFamily(os), 'ubuntu');
         for (const os of ['win10','win11','win8e','win7u','winxp','winme','win2k','win98']) assert.equal(mykosImageFamily(os), 'windows');
         for (const os of ['wns2025','wns2022','wns2019','wns2016']) assert.equal(mykosImageFamily(os), 'windows-server');
@@ -182,7 +182,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(el('mykos-stage-os').options.find(option => option.value === 'rh9').disabled, false);
         for (const family of mykosOsFamilies) {
             for (const option of el(mykosOsId(family, 'mykos-stage-os')).options.slice(1)) {
-                assert.equal(option.text, option.value.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, ''));
+                assert.equal(option.text, option.value==='rh8rti' ? '8 RTI' : option.value.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, ''));
             }
         }
         assert.equal(el('mykos-stage-os').options.find(option => option.value === 'rh10').disabled, true);

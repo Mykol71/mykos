@@ -191,7 +191,7 @@ def image_name(info, image):
     if not re.fullmatch(r'(?:sha256:)?[0-9a-f]{12,64}', stored):
         return stored
     tags = image.get('RepoTags') or []
-    return next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)(?:vm)?|ubuntu[0-9.]*|win[^/:]+|wns[0-9]+|macos[0-9]+):[^/]+', tag)), next(iter(tags), stored))
+    return next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|(?:rh8rti|rh[0-9]+)|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)(?:vm)?|ubuntu[0-9.]*|win[^/:]+|wns[0-9]+|macos[0-9]+):[^/]+', tag)), next(iter(tags), stored))
 
 
 def parse_os_release(text):
@@ -260,6 +260,17 @@ def release_name(os_type, version):
            'macOS':{'12':'Monterey','13':'Ventura','14':'Sonoma','15':'Sequoia'},
            'Ubuntu':{'20':'Focal Fossa','22':'Jammy Jellyfish','24':'Noble Numbat'}}
     return names.get(os_type,{}).get(major)
+
+
+
+def ram_snapshots_supported(info, image=None):
+    """RH8 RTI boots normally; native RAM restore remains unvalidated."""
+    images = [info, image or {}]
+    for value in images:
+        labels = value.get('Labels') or value.get('Config', {}).get('Labels') or {}
+        if labels.get('io.mykos.os') == 'rh8rti': return False
+    refs = [info.get('ImageName', ''), info.get('Config', {}).get('Image', '')]
+    return not any(re.search(r'(?:^|/)rh8rti(?=:|$)', str(ref)) for ref in refs)
 
 
 def image_os(info, image):

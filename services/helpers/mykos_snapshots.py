@@ -251,11 +251,19 @@ def native_data_mounts(state):
     return mounts
 
 
+
+def require_native_ram_snapshots(state):
+    from mykos_host_monitoring import ram_snapshots_supported
+    if not ram_snapshots_supported(state):
+        raise ValueError('RAM snapshots are disabled for rh8rti pending native CRIU restore validation; normal start/stop remains available')
+
+
 def capture_native(shop):
     import mykos_linux
     shopcode(shop)
     with vm.locked():
         name,state=mykos_linux.inspect(shop)
+        require_native_ram_snapshots(state)
         if not state.get('State',{}).get('Running'):raise ValueError('Start the container before taking a snapshot')
         criu_binary()
         check_native_compatibility(state)
@@ -316,8 +324,8 @@ def capture_native(shop):
             image_name=state.get('ImageName','')
             if re.fullmatch(r'(?:sha256:)?[0-9a-f]{12,64}',image_name):
                 tags=json.loads(vm.run([vm.PODMAN,'image','inspect',image]))[0].get('RepoTags') or []
-                image_name=next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|ubuntu[0-9.]*):[^/]+',tag)),image_name)
-            os_match=re.search(r'(?:^|/)(mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|ubuntu[0-9.]*)(?=:|$)',image_name)
+                image_name=next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|(?:rh8rti|rh[0-9]+)|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|ubuntu[0-9.]*):[^/]+',tag)),image_name)
+            os_match=re.search(r'(?:^|/)(mssql(?:2022|2025)|(?:rh8rti|rh[0-9]+)|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|ubuntu[0-9.]*)(?=:|$)',image_name)
             metadata={'format':1,'id':identifier,'code':shop,'name':name,'os':os_match.group(1) if os_match else '', 'created_at':int(time.time()),
                       'capture_mode':'criu-memory','image':image,'image_ref':reference,'path':str(final),
                       'source_running':True,'configuration':state,'mounts':mounts,
@@ -443,6 +451,8 @@ def restore_native(shop,identifier):
         folder,metadata=read_snapshot(shop,identifier)
         if metadata.get('capture_mode')!='criu-memory':raise ValueError('Not a native memory snapshot')
         name,state=mykos_linux.inspect(shop);mykos_linux.require_persistent(state)
+        require_native_ram_snapshots(state)
+        if metadata.get('os')=='rh8rti':raise ValueError('RAM restore is disabled for rh8rti pending native CRIU validation')
         from mykos_runtime import require_container_capacity
         require_container_capacity(name)
         if name!=metadata['name'] or state['Id']!=metadata['configuration']['Id'] or state['Image']!=metadata['image']:raise ValueError('Native snapshot requires its original container and image')

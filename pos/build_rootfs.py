@@ -11,8 +11,8 @@ import subprocess
 import tempfile
 import time
 
-SUPPORTED=re.compile(r'(?:rh(?:7|8|9|10)|(?:rocky|alma|oracle|centos)(?:8|9|10)|fedora(?:43|44)|mssql(?:2022|2025))\Z')
-EL8=re.compile(r'(?:rh|rocky|alma|oracle|centos)8\Z')
+SUPPORTED=re.compile(r'(?:rh(?:7|8|8rti|9|10)|(?:rocky|alma|oracle|centos)(?:8|9|10)|fedora(?:43|44)|mssql(?:2022|2025))\Z')
+EL8=re.compile(r'(?:rh8rti|(?:rh|rocky|alma|oracle|centos)8)\Z')
 ISOLATION='''# Minimal guest roots omit SELinux policy. Prevent chroot account tools from
 # probing the host policy view; kernel enforcement on the host stays enabled.
 if [ -d /sys/fs/selinux ]; then

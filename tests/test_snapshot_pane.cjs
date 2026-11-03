@@ -67,6 +67,11 @@ console.log('Snapshot pane checks passed: grouping, per-container choices, prese
  await run('mykosCheckTerminalPermission()');
  assert.equal(el('mykos-snapshots-rows').children[0].children[5].children[0].children[0].disabled,true);
  assert.deepEqual(imageRefreshes,[true,true]);
+ run(`mykosTerminalAllowed=true;mykosSnapshotData=[{code:'98982401',os:'rh8rti',id:'1792900000-abcdef123456',created_at:1792900000,capture_mode:'criu-memory'}];mykosRenderSnapshots()`);
+ const rti=el('mykos-snapshots-rows').children[0],rtiActions=rti.children[5].children[0].children;
+ assert.equal(rtiActions[0].disabled,true);assert.match(rtiActions[0].title,/disabled for rh8rti/);
+ assert.equal(rtiActions[1].disabled,false,'Deleting legacy snapshots remains allowed');
+ rti.children[3].children[0].onchange();assert.equal(rtiActions[0].disabled,true);assert.equal(rtiActions[1].disabled,false);
  console.log('Snapshot permission arrival enables real actions with preview off; revocation disables them.');
  console.log('Snapshot delete sends the selected ID with DELETE; sample actions remain disabled.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

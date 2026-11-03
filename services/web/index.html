@@ -1489,7 +1489,7 @@ function mykosSetPanePreviewAccess(allowed) {
     mykosRefreshSampleRows();
 }
 const mykosOsChoices = {
-    linux: ['rh7', 'rh8', 'rh9', 'rh10'],
+    linux: ['rh7', 'rh8', 'rh8rti', 'rh9', 'rh10'],
     rocky: ['rocky8','rocky9','rocky10'],
     alma: ['alma8','alma9','alma10'],
     fedora: ['fedora43','fedora44','fedora43vm','fedora44vm'],
@@ -1514,7 +1514,7 @@ function mykosImageFamily(os) {
     if (/^oracle(?:8|9|10)$/i.test(os)) return 'oracle';
     if (/^centos(?:8|9|10)$/i.test(os)) return 'centos';
     if (/^fedora(?:43|44)(?:vm)?$/i.test(os)) return 'fedora';
-    if (/^rh\d+$/i.test(os)) return 'linux';
+    if (/^(?:rh8rti|rh\d+)$/i.test(os)) return 'linux';
     if (/^ubuntu(?:\d{2}(?:\.\d{2})?)?$/i.test(os)) return 'ubuntu';
     if (/^wns\d+$/i.test(os)) return 'windows-server';
     if (/^win/i.test(os)) return 'windows';
@@ -2192,11 +2192,11 @@ function mykosRenderSnapshots() {
         const actions = mykosActionGroup(row, 'Snapshot actions');
         const button = document.createElement('button');
         button.type = 'button'; button.className = 'mykos-icon'; button.style.color = '#38bdf8';
-        button.title = sample ? 'Sample restore unavailable' : 'Restore selected snapshot';
+        button.title = sample ? 'Sample restore unavailable' : os==='rh8rti' ? 'RAM restore disabled for rh8rti pending validation' : 'Restore selected snapshot';
         button.setAttribute('aria-label', button.title);
         button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7"/></svg>';
-        button.disabled = sample || !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code);
-        select.onchange = () => { mykosSnapshotSelection.set(code, select.value); updateTaken(); button.disabled = !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code); deleteButton.disabled = button.disabled; };
+        button.disabled = sample || os==='rh8rti' || !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code);
+        select.onchange = () => { mykosSnapshotSelection.set(code, select.value); updateTaken(); button.disabled = os==='rh8rti' || !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code); deleteButton.disabled = sample || !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code); };
         button.onclick = async () => {
             const identifier = select.value;
             if (button.disabled || !snapshots.some(item => item.id === identifier)) return;
@@ -2211,7 +2211,7 @@ function mykosRenderSnapshots() {
         deleteButton.type = 'button'; deleteButton.className = 'mykos-icon'; deleteButton.style.color = '#ef4444';
         deleteButton.title = sample ? 'Sample delete unavailable' : 'Delete selected snapshot';
         deleteButton.setAttribute('aria-label', deleteButton.title);
-        deleteButton.disabled = button.disabled;
+        deleteButton.disabled = sample || !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code);
         deleteButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>';
         deleteButton.onclick = async () => {
             const identifier = select.value;
@@ -2420,8 +2420,9 @@ function mykosRenderInventory() {
                     persistent ? 'Start container' : unavailable, '#4ade80', '<path d="m8 5 11 7-11 7Z"/>'));
                 logCell.append(mykosContainerActionButton(shop, 'stop', persistent && node.status === 'online',
                     persistent ? 'Stop container' : unavailable, '#ef4444', '<rect x="6" y="6" width="12" height="12" rx="1"/>'));
-                logCell.append(mykosContainerActionButton(shop, 'snapshot', persistent && node.status === 'online',
-                    persistent ? 'Snapshot container' : unavailable, '#38bdf8', '<path d="M8 5l2-2h4l2 2h4v15H4V5Z"/><circle cx="12" cy="12" r="4"/>'));
+                const ramSnapshots = detail.ram_snapshots_supported !== false && !/(?:^|\/)rh8rti(?=:|$)/i.test(String(detail.image || node.image || ''));
+                logCell.append(mykosContainerActionButton(shop, 'snapshot', persistent && node.status === 'online' && ramSnapshots,
+                    !ramSnapshots ? 'RAM snapshots disabled for rh8rti pending restore validation' : persistent ? 'Snapshot container' : unavailable, '#38bdf8', '<path d="M8 5l2-2h4l2 2h4v15H4V5Z"/><circle cx="12" cy="12" r="4"/>'));
             }
             logCell.append(mykosContainerActionButton(row.dataset.mykosShop, 'delete', true,
                 'Delete container and saved data', '#ef4444', '<path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/>'));
@@ -3284,7 +3285,7 @@ function mykosRenderImageBuilds() {
                 if (mykosTerminalAllowed && url.origin === window.location.origin && url.pathname.startsWith('/mykos/console/') && !url.username && !url.password)
                     consoleLink = '<a class="mykos-icon mykos-logs-button" style="color:#4ade80" href="' + escape(url.href) + '" target="_blank" rel="noopener noreferrer" title="' + consoleLabel + '" aria-label="Open ' + consoleLabel.toLowerCase() + ' for ' + escape(item.os) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8"/></svg></a>';
             } catch (_) {}
-            const version = /^fedora(?:43|44)vm$/.test(item.os) ? item.os.slice(6,-2)+' GNOME VM' : item.build_state==='ready' && !item.os.startsWith('mssql') && item.version ? item.version : item.os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '').replace(/vm$/, ' GNOME VM');
+            const version = item.os==='rh8rti' ? '8 RTI' : /^fedora(?:43|44)vm$/.test(item.os) ? item.os.slice(6,-2)+' GNOME VM' : item.build_state==='ready' && !item.os.startsWith('mssql') && item.version ? item.version : item.os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '').replace(/vm$/, ' GNOME VM');
             const span = 4;
             const phase = ({queued:'Queued',building:'Installing',configuring:'Preparing',capturing:'Capturing',failed:'Failed',ready:'Image'})[item.build_state] || 'Installing';
             const produced=Number.isFinite(item.created_at) && item.created_at>0 ? new Date(item.created_at*1000).toLocaleString() : 'Unknown';
@@ -3345,7 +3346,7 @@ function mykosRefreshOsChoices() {
         const selected = select.value;
         select.replaceChildren(new Option(choices.length ? 'Ver' : mykosStageImagesError ? 'OS unavailable' : 'No OS templates running', ''));
         for (const os of choices) {
-            const label = os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '').replace(/vm$/, ' GNOME VM');
+            const label = os==='rh8rti' ? '8 RTI' : os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '').replace(/vm$/, ' GNOME VM');
             const option = new Option(label, os);
             option.disabled = !available.has(os);
             option.title = option.disabled ? 'Image unavailable' : 'Image available';
@@ -3480,7 +3481,7 @@ for (const family of mykosOsFamilies) {
             if (check.exists && !check.desktop) throw new Error('Container already exists for this shop.');
             if (check.active) throw new Error('Another staging job is in progress.');
             let restore = false;
-            if (check.backup && /^(?:rh\d+|rocky\d+|alma\d+|oracle\d+|centos\d+|fedora\d+|mssql\d+)$/.test(os)) {
+            if (check.backup && /^(?:rh8rti|rh\d+|rocky\d+|alma\d+|oracle\d+|centos\d+|fedora\d+|mssql\d+)$/.test(os)) {
                 restore = window.confirm('Backup found for '+shop+'. Mount its original folders read/write? Changes in this container will change the backup files.');
             }
             if (!window.confirm('Start container '+shop+' with OS '+os+'?')) {

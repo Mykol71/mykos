@@ -1,5 +1,9 @@
 # Validation record and remaining integration work
 
+## Release224 — RHEL 8 RTI guest profile
+
+Adds a separate rh8rti native image and exact requested package groups/list with updateos. Native selection, EL8 platform/RPM database handling, image identity, staging/snapshots and dashboard classification are included. The normal rh8 recipe, published releases, host support matrix and existing workloads stay preserved. Package/group availability, a real dev image build and installed-package checks, native instance lifecycle, full regressions and signed dev/prod validation gate publication. The user explicitly selected publication with RH8RTI RAM snapshot/restore actions disabled pending a later CRIU compatibility fix. Disabled actions are enforced in the backend as well as the UI; other OS snapshots remain unchanged.
+
 ## Release223 — LAN-only updateos listing
 
 The dashboard inventory includes the updateos download tree as read-only while the destructive repository path continues to reject it. The download landing page selects a protected LAN index only for loopback and the existing two LAN ranges. Direct private-index requests and updateos downloads remain forbidden to public clients. Focused inventory/UI checks and isolated Apache LAN/public tests gate dev/prod promotion. Existing updater fixes and all release222 behavior are retained.
