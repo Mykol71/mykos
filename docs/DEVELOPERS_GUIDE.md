@@ -396,7 +396,7 @@ Collectors build snapshots read by browsers and APIs. The basic collector normal
 runs 15 seconds after the previous run finishes; details and extended collectors
 normally use 30-second intervals. This is not one synchronous query per browser.
 API v2 considers these snapshots fresh for 120 seconds. Host history independently
-retains 30 minutes of real samples at a three-second target interval.
+retains65 minutes of real samples at a three-second target interval.
 
 Keep `collected_at`, identity and unknown values together. A previous observation
 of a reused ID must not be silently assigned to a different container. Do not

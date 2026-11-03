@@ -626,10 +626,10 @@ stock guest. Its RAM allocation is still 2048 MiB.
 ## Retained host performance history
 
 `GET /mykos/api/v2/host/history` accepts a read/admin API key and returns up to
-30 minutes of real host samples. Browser sessions use
+65 minutes of real host samples, supporting one hour of five-minute recall windows. Browser sessions use
 `GET /mykos/api/web/host-history`. An optional `since` query parameter is a
 nonnegative Unix timestamp in seconds; timestamps remain UTC Unix time.
-Responses include `retention_seconds: 1800`, `sample_interval_seconds: 3`,
+Responses include `retention_seconds: 3900`, `sample_interval_seconds: 3`,
 `collected_at`, and `samples`, ordered oldest first. Each sample contains
 `collected_at`, CPU percentage/count, load averages, memory/disk measurements,
 and cached `graph_counts`/`graph_totals` for containers and VPNs.
@@ -639,7 +639,7 @@ container commands. It reads host counters and the existing collector's cached
 status, storing a rolling SQLite history under `/opt/mykos-web/data`.
 A fresh latest sample is shared by the live metrics endpoints. Missing or stale
 container observations remain unknown. History survives browser/web-service
-reloads; old readings expire after 30 minutes. On initial deployment there is no
+reloads; old readings expire after65 minutes. On initial deployment there is no
 synthetic historical data: the retained interval grows as samples are collected.
 The dashboard shows a trailing five-minute window with a history slider and
 Live control; horizontal/Shift-wheel scrolling also moves the selected window.

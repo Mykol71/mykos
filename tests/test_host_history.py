@@ -26,12 +26,12 @@ def test_history_persists_and_expires(store):
     history.record(sample(11000), now=11000)
     assert len(history.read(now=11000)['samples']) == 2
     assert history.read(since=10500, now=11000)['samples'][0]['collected_at'] == 11000
-    assert history.read(now=12000)['samples'] == [dict((k, sample(11000).get(k)) for k in history.FIELDS)]
+    assert history.read(now=10000 + history.RETENTION + 1)['samples'] == [dict((k, sample(11000).get(k)) for k in history.FIELDS)]
     assert 'host' not in history.read(now=11000)['samples'][0]
     assert history.latest(now=11005)['host']['hostname'] == 'example'
     assert history.latest(now=11011) is None
-    history.record(sample(13000), now=13000)
-    assert [r['collected_at'] for r in history.read(now=13000)['samples']] == [13000]
+    history.record(sample(11000 + history.RETENTION + 1), now=11000 + history.RETENTION + 1)
+    assert [r['collected_at'] for r in history.read(now=11000 + history.RETENTION + 1)['samples']] == [11000 + history.RETENTION + 1]
 
 
 def test_duplicate_samples_and_invalid_timestamps(store):
@@ -55,3 +55,19 @@ def test_empty_or_missing_history_is_safe(store):
 def test_history_does_not_invoke_container_commands():
     source = Path(history.__file__).read_text()
     assert 'subprocess' not in source and 'podman' not in source
+
+
+def test_full_hour_recall_is_not_truncated_by_old_row_limit(store):
+    import sqlite3
+    now = 10000
+    history.record(sample(now), now=now)
+    stamps = list(range(now-history.RETENTION, now+1, history.INTERVAL))
+    with sqlite3.connect(str(history.DATABASE)) as db:
+        db.executemany('INSERT OR REPLACE INTO samples VALUES (?,?)',
+                       [(stamp,json.dumps({key:sample(stamp).get(key) for key in history.FIELDS})) for stamp in stamps])
+    result=history.read(now=now)
+    assert result['retention_seconds']==3900
+    assert len(result['samples'])==len(stamps)>650
+    assert result['samples'][0]['collected_at']==now-history.RETENTION
+    assert result['samples'][-1]['collected_at']==now
+    assert len(result['samples'])<=history.MAX_SAMPLES

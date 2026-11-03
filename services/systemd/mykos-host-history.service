@@ -1,5 +1,5 @@
 [Unit]
-Description=MYKOS rolling 30-minute host performance history
+Description=MYKOS rolling 65-minute host performance history
 After=network-online.target
 ConditionPathIsDirectory=/opt/mykos-web/data
 

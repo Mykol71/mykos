@@ -85,7 +85,7 @@ latest available readings.
 | VPNs | Reported connected VPNs; the graph's count scale reaches 100% at 15. This scale is not a 15-connection admission limit. |
 
 The graph shows a five-minute window. Drag the history slider left to inspect
-older windows within the retained 30 minutes; select **Live** to return to now.
+older windows within the retained hour; select **Live** to return to now.
 Hover or focus the graph to inspect readings. Horizontal scrolling, including
 Shift plus the mouse wheel, moves through history. Resource readings are marked
 high at 75% and critical at 90%. Count bars have their own scales.
@@ -409,12 +409,12 @@ ID/start controls and table begin below the heading without a separate status ro
 
 **Receiver** is a personal theme available only after signing in as `mgreen`. Its footer leaf cycles Dark → Light → Receiver. Other logins and the signed-out login screen offer Dark and Light. A saved Receiver preference is restored only after the current-user API confirms `mgreen`; logout/session expiry removes it immediately. Preferences are remembered separately for each signed-in username. Receiver uses a brushed aluminum face, compact blue-lit black VU meters, round metal action buttons and a radio-style recall band with a one-minute tuning knob. The larger flower has a transparent background.
 
-The four VU meters show actual CPU, memory, System and Data percentages from the existing host collector, following the same selected history and freshness rules as the graph. Missing or stale readings show a dim face and a dash; needles stop at 100% while the value still reports overload. The original history graph, metric controls and all actions remain available. Compact peers inherit the appearance without adding meter height. This is an appearance option, not an audio interface or a change to host resource policy.
+The four VU meters show actual CPU, memory, System and Data percentages from the existing host collector, following the same selected history and freshness rules as the graph. Missing or stale readings show a dim face and a dash; needles stop at 100% while the value still reports overload. Dark/Light retain the detailed history graph, metric controls and all actions. Compact peers inherit the appearance without adding meter height. This is an appearance option, not an audio interface or a change to host resource policy.
 
 
 ### Receiver control bank
 
-Receiver now uses the approved continuous faceplate layout. Click **Illumination** to add 10 percentage points to the blue meter lighting, cycling from 100% back to 0%. Only the marker line moves; the knob body stays fixed. The percentage readout updates too, and the browser remembers the setting. Enter/Space also operate the knob. **Slow / Normal / Fast** changes needle damping. **Display** turns the receiver meter lighting/needle display off and on; it does not control server power or stop collection. The history band retains dragging and keyboard control, and Live resets the selection. **History graph** reveals the detailed graph and metric controls. Dark/Light restore the original layout and original control nodes.
+Receiver now uses the approved continuous faceplate layout. Click **Illumination** to add 10 percentage points to the blue meter lighting, cycling from 100% back to 0%. Only the marker line moves; the knob body stays fixed. The percentage readout updates too, and the browser remembers the setting. Enter/Space also operate the knob. **Slow / Normal / Fast** changes needle damping. **Display** turns the receiver meter lighting/needle display off and on; it does not control server power or stop collection. The history band retains dragging and keyboard control, and Live resets the selection. Detailed graph controls remain available in Dark/Light. Dark/Light restore the original layout and original control nodes.
 
 The black tuner shows host information with fixed light-blue container and green VPN signal indicators. They share recorded chart data and the selected history endpoint. Counts are scaled to50 containers and15 VPNs; stale counts show a dash and unlit bars. They update at most once per second without additional collector/API polling.
 
@@ -432,10 +432,26 @@ The taller black performance enclosure groups the VU faces, fixed signal count b
 
 ### Receiver radio controls
 
-The black instrument panel shows two fixed, ascending signal-style bars to the left of the four VU meters: running containers (full scale50) and VPN links (full scale15). Exact counts remain visible; missing/stale readings show a dash with no lit bars. These indicators follow the selected history endpoint rather than scrolling through observations.
+The black instrument panel shows fixed, ascending container/VPN signal bars sharing one plot to the left of the four VU meters: running containers (full scale50) and VPN links (full scale15). Exact counts remain visible; missing/stale readings show a dash with no lit bars. These indicators follow the selected history endpoint rather than scrolling through observations.
 
 Illumination is centered to the right of the meters. Each click adds10 percentage points, with100 wrapping to0. The blue lamp gradient has twice its former gain across the knob range; the meter glass brightness reaches2× at100%. Display Off remains a separate visual-only control.
 
-The radio-style recall band has a vertical tick every15seconds, longer minute marks and labels in minutes back. Its knob on the right steps one minute earlier per click, through25minutes before wrapping to live. The band can still be dragged or adjusted with the keyboard; Live resets it. Slow, Normal, Fast and Live are small round brushed-metal buttons. Source still cycles available OS panes and keeps the displayed label synchronized. Other themes retain their original history controls.
+The radio-style recall band has a vertical tick every15seconds, longer minute marks and labels in minutes back. Its knob on the right steps one minute earlier per click, through60minutes before wrapping to live. The band can still be dragged or adjusted with the keyboard; Live resets it. Slow, Normal, Fast and Live are small round brushed-metal buttons. Source still cycles available OS panes and keeps the displayed label synchronized. Other themes retain their original history controls.
 
-The Source, recall and Illumination knobs share the same brushed-aluminum finish and machined rim. Sizes and click/marker behavior are unchanged.
+The Source, recall and Illumination knobs share the same brushed-aluminum finish and machined rim. Their click/marker behavior is retained.
+
+VPN signal bars overlay the container bars in the same plot, with VPN drawn in front. Both exact counts remain separately labeled. The radio recall band is centered directly below the VU meter group, with an enlarged brushed-aluminum tuning knob directly below Illumination. Response/Live controls form a row above the recall band.
+
+The recall band has white tick marks, green minute numbers/scrollbar and a bright amber historical-time marker.
+
+Amber source indicators span the top of the black panel. The first available choice starts at the far left and subsequent choices progress right; clicking Source advances the bright amber lamp and selected OS name, wrapping back to the first choice. Disabled/unavailable OS panes are omitted, and dropdown/section-link selection stays synchronized.
+
+The compact32px response/Live buttons sit above the recall band, aligned to its right edge.
+
+### Receiver component stack
+
+Host, OS and utility panes are black stereo-style components with beveled cases, depth shadows and enlarged round brushed-aluminum feet, half hidden beneath each case. Pane visibility, tables and actions retain their existing permissions. Compact peers use smaller feet.
+
+The Source section has a compact, right-justified amber seven-segment Host uptime display labeled in days, hours, minutes and seconds; it refreshes from actual collector uptime. Missing data shows a dash. Decorative OS detail, Host Monitor/Synchronized, Monitor/Online, the History graph rectangle and OS Pane Selector label are removed from Receiver. Host OS information remains in its normal status/footer views.
+
+The radio band scrolls through a trailing five-minute window while Live is selected. Recall browses back up to one hour; the collector retains65 minutes to include the oldest window. Existing discarded history cannot be recovered, so the larger interval fills as new samples arrive. White quarter-minute tick bars move across a blue-lit window, with a green history scrollbar and bright amber recalled-time marker. Display/response buttons have raised metal faces. Larger feet are half tucked beneath each component.

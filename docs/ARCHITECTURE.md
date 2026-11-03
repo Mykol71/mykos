@@ -64,7 +64,7 @@ samples, tooltips, count bars and alerts retain their actual values. Reduced-mot
 preferences disable easing and limit timeline redraws to once per second.
 Dashboard reloads share the same sampling limit, so they cannot add extra host polls.
 Only one host-metrics request runs at a time; requests time out after five seconds.
-History is collected independently of an open browser and retained for 30 minutes
+History is collected independently of an open browser and retained for65 minutes (one hour of recall plus five minutes of window context)
 in the host SQLite history store. Reloading or logging out does not clear it;
 no synthetic readings are backfilled before collection began. CPU, memory and root disk use percentage values.
 Load is normalized by CPU count. Containers and VPNs use downward bars from the
@@ -92,7 +92,7 @@ management panes and are excluded from the performance chart.
 The chart consumes the existing browser endpoints. API clients can retrieve the
 same current readings through `/mykos/api/v2/host/metrics`, `/backups`, `/repos`
 and `/nodes` under the API v2 prefix. `/host/history` exposes the retained
-30-minute history through read/admin API keys.
+one-hour recall history through read/admin API keys.
 
 The host row below the graph uses the container row's typography, columns and icon
 sizes. Its Host field is the hostname. Version is the host OS version, IP is the host's

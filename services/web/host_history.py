@@ -12,8 +12,9 @@ import time
 from urllib.parse import quote
 from mykos_config import BASE
 
-RETENTION = 30 * 60
+RETENTION = 65 * 60
 INTERVAL = 3
+MAX_SAMPLES = RETENTION // INTERVAL + 2
 DATABASE = BASE / 'data/host-history.sqlite3'
 LIVE = Path('/run/mykos-host-metrics/latest.json')
 FIELDS = ('collected_at', 'cpu_percent', 'cpu_count', 'memory', 'disk', 'data',
@@ -36,8 +37,8 @@ def read(since=0, now=None):
               'collected_at': now, 'samples': []}
     try:
         with closing(sqlite3.connect('file:' + quote(str(DATABASE)) + '?mode=ro', uri=True, timeout=.2)) as db:
-            rows = db.execute('SELECT sample FROM samples WHERE collected_at >= ? AND collected_at <= ? ORDER BY collected_at LIMIT 650',
-                              (max(since, now - RETENTION), now + 1)).fetchall()
+            rows = db.execute('SELECT sample FROM samples WHERE collected_at >= ? AND collected_at <= ? ORDER BY collected_at LIMIT ?',
+                              (max(since, now - RETENTION), now + 1, MAX_SAMPLES)).fetchall()
         result['samples'] = [json.loads(row[0]) for row in rows]
     except (OSError, sqlite3.Error, ValueError): pass
     return result

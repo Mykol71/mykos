@@ -239,3 +239,21 @@ Fixed container/VPN signal indicators replace the Receiver rolling count bars. T
 Receiver is offered only to authenticated `mgreen`. Regression tests cover signed-out/default rendering, saved Receiver preferences before identity verification, owner restoration, other usernames including other admins, direct selector rejection, account switching, logout and identity-generation guards against a late current-user response. No authentication policy, guest lifecycle, host build or repository access rules change.
 
 Receiver218 also standardizes the finish of Source, recall and Illumination knobs; browser computed-style checks compare all three faces/rims.
+
+## Release219 — Receiver count order and recall alignment
+
+Browser checks compare actual meter/recall band center coordinates and VPN/container shared geometry and SVG layer order at desktop and narrow widths. Existing count, history, source and identity regressions remain unchanged; guarded UI hotfix installation preserves workloads and host settings.
+
+Final219 layout checks also verify the82px recall knob is directly beneath Illumination, the response row is above the band, and white radio-band graduations and green numerals use the intended computed colors.
+
+Amber source-lamp checks verify left-to-right choice order, click/dropdown synchronization, one active lamp and fallback when a selected pane becomes unavailable.
+
+The final response bank is32px and its right edge matches the recall band at desktop and narrow widths.
+
+The final signal plot draws the container group first and VPN group second with identical bar coordinates; inactive VPN segments are transparent so the container meter remains visible beneath them.
+
+Component219 checks cover black beveled cases/round feet across visible Host/OS/utility panes, hidden-pane preservation and a seven-segment Host uptime reading. Boundary tests verify days/hours/minutes/seconds, unavailable data and fractional seconds.
+
+Release219 packages the final component layout and one-hour recall. Validation covers JavaScript controls, history retention/API authorization, the complete development Python suite, signed staged installation and guarded live promotion. No guest lifecycle or OS image-build tests are used for this theme release.
+
+One-hour recall tests verify65-minute persistence/read coverage, the oldest full window, bounded sample count, sixty one-minute steps/wrap and scrolling tick motion. History API authorization remains unchanged.

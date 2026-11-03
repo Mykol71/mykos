@@ -807,7 +807,7 @@ def test_host_history_requires_browser_session_or_api_key(environment, monkeypat
     reader = login('reader', 'reader-password-123')
     response = reader.get('/api/web/host-history')
     assert response.status_code == 200
-    assert response.json()['retention_seconds'] == 1800
+    assert response.json()['retention_seconds'] == 3900
     assert response.json()['samples'][0]['cpu_percent'] == 12.5
     assert reader.get('/api/v2/host/history').status_code == 401
     headers = {'X-MYKOS-API-Key': mykos_api_keys.create('history', 'read')}
