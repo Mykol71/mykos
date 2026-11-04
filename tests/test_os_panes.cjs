@@ -190,15 +190,15 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         mykosRefreshOsChoices();
         assert.equal(el('mykos-stage-os').value, 'rh9', 'Preserve the available selection');
         fail = true;
-        for (const kind of ['backups','repos']) assert.equal(el('mykos-'+kind+'-pane').hidden,false);
+        for (const kind of ['repos']) assert.equal(el('mykos-'+kind+'-pane').hidden,false);
         mykosStageImagesLoadedAt = 0; await mykosLoadStageImages();
         for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, !mykosPreviewOsFamilies.has(family), 'Failed refresh preserves EL-only preview');
-        mykosSetPaneVisible('backups', true);
+        mykosSetPaneVisible('repos', true);
         el('mykos-show-all-panes').onclick({preventDefault(){}});
         for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, family !== 'linux', 'The retained real rh9 image remains visible when preview is off');
         assert.equal(el('mykos-stage-os').value, 'rh9', 'Failed refresh preserves the available selection');
-        assert.equal(el('mykos-backups-pane').hidden,false,'Turning override off restores the latest automatic state');
-        assert.equal(el('mykos-repos-pane').hidden,true);
+        assert.equal(el('mykos-repos-pane').hidden,false,'Turning override off restores the latest automatic state');
+
     })()`, context);
     for (const family of ['windows','windows-server','macos']) {
         const section = html.slice(html.indexOf(`<div id="${family}-mykos-container-panel"`));

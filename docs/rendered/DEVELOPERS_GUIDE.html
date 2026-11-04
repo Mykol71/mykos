@@ -506,13 +506,7 @@ persistent container monitor down when the worker exits. Preserve this when
 refactoring process launching.</p>
 <h2 id="areas-where-a-plausible-change-can-break-customers">Areas where a plausible change can break customers</h2>
 <h3 id="backup-data-and-accounts">Backup data and accounts</h3>
-<p>Native restore can mount configured application directories, complete <code>/etc</code> and <code>/home</code>
-directly read/write from a customer backup. It prepares only the new stopped
-guest’s image root and overlays private files for passwd/group/shadow/gshadow,
-host identity, mount tables, network ownership and PAM limits. UID/GID conflicts
-must be resolved deliberately. Do not “fix” ownership with a host-wide <code>chown</code> or
-rewrite the backup’s account databases. Password hashes are sensitive even when
-no plaintext password is present. See <a href="INSTALL_SERVICES.html#complete-customer-backup-mounts">backup mount details</a>.</p>
+<p>Backup account management is delivered by a separately installed private business extension. Its dashboard pane, account-management API, transfer setup and implementation are not included in the base MYKOS distribution. Existing customer backup data is preserved during core updates.</p>
 <h3 id="networking-and-vpns">Networking and VPNs</h3>
 <p>The usual private bridge is <code>mykos-lan</code>, <code>192.168.22.0/24</code>; the physical LAN is a
 separate network. Native direct tunnels terminate in the guest namespace. Shared

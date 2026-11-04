@@ -492,3 +492,8 @@ The collector still publishes its root-owned cache; only the CLI child runs as
 that account, with its normal home/configuration. No passwords or client settings
 are exposed by the API. A root-managed test may additionally set
 `MYKOS_SPEEDTEST_HOME` to an isolated copy of that account's existing setup.
+
+
+## Browser login visibility
+
+Run `sudo mykos-who` on the host to list unexpired browser logins and their latest expiry. Add `--json` for structured output. Names, counts and expiration times are read without exposing credentials or session tokens. An unexpired login does not prove that the dashboard is currently open. API keys, SSH users and guest logins are outside this command.

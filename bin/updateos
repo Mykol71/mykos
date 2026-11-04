@@ -5,9 +5,9 @@ ID=$(/usr/bin/id -u)
 [ $ID -ne 0 ] && echo "You must be root to run $0." && exit 1
 
 #Init
-VERSION="2.2.8"
+VERSION="2.2.9"
 LOG_FILE="/tmp/updateos.log"
-export BACKEND="${MYKOS_UPDATEOS_BACKEND:-https://repo.myk.sh/updateos}"
+export BACKEND="${MYKOS_UPDATEOS_BACKEND:-http://rhel8repo.centralus.cloudapp.azure.com/updateos}"
 [ "`echo $#`" -ge "2" ] && export CMDLINEVARS="`echo $@ | cut -d" " -f2-`" || export CMDLINEVARS=""
 export SCRIPT="$1"
 export SUBGROUP="$1"

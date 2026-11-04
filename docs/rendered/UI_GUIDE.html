@@ -455,36 +455,7 @@ the target before accepting. Native direct VPNs, shared gateways, host site VPNs
 and MYKOS peer VPNs serve different purposes. See <a href="NETWORKING.html">Networking</a>.
 The geographic background represents saved locations, not a packet-path test.</p>
 <h2 id="rsync-backup-accounts">rsync backup accounts</h2>
-<p>The rsync pane lists backup account ID, application type, OS, used disk, last
-modification, and subscriber state. These are backup SSH accounts, not browser
-login accounts. The inline creation controls take an eight-digit <strong>ID</strong> and the
-client <strong>SSH public key</strong>, then <strong>Create account</strong>.</p>
-<table>
-<thead>
-<tr>
-<th>Control</th>
-<th>What happens</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Change key</td>
-<td>Opens the account public-key editor. <strong>Save</strong> replaces its authorized public key; <strong>Cancel</strong> dismisses the form.</td>
-</tr>
-<tr>
-<td>View / get keys</td>
-<td>Retrieves keys stored in the client&#39;s backup. The dialog may include a private key; <strong>Download keys</strong> saves a local copy. Treat it as secret.</td>
-</tr>
-<tr>
-<td>Remove backup account</td>
-<td>First requires the exact ID. A second prompt asks whether to delete all backup data: <strong>OK deletes the data; Cancel retains the data but still removes account access</strong>. Canceling the first ID prompt aborts removal.</td>
-</tr>
-<tr>
-<td>Close in Backup keys</td>
-<td>Dismisses the key display.</td>
-</tr>
-</tbody></table>
-<p>Account creation does not prove that a fresh rsync backup has run. Consult the
-last-modified and storage values, then verify the intended backup separately.</p>
+<p>Backup account management is delivered by a separately installed private business extension. Its dashboard pane, account-management API, transfer setup and implementation are not included in the base MYKOS distribution. Existing customer backup data is preserved during core updates.</p>
 <h2 id="repositories">Repositories</h2>
 <p>The Repos pane shows repository name, disk use, last modification, and latest
 RPM. Select a <strong>repository name</strong> to browse its published directory in another

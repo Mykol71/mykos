@@ -1,4 +1,4 @@
-"""Dashboard views and administrator operations for MYKOS Backup and Repos."""
+"""Dashboard views and administrator operations for MYKOS repositories."""
 import json
 import threading
 import time
@@ -32,10 +32,6 @@ def listing(kind, refresh=False):
         return result
 
 
-@router.get('/backups')
-def backups(request: Request, refresh: bool = False):
-    authorize(request)
-    return listing('backup', refresh)
 
 
 @router.get('/repos')
@@ -44,12 +40,6 @@ def repos(request: Request, refresh: bool = False):
     return listing('repo', refresh)
 
 
-class BackupAction(BaseModel):
-    action: Literal['create', 'key', 'subscriber', 'delete', 'keys']
-    code: str = Field(pattern=r'^[0-9]{8}$')
-    key: Optional[str] = Field(default=None, max_length=3000)
-    subscriber: bool = False
-    remove_data: bool = False
 
 
 class RepoAction(BaseModel):
@@ -65,10 +55,6 @@ def perform(kind, action, target, payload):
             _cache.pop(kind, None)
 
 
-@router.post('/backups')
-def backup_action(data: BackupAction, request: Request):
-    authorize(request, modify=True)
-    return perform('backup', data.action, data.code, data.model_dump(exclude={'action', 'code'}))
 
 
 @router.post('/repos')

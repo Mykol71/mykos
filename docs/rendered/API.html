@@ -12,10 +12,10 @@ header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px
 <li><a href="#administrative-examples">Administrative examples</a></li>
 </ul>
 </li>
-<li><a href="#host-metrics-backup-repos-and-terminal-integrations">Host metrics, Backup, Repos and terminal integrations</a></li>
+<li><a href="#host-metrics-repositories-and-terminal-integrations">Host metrics, Backup, Repos and terminal integrations</a></li>
 <li><a href="#legacy-routes">Legacy routes</a></li>
 <li><a href="#common-errors">Common errors</a></li>
-<li><a href="#dashboard-backup-and-repos-panes">Dashboard Backup and Repos panes</a><ul>
+<li><a href="#dashboard-repositories-pane">Dashboard Backup and Repos panes</a><ul>
 <li><a href="#add-a-vpn-from-the-container-pane">Add a VPN from the container pane</a></li>
 </ul>
 </li>
@@ -150,7 +150,7 @@ submission is not proof of completed staging. A lost/failed worker produces fail
 status when polled. Jobs are not automatically retried. Repeated start requests
 while a worker is active or a container exists are rejected. Stopping a successfully
 staged container keeps it present; removal/restart is an explicit operator task.</p>
-<h2 id="host-metrics-backup-repos-and-terminal-integrations">Host metrics, Backup, Repos and terminal integrations</h2>
+<h2 id="host-metrics-repositories-and-terminal-integrations">Host metrics, repositories and terminal integrations</h2>
 <p>API v2 now exposes the same data and operations as all dashboard panes. Use
 <code>X-MYKOS-API-Key</code> for each request; neither browser login nor Origin is required.
 <code>/host/metrics</code> returns the same raw readings used by the Host gauges and footer.
@@ -163,43 +163,10 @@ the host and does not add guest calls.
 Swap remains available in the API even though its gauge is hidden in the UI.
 Unavailable counters are <code>null</code>, rather than a fabricated zero.</p>
 <pre><code class="language-sh">curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/host/metrics&quot;
-curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/backups&quot;
 curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE/repos?refresh=true&quot;
 </code></pre>
 <p>Business-specific integration is provided by a separately installed local extension.</p>
-<p>Backup POST bodies share the dashboard&#39;s schema:</p>
-<table>
-<thead>
-<tr>
-<th><code>action</code></th>
-<th>Fields in addition to <code>action</code></th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>create</code></td>
-<td><code>code</code>, SSH public <code>key</code>, optional boolean <code>subscriber</code></td>
-</tr>
-<tr>
-<td><code>key</code></td>
-<td><code>code</code>, replacement public <code>key</code></td>
-</tr>
-<tr>
-<td><code>subscriber</code></td>
-<td><code>code</code>, boolean <code>subscriber</code></td>
-</tr>
-<tr>
-<td><code>delete</code></td>
-<td><code>code</code>, boolean <code>remove_data</code> (default false preserves data)</td>
-</tr>
-<tr>
-<td><code>keys</code></td>
-<td><code>code</code>; returns backed-up public/private client keys</td>
-</tr>
-</tbody></table>
-<p>The equivalent key read is <code>GET /backups/{code}/keys</code>. Key material is restricted
-to admin keys and uses <code>Cache-Control: no-store</code>. It is never included in listings.
-The account&#39;s currently authorized public key and the backed-up client&#39;s own RSA
-keys are different: <code>key</code> updates authorized access; <code>keys</code> reads the client backup.</p>
+<p>Backup account management is supplied by a separately installed private business extension. It is absent from the base platform API.</p>
 <p>Repository POST bodies use <code>action: delete|enable|disable|sync</code> and <code>name</code>.
 Deletion requires an existing repository name. Other actions use <code>name: &quot;all&quot;</code>
 (the default). Actions use the same helper validation and locks as the dashboard,
@@ -282,8 +249,8 @@ Do not build new integrations against these compatibility routes.</p>
 or unconfigured image) to 500, not 409. Do not automatically retry a mutating request
 after a timeout; inspect its job/container state first. The helper limits diagnostic
 output and command duration; long operations belong to the staging job workflow.</p>
-<h2 id="dashboard-backup-and-repos-panes">Dashboard Backup and Repos panes</h2>
-<p>The dashboard orders its panes as Host, Backups, Repos, Containers. Header section
+<h2 id="dashboard-repositories-pane">Dashboard repositories pane</h2>
+<p>The dashboard includes Host, OS, snapshot and repository panes. Header section
 links update the breadcrumb location. Container status includes the collected OS
 type and version; missing or stale details show <code>OS unknown</code>.</p>
 <p>These browser-session endpoints sit outside API v2:</p>
@@ -296,19 +263,9 @@ type and version; missing or stale details show <code>OS unknown</code>.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td><code>GET /api/web/mykos/backups</code></td>
-<td>Browser user</td>
-<td>Backup accounts, POS/OS, disk use, subscriber state and storage</td>
-</tr>
-<tr>
 <td><code>GET /api/web/mykos/repos</code></td>
 <td>Browser user</td>
 <td>Repository directories, disk use, modification times, Apache and sync state</td>
-</tr>
-<tr>
-<td><code>POST /api/web/mykos/backups</code></td>
-<td>Browser admin + Origin</td>
-<td>JSON <code>action</code>, eight-digit <code>code</code>, and action fields below</td>
 </tr>
 <tr>
 <td><code>POST /api/web/mykos/repos</code></td>

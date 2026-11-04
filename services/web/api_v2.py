@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse, Response
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel, ConfigDict, StrictInt, SecretStr
-from mykos_admin_api import BackupAction, RepoAction
+from mykos_admin_api import RepoAction
 
 from generic_monitoring import details as generic_details, extended as generic_extended
 from mykos_config import BASE as ROOT
@@ -281,36 +281,12 @@ async def host_terminal_websocket(ws: WebSocket):
         await mykos_terminal_bridge(ws, 'host', action=action)
 
 
-@router.get('/backups', summary='Backup accounts, subscriber status and storage')
-def backups(request: Request, refresh: bool = False):
-    authenticated(request)
-    from mykos_admin_api import listing
-    return listing('backup', refresh)
 
 
-@router.get('/backups/{code}', summary='Inspect one backup account')
-def backup_account(request: Request, code: str, refresh: bool = False):
-    authenticated(request)
-    validate_shop(code)
-    for account in backups(request, refresh).get('accounts', []):
-        if account.get('code') == code:
-            return account
-    raise HTTPException(404, 'Backup account not found')
 
 
-@router.post('/backups', summary='Manage backup accounts, keys and subscribers (admin only)')
-def backup_action(request: Request, data: BackupAction):
-    administrator(request)
-    from mykos_admin_api import perform
-    return perform('backup', data.action, data.code, data.model_dump(exclude={'action', 'code'}))
 
 
-@router.get('/backups/{code}/keys', summary='Read backed-up public/private client keys (admin only)')
-def backup_keys(request: Request, code: str):
-    administrator(request)
-    validate_shop(code)
-    from mykos_admin_api import perform
-    return perform('backup', 'keys', code, {})
 
 
 @router.get('/repos', summary='Repository inventory, storage, Apache and sync state')
@@ -482,13 +458,11 @@ def actions(request: Request):
                         'restore_snapshot': 'POST /api/v2/nodes/{shop}/snapshots/{identifier}/restore',
                         'delete_snapshot': 'DELETE /api/v2/nodes/{shop}/snapshots/{identifier}',
                         'checkit': 'GET /api/v2/nodes/{shop}/checkit',
-                        'backups': 'POST /api/v2/backups',
                         'repos': 'POST /api/v2/repos',
                         'terminal': 'WS /api/v2/terminal/{shop}',
                         'add_vpn': 'WS /api/v2/terminal/{shop}?action=add-vpn',
                         'remove_vpn': 'WS /api/v2/terminal/{shop}?action=remove-vpn'},
-            'action_options': {'backups': ['create', 'key', 'subscriber', 'delete', 'keys'],
-                               'repos': ['delete', 'enable', 'disable', 'sync']},
+            'action_options': {'repos': ['delete', 'enable', 'disable', 'sync']},
             'admin_required': True}
 
 

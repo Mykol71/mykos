@@ -124,11 +124,7 @@ historical archive's token. Legacy tokens have read-only access to monitor endpo
 
 ## Backup SSH keys
 
-Business-specific integration is provided by a separately installed local extension.
-
-Identity backups need explicit `backup --include-data`; store them encrypted off-host.
-Restoring one can replace passwords, roles, sessions, and revocations. Ordinary
-source installs preserve identity databases and never import the original archive.
+Backup account management is delivered by a separately installed private business extension. Its dashboard pane, account-management API, transfer setup and implementation are not included in the base MYKOS distribution. Existing customer backup data is preserved during core updates.
 
 ## Released permission boundary
 

@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        227%{?dist}
+Release:        231%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -110,6 +110,15 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-231
+- Restore the original updater backend without dropping download protections.
+- Include the validated Receiver component refinements and private extension boundary.
+
+* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-230
+- Refine Receiver component cabinet, controls, source lamps and live peak indicators.
+- Add read-only local browser-login visibility command.
+- Deliver backup account management only through separately signed private extensions.
+
 * Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-227
 - Add verified separately packaged extension payloads without including them in core builds.
 - Preserve valid UID-zero image roots using nonzero primary groups during backup restore.

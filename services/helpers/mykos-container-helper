@@ -49,7 +49,7 @@ def _dispatch(args):
             'host-ipsec': ['/usr/sbin/ipsec', 'status'],
         }
         return {'host': socket.gethostname(), 'output': run(commands[action], timeout=15)}
-    if action in ('backup-list', 'repo-list', 'backup-action', 'repo-action'):
+    if action in ('repo-list', 'repo-action'):
         from mykos_admin import dispatch as mykos_dispatch
         return mykos_dispatch(args)
     if action == 'ubuntu-vpn-add':
@@ -281,7 +281,7 @@ def dispatch(args):
         from mykos_runtime import inventory_read
         with priority():
             return inventory_read(args[0], lambda: _dispatch(args))
-    if isinstance(args,list) and args and args[0] in ('backup-list','repo-list','list-snapshots','stage-images','host-logs','host-top','host-ipsec','logs','top','ipsec','checkit','memory-info'):
+    if isinstance(args,list) and args and args[0] in ('repo-list','list-snapshots','stage-images','host-logs','host-top','host-ipsec','logs','top','ipsec','checkit','memory-info'):
         with priority():
             return _dispatch(args)
     return _dispatch(args)

@@ -34,3 +34,12 @@ def test_failed_download_preserves_cache_and_never_publishes_html(tmp_path):
 def test_rejects_script_path_traversal(tmp_path):
     code='NETUP=Y;SCRIPT=../escape;SUBGROUP=stage;log(){ :; };\n'+functions()+'\ndownload_script\n'
     assert subprocess.run(['bash','-c',code],capture_output=True).returncode==2
+
+
+def test_original_backend_default_and_explicit_override():
+ text=SOURCE.read_text();line=next(line for line in text.splitlines() if line.startswith('export BACKEND='))
+ env={k:v for k,v in os.environ.items() if k not in ('MYKOS_UPDATEOS_BACKEND','BACKEND')}
+ result=subprocess.run(['bash','-c',line+'; printf %s "$BACKEND"'],env=env,capture_output=True,text=True,check=True)
+ assert result.stdout=='http://rhel8repo.centralus.cloudapp.azure.com/updateos'
+ result=subprocess.run(['bash','-c',line+'; printf %s "$BACKEND"'],env={**env,'MYKOS_UPDATEOS_BACKEND':'https://explicit.example/updateos'},capture_output=True,text=True,check=True)
+ assert result.stdout=='https://explicit.example/updateos'

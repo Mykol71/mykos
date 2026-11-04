@@ -144,10 +144,7 @@ API v2. If an existing integration requires it, create a random restricted token
 as <code>mykosweb</code>, update that consumer, and replace the file to rotate it. Do not copy the
 historical archive&#39;s token. Legacy tokens have read-only access to monitor endpoints.</p>
 <h2 id="backup-ssh-keys">Backup SSH keys</h2>
-<p>Business-specific integration is provided by a separately installed local extension.</p>
-<p>Identity backups need explicit <code>backup --include-data</code>; store them encrypted off-host.
-Restoring one can replace passwords, roles, sessions, and revocations. Ordinary
-source installs preserve identity databases and never import the original archive.</p>
+<p>Backup account management is delivered by a separately installed private business extension. Its dashboard pane, account-management API, transfer setup and implementation are not included in the base MYKOS distribution. Existing customer backup data is preserved during core updates.</p>
 <h2 id="released-permission-boundary">Released permission boundary</h2>
 <p>Business-specific integration is provided by a separately installed local extension.</p>
 <h2 id="login-throttling-and-active-terminal-revocation">Login throttling and active terminal revocation</h2>

@@ -291,20 +291,14 @@ def test_mykos_menu_authorization_and_validation(environment, monkeypatch):
     monkeypatch.setattr(mykos_admin_api, '_cache', {})
     monkeypatch.setattr(mykos_admin_api, 'invoke', lambda *args: calls.append(args) or {'ok': True})
     anonymous = TestClient(app.app, base_url='https://testserver')
-    assert anonymous.get('/api/web/mykos/backups').status_code == 401
+    assert anonymous.get('/api/web/mykos/repos').status_code == 401
     reader = login('reader', 'reader-password-123')
-    assert reader.get('/api/web/mykos/backups').status_code == 200
     assert reader.get('/api/web/mykos/repos').status_code == 200
-    for action in ('create', 'key', 'subscriber', 'delete', 'keys'):
-        assert reader.post('/api/web/mykos/backups', headers={'Origin': 'https://testserver'},
-                           json={'action': action, 'code': '01234567'}).status_code == 403
     admin = login('operator', 'operator-password-123')
     assert admin.post('/api/web/mykos/repos', json={'action': 'sync'}).status_code == 403
     assert admin.post('/api/web/mykos/repos', headers={'Origin': 'https://testserver'},
                       json={'action': 'sync'}).status_code == 200
     assert calls[-1][:3] == ('repo-action', 'sync', 'all')
-    assert admin.post('/api/web/mykos/backups', headers={'Origin': 'https://testserver'},
-                      json={'action': 'delete', 'code': '../../etc'}).status_code == 422
     assert admin.post('/api/web/mykos/repos', headers={'Origin': 'https://testserver'},
                       json={'action': 'exec'}).status_code == 422
 
@@ -335,14 +329,13 @@ def api_dashboard(environment, monkeypatch):
 
 def test_dashboard_api_reads_and_cookie_separation(api_dashboard):
     client, read, admin, calls, metrics = api_dashboard
-    for path in ('/host/metrics', '/backups', '/backups/01234567', '/repos', '/repos/rhel-9-rpms'):
+    for path in ('/host/metrics', '/repos', '/repos/rhel-9-rpms'):
         assert client.get('/api/v2' + path).status_code == 401
         assert client.get('/api/v2' + path, headers=read).status_code == 200
     assert client.get('/api/v2/host/metrics', headers=read).json() == metrics
     assert client.get('/api/v2/host', headers=read).json()['metrics'] == metrics
     assert client.get('/api/v2/overview', headers=read).json()['host']['metrics'] == metrics
     assert client.get('/api/v2/backups/99999999', headers=read).status_code == 404
-    assert client.get('/api/v2/backups/bad', headers=read).status_code == 400
     assert client.get('/api/v2/repos/missing', headers=read).status_code == 404
     assert client.get('/api/v2/repos/--all', headers=read).status_code == 400
     # Refresh bypasses the shared inventory cache.
@@ -350,21 +343,10 @@ def test_dashboard_api_reads_and_cookie_separation(api_dashboard):
     client.get('/api/v2/repos?refresh=true', headers=read)
     assert calls.count(('repo-list',)) == before + 1
     browser = login('operator', 'operator-password-123')
-    assert browser.get('/api/v2/backups').status_code == 401
-    assert browser.get('/api/v2/backups', headers=read).status_code == 200
+    assert browser.get('/api/v2/repos').status_code == 401
+    assert browser.get('/api/v2/repos', headers=read).status_code == 200
 
 
-@pytest.mark.parametrize('action', ['create', 'key', 'subscriber', 'delete', 'keys'])
-def test_backup_api_admin_actions_without_cookies_or_origin(api_dashboard, action):
-    client, read, admin, calls, _ = api_dashboard
-    body = {'action': action, 'code': '01234567', 'key': 'ssh-ed25519 test',
-            'subscriber': True, 'remove_data': False}
-    assert client.post('/api/v2/backups', json=body).status_code == 401
-    assert client.post('/api/v2/backups', headers=read, json=body).status_code == 403
-    assert not calls
-    assert client.post('/api/v2/backups', headers=admin, json=body).status_code == 200
-    assert calls[-1][:3] == ('backup-action', action, '01234567')
-    assert json.loads(calls[-1][3])['subscriber'] is True
 
 
 @pytest.mark.parametrize('action', ['delete', 'enable', 'disable', 'sync'])
@@ -378,23 +360,6 @@ def test_repository_api_admin_actions_without_cookies_or_origin(api_dashboard, a
     assert calls[-1][:3] == ('repo-action', action, body['name'])
 
 
-def test_private_backup_keys_and_validation(api_dashboard):
-    client, read, admin, calls, _ = api_dashboard
-    path = '/api/v2/backups/01234567/keys'
-    assert client.get(path).status_code == 401
-    assert client.get(path, headers=read).status_code == 403
-    assert not calls
-    response = client.get(path, headers=admin)
-    assert response.json()['private_key'] == 'test-private'
-    assert response.headers['cache-control'] == 'no-store'
-    for body in ({'action': 'delete', 'code': '../../etc'},
-                 {'action': 'exec', 'code': '01234567'}):
-        assert client.post('/api/v2/backups', headers=admin, json=body).status_code == 422
-    assert client.post('/api/v2/repos', headers=admin,
-                       json={'action': 'delete', 'name': '../outside'}).status_code == 422
-    with mykos_api_keys.connect() as connection:
-        connection.execute('UPDATE api_keys SET revoked_at=?', (int(time.time()),))
-    assert client.get(path, headers=admin).status_code == 401
 
 
 def test_terminal_api_key_and_browser_policies(api_dashboard, monkeypatch):
@@ -432,14 +397,14 @@ def test_dashboard_api_schema_and_action_discovery(api_dashboard):
     client, read, _, _, _ = api_dashboard
     schema = client.get('/api/v2/openapi.json').json()
     for path, methods in {
-            '/api/v2/host/metrics': ['get'], '/api/v2/backups': ['get', 'post'],
-            '/api/v2/backups/{code}': ['get'], '/api/v2/backups/{code}/keys': ['get'],
+            '/api/v2/host/metrics': ['get'],
             '/api/v2/repos': ['get', 'post'], '/api/v2/repos/{name}': ['get']}.items():
         for method in methods:
             assert schema['paths'][path][method]['security'] == [{'MYKOSApiKey': []}]
     options = client.get('/api/v2/actions', headers=read).json()
     assert options['actions']['terminal'] == 'WS /api/v2/terminal/{shop}'
-    assert options['action_options']['backups'] == ['create', 'key', 'subscriber', 'delete', 'keys']
+    assert 'backups' not in options['action_options']
+    assert not any('/backups' in path for path in schema['paths'])
     assert all(isinstance(value, str) for value in options['actions'].values())
 
 
@@ -1081,3 +1046,11 @@ def test_speedtest_api_is_authenticated_cached_and_read_only(environment,monkeyp
     for _ in range(3):
         value=client.get('/api/v2/host/network-speed',headers={'X-MYKOS-API-Key':key});assert value.status_code==200
         assert value.json()['download_mbps']==900 and value.json()['upload_mbps']==100
+
+
+def test_public_core_has_no_private_backup_management(api_dashboard):
+    client, read, admin, calls, _ = api_dashboard
+    for path in ['/api/web/mykos/backups', '/api/v2/backups', '/api/v2/backups/01234567/keys']:
+        assert client.get(path, headers=admin).status_code == 404
+        assert client.post(path, headers=admin, json={'action': 'create', 'code': '01234567'}).status_code == 404
+    assert not calls

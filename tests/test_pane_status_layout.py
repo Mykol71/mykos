@@ -33,7 +33,7 @@ def test_all_live_pane_summaries_belong_to_their_heading():
     document = Dashboard(html)
     prefixes = ['', 'rocky-', 'alma-', 'oracle-', 'centos-', 'fedora-', 'ubuntu-', 'mssql-', 'windows-', 'windows-server-', 'macos-']
     mapping = {prefix + 'mykos-containers-status': prefix + 'mykos-containers-pane' for prefix in prefixes}
-    mapping.update({'mykos-' + name + '-status': 'mykos-' + name + '-title' for name in ['snapshots', 'backups', 'repos']})
+    mapping.update({'mykos-' + name + '-status': 'mykos-' + name + '-title' for name in ['snapshots', 'repos']})
     for status, heading in mapping.items():
         node = document.ids[status]
         assert node['tag'] == 'span'
@@ -41,7 +41,7 @@ def test_all_live_pane_summaries_belong_to_their_heading():
         assert node['parents'][-1]['attrs']['id'] == heading
         assert 'mykos-pane-status' in node['attrs']['class'].split()
         assert not any('panel' in p['attrs'].get('class', '').split() for p in node['parents'])
-    assert len(mapping) == 14
+    assert len(mapping) == 13
     assert '.mykos-pane-status:not(:empty)::before { content: " · "; }' in html
 
 

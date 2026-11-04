@@ -1,4 +1,4 @@
-"""Fixed backup/repository operations for the authenticated MYKOS socket bridge."""
+"""Fixed repository operations for the authenticated MYKOS socket bridge."""
 import base64
 import fcntl
 import hashlib
@@ -15,9 +15,7 @@ import tempfile
 import time
 from mykos_runtime import run, shopcode
 
-BACKUPS = Path('/backups')
 REPOS = Path('/var/www/html')
-TOOLKIT = Path('/usr/local/share/mykos')
 LOCK = Path('/run/mykos-admin.lock')
 REPO_SYNC_LOCK = Path('/run/lock/mykos-repo-sync.lock')
 REPOSITORY_SOURCE = Path('/etc/mykos/repository-source.json')
@@ -41,8 +39,6 @@ def trusted_storage_alias(alias, label):
     return target
 
 
-def trusted_backup_alias():
-    return trusted_storage_alias(BACKUPS, 'Backup')
 
 
 def directory(path):
@@ -52,9 +48,7 @@ def directory(path):
     for part in path.parts[1:]:
         current /= part
         if current.is_symlink():
-            if current == BACKUPS:
-                trusted_backup_alias()
-            elif current == REPOS or current in REPOS.parents:
+            if current == REPOS or current in REPOS.parents:
                 trusted_storage_alias(current, 'Repository')
             else:
                 raise ValueError('Symlink paths are not managed')
@@ -63,51 +57,14 @@ def directory(path):
     return path
 
 
-def account_path(code):
-    return BACKUPS / ('tfrsync-' + shopcode(code))
 
 
-def account(code):
-    path = directory(account_path(code))
-    user = pwd.getpwnam(path.name)
-    if Path(user.pw_dir) != path:
-        raise ValueError('Backup account home does not match')
-    return path, user
 
 
-def regular_file_at(root, relative):
-    """Open a regular backup file without traversing backup-supplied symlinks."""
-    fd = os.open(directory(root), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    try:
-        parts = Path(relative).parts
-        for part in parts[:-1]:
-            new = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
-            os.close(fd)
-            fd = new
-        file = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
-        if not stat.S_ISREG(os.fstat(file).st_mode):
-            os.close(file)
-            raise ValueError('Expected a regular file')
-        return file
-    finally:
-        os.close(fd)
 
 
-def read_at(root, relative):
-    """Read bounded regular files without following backup-supplied symlinks."""
-    with os.fdopen(regular_file_at(root, relative)) as stream:
-        return stream.read(16384)
 
 
-def backup_updated_at(path):
-    timestamps = []
-    for relative in ('rsync-summary.log',):
-        try:
-            with os.fdopen(regular_file_at(path, relative)) as stream:
-                timestamps.append(int(os.fstat(stream.fileno()).st_mtime))
-        except (OSError, ValueError):
-            continue
-    return max(timestamps) if timestamps else None
 
 
 def storage(path):
@@ -166,36 +123,6 @@ def sizes(path):
         return measured
 
 
-def backup_status():
-    rows = []
-    usage = sizes(BACKUPS)
-    for user in pwd.getpwall():
-        if not re.fullmatch(r'tfrsync-[0-9]{8}', user.pw_name):
-            continue
-        path = account_path(user.pw_name[-8:])
-        try:
-            account(user.pw_name[-8:])
-            try:
-                os_name = read_at(path, 'etc/redhat-release').strip()
-            except (OSError, ValueError):
-                os_name = 'Unknown'
-                try:
-                    release={}
-                    for line in read_at(path,'etc/os-release').splitlines():
-                        if '=' not in line or line.startswith('#'): continue
-                        key,value=line.split('=',1);parts=shlex.split(value)
-                        if len(parts)==1:release[key]=parts[0]
-                    os_name=release.get('PRETTY_NAME') or release.get('NAME') or 'Unknown'
-                except (OSError,ValueError):pass
-            rows.append({'code': user.pw_name[-8:], 'account': user.pw_name,
-                         'type': __import__('mykos_profiles').backup_type(path),
-                         'os': os_name, 'used_bytes': usage.get(path.name),
-                         'updated_at': backup_updated_at(path),
-                         'subscriber': (path/'paying_customer').is_file(), 'available': True})
-        except (OSError, ValueError, KeyError):
-            rows.append({'code': user.pw_name[-8:], 'account': user.pw_name, 'available': False})
-    return {'accounts': sorted(rows, key=lambda x: x['code']), 'storage': storage(BACKUPS),
-            'collected_at': int(time.time())}
 
 
 def repo_path(name):
@@ -294,125 +221,29 @@ def repo_status():
             'sync': repo_sync_state(), 'collected_at': int(time.time())}
 
 
-def validate_key(key):
-    if not isinstance(key, str) or len(key) > 3000 or '\n' in key or '\r' in key:
-        raise ValueError('Enter one SSH public key (maximum 3000 characters)')
-    fields = key.split()
-    if len(fields) < 2 or not re.fullmatch(r'(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521))', fields[0]):
-        raise ValueError('Unsupported SSH public key type')
-    try:
-        base64.b64decode(fields[1], validate=True)
-    except ValueError:
-        raise ValueError('Invalid SSH public key')
-    with tempfile.NamedTemporaryFile(mode='w') as file:
-        file.write(key.strip() + '\n'); file.flush()
-        run(['/usr/bin/ssh-keygen', '-l', '-f', file.name], timeout=10)
-    return key.strip()
 
 
-def write_key(path, user, key):
-    ssh = path/'.ssh'
-    ssh.mkdir(mode=0o700, exist_ok=True)
-    fd = os.open(directory(ssh), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    try:
-        os.fchmod(fd, 0o700); os.fchown(fd, user.pw_uid, user.pw_gid)
-        keyfd = os.open('authorized_keys', os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK,
-                        0o600, dir_fd=fd)
-        with os.fdopen(keyfd, 'w') as file:
-            info = os.fstat(file.fileno())
-            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-                raise ValueError('Authorized keys must be a single-link regular file')
-            os.ftruncate(file.fileno(), 0)
-            os.fchmod(file.fileno(), 0o600)
-            os.fchown(file.fileno(), user.pw_uid, user.pw_gid)
-            file.write('restrict,command="' + str(path/'tfrsync') + '" ' + key + '\n')
-    finally:
-        os.close(fd)
 
 
-def set_subscriber(path, enabled):
-    fd = os.open(directory(path), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    try:
-        if enabled:
-            marker = os.open('paying_customer', os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600, dir_fd=fd)
-            try:
-                if not stat.S_ISREG(os.fstat(marker).st_mode):
-                    raise ValueError('Subscriber marker must be a regular file')
-            finally:
-                os.close(marker)
-        else:
-            try: os.unlink('paying_customer', dir_fd=fd)
-            except FileNotFoundError: pass
-    finally:
-        os.close(fd)
 
 
-def backup_action(action, code, payload):
-    path = account_path(code)
-    if action == 'create':
-        key = validate_key(payload.get('key'))
-        directory(BACKUPS)
-        if path.exists() or path.is_symlink():
-            raise ValueError('Backup directory already exists')
-        try: pwd.getpwnam(path.name)
-        except KeyError: pass
-        else: raise ValueError('Account already exists')
-        source = TOOLKIT/'back/bin/tfrsync'
-        if not source.is_file(): raise ValueError('Backup command is not installed')
-        run(['/usr/sbin/useradd', '-m', '-U', '-d', str(path), path.name])
-        try:
-            path, user = account(code)
-            shutil.copyfile(source, path/'tfrsync', follow_symlinks=False)
-            os.chmod(path/'tfrsync', 0o500)
-            os.chown(path/'tfrsync', user.pw_uid, user.pw_gid)
-            write_key(path, user, key)
-            set_subscriber(path, payload.get('subscriber') is True)
-        except Exception:
-            run(['/usr/sbin/userdel', path.name])
-            shutil.rmtree(path)
-            raise
-    else:
-        path, user = account(code)
-        if action == 'key':
-            write_key(path, user, validate_key(payload.get('key')))
-        elif action == 'subscriber':
-            if not isinstance(payload.get('subscriber'), bool): raise ValueError('Subscriber must be boolean')
-            set_subscriber(path, payload['subscriber'])
-        elif action == 'delete':
-            if not isinstance(payload.get('remove_data'), bool): raise ValueError('Choose whether to remove data')
-            run(['/usr/sbin/userdel', path.name])
-            if payload['remove_data']:
-                shutil.rmtree(path)
-            elif (path/'.ssh').is_symlink():
-                (path/'.ssh').unlink()
-            elif (path/'.ssh').exists():
-                shutil.rmtree(path/'.ssh')
-        elif action == 'keys':
-            prefix = 'home/' + path.name + '/.ssh/'
-            return {'public_key': read_at(path, prefix+'id_rsa.pub'),
-                    'private_key': read_at(path, prefix+'id_rsa')}
-        else:
-            raise ValueError('Unsupported backup action')
-    return {'ok': True, 'code': code, 'action': action}
 
 
 def dispatch(args):
     if not isinstance(args, list) or not args or not all(isinstance(x, str) for x in args):
         raise ValueError('Invalid arguments')
-    if args == ['backup-list']: return backup_status()
     if args == ['repo-list']: return repo_status()
     if len(args) != 4: raise ValueError('Wrong argument count')
     import json
     kind, action, target, raw = args
     payload = json.loads(raw)
     if not isinstance(payload, dict): raise ValueError('Invalid payload')
-    if kind not in ('backup-action', 'repo-action'): raise ValueError('Unsupported action')
+    if kind != 'repo-action': raise ValueError('Unsupported action')
     if kind == 'repo-action' and repository_source():
         raise ValueError('Remote repositories are read-only here; manage them on the repository server')
     LOCK.parent.mkdir(parents=True, exist_ok=True)
     with LOCK.open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        if kind == 'backup-action': return backup_action(action, target, payload)
         if action == 'delete':
             if repo_sync_state() in ('active', 'activating', 'reloading'):
                 raise ValueError('Cannot delete while repository sync is running')

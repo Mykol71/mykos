@@ -11,5 +11,3 @@ assert.equal(context.mykosFooterHostOs({os:'Red Hat Enterprise Linux',version:'8
 assert.equal(context.mykosFooterHostOs({os:'Linux',version:'1.2'}),'1.2');
 assert.equal(context.mykosFooterHostOs(null),'Unknown');
 
-assert.equal(context.mykosBackupOsLabel('Red Hat Enterprise Linux release 8.10 (Ootpa)'), 'rhel 8.10 Ootpa');
-assert.equal(context.mykosBackupOsLabel('Ubuntu 22.04.5 LTS'), 'Ubuntu 22.04.5 LTS');

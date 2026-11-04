@@ -10,10 +10,10 @@
 - [Endpoint inventory](#endpoint-inventory)
   - [Read examples and response shapes](#read-examples-and-response-shapes)
   - [Administrative examples](#administrative-examples)
-- [Host metrics, Backup, Repos and terminal integrations](#host-metrics-backup-repos-and-terminal-integrations)
+- [Host metrics, Backup, Repos and terminal integrations](#host-metrics-repositories-and-terminal-integrations)
 - [Legacy routes](#legacy-routes)
 - [Common errors](#common-errors)
-- [Dashboard Backup and Repos panes](#dashboard-backup-and-repos-panes)
+- [Dashboard Backup and Repos panes](#dashboard-repositories-pane)
   - [Add a VPN from the container pane](#add-a-vpn-from-the-container-pane)
 - [Persistent containers and live snapshots](#persistent-containers-and-live-snapshots)
 - [Scheduled commands (admin API keys only)](#scheduled-commands-admin-api-keys-only)
@@ -178,7 +178,7 @@ status when polled. Jobs are not automatically retried. Repeated start requests
 while a worker is active or a container exists are rejected. Stopping a successfully
 staged container keeps it present; removal/restart is an explicit operator task.
 
-## Host metrics, Backup, Repos and terminal integrations
+## Host metrics, repositories and terminal integrations
 
 API v2 now exposes the same data and operations as all dashboard panes. Use
 `X-MYKOS-API-Key` for each request; neither browser login nor Origin is required.
@@ -194,26 +194,12 @@ Unavailable counters are `null`, rather than a fabricated zero.
 
 ```sh
 curl --fail-with-body -sS -H "X-MYKOS-API-Key: $MYKOS_KEY" "$BASE/host/metrics"
-curl --fail-with-body -sS -H "X-MYKOS-API-Key: $MYKOS_KEY" "$BASE/backups"
 curl --fail-with-body -sS -H "X-MYKOS-API-Key: $MYKOS_KEY" "$BASE/repos?refresh=true"
 ```
 
 Business-specific integration is provided by a separately installed local extension.
 
-Backup POST bodies share the dashboard's schema:
-
-| `action` | Fields in addition to `action` |
-|---|---|
-| `create` | `code`, SSH public `key`, optional boolean `subscriber` |
-| `key` | `code`, replacement public `key` |
-| `subscriber` | `code`, boolean `subscriber` |
-| `delete` | `code`, boolean `remove_data` (default false preserves data) |
-| `keys` | `code`; returns backed-up public/private client keys |
-
-The equivalent key read is `GET /backups/{code}/keys`. Key material is restricted
-to admin keys and uses `Cache-Control: no-store`. It is never included in listings.
-The account's currently authorized public key and the backed-up client's own RSA
-keys are different: `key` updates authorized access; `keys` reads the client backup.
+Backup account management is supplied by a separately installed private business extension. It is absent from the base platform API.
 
 Repository POST bodies use `action: delete|enable|disable|sync` and `name`.
 Deletion requires an existing repository name. Other actions use `name: "all"`
@@ -283,9 +269,9 @@ or unconfigured image) to 500, not 409. Do not automatically retry a mutating re
 after a timeout; inspect its job/container state first. The helper limits diagnostic
 output and command duration; long operations belong to the staging job workflow.
 
-## Dashboard Backup and Repos panes
+## Dashboard repositories pane
 
-The dashboard orders its panes as Host, Backups, Repos, Containers. Header section
+The dashboard includes Host, OS, snapshot and repository panes. Header section
 links update the breadcrumb location. Container status includes the collected OS
 type and version; missing or stale details show `OS unknown`.
 
@@ -293,9 +279,7 @@ These browser-session endpoints sit outside API v2:
 
 | Method and path | Permission | Behavior |
 |---|---|---|
-| `GET /api/web/mykos/backups` | Browser user | Backup accounts, POS/OS, disk use, subscriber state and storage |
 | `GET /api/web/mykos/repos` | Browser user | Repository directories, disk use, modification times, Apache and sync state |
-| `POST /api/web/mykos/backups` | Browser admin + Origin | JSON `action`, eight-digit `code`, and action fields below |
 | `POST /api/web/mykos/repos` | Browser admin + Origin | JSON `action` and optional `name` (default `all`) |
 
 Business-specific integration is provided by a separately installed local extension.

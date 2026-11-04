@@ -61,20 +61,7 @@ gaps, not hidden features supplied by the installer.
 
 ## Backup accounts (`cd /usr/local/share/mykos/back`)
 
-Business-specific integration is provided by a separately installed local extension.
-
-The legacy scripts have limited input validation and should be operated only by
-trusted host administrators. The account restriction is a legacy shell wrapper,
-not a general SSH sandbox. Review SSH restrictions and backup-user permissions for
-your environment. `tfrsync.pl` client software is external (`ostools`). A typical
-client backup command documented by the old project is:
-
-```sh
-tfrsync.pl --cloud --backup=all --rsync-account=tfrsync-01234567 --cloud-server=YOUR_HOST --force-rsync-account
-```
-
-This command runs on the client with its own prepared SSH keys and software, not
-inside the installer. Scheduler setup and a tested restore are separate operations.
+Backup account management is delivered by a separately installed private business extension. Its dashboard pane, account-management API, transfer setup and implementation are not included in the base MYKOS distribution. Existing customer backup data is preserved during core updates.
 
 ## POS containers (`cd /usr/local/share/mykos/pos`)
 

@@ -20,7 +20,7 @@ const run=code=>vm.runInContext(code,context);
 run('mykosRefreshSampleRows()');
 assert.ok([...elements.values()].every(element=>element.children.length===0));
 run('mykosShowAllPanes=true;mykosRefreshSampleRows()');
-assert.equal(elements.size,13);
+assert.equal(elements.size,12);
 for(const [id,tbody] of elements.entries()) {
     if (!['linux-rows','rocky-rows','alma-rows','oracle-rows','centos-rows','mykos-backups-rows','mykos-repos-rows'].includes(id)) {
         assert.equal(tbody.children.length,0,'No non-EL sample rows');continue;
@@ -33,15 +33,15 @@ for(const [id,tbody] of elements.entries()) {
         assert.ok(buttons.every(button=>!button.onclick && !button.attrs.href));
     }
 }
-nodes.push({family:'linux',id:'12345678'});mykosData.backups.accounts.push({code:'12345678'});
+nodes.push({family:'linux',id:'12345678'});mykosData.repos.repos.push({name:'example-repo'});
 run('mykosRefreshSampleRows()');
 assert.equal(el('linux-rows').children.length,0);
-assert.equal(el('mykos-backups-rows').children.length,0);
+assert.equal(el('mykos-repos-rows').children.length,0);
 assert.equal(el('windows-rows').children.length,0);
 assert.equal(el('rocky-rows').children.length,2);
 run('mykosShowAllPanes=false;mykosRefreshSampleRows()');
 assert.ok([...elements.values()].every(element=>element.children.length===0));
-assert.equal(nodes.length,1);assert.equal(mykosData.backups.accounts.length,1);
+assert.equal(nodes.length,1);assert.equal(mykosData.repos.repos.length,1);
 console.log('Sample pane checks passed: two labeled rows per empty pane, disabled actions, populated panes preserved, and no inventory mutation.');
 
 context.mykosCanPreviewFamily=()=>true;run('mykosShowAllPanes=true;mykosRefreshSampleRows()');assert.equal(el('windows-rows').children.length,2);assert.equal(el('macos-rows').children.length,2);assert.equal(el('ubuntu-rows').children.length,2);

@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""List unexpired MYKOS browser logins without reading credentials or tokens."""
+import argparse
+import datetime
+import json
+import os
+from pathlib import Path
+import sqlite3
+import sys
+import time
+
+DB = Path('/opt/mykos-web/data/auth.db')
+
+
+def logins(path=DB, now=None):
+    now = int(time.time()) if now is None else int(now)
+    with sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=5) as db:
+        db.execute('PRAGMA query_only=ON')
+        rows = db.execute('SELECT name, COUNT(*), MAX(expires) FROM sessions '
+                          'WHERE expires>? GROUP BY name ORDER BY name', (now,)).fetchall()
+    return [{'username': name, 'browser_logins': count,
+             'latest_expiry_utc': datetime.datetime.fromtimestamp(expires, datetime.timezone.utc).isoformat()}
+            for name, count, expires in rows]
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Show unexpired browser logins; this does not prove current browser activity.')
+    parser.add_argument('--json', action='store_true', help='Print structured results')
+    args = parser.parse_args()
+    if os.geteuid() != 0:
+        parser.exit(1, 'Run with sudo: sudo mykos-who\n')
+    try:
+        rows = logins()
+    except (OSError, sqlite3.Error, ValueError):
+        parser.exit(1, 'Unable to read MYKOS browser login status.\n')
+    if args.json:
+        print(json.dumps({'unexpired_browser_logins': rows, 'active_presence_verified': False}, indent=2))
+    else:
+        print('Unexpired browser logins (not verified live presence):')
+        if not rows:
+            print('None')
+        for row in rows:
+            print(f"{row['username']}  browsers={row['browser_logins']}  expires={row['latest_expiry_utc']}")
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

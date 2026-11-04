@@ -72,4 +72,4 @@ console.log('Snapshot pane checks passed: grouping, per-container choices, prese
 })().catch(error=>{console.error(error);process.exitCode=1;});
 
 assert.ok(html.indexOf('id="macos-mykos-container-panel"') < html.indexOf('id="mykos-snapshots-title"'));
-assert.ok(html.indexOf('id="mykos-snapshots-title"') < html.indexOf('id="mykos-backups-title"'));
+assert.ok(html.indexOf('id="mykos-snapshots-title"') < html.indexOf('id="mykos-repos-title"'));

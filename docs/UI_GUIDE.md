@@ -281,20 +281,7 @@ The geographic background represents saved locations, not a packet-path test.
 
 ## rsync backup accounts
 
-The rsync pane lists backup account ID, application type, OS, used disk, last
-modification, and subscriber state. These are backup SSH accounts, not browser
-login accounts. The inline creation controls take an eight-digit **ID** and the
-client **SSH public key**, then **Create account**.
-
-| Control | What happens |
-| --- | --- |
-| Change key | Opens the account public-key editor. **Save** replaces its authorized public key; **Cancel** dismisses the form. |
-| View / get keys | Retrieves keys stored in the client's backup. The dialog may include a private key; **Download keys** saves a local copy. Treat it as secret. |
-| Remove backup account | First requires the exact ID. A second prompt asks whether to delete all backup data: **OK deletes the data; Cancel retains the data but still removes account access**. Canceling the first ID prompt aborts removal. |
-| Close in Backup keys | Dismisses the key display. |
-
-Account creation does not prove that a fresh rsync backup has run. Consult the
-last-modified and storage values, then verify the intended backup separately.
+Backup account management is delivered by a separately installed private business extension. Its dashboard pane, account-management API, transfer setup and implementation are not included in the base MYKOS distribution. Existing customer backup data is preserved during core updates.
 
 ## Repositories
 

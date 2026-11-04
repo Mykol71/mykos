@@ -399,4 +399,6 @@ Environment=MYKOS_SPEEDTEST_USER=existing-licensed-user
 that account, with its normal home/configuration. No passwords or client settings
 are exposed by the API. A root-managed test may additionally set
 <code>MYKOS_SPEEDTEST_HOME</code> to an isolated copy of that account&#39;s existing setup.</p>
+<h2 id="browser-login-visibility">Browser login visibility</h2>
+<p>Run <code>sudo mykos-who</code> on the host to list unexpired browser logins and their latest expiry. Add <code>--json</code> for structured output. Names, counts and expiration times are read without exposing credentials or session tokens. An unexpired login does not prove that the dashboard is currently open. API keys, SSH users and guest logins are outside this command.</p>
 <footer>MYKOS documentation</footer></main></html>

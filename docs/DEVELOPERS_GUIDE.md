@@ -356,13 +356,7 @@ refactoring process launching.
 
 ### Backup data and accounts
 
-Native restore can mount configured application directories, complete `/etc` and `/home`
-directly read/write from a customer backup. It prepares only the new stopped
-guest’s image root and overlays private files for passwd/group/shadow/gshadow,
-host identity, mount tables, network ownership and PAM limits. UID/GID conflicts
-must be resolved deliberately. Do not “fix” ownership with a host-wide `chown` or
-rewrite the backup’s account databases. Password hashes are sensitive even when
-no plaintext password is present. See [backup mount details](INSTALL_SERVICES.md#complete-customer-backup-mounts).
+Backup account management is delivered by a separately installed private business extension. Its dashboard pane, account-management API, transfer setup and implementation are not included in the base MYKOS distribution. Existing customer backup data is preserved during core updates.
 
 ### Networking and VPNs
 
