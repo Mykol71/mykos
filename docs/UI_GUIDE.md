@@ -403,47 +403,23 @@ The four VU meters show actual CPU, memory, System and Data percentages from the
 
 ### Receiver control bank
 
-Receiver now uses the approved continuous faceplate layout. Click **Illumination** to add 10 percentage points to the blue meter lighting, cycling from 100% back to 0%. Only the marker line moves; the knob body stays fixed. The percentage readout updates too, and the browser remembers the setting. Enter/Space also operate the knob. **Slow / Normal / Fast** changes needle damping. **Display** turns the receiver meter lighting/needle display off and on; it does not control server power or stop collection. The history band retains dragging and keyboard control, and Live resets the selection. Detailed graph controls remain available in Dark/Light. Dark/Light restore the original layout and original control nodes.
-
-The black tuner shows host information with fixed light-blue container and green VPN signal indicators. They share recorded chart data and the selected history endpoint. Counts are scaled to50 containers and15 VPNs; stale counts show a dash and unlit bars. They update at most once per second without additional collector/API polling.
-
+Illumination advances ten percentage points per click and wraps from100% to0%. Source advances through the available OS panes from left to right, moving its marker and amber source indicator while retaining a fixed brushed-aluminum knob body. Both controls support Enter/Space. The source knob sits above the overlaid container/VPN count meter; VPN bars remain in front. Counts follow the selected history and scale to50 containers and15 VPNs. Stale or missing counts show a dash.
 
 ### Receiver instruments and OS selector
 
-The smaller black VU faces sit inside the black performance window, with white needles/scales and blue light shining upward from the bottom. The hostname sits outside that window immediately above the recall controls, in royal blue. Fixed graduated container/VPN indicators use light blue/green. Keyboard focus on knobs has a light-blue cue; pointer interaction has no red/orange focus ring.
-
-Click the **Source** knob to advance to the next available OS pane, cycling back through **All OS panes**. Each click moves only the marker line and updates the OS label; the knob body stays fixed. The adjacent dropdown provides the same choices for direct selection; the knob supports Enter/Space as a normal button. Only enabled, available panes appear. The selector preserves each pane’s configured visibility and permissions and automatically falls back to All if the selected pane becomes unavailable. Section links select their corresponding available OS pane. Other themes restore the original pane visibility.
-
+A bordered black source-light section sits above a single framed bank containing the VU meters and recall controls. The blue light under the time band uses the same illumination and brightness as the VU faces. A small, faded seven-segment Host uptime display sits behind the time graduations. It reflects actual collector uptime; unavailable data shows a dash.
 
 ### Receiver performance enclosure
 
-The taller black performance enclosure groups the VU faces, fixed signal count bars, Display switch, radio recall/Live control, needle-response switches, Illumination knob and OS Source dial/dropdown. The hostname remains outside above the enclosure. Control labels stay light against the dark background, while knobs/buttons retain their metal finish. Lit container signal bars use45% opacity and VPN bars85%; inactive segments stay dim. Other themes retain their existing appearance. The original history controls and OS visibility rules remain intact.
+A Host status lamp at the upper left shows green for online and red for offline or unavailable collector state. It is an indicator, not a power control. Receiver has no Monitor/Display switch. Host action buttons sit beside the recall controls with the same raised brushed-aluminum finish. Their targets, permissions and confirmations are unchanged. The full bottom Host status row and hardware line are hidden in Receiver; Dark/Light retain their usual views and restore the original controls.
 
 ### Receiver radio controls
 
-The black instrument panel shows fixed, ascending container/VPN signal bars sharing one plot to the left of the four VU meters: running containers (full scale50) and VPN links (full scale15). Exact counts remain visible; missing/stale readings show a dash with no lit bars. These indicators follow the selected history endpoint rather than scrolling through observations.
-
-Illumination is centered to the right of the meters. Each click adds10 percentage points, with100 wrapping to0. The blue lamp gradient has twice its former gain across the knob range; the meter glass brightness reaches2× at100%. Display Off remains a separate visual-only control.
-
-The radio-style recall band has a vertical tick every15seconds, longer minute marks and labels in minutes back. Its knob on the right steps one minute earlier per click, through60minutes before wrapping to live. The band can still be dragged or adjusted with the keyboard; Live resets it. Slow, Normal, Fast and Live are small round brushed-metal buttons. Source still cycles available OS panes and keeps the displayed label synchronized. Other themes retain their original history controls.
-
-The Source, recall and Illumination knobs share the same brushed-aluminum finish and machined rim. Their click/marker behavior is retained.
-
-VPN signal bars overlay the container bars in the same plot, with VPN drawn in front. Both exact counts remain separately labeled. The radio recall band is centered directly below the VU meter group, with an enlarged brushed-aluminum tuning knob directly below Illumination. Response/Live controls form a row above the recall band.
-
-The recall band has white tick marks, green minute numbers/scrollbar and a bright amber historical-time marker.
-
-Amber source indicators span the top of the black panel. The first available choice starts at the far left and subsequent choices progress right; clicking Source advances the bright amber lamp and selected OS name, wrapping back to the first choice. Disabled/unavailable OS panes are omitted, and dropdown/section-link selection stays synchronized.
-
-The compact32px response/Live buttons sit above the recall band, aligned to its right edge.
+The recall band scrolls through a trailing five-minute window at Live. Recall browses back up to one hour; the server retains65 minutes to cover the oldest window. White quarter-minute graduations move across blue-lit glass, and historical selection has a bright amber marker. Dragging and keyboard adjustment remain available; the recall knob steps one minute earlier and wraps to Live. Source choices retain each pane's configured visibility and permissions. Unavailable selections fall back to All OS panes.
 
 ### Receiver component stack
 
-Host, OS and utility panes are black stereo-style components with beveled cases, depth shadows and enlarged round brushed-aluminum feet, half hidden beneath each case. Pane visibility, tables and actions retain their existing permissions. Compact peers use smaller feet.
-
-The Source section has a compact, right-justified amber seven-segment Host uptime display labeled in days, hours, minutes and seconds; it refreshes from actual collector uptime. Missing data shows a dash. Decorative OS detail, Host Monitor/Synchronized, Monitor/Online, the History graph rectangle and OS Pane Selector label are removed from Receiver. Host OS information remains in its normal status/footer views.
-
-The radio band scrolls through a trailing five-minute window while Live is selected. Recall browses back up to one hour; the collector retains65 minutes to include the oldest window. Existing discarded history cannot be recovered, so the larger interval fills as new samples arrive. White quarter-minute tick bars move across a blue-lit window, with a green history scrollbar and bright amber recalled-time marker. Display/response buttons have raised metal faces. Larger feet are half tucked beneath each component.
+The wood cabinet surrounds the black instrument window and framed silver control bank. Enlarged round brushed-aluminum feet are half hidden beneath each component. The metal model plaque and recall/Live controls remain below the time band. Receiver remains a personal appearance option for mgreen; other users retain Dark/Light.
 
 ### Terminal pane width
 
