@@ -219,10 +219,12 @@ def test_selected_os_is_saved_and_passed_to_worker(tmp_path, monkeypatch):
     assert calls == []
     result = module.dispatch(['stage-start', '01234567', 'no', 'rh9'])
     assert result['os'] == 'rh9' and result['image'] == 'sha256:abc123'
+    import mykos_refresh
+    signals=[]
+    monkeypatch.setattr(mykos_refresh,'lifecycle',lambda shop,operation,**kw:signals.append((shop,operation)) or True)
     module.worker('01234567')
     assert ['/usr/local/sbin/mykos-stage-pos', '01234567', 'no', 'sha256:abc123'] in calls
-    assert calls[-3:] == [['/usr/bin/nice','-n','-5',sys.executable,'/opt/mykos-web/'+name,'01234567']
-                          for name in ('collect-nodes.py','collect-details.py','collect-extended.py')]
+    assert not any('collect-' in str(call) for call in calls)
 
 
 @pytest.mark.parametrize('device', [None, 'eth0'])
@@ -316,8 +318,9 @@ add_vpn
     conf = (tmp_path/'.01234567/test-peer.conn.conf').read_text()
     assert 'conn test-peer' in conf and 'right=203.0.113.20' in conf
     assert 'rightsubnet=10.1.2.0/24' in conf
-    assert 'leftsubnet=192.168.22.134/32' in conf
+    assert 'leftsubnet=192.168.22.0/24' in conf
     assert 'Private Subnets: 192.168.22.134/32' in result.stdout
+    assert 'narrowing=yes' in conf
     assert (tmp_path/'.01234567/test-peer.secrets').stat().st_mode & 0o777 == 0o600
     assert 'unexpected-meraki' not in result.stdout
     escaped = secret.replace('\\', '\\\\').replace('"', '\\"')
@@ -581,10 +584,13 @@ def test_delete_container_queue_pins_identity_and_worker_dispatch(tmp_path,monke
     assert queued['operation']=='delete' and queued['container_id']=='a'*64
     deleted=[]
     monkeypatch.setattr(mykos_containers,'delete',lambda *args:deleted.append(args) or {'state':'deleted'})
+    import mykos_refresh
+    signals=[]
+    monkeypatch.setattr(mykos_refresh,'lifecycle',lambda shop,operation,**kw:signals.append((shop,operation)) or True)
     module.worker('01234567')
     assert deleted==[('01234567','01234567','a'*64)]
     assert json.loads((tmp_path/'01234567.json').read_text())['state']=='done'
-    assert calls[-3:]==[['/usr/bin/nice','-n','-5',sys.executable,'/opt/mykos-web/'+name,'01234567'] for name in ('collect-nodes.py','collect-details.py','collect-extended.py')]
+    assert not any('collect-' in str(call) for call in calls)
     assert not any('mykos-collector.service' in call for call in calls)
 
 
@@ -623,7 +629,7 @@ add_vpn
     conf=(directory/'mykos-branch.conn.conf').read_text()
     assert 'leftid=192.168.222.0' in conf and 'rightid=192.168.222.0' in conf
     assert 'ike=aes128-sha1-dh21' in conf and 'esp=aes128-sha1' in conf
-    assert 'leftsubnet=192.168.222.0/24' in conf and 'rightsubnet=10.1.0.0/24' in conf
+    assert 'leftsubnet=192.168.22.0/24' in conf and 'rightsubnet=10.1.0.0/24' in conf
     assert (directory/'mykos-branch.secrets').read_text()=='192.168.222.0 192.168.222.0 : PSK "test\\"and\\\\secret"\n'
     assert (directory/'mykos-branch.secrets').stat().st_mode & 0o777==0o600
 

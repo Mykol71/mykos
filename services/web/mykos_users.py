@@ -67,3 +67,8 @@ def set_password(name, password, role=None, create=False):
                   'ON CONFLICT(name) DO UPDATE SET salt=excluded.salt,hash=excluded.hash,role=excluded.role',
                   (name, salt, digest, role or (exists[0] if exists else 'user')))
         c.execute('DELETE FROM sessions WHERE name=?', (name,))
+
+
+def role_supported(role):
+    """Unknown or removed extension roles never fall back to unrestricted access."""
+    return role in ('user','admin','arch','owner')

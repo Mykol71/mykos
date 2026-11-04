@@ -1,0 +1,16 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(require('node:path').join(__dirname,'../services/web/index.html'),'utf8');
+const button={disabled:'unchanged'},cells=[{},{}],vpnCell={},row={cells,dataset:{},querySelector:s=>{assert.equal(s,'.mykos-vpn-status-cell','Status signal must not inspect actions');return vpnCell},querySelectorAll(){throw Error('Status signal must not change action buttons')},remove(){this.removed=true}};
+let requests=0;
+const ctx=vm.createContext({nodes:[{id:'01234567',status:'offline',vpn:'down'},{id:'76543210',status:'online',vpn:'up'}],document:{querySelectorAll:s=>s.startsWith('tr[')&&s.includes('01234567')?[row]:[],createElement(){throw Error('No element creation')}},mykosRenderInventory(){throw Error('No inventory/action rendering')},statusIcon:(kind,state)=>kind+':'+state,el(){throw Error('Only status symbols should change')},Date,Map,window:{},fetch(){requests++;throw Error('No detail requests')}});
+const start=html.indexOf('// Lifecycle scripts send only a state.'),end=html.indexOf('// End lifecycle state signals.',start);vm.runInContext(html.slice(start,end),ctx);
+ctx.mykosApplyLifecycle('container','01234567','up');assert.equal(cells[1].innerHTML,'node:online');
+ctx.mykosApplyLifecycle('vpn','01234567','up');assert.equal(vpnCell.innerHTML,'vpn:up');
+ctx.mykosApplyLifecycle('vpn','01234567','down');assert.equal(vpnCell.innerHTML,'vpn:down');
+ctx.mykosApplyLifecycle('container','01234567','down');assert.equal(cells[1].innerHTML,'node:offline');
+assert.equal(button.disabled,'unchanged');assert.equal(ctx.nodes[1].vpn,'up');
+ctx.mykosApplyLifecycle('container','11112222','up');assert.equal(ctx.nodes.length,2);assert.equal(ctx.mykosApplyLifecycleOverrides([]).length,0);
+ctx.mykosApplyLifecycle('container','01234567','up');assert.equal(ctx.mykosApplyLifecycleOverrides([{id:'01234567',status:'offline'}])[0].status,'online');
+ctx.mykosApplyLifecycle('container','01234567','deleted');assert.equal(ctx.nodes.length,1);assert.ok(row.removed);assert.equal(ctx.mykosApplyLifecycleOverrides([{id:'01234567',status:'online'}]).length,0);
+assert.equal(requests,0);assert.ok(!html.includes('mykosPendingStarts'));
+console.log('Passed: existing status symbols update; no new rows, buttons, action changes, inventory render or detail fetch.');

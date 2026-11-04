@@ -82,6 +82,7 @@ def save_connection(root, name, peer, local, remote, secret, *, local_id="192.16
                    '  left=%defaultroute\n  leftid=' + left_id + '\n  leftsubnet=' + local + '\n'
                    '  right=' + peer + '\n  rightid=' + right_id + '\n  rightsubnet=' + remote + '\n'
                    '  ike=aes128-sha1-dh21\n  esp=aes128-sha1\n  pfs=no\n  dpddelay=30s\n  retransmit-timeout=45s\n  auto=start\n  encapsulation=yes\n')
+    if native_directory is not None:config_text+='  narrowing=yes\n'
     extra=[]
     if full_tunnel_hook is not None:
         # Per-connection files are exclusive; existing tunnels and credentials stay intact.
@@ -177,7 +178,7 @@ def main():
         if len(values)!=5 or values[-1]!='':raise ValueError('Invalid host VPN input')
         name,peer,network,secret=values[:-1]
         if '/' not in network: network+='/24'
-        print(save_connection(Path('/etc'),name,peer,'192.168.222.0/24',network,secret))
+        print(save_connection(Path('/etc'),name,peer,'192.168.22.0/24',network,secret))
         return
     if len(sys.argv)!=1:raise ValueError('Unexpected host VPN arguments')
     os.chdir(Path(__file__).resolve().parent)

@@ -1402,9 +1402,46 @@ showNodeDetails = async function(shop) {
 </script><script>
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let map,markers=[],nodes=[],mykosGeoHosts=[],mykosMerakiSites=[];
 el('form').onsubmit=async e=>{e.preventDefault();const r=await fetch('/mykos/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:el('user').value,password:el('pass').value})});if(!r.ok){el('error').textContent='Login failed';return}el('pass').value='';await mykosCheckTerminalPermission();load()};
-el('logout').onclick=async()=>{window.mykosClearThemeIdentity?.();mykosCloseTerminal();await fetch('/mykos/api/logout',{method:'POST'});mykosResetHostChart();el('dashboard').hidden=true;el('login').hidden=false};
+el('logout').onclick=async()=>{mykosStopLifecycleSignals();window.mykosClearThemeIdentity?.();mykosCloseTerminal();await fetch('/mykos/api/logout',{method:'POST'});mykosResetHostChart();el('dashboard').hidden=true;el('login').hidden=false};
 el('geo').onclick=()=>view(false);el('topo').onclick=()=>view(true);
 function view(top){el('map').hidden=top;el('topology').hidden=!top;el('geo').classList.toggle('active',!top);el('topo').classList.toggle('active',top);if(!top&&map)setTimeout(()=>map.invalidateSize(),50)}
+// Lifecycle scripts send only a state. Apply it locally; no statistics fetch.
+// Status signals only touch existing status symbols; they never create actions.
+let mykosLifecycleSource=null;
+const mykosLifecycleOverrides=new Map();
+function mykosApplyLifecycle(kind,shop,state) {
+    if(!['container','vpn'].includes(kind) || !/^[0-9]{8}$/.test(shop) || !['up','down','deleted'].includes(state))return;
+    mykosLifecycleOverrides.set(kind+'.'+shop,{state,expires:Date.now()+90000});
+    let node=nodes.find(item=>String(item.id)===shop);
+    if(kind==='container' && state==='deleted')nodes=nodes.filter(item=>String(item.id)!==shop);
+    else if(node) {if(kind==='container')node.status=state==='up'?'online':'offline';else node.vpn=state==='deleted'?'not_configured':state;}
+    document.querySelectorAll('tr[data-shop="'+shop+'"],tr[data-mykos-shop="'+shop+'"]').forEach(row=>{
+        if(kind==='container' && state==='deleted') {row.remove();return;}
+        if(kind==='container') {row.dataset.mykosRunning=String(state==='up');if(row.cells[1])row.cells[1].innerHTML=statusIcon('node',state==='up'?'online':'offline');}
+        else {const cell=row.querySelector('.mykos-vpn-status-cell');if(cell)cell.innerHTML=statusIcon('vpn',state==='deleted'?'not_configured':state);}
+    });
+    if(kind==='container' && state==='deleted')document.querySelectorAll('.mykos-detail-row[data-detail-shop="'+shop+'"]').forEach(row=>row.remove());
+}
+function mykosApplyLifecycleOverrides(incoming) {
+    let result=incoming;
+    for(const [key,value] of mykosLifecycleOverrides) {
+        if(Date.now()>value.expires){mykosLifecycleOverrides.delete(key);continue;}
+        const [kind,shop]=key.split('.'),node=result.find(item=>String(item.id)===shop);
+        const expected=kind==='container'?(value.state==='up'?'online':'offline'):(value.state==='deleted'?'not_configured':value.state);
+        if(kind==='container' && value.state==='deleted') {if(!node)mykosLifecycleOverrides.delete(key);else result=result.filter(item=>String(item.id)!==shop);}
+        else if(node) {const field=kind==='container'?'status':'vpn';if(node[field]===expected)mykosLifecycleOverrides.delete(key);else node[field]=expected;}
+    }
+    return result;
+}
+function mykosStartLifecycleSignals() {
+    if(mykosLifecycleSource || !window.EventSource)return;
+    mykosLifecycleSource=new EventSource('/mykos/api/web/lifecycle-events');
+    for(const kind of ['container','vpn'])mykosLifecycleSource.addEventListener(kind,event=>mykosApplyLifecycle(kind,event.lastEventId.split(':').at(-1),event.data));
+}
+function mykosStopLifecycleSignals() {mykosLifecycleSource?.close();mykosLifecycleSource=null;mykosLifecycleOverrides.clear();}
+
+// End lifecycle state signals.
+
 async function load(){
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -1421,10 +1458,11 @@ async function load(){
         }
         if (!r.ok) throw new Error('Dashboard unavailable');
         const data = await r.json();
-        nodes = data.nodes || [];
+        nodes = mykosApplyLifecycleOverrides(data.nodes || []);
         mykosGeoHosts = Array.isArray(data.hosts) ? data.hosts : [];
         mykosMerakiSites = Array.isArray(data.meraki_sites) ? data.meraki_sites : [];
         el('dashboard').hidden = false;
+        mykosStartLifecycleSignals();
         el('login').hidden = true;
         el('error').textContent = '';
         mykosLoadCurrentUser();mykosLoadHostVersion();mykosLoadHostMetrics();mykosLoadHostHistory();mykosLoadCountMetrics();mykosLoadStageImages();mykosRefreshMykos();
@@ -2315,7 +2353,7 @@ async function mykosRunContainerAction(shop, action, method = 'POST') {
             if ([502, 503, 504].includes(error.status)) continue;
             throw error;
         }
-        if (action==='start') await mykosRefreshStartupInventory();
+        // Lifecycle state arrives separately; job polling does not collect details.
     }
     if (data.state === 'failed') throw new Error(data.output || 'Operation failed');
     if (action === 'snapshot') {
@@ -2324,6 +2362,7 @@ async function mykosRunContainerAction(shop, action, method = 'POST') {
         alert('Snapshot saved' + (snapshot.path ? ': ' + snapshot.path : '.'));
     }
     if (deleting && mykosSelectedShop === shop) mykosSelectedShop = null;
+    if (['start','stop','delete','vpn/start','vpn/stop'].includes(action) || action.endsWith('/restore')) return;
     await load();
     await mykosRefreshListStats();
     await mykosRefreshSnapshots();
@@ -2332,7 +2371,7 @@ async function mykosRunContainerAction(shop, action, method = 'POST') {
 function mykosContainerActionButton(shop, action, enabled, label, color, icon) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'mykos-' + action + '-button';
+    button.className = 'mykos-' + action.replace('/', '-') + '-button';
     button.disabled = !enabled || mykosBusyContainers.has(shop);
     button.title = mykosBusyContainers.has(shop) ? 'Container operation in progress' : label;
     button.setAttribute('aria-label', label);
@@ -2341,7 +2380,7 @@ function mykosContainerActionButton(shop, action, enabled, label, color, icon) {
     button.addEventListener('click', async event => {
         event.stopPropagation();
         if (button.disabled || mykosBusyContainers.has(shop)) return;
-        const question = action === 'snapshot' ? 'Capture live state for ' + shop + ' and leave it running?' :
+        const question = action === 'vpn/start' ? 'Start configured VPNs for '+shop+'?' : action === 'vpn/stop' ? 'Stop VPNs for '+shop+' and retain their settings?' : action === 'snapshot' ? 'Capture live state for ' + shop + ' and leave it running?' :
             action === 'start' ? 'Start container ' + shop + ' using its existing disks?' : 'Stop container ' + shop + ' and keep its disks?';
         if (action === 'delete') {
             const nativeSnapshotWarning = mykosSnapshotData.some(item => String(item.code) === shop && item.capture_mode === 'criu-memory') ? '\nNative Linux memory snapshots currently require this original container for restore.' : '';
@@ -2357,6 +2396,11 @@ function mykosContainerActionButton(shop, action, enabled, label, color, icon) {
     return button;
 }
 
+function mykosVpnControlAvailable(node,detail={},memory={}) {
+    const family=mykosNodeFamily(node);
+    return !['windows','windows-server','macos'].includes(family) && (!detail.desktop || family==='ubuntu') &&
+        (['up','down'].includes(node?.vpn) || (memory?.vpn_topology?.links || []).length>0);
+}
 function mykosRenderInventory() {
     // Keep expanded content intact while the inventory rows and async data refresh.
     const expanded = Array.from(document.querySelectorAll('.mykos-detail-row'))
@@ -2385,6 +2429,14 @@ function mykosRenderInventory() {
         const desktop = ['windows', 'windows-server', 'macos'].includes(mykosNodeFamily(node)) || mykosListDetails[node.id]?.desktop;
         const detail = mykosListDetails[node.id] || {};
         const persistent = desktop || detail.persistent_storage === true;
+        if(mykosTerminalAllowed && mykosVpnControlAvailable(node,detail,mykosListMemory[node.id])) {
+            for(const [operation,label,color,icon] of [
+                ['start','Start VPN','#4ade80','<path d="m8 5 11 7-11 7Z"/>'],
+                ['stop','Stop VPN','#f87171','<rect x="6" y="6" width="12" height="12"/>']]) {
+                const control=mykosContainerActionButton(row.dataset.mykosShop,'vpn/'+operation,node.status==='online' && (operation==='stop'||node.vpn!=='up'),label,color,icon);
+                control.dataset.vpnControl=operation;logCell.append(control);
+            }
+        }
         if (mykosTerminalAllowed && ['linux', 'rocky', 'alma', 'oracle', 'centos', 'fedora', 'ubuntu', 'mssql'].includes(mykosNodeFamily(node)) && node?.vpn === 'up') {
             const addVpn = document.createElement('button');
             addVpn.type = 'button';
@@ -2510,6 +2562,7 @@ document.getElementById('mykos-os-panes').addEventListener(
         }
         const networkButton = event.target.closest('.mykos-network-button');
         if (networkButton) {event.stopImmediatePropagation();mykosToggleShop(networkButton.dataset.shop,'network');return;}
+        if (event.target.closest('[data-vpn-control]')) return;
         if (event.target.closest('.mykos-top-button')) return;
         if (event.target.closest('.mykos-add-vpn-button')) return;
         if (event.target.closest('.mykos-remove-vpn-button')) return;
@@ -3432,7 +3485,7 @@ async function mykosRefreshStartupInventory() {
     try {
         const response=await fetch('/mykos/api/nodes',{cache:'no-store'});
         if (!response.ok) return;
-        nodes=(await response.json()).nodes || [];
+        nodes=mykosApplyLifecycleOverrides((await response.json()).nodes || []);
         await mykosRefreshListStats();
         mykosRenderInventory();
     } catch (_) {} finally { mykosStartupRefreshBusy=false; }
@@ -3495,8 +3548,7 @@ for (const family of mykosOsFamilies) {
                     if (data.state === 'done') {
                         mykosStageResult.textContent = '';
                         mykosStageResult.hidden = true;
-                        await load();
-                        await mykosRefreshListStats();
+                        // The startup script has already sent its state-only signal.
                     }
                 }
             } catch (e) {
@@ -4586,4 +4638,5 @@ function mykosReceiverSourceSelection(panes,selected){
  };
 
 })();
+
 </script></body></html>

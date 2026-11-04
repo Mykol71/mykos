@@ -106,9 +106,7 @@ def add(shop, name, peer, remote, secret, local=None):
     value = selection(shop)
     common,path = config_module()
     remote = str(ipaddress.IPv4Network(remote, strict=True))
-    if local is None:
-        address = execute(value,'/usr/bin/python3',('-c',"import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.connect(('8.8.8.8',53));print(s.getsockname()[0]);s.close()"),timeout=5)
-        local = str(ipaddress.IPv4Network(address+'/32', strict=True))
+    if local is None:local='192.168.22.0/24'
     local,remote = common.validate(name,peer,local,remote,secret)
     directory = vm.POS/('.'+shop)
     vm.safe_dir(directory)
@@ -164,3 +162,18 @@ def remove_interactive(shop):
     cache=vm.storage(shop)/'vpn-status.json'
     if not cache.is_symlink():cache.unlink(missing_ok=True)
     print('Stopped and removed '+name)
+
+
+
+def change(shop,operation):
+    if operation not in ('start','stop'):raise ValueError('Invalid VPN control action')
+    value=selection(shop);directory=vm.POS/('.'+shop)
+    if directory.is_symlink() or not any(p.is_file() and not p.is_symlink() for p in directory.glob('*.conn.conf')):raise ValueError('No configured VPN for this instance')
+    execute(value,'/usr/bin/systemctl',(operation,'ipsec'),timeout=60)
+    if operation=='start':
+        execute(value,'/usr/sbin/ipsec',('auto','--rereadsecrets'),timeout=15)
+        for path in sorted(directory.glob('*.conn.conf')):
+            connection=path.name[:-10]
+            if path.is_symlink() or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}',connection):raise ValueError('Invalid saved VPN connection')
+            execute(value,'/usr/sbin/ipsec',('auto','--asynchronous','--up','mykos-'+connection),timeout=20)
+    return {'shop':shop,'state':'vpn_started' if operation=='start' else 'vpn_stopped','configuration_retained':True}

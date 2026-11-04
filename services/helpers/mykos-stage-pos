@@ -56,6 +56,9 @@ def _stage(shop, restore, image=None):
             prepare_backup(cid,name,shop,cfg,network_args,private)
             run([PODMAN,'start',cid])
         if any(vpn.glob('*.conn.conf')):
+            from mykos_linux import _prepare_vpn,wait_boot
+            wait_boot(name,run)
+            _prepare_vpn(shop)
             run([PODMAN,'exec',cid,'systemctl','restart','ipsec'])
         if restore=='yes':
             for service in profile.services():

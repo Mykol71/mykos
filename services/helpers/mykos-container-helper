@@ -12,6 +12,19 @@ import mykos_profiles as profile
 from mykos_runtime import (JOBS, PODMAN, config, connection, containers, job, request,
                          run, save_job, shopcode, stage_images, target, network_device)
 
+def vpn_target(shop):
+    from mykos_vm import POS,record_path
+    folder=POS/('.'+shop)
+    if folder.is_symlink() or not any(p.is_file() and not p.is_symlink() for p in folder.glob('*.conn.conf')):raise ValueError('No configured VPN for this instance')
+    if record_path(shop).is_file():
+        from mykos_ubuntu_vpn import selection
+        selection(shop)
+        return 'ubuntu'
+    from mykos_linux import vpn_preflight
+    vpn_preflight(shop)
+    return 'native'
+
+
 def active(shop):
     p = subprocess.run(['/usr/bin/systemctl','is-active','mykos-stage@'+shop+'.service'],
                        capture_output=True, text=True, timeout=10)
@@ -166,7 +179,7 @@ def _dispatch(args):
         usage = shutil.disk_usage('/backups')
         return {'free': '%.1f GiB' % (usage.free/1024**3), 'free_bytes':usage.free,
                 'used_bytes':usage.used, 'total_bytes':usage.total}
-    if action not in ('logs','top','ipsec','checkit','stage-check','stage-status','stage-start','start-pos','snapshot-pos','restore-snapshot','delete-snapshot','stop-pos'):
+    if action not in ('logs','top','ipsec','checkit','stage-check','stage-status','stage-start','start-pos','snapshot-pos','restore-snapshot','delete-snapshot','stop-pos','start-vpn','stop-vpn'):
         raise ValueError('Unsupported action')
     if action in ('restore-snapshot','delete-snapshot'):
         from mykos_snapshots import read_snapshot
@@ -181,11 +194,19 @@ def _dispatch(args):
         if value['state'] in ('queued','running') and not active(shop):
             value.update(state='failed',output='Worker is no longer active; inspect journalctl -u mykos-stage@'+shop)
         return value
-    if action in ('stage-start','start-pos','snapshot-pos','restore-snapshot','delete-snapshot','stop-pos'):
+    if action in ('stage-start','start-pos','snapshot-pos','restore-snapshot','delete-snapshot','stop-pos','start-vpn','stop-vpn'):
         JOBS.mkdir(parents=True, exist_ok=True, mode=0o700)
         with (JOBS / (shop+'.lock')).open('a') as lock:
             fcntl.flock(lock,fcntl.LOCK_EX)
             if active(shop): raise ValueError('Staging job already active')
+            if action in ('start-vpn','stop-vpn'):
+                vpn_target(shop)
+                value={'shop':shop,'state':'queued','operation':action,'output':'','updated_at':int(time.time())}
+                save_job(shop,value)
+                try:run(['/usr/bin/systemctl','start','--no-block','mykos-stage@'+shop+'.service'])
+                except Exception:
+                    value.update(state='failed',output='Could not start VPN worker');save_job(shop,value);raise
+                return value
             if action=='delete-snapshot':
                 value={'shop':shop,'state':'queued','operation':'delete-snapshot','snapshot':args[2],
                        'output':'','updated_at':int(time.time())}
@@ -194,7 +215,7 @@ def _dispatch(args):
                 except Exception:
                     value.update(state='failed',output='Could not start worker');save_job(shop,value);raise
                 return value
-            if action in ('start-pos','snapshot-pos','restore-snapshot','delete-snapshot','stop-pos'):
+            if action in ('start-pos','snapshot-pos','restore-snapshot','delete-snapshot','stop-pos','start-vpn','stop-vpn'):
                 from mykos_vm import read, record_path, VERSIONS, inspect as vm_inspect
                 name=target(shop)
                 desktop_os=None
@@ -306,6 +327,12 @@ def worker(shop):
         elif operation=='snapshot':
             from mykos_snapshots import capture
             output=json.dumps(capture(shop))
+        elif operation in ('start-vpn','stop-vpn'):
+            if vpn_target(shop)=='ubuntu':
+                from mykos_ubuntu_vpn import change
+            else:
+                from mykos_linux import vpn_change as change
+            output=json.dumps(change(shop,operation.split('-')[0]))
         elif operation in ('start','stop'):
             if value.get('desktop_os'):
                 import mykos_vm as lifecycle
@@ -318,10 +345,10 @@ def worker(shop):
                 command = ['/usr/local/sbin/mykos-desktop', shop, value['desktop_os']]
             elif value.get('image'): command.append(value['image'])
             output=run(command,timeout=1800)
-        # Every completed resource action refreshes only its own cache rows.
+        # Lifecycle scripts signal state only; normal collectors keep their schedule.
         try:
-            from mykos_refresh import refresh
-            refresh(shop, run=run)
+            from mykos_refresh import lifecycle,refresh
+            if not lifecycle(shop,operation,run=run):refresh(shop,run=run)
         except Exception as error:
             output += '\nAction completed; related data refresh deferred: ' + str(error)
         value.update(state='done',output=output)

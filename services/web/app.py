@@ -17,7 +17,7 @@ app = FastAPI(root_path="/mykos", docs_url=None, redoc_url=None, openapi_url=Non
 app.include_router(monitor_router)
 from image_build_api import router as image_build_router
 app.include_router(image_build_router)
-from mykos_users import connect as db, is_admin
+from mykos_users import connect as db, is_admin,role_supported
 def digest(password,salt):
     return hashlib.scrypt(password.encode(),salt=bytes.fromhex(salt),n=16384,r=8,p=1).hex()
 def check(request):
@@ -25,8 +25,8 @@ def check(request):
     if principal(request): return
     token=request.cookies.get('mykos_session','')
     with db() as c:
-        row=c.execute('SELECT sessions.name FROM sessions JOIN users ON users.name=sessions.name WHERE token=? AND expires>?',(hashlib.sha256(token.encode()).hexdigest(),int(time.time()))).fetchone() if token else None
-    if not row: raise HTTPException(401,'Login required')
+        row=c.execute('SELECT sessions.name,users.role FROM sessions JOIN users ON users.name=sessions.name WHERE token=? AND expires>?',(hashlib.sha256(token.encode()).hexdigest(),int(time.time()))).fetchone() if token else None
+    if not row or not role_supported(row[1]): raise HTTPException(401,'Login required')
 def origin(request):
     from mykos_peers import principal
     if principal(request): return
@@ -199,8 +199,8 @@ def login(data:Credentials,request:Request):
     attempts = identity_db.with_name('login-attempts.db')
     reserve(data.username, request.client.host if request.client else 'unknown', attempts)
     with db() as c:
-        row=c.execute('SELECT salt,hash FROM users WHERE name=?',(data.username,)).fetchone()
-        valid=row and hmac.compare_digest(digest(data.password,row[0]),row[1])
+        row=c.execute('SELECT salt,hash,role FROM users WHERE name=?',(data.username,)).fetchone()
+        valid=row and role_supported(row[2]) and hmac.compare_digest(digest(data.password,row[0]),row[1])
         if not valid: raise HTTPException(401,'Invalid login')
         success(data.username, attempts)
         token=secrets.token_urlsafe(32)

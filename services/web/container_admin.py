@@ -147,3 +147,60 @@ def container_ipsec(shop: str, request: Request):
     if len(shop) != 8 or not shop.isascii() or not shop.isdigit():
         raise HTTPException(400, "Invalid ID")
     return invoke("ipsec", shop)
+
+
+@router.post('/api/web/containers/{shop}/vpn/{action}')
+def container_vpn_control(shop: str, action: str, request: Request):
+    authorized(request,modify=True)
+    from app import mykos_terminal_permission
+    if not mykos_terminal_permission(request).get('allowed'):raise HTTPException(403,'Administrator login required')
+    if len(shop)!=8 or not shop.isascii() or not shop.isdigit():raise HTTPException(400,'Invalid ID')
+    if action not in ('start','stop'):raise HTTPException(404,'Unknown VPN action')
+    return invoke(action+'-vpn',shop)
+
+
+STARTUP_STATUS_DIR = __import__('pathlib').Path('/run/mykos-startup-status')
+
+
+def startup_status_snapshot():
+    import re,stat
+    result={}
+    try:
+        root=STARTUP_STATUS_DIR.lstat()
+        if not stat.S_ISDIR(root.st_mode) or root.st_uid!=0 or root.st_mode&0o022:return result
+        for path in STARTUP_STATUS_DIR.iterdir():
+            if not re.fullmatch(r'(container|vpn)\.[0-9]{8}',path.name):continue
+            info=path.lstat()
+            if not stat.S_ISREG(info.st_mode) or info.st_uid!=0 or info.st_mode&0o022 or info.st_size>7:continue
+            state=path.read_text()
+            if state in ('up','down','deleted'):result[path.name]=((info.st_ino,info.st_mtime_ns),state)
+    except FileNotFoundError:pass
+    return result
+
+
+@router.get('/api/web/lifecycle-events')
+async def startup_events(request: Request):
+    authorized(request)
+    from fastapi.responses import StreamingResponse
+    import asyncio,time,re
+    async def events():
+        previous=startup_status_snapshot();checked=time.monotonic();heartbeat=checked;started=checked
+        cursor=request.headers.get('last-event-id','')
+        if re.fullmatch(r'[0-9]+:(container|vpn):[0-9]{8}',cursor):
+            previous={name:value for name,value in previous.items() if value[0][1]<=int(cursor.split(':')[0])}
+        yield 'retry: 1000\n: connected\n\n'
+        while time.monotonic()-started<20 and not await request.is_disconnected():
+            now=time.monotonic()
+            if now-checked>=15:
+                try:authorized(request)
+                except Exception:return
+                checked=now
+            current=startup_status_snapshot()
+            for name,(token,state) in sorted(current.items(),key=lambda item:item[1][0][1]):
+                if previous.get(name)==(token,state):continue
+                kind,shop=name.split('.')
+                yield 'event: '+kind+'\nid: '+str(token[1])+':'+kind+':'+shop+'\ndata: '+state+'\n\n'
+            previous=current
+            if now-heartbeat>=15:yield ': keepalive\n\n';heartbeat=now
+            await asyncio.sleep(.5)
+    return StreamingResponse(events(),media_type='text/event-stream',headers={'Cache-Control':'no-store','X-Accel-Buffering':'no'})

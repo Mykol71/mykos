@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import sys
 import tempfile
+import time
 
 import mykos_vm as vm
 import mykos_host_monitoring as host
@@ -109,7 +110,7 @@ def _prepare_vpn(shop):
     restore=vm.POS/'vpn-restore'
     if restore.is_symlink() or not restore.is_file():raise ValueError('Missing VPN boot restore helper')
     unit='[Service]\nExecStartPre=/usr/local/sbin/mykos-vpn-restore\n'
-    setup="""import os,json,pathlib,stat,sys,tempfile
+    setup="""import os,json,pathlib,stat,sys,tempfile,fnmatch,re
 root,helper,unit,device,inode=sys.argv[1:]
 os.chroot(root);os.chdir('/')
 mounted=os.stat('/etc/ipsec.d')
@@ -118,7 +119,9 @@ for filename,line in [('ipsec.conf','include /etc/ipsec.d/*.conn.conf'),('ipsec.
  p=pathlib.Path('/etc')/filename
  if p.is_symlink() or (p.exists() and not p.is_file()):raise ValueError('Unsafe IPsec include destination')
  old=p.read_text() if p.exists() else ''
- if line not in old.splitlines():
+ probe='/etc/ipsec.d/mykos-probe.'+('conn.conf' if filename=='ipsec.conf' else 'secrets')
+ patterns=[parts[1] for text in old.splitlines() for parts in [text.split()] if len(parts)>=2 and parts[0]=='include']
+ if not any(fnmatch.fnmatch(probe,pattern) for pattern in patterns):
   if p.exists():
    backup=p.with_name(filename+'.mykos-before-include')
    if backup.is_symlink():raise ValueError('Unsafe IPsec include backup')
@@ -142,6 +145,15 @@ for rel,text,mode in [('usr/local/sbin/mykos-vpn-restore',helper,0o755),('etc/sy
     return {'shop':shop,'state':'vpn_boot_ready'}
 
 
+def wait_boot(name,runner=run,timeout=240):
+    deadline=time.monotonic()+timeout
+    while True:
+        state=runner([PODMAN,'exec',name,'/bin/sh','-c','systemctl is-system-running 2>/dev/null || true'],timeout=10).strip()
+        if state in ('running','degraded'):return state
+        if time.monotonic()>=deadline:raise TimeoutError('Container boot did not finish before VPN startup')
+        time.sleep(.5)
+
+
 def start(shop):
     shopcode(shop)
     with vm.locked():
@@ -163,6 +175,8 @@ def start(shop):
         state=json.loads(run([PODMAN,'container','inspect',name],timeout=30))[0]
         # Restart a VPN service only when this ID has explicitly configured tunnels.
         if any((vm.POS / ('.'+shop)).glob('*.conn.conf')):
+            wait_boot(name,run)
+            _prepare_vpn(shop)
             run([PODMAN,'exec',name,'systemctl','restart','ipsec'],timeout=45)
         state=json.loads(run([PODMAN,'container','inspect',name],timeout=30))[0]
         if not state.get('State',{}).get('Running'):raise RuntimeError('Container exited during startup')
@@ -177,3 +191,28 @@ def stop(shop):
         remember(shop,name,state)
         run([PODMAN,'stop','--time','120',name],timeout=150)
         return {'shop':shop,'state':'stopped','output':name}
+
+
+
+def vpn_change(shop,operation):
+    if operation not in ('start','stop'):raise ValueError('Invalid VPN control action')
+    with vm.locked():
+        name,state=inspect(shop)
+        vpn_preflight(shop)
+        folder=vm.POS/('.'+shop)
+        if folder.is_symlink() or not any(p.is_file() and not p.is_symlink() for p in folder.glob('*.conn.conf')):raise ValueError('No configured VPN for this instance')
+        if operation=='start':_prepare_vpn(shop)
+        run([PODMAN,'exec',name,'systemctl',operation,'ipsec'],timeout=60)
+        if operation=='start':
+            run([PODMAN,'exec',name,'ipsec','auto','--rereadsecrets'],timeout=15)
+            connections=[]
+            for path in folder.glob('*.conn.conf'):
+                if path.is_symlink() or not path.is_file():raise ValueError('Unsafe VPN configuration')
+                for connection in re.findall(r'^\s*conn\s+(\S+)',path.read_text(),re.M):
+                    if connection=='%default' or connection.endswith('-mykos-default'):continue
+                    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,69}',connection):raise ValueError('Invalid saved VPN connection name')
+                    connections.append(connection)
+            if not connections:raise ValueError('No saved VPN connections')
+            for connection in sorted(set(connections)):run([PODMAN,'exec',name,'ipsec','auto','--asynchronous','--up',connection],timeout=20)
+        if inspect(shop)[1]['Id']!=state['Id']:raise ValueError('Container changed during VPN action')
+        return {'shop':shop,'state':'vpn_started' if operation=='start' else 'vpn_stopped','configuration_retained':True}
