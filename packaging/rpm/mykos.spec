@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        243%{?dist}
+Release:        244%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -119,6 +119,9 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Wed Nov 04 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-244
+- Explain PXE readiness in the provisioning dialog; repair media cache traversal permissions.
+
 * Wed Nov 04 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-243
 - Refine Receiver instrument layout and preserve theme control restoration.
 

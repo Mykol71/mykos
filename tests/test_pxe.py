@@ -185,3 +185,20 @@ def test_bootstrap_initrd_uses_explicit_injected_filename(env):
     body=client.get('/pxe/select.ipxe',params={'mac':MAC}).text
     assert 'initrd --name install.cmd https://' in body
     assert 'bootstrap.cmd?mac='+MAC in body
+
+
+def test_cli_repairs_existing_private_cache_traversal(tmp_path,monkeypatch):
+ path=WEB.parents[1]/'services/helpers/mykos-pxe'
+ loader=importlib.machinery.SourceFileLoader('pxe_cache_permission_test',str(path));spec=importlib.util.spec_from_loader(loader.name,loader);module=importlib.util.module_from_spec(spec);loader.exec_module(module)
+ cache=tmp_path/'cache';cache.mkdir(mode=0o700);monkeypatch.setattr(module,'CACHE',cache)
+ from types import SimpleNamespace
+ monkeypatch.setattr(module.grp,'getgrnam',lambda name:SimpleNamespace(gr_gid=0));monkeypatch.setattr(module.os,'chown',lambda *a:None)
+ monkeypatch.setattr(module.store,'register_asset',lambda path,name:{'path':str(path)})
+ source=tmp_path/'wimboot';source.write_bytes(b'fixture bootstrap bytes')
+ previous_mask=module.os.umask(0o077)
+ try:result=module.copy_asset(source,'wimboot')
+ finally:module.os.umask(previous_mask)
+ assert Path(result['path']).parent.stat().st_mode&0o777==0o750
+ assert cache.stat().st_mode&0o777==0o750
+ assert (cache/'assets').stat().st_mode&0o777==0o750
+ assert Path(result['path']).read_bytes()==source.read_bytes()

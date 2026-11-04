@@ -34,7 +34,7 @@ def copy_asset(source,name,expected=None):
     group=grp.getgrnam('mykosweb').gr_gid
     for directory in (CACHE,CACHE/'assets'):
         if directory.is_symlink():raise ValueError('Unsafe media directory')
-        directory.mkdir(exist_ok=True,mode=0o750);os.chown(directory,0,group)
+        directory.mkdir(exist_ok=True,mode=0o750);os.chown(directory,0,group);directory.chmod(0o750)
     with tempfile.NamedTemporaryFile(dir=CACHE/'assets',delete=False) as out:
         temp=Path(out.name)
         try:
@@ -43,7 +43,7 @@ def copy_asset(source,name,expected=None):
             if expected and digest!=expected:raise ValueError('Asset digest mismatch: '+name)
             folder=CACHE/'assets'/digest
             if folder.is_symlink():raise ValueError('Unsafe digest directory')
-            folder.mkdir(exist_ok=True,mode=0o750);os.chown(folder,0,group)
+            folder.mkdir(exist_ok=True,mode=0o750);os.chown(folder,0,group);folder.chmod(0o750)
             target=folder/name
             if target.is_symlink():raise ValueError('Unsafe asset path')
             if target.exists():

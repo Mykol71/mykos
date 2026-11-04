@@ -1,5 +1,6 @@
 """Full-administrator PXE job UI. Boot clients use independent scoped leases."""
 import hashlib,json,time
+from pathlib import Path
 from fastapi import APIRouter,Request,HTTPException
 from pydantic import BaseModel,Field,SecretStr
 import pxe_store as store
@@ -12,6 +13,20 @@ def admin(request,modify=False):
     token=hashlib.sha256(request.cookies.get('mykos_session','').encode()).hexdigest()
     with mykos_users.connect() as c:row=c.execute('SELECT name FROM sessions WHERE token=? AND expires>?',(token,int(time.time()))).fetchone()
     if not row or not mykos_users.is_admin(row[0]):raise HTTPException(403,'Full administrator login required')
+REQUIRED_MEDIA=('boot.wim','install.wim','wimboot','curl.exe','curl-ca-bundle.crt','mykos-pe-guard.exe','chrome.msi')
+def readable_assets():
+    try:registered=store.assets()
+    except store.HTTPException:return {},''
+    visible={}
+    for name,item in registered.items():
+        try:
+            actual=store.asset(name)
+            with Path(actual['path']).open('rb') as handle:handle.read(1)
+            visible[name]={field:item[field] for field in ('sha256','size')}
+        except (OSError,store.HTTPException):continue
+    error='PXE media is not readable by the web service. Restart mykos-web after initial media import to attach its read-only media mount.' if len(visible)!=len(registered) else ''
+    return visible,error
+
 @router.get('')
 def overview(request:Request):
     admin(request)
@@ -19,11 +34,10 @@ def overview(request:Request):
     except store.HTTPException as error:
         if error.status_code!=503:raise
         return {'enabled':False,'profiles':store.PROFILES,'jobs':[],'assets':{},'media_index':1}
-    try:assets={k:{field:v[field] for field in ('sha256','size')} for k,v in store.assets().items()}
-    except store.HTTPException:assets={}
+    assets,readiness_error=readable_assets()
     try:index=json.loads((store.ROOT/'media.json').read_text())['index']
     except (OSError,KeyError,ValueError):index=1
-    return {'enabled':True,'origin':cfg['origin'],'allowed_networks':cfg['allowed_networks'],'profiles':store.PROFILES,'assets':assets,'jobs':store.jobs(),'media_index':index}
+    return {'enabled':True,'origin':cfg['origin'],'allowed_networks':cfg['allowed_networks'],'profiles':store.PROFILES,'assets':assets,'readiness_error':readiness_error,'jobs':store.jobs(),'media_index':index}
 class Arm(BaseModel):
     mac:str=Field(max_length=17)
     customer:str=Field(pattern=r'^[0-9]{8}$')
@@ -42,6 +56,8 @@ def arm_job(data:Arm,request:Request):
         try:matched=store.mac(data.confirmation)==store.mac(data.mac)
         except ValueError:matched=False
         if not matched:raise HTTPException(400,'Repeat the target MAC to authorize erasing its disk')
+    visible,error=readable_assets()
+    if error or any(name not in visible for name in REQUIRED_MEDIA):raise HTTPException(503,error or 'Import all required PXE media before arming a desktop')
     try:return store.enroll(data.mac,data.customer,data.profile,data.password.get_secret_value(),hostname=data.hostname,minutes=data.minutes,allow_wipe=data.allow_wipe,image_index=data.image_index)
     except (ValueError,store.HTTPException) as error:raise HTTPException(getattr(error,'status_code',400),str(error))
 @router.post('/jobs/{key}/revoke')
