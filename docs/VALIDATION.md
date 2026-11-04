@@ -279,3 +279,8 @@ One-hour recall tests verify65-minute persistence/read coverage, the oldest full
 ## Updateos and terminal width repair221
 
 Regression tests reproduce a styled Apache stage listing with harmless synthetic scripts, reject404/HTML downloads and traversal, and preserve a cached good script on failed downloads. Terminal tests cover fragmented/coalesced frames, dimension bounds, real PTY window sizes, authorized WebSocket forwarding and legacy raw input. Browser checks use the real xterm/FitAddon display with a synthetic transport, avoiding live user shell input.
+
+
+## VPN status compatibility246
+
+Native guests with a newer Libreswan control protocol can reject the host status command even while a tunnel is established. MYKOS now falls back, only on this explicit protocol mismatch, to read-only kernel XFRM queries in the selected guest network namespace. An outbound ESP tunnel policy and both matching ESP SAs are required for an up status; half-open IKE sessions, unmatched states and stale container identities do not qualify. Queries request no encryption keys and execute no guest binaries. This also avoids waiting for the UI notification deadline when the tunnel is already established. VPN action controls use up/down arrows separately from the container play/stop controls.

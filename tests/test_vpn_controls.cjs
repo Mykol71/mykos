@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const html=fs.readFileSync(require('node:path').join(__dirname,'../services/web/index.html'),'utf8');let capture,action,question,details=0;
+const html=fs.readFileSync(require('node:path').join(__dirname,'../services/web/index.html'),'utf8');let capture,action,question,details=0;assert.ok(html.includes('M12 20V4m-6 6 6-6 6 6'));assert.ok(html.includes('M12 4v16m-6-6 6 6 6-6'));
 const context=vm.createContext({mykosNodeFamily:n=>n.family,document:{createElement(){return {dataset:{},style:{},setAttribute(){},addEventListener(k,f){this[k]=f}}},getElementById(){return {addEventListener(k,f,c){assert.equal(c,true);capture=f}}}},window:{confirm(q){question=q;return true}},mykosBusyContainers:new Map(),mykosRunContainerAction:async(...a)=>{action=a},mykosRenderInventory(){},mykosRenderSnapshots(){},showNodeDetails(){details++}});
 for(const name of ['mykosVpnControlAvailable','mykosContainerActionButton']){let a=html.indexOf('function '+name+'('),b=html.indexOf('\n}',a)+2;vm.runInContext(html.slice(a,b),context)}
 assert.equal(context.mykosVpnControlAvailable({family:'linux',vpn:'down'}),true);

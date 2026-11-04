@@ -125,6 +125,40 @@ def vpn_without_daemon(root):
     return result
 
 
+def query_vpn_kernel(info, root):
+    """Read namespace ESP state when a newer daemon rejects the host protocol.
+
+    Never execute guest binaries or request kernel encryption keys. An outbound
+    policy and both matching tunnel SAs are required before reporting up.
+    """
+    from mykos_vpn_host import parse_xfrm
+    result = vpn_without_daemon(root)
+    if result['status'] == 'unknown':
+        return result
+    prefix = ['/usr/bin/nsenter', '-t', str(info['State']['Pid']), '-n', '--', '/usr/sbin/ip', 'xfrm']
+    states = parse_xfrm(run([*prefix, 'state', 'list', 'nokeys'], timeout=5), 'state')
+    policies = parse_xfrm(run([*prefix, 'policy', 'list'], timeout=5), 'policy')
+    established = set()
+    for policy in policies:
+        if policy.get('dir') != 'out' or policy.get('action', 'allow') != 'allow':
+            continue
+        for template in policy.get('tmpl', []):
+            if (template.get('proto') != 'esp' or template.get('mode') != 'tunnel'
+                    or template.get('level', 'required') not in ('required', 'require')
+                    or not isinstance(template.get('reqid'), int) or template['reqid'] <= 0):
+                continue
+            src, dst, reqid = template.get('src'), template.get('dst'), template['reqid']
+            def matching(source, destination):
+                return any(s.get('src') == source and s.get('dst') == destination
+                           and s.get('reqid') == reqid and s.get('proto') == 'esp'
+                           and s.get('mode') == 'tunnel' for s in states)
+            if src and dst and src != dst and matching(src, dst) and matching(dst, src):
+                established.add((src, dst, reqid))
+    result.update(status='up' if established else result['status'], established=len(established),
+                  connections=[], established_connections=[], status_source='kernel-xfrm')
+    return result
+
+
 def query_vpn(info=None):
     result = unknown_vpn()
     if info is not None and desktop(info):
@@ -156,6 +190,9 @@ def query_vpn(info=None):
         output = run(args, timeout=5)
         if info is not None and process_token(pid) != before:
             return result
+        if info is not None and ('Mismatched versions of userland tools' in output or 'whack with bad magic' in output):
+            fallback = query_vpn_kernel(info, root)
+            return fallback if process_token(pid) == before else result
         return parse_vpn(output)
     except (OSError, ValueError, subprocess.SubprocessError):
         return result

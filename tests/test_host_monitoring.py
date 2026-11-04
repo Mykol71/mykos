@@ -144,3 +144,40 @@ def test_dmidecode_binary_unit_names(monkeypatch):
     output='Memory Device\n\tSize: 16 GiB\n\tType: DDR4\n\tSpeed: 3200 MT/s\n'
     monkeypatch.setattr(host,'run',lambda *a,**k:output*2)
     assert host.hardware()['details']=={'memory_type':'DDR4','memory_speed':'3200 MT/s','memory_total':'32 GiB'}
+
+
+def test_newer_daemon_uses_kernel_only_with_paired_esp_policy(tmp_path,monkeypatch):
+    root=tmp_path/'root';(root/'etc/ipsec.d').mkdir(parents=True)
+    (root/'etc/ipsec.d/office.conn.conf').write_text('conn office\n')
+    states='src 192.0.2.2 dst 198.51.100.1\n proto esp reqid 42 mode tunnel\nsrc 198.51.100.1 dst 192.0.2.2\n proto esp reqid 42 mode tunnel\n'
+    policies='src 192.0.2.2/32 dst 10.0.0.0/24\n dir out\n tmpl src 192.0.2.2 dst 198.51.100.1\n proto esp reqid 42 mode tunnel\n'
+    calls=[]
+    def run(args,timeout):
+        calls.append(args)
+        return states if 'state' in args else policies
+    monkeypatch.setattr(host,'run',run)
+    assert host.query_vpn_kernel(native(),root)['status']=='up'
+    assert calls[0][-4:]==['xfrm','state','list','nokeys']
+    assert all(a[:6]==['/usr/bin/nsenter','-t','123','-n','--','/usr/sbin/ip'] for a in calls)
+    for broken in ['',states.split('src 198.51.100.1')[0],states.replace('reqid 42','reqid 99'),states.replace('proto esp','proto ah')]:
+        monkeypatch.setattr(host,'run',lambda a,timeout:broken if 'state' in a else policies)
+        assert host.query_vpn_kernel(native(),root)['status']=='down'
+    monkeypatch.setattr(host,'run',lambda a,timeout:states if 'state' in a else '')
+    assert host.query_vpn_kernel(native(),root)['status']=='down'
+
+
+def test_version_mismatch_fallback_rechecks_container_identity(tmp_path,monkeypatch):
+    root=tmp_path/'root';(root/'run/pluto').mkdir(parents=True)
+    import socket
+    sock=socket.socket(socket.AF_UNIX);sock.bind(str(root/'run/pluto/pluto.ctl'))
+    original=host.Path
+    monkeypatch.setattr(host,'Path',lambda p:root if str(p)=='/proc/123/root' else original(p))
+    monkeypatch.setattr(host,'run',lambda *a,**kw:'000 ignoring message from whack with bad magic; Mismatched versions of userland tools.')
+    monkeypatch.setattr(host,'query_vpn_kernel',lambda *a:{'status':'up','status_source':'kernel-xfrm'})
+    monkeypatch.setattr(host,'process_token',lambda pid:('stable',1))
+    try:
+        assert host.query_vpn(native())['status']=='up'
+        tokens=iter([('old',1),('old',1),('new',2)])
+        monkeypatch.setattr(host,'process_token',lambda pid:next(tokens))
+        assert host.query_vpn(native())['status']=='unknown'
+    finally:sock.close()
