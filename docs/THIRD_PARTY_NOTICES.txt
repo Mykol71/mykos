@@ -1038,3 +1038,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+PXE provisioning references and runtime downloads
+-----------------------------------------------
+The PXE tooling downloads iPXE (https://ipxe.org), wimboot (https://ipxe.org/wimboot), curl (https://curl.se), and a pinned regular Tiny11 builder (https://github.com/ntdevlabs/tiny11builder) from their upstream projects. Their own licenses and notices remain applicable; the MYKOS license does not replace those grants. iPXE and wimboot are GPL software; refer to the corresponding upstream release source and license. curl retains the curl license and bundled dependency notices. Windows/WinPE media, Chrome installers and customer applications are separate runtime inputs and are not included in MYKOS source or RPM payloads.

@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        241%{?dist}
+Release:        242%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -68,6 +68,15 @@ SETUP
 chmod 0755 %{buildroot}/usr/sbin/mykos-setup %{buildroot}/usr/share/mykos/MENU
 
 %pre
+%{mykos_python} - <<'PXE_GUARD' || exit 1
+from pathlib import Path
+import sqlite3,time
+path=Path('/opt/mykos-web/data/pxe/jobs.db')
+if path.exists():
+    with sqlite3.connect(path.resolve().as_uri()+'?mode=ro',uri=True) as c:
+        if c.execute("SELECT 1 FROM jobs WHERE expires>? AND state IN ('armed','booting','applying','firstboot') LIMIT 1",(int(time.time()),)).fetchone():
+            raise SystemExit('Finish or revoke active PXE staging jobs before upgrading MYKOS')
+PXE_GUARD
 getent group mykosweb >/dev/null || groupadd --system mykosweb
 getent passwd mykosweb >/dev/null || useradd --system --gid mykosweb --home-dir /opt/mykos-web --shell /sbin/nologin mykosweb
 
@@ -110,6 +119,10 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Wed Nov 04 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-242
+- Add opt-in Windows PXE staging with scoped HTTPS leases and explicit target disk guards.
+- Preserve active provisioning during application upgrades; scrub expired credentials.
+
 * Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-231
 - Restore the original updater backend without dropping download protections.
 - Include the validated Receiver component refinements and private extension boundary.

@@ -320,3 +320,16 @@ def test_sync_budget_slice_is_delivered_without_allowing_other_unit_names(tmp_pa
     assert 'CPUQuota=100%' in (stage / 'etc/systemd/system/mykosreposync.slice').read_text()
     assert (stage / 'usr/local/share/mykos/repo/bin/sync_repos.py').is_file()
     assert (stage / 'usr/local/share/mykos/repo/bin/sync_worker.sh').is_file()
+
+
+def test_active_pxe_installation_blocks_source_replacement(tmp_path):
+    import sqlite3,time
+    root=tmp_path/'root';db=root/'opt/mykos-web/data/pxe/jobs.db';db.parent.mkdir(parents=True)
+    with sqlite3.connect(db) as connection:
+        connection.execute('CREATE TABLE jobs(state TEXT,expires INTEGER)')
+        connection.execute('INSERT INTO jobs VALUES (?,?)',('applying',int(time.time())+600))
+    result=run(root,'install',ok=False)
+    assert 'actively staging' in result.stderr+result.stdout
+    assert not (root/'usr/local/share/mykos').exists()
+    with sqlite3.connect(db) as connection:connection.execute("UPDATE jobs SET state='revoked'")
+    run(root,'install')

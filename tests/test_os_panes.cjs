@@ -9,11 +9,11 @@ const slice = (start, end) => html.slice(html.indexOf(start), html.indexOf(end, 
 const elements = new Map();
 const el = id => {
     if (!elements.has(id)) elements.set(id, {value:'', options:[], hidden:true,
-        replaceChildren(...options) { this.options = options; }, add(option) { this.options.push(option); }, setAttribute() {}});
+        replaceChildren(...options) { this.options = options; }, add(option) { this.options.push(option); }, setAttribute() {},querySelectorAll(){return []}});
     return elements.get(id);
 };
 const context = vm.createContext({setInterval(){},assert, el, Date, URL, html, window:{location:{origin:'https://testserver'}}, Option:function(text, value) { this.text = text; this.value = value; },
-    document:{querySelector:selector => el(selector)}});
+    document:{documentElement:{dataset:{role:"admin"}},querySelector:selector => el(selector)}});
 const source = slice('const mykosOsFamilies', '\nfunction drawMap') + '\n' +
     slice('const mykosPaneVisibility', '\nfunction mykosRenderMykos') + '\n' +
     slice('let mykosStageImagesLoading', '\nasync function mykosStageJSON');

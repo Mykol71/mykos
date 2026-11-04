@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Prepare immutable PXE media and explicitly arm an identified customer desktop."""
+import argparse
+import getpass
+import grp
+import hashlib
+import json
+import os
+from pathlib import Path
+import pwd
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.request
+
+SOURCE=Path(__file__).resolve().parents[2]
+WEB=SOURCE/'services/web' if (SOURCE/'services/web/pxe_store.py').exists() else Path('/opt/mykos-web')
+sys.path.insert(0,str(WEB))
+import pxe_store as store
+CACHE=Path('/home/mykos-pxe')
+
+
+def permissions():
+    user=pwd.getpwnam('mykosweb')
+    for path in [store.ROOT,*store.ROOT.iterdir()]:
+        if path.is_symlink():raise ValueError('PXE state cannot be a symlink')
+        os.chown(path,user.pw_uid,user.pw_gid);path.chmod(0o700 if path.is_dir() else 0o600)
+
+
+def copy_asset(source,name,expected=None):
+    source=Path(source)
+    if source.is_symlink() or not source.is_file():raise ValueError('Use a regular media file: '+str(source))
+    group=grp.getgrnam('mykosweb').gr_gid
+    for directory in (CACHE,CACHE/'assets'):
+        if directory.is_symlink():raise ValueError('Unsafe media directory')
+        directory.mkdir(exist_ok=True,mode=0o750);os.chown(directory,0,group)
+    with tempfile.NamedTemporaryFile(dir=CACHE/'assets',delete=False) as out:
+        temp=Path(out.name)
+        try:
+            with source.open('rb') as handle:shutil.copyfileobj(handle,out,1024*1024)
+            out.flush();digest=store.file_sha(temp)
+            if expected and digest!=expected:raise ValueError('Asset digest mismatch: '+name)
+            folder=CACHE/'assets'/digest
+            if folder.is_symlink():raise ValueError('Unsafe digest directory')
+            folder.mkdir(exist_ok=True,mode=0o750);os.chown(folder,0,group)
+            target=folder/name
+            if target.is_symlink():raise ValueError('Unsafe asset path')
+            if target.exists():
+                if store.file_sha(target)!=digest:raise ValueError('Existing immutable asset was modified')
+                temp.unlink()
+            else:temp.chmod(0o440);os.chown(temp,0,group);temp.replace(target)
+            return store.register_asset(target,name)
+        finally:
+            if temp.exists():temp.unlink()
+
+
+
+def validate_windows11(image,index):
+    from xml.etree import ElementTree as ET
+    metadata=subprocess.check_output(['wimlib-imagex','info',str(image),'--xml'],timeout=120)
+    try:
+        root=ET.fromstring(metadata)
+        selected=next(item for item in root.findall('IMAGE') if item.get('INDEX')==str(index))
+        windows=selected.find('WINDOWS')
+        title=selected.findtext('NAME','')+' '+selected.findtext('DISPLAYNAME','')
+        import re
+        valid=(windows is not None and windows.findtext('INSTALLATIONTYPE')=='Client' and
+               windows.findtext('ARCH')=='9' and windows.findtext('VERSION/MAJOR')=='10' and
+               int(windows.findtext('VERSION/BUILD','0'))>=22000 and
+               re.search(r'(?i)\b(?:Windows\s+11|tiny11)\b',title))
+        if not valid:raise ValueError('PXE staging accepts Windows 11 x64 client images only')
+    except (ET.ParseError,StopIteration,TypeError) as error:
+        raise ValueError('Could not validate the selected Windows 11 image') from error
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    sub=parser.add_subparsers(dest='command',required=True)
+    p=sub.add_parser('configure');p.add_argument('--origin',required=True);p.add_argument('--allow-network',action='append',required=True)
+    p=sub.add_parser('asset');p.add_argument('name');p.add_argument('path');p.add_argument('--sha256',required=True)
+    p=sub.add_parser('import-media');p.add_argument('directory');p.add_argument('--index',type=int,default=1);p.add_argument('--tiny11-report')
+    p=sub.add_parser('arm');p.add_argument('--mac',required=True);p.add_argument('--customer',required=True);p.add_argument('--profile',choices=['windows11'],required=True);p.add_argument('--hostname');p.add_argument('--minutes',type=int,default=120);p.add_argument('--index',type=int,default=1);p.add_argument('--allow-wipe',action='store_true');p.add_argument('--with-apps',action='store_true');p.add_argument('--password-stdin',action='store_true')
+    sub.add_parser('status')
+    p=sub.add_parser('revoke');p.add_argument('job')
+    args=parser.parse_args()
+    if os.geteuid()!=0:parser.error('Run as root to manage staging jobs')
+    store.initialize()
+    try:
+        if args.command=='configure':result=store.configure(args.origin,args.allow_network)
+        elif args.command=='asset':
+            if not store.SHA.fullmatch(args.sha256):raise ValueError('Use a SHA256 digest')
+            result=copy_asset(args.path,args.name,args.sha256)
+        elif args.command=='import-media':
+            directory=Path(args.directory);boot=directory/'sources/boot.wim';image=directory/'sources/install.wim'
+            if args.tiny11_report:
+                report=json.loads(Path(args.tiny11_report).read_text())
+                if report.get('kind')!='tiny11' or report.get('core') is not False or report.get('servicing_preserved') is not True:raise ValueError('Use the serviceable MYKOS Tiny11 builder report; Core is not accepted')
+                if store.file_sha(image)!=report.get('install_wim_sha256'):raise ValueError('The Tiny11 report does not match this installation image')
+            validate_windows11(image,args.index)
+            # Do not accept a trimmed image that lacks required security/runtime components.
+            files=subprocess.check_output(['wimlib-imagex','dir',str(image),str(args.index)],text=True,timeout=120).lower().replace('\\','/')
+            for required in ('windows/system32/wuaueng.dll','windows/servicing/trustedinstaller.exe','windows/system32/spoolsv.exe','windows/system32/odbc32.dll','windows/system32/srvsvc.dll','program files/windows defender/msmpeng.exe'):
+                if required not in files:raise ValueError('Required image component is missing: '+required)
+            result={name:copy_asset(path,name) for name,path in [('boot.wim',boot),('install.wim',image)]}
+            store.private_write(store.ROOT/'media.json',json.dumps({'index':args.index,'tiny11':bool(args.tiny11_report)}))
+        elif args.command=='arm':
+            secret=sys.stdin.readline().rstrip('\r\n') if args.password_stdin else getpass.getpass('Local Windows password: ')
+            result=store.enroll(args.mac,args.customer,args.profile,secret,hostname=args.hostname,minutes=args.minutes,allow_wipe=args.allow_wipe,apps=args.with_apps,image_index=args.index)
+        elif args.command=='revoke':store.revoke(args.job);result={'state':'revoked','job':args.job}
+        else:result=store.jobs()
+        print(json.dumps(result,indent=2))
+    finally:permissions()
+
+
+if __name__=='__main__':
+    try:main()
+    except (OSError,ValueError,store.HTTPException,subprocess.SubprocessError) as error:print(str(error),file=sys.stderr);raise SystemExit(1)

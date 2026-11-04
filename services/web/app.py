@@ -36,6 +36,10 @@ class Credentials(BaseModel):
     username: str = Field(max_length=64)
     password: str = Field(max_length=4096)
 
+from pxe_api import router as pxe_router
+app.include_router(pxe_router)
+from pxe_admin import router as pxe_admin_router
+app.include_router(pxe_admin_router)
 from pane_notes import Pane, NoteUpdate, read as read_pane_note, save as save_pane_note, authorize as authorize_pane_notes
 from pane_notes import read_personal as read_personal_note, save_personal as save_personal_note
 
@@ -686,3 +690,6 @@ async def mykos_peer_cleanup_stop():
     if _peer_cleanup_task:
         _peer_cleanup_task.cancel()
         await _mykos_asyncio.gather(_peer_cleanup_task, return_exceptions=True)
+
+@app.get('/pxe-ui.js',include_in_schema=False)
+def pxe_ui_script():return FileResponse(BASE/'pxe-ui.js',media_type='application/javascript',headers={'Cache-Control':'no-cache'})

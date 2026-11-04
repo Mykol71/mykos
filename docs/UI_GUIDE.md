@@ -448,3 +448,8 @@ The radio band scrolls through a trailing five-minute window while Live is selec
 ### Terminal pane width
 
 Interactive terminals fit their text columns to the available pane or window width. Resizing updates the PTY dimensions without writing commands into the shell. Close/replacement disconnects the resize observer. Legacy API/raw terminal clients remain supported.
+
+
+## PXE desktop provisioning
+
+Full administrators can arm and revoke Windows 11 PXE jobs from the Windows pane. Physical rows show provisioning status only. See [PXE provisioning](PXE.md) for configuration, media imports and explicit erase confirmation.

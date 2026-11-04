@@ -3883,6 +3883,7 @@ function mykosApplyPaneVisibility(headingId, panelId, automatic, preview = true)
     document.querySelector('.mykos-section-links a[href="#' + headingId + '"]').hidden = !visible;
 }
 function mykosSetOsPaneVisible(family, visible) {
+    visible=visible||window.mykosPXEFamilyVisible?.(family)===true;
     const headingId = mykosOsId(family, 'mykos-containers-pane');
     mykosApplyPaneVisibility(headingId, mykosOsId(family, 'mykos-container-panel'), visible, mykosCanPreviewFamily(family));
 }
@@ -4639,4 +4640,4 @@ function mykosReceiverSourceSelection(panes,selected){
 
 })();
 
-</script></body></html>
+</script><script src="/mykos/pxe-ui.js"></script></body></html>

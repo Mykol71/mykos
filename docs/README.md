@@ -1,5 +1,7 @@
 # MYKOS documentation
 
+[PXE desktop provisioning](PXE.md) describes explicit Windows 11 staging, its disabled defaults and validation limits.
+
 [Release222 notes](VALIDATION.md#release222--fedora-gnome-desktop-vms) describe the Fedora GNOME VM addition and validation.
 
 [Fedora GNOME desktop VMs](IMAGE_BUILDS.md#fedora-gnome-desktop-vms) add separate `fedora43vm` and `fedora44vm` choices with normal guest logins, Xwayland and paired RAM/disk snapshots. Native Fedora choices remain available.

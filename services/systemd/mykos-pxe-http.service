@@ -1,0 +1,22 @@
+[Unit]
+Description=MYKOS UEFI HTTP bootstrap (explicitly enabled only)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/home/mykos-pxe/boot/autoexec.ipxe
+
+[Service]
+Type=simple
+User=mykosweb
+Group=mykosweb
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-pxe-boot-http
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -11,7 +11,7 @@ function setup() {
     const el = id => { if (!elements.has(id)) elements.set(id, {}); return elements.get(id); };
     let respond, reject;
     const noop = () => {};
-    const context = vm.createContext({el, nodes:[], AbortController, Date,
+    const context = vm.createContext({el, nodes:[], mykosGeoHosts:[], mykosMerakiSites:[], AbortController, Date, window:{mykosClearThemeIdentity(){}}, document:{documentElement:{dataset:{role:"admin"}}}, mykosApplyLifecycleOverrides:v=>v,mykosStartLifecycleSignals:noop,mykosSetPanePreviewAccess:noop,mykosLoadHostHistory:noop,
         setTimeout:() => 1, clearTimeout:noop,
         fetch:() => new Promise((resolve, fail) => {respond=resolve;reject=fail;}),
         mykosSetNotesAccess:noop, mykosLoadCurrentUser:noop, mykosLoadHostVersion:noop, mykosLoadHostMetrics:noop,
