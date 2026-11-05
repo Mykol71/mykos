@@ -1,0 +1,16 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(path.join(__dirname,'../services/web/index.html'),'utf8');
+const source=html.slice(html.indexOf('let mykosChartLastPaint = 0;'),html.indexOf('\nlet mykosChartViewEnd = null;'));
+let paints=0;const state={now:10000},dashboard={hidden:false};
+const ctx=vm.createContext({Date:{now:()=>state.now},document:{hidden:false},el:()=>dashboard,requestAnimationFrame:()=>{},mykosChartReducedMotion:false,mykosChartViewEnd:null,mykosChartFreshness:25000,mykosChartMetrics:[{bar:false,points:[{t:7000,percent:50},{t:10000,percent:50}]}],mykosDrawHostChart:()=>paints++});
+vm.runInContext(source,ctx);
+assert.equal(ctx.mykosHostChartAnimating(state.now),false);
+for(let t=50;t<=4000;t+=50)ctx.mykosAnimateHostChart(t);
+assert.equal(paints,4,'Unchanged history redraws at one Hz, not twenty');
+ctx.mykosChartMetrics[0].points[1].percent=60;assert.equal(ctx.mykosHostChartAnimating(state.now),true);
+ctx.mykosAnimateHostChart(4050);assert.equal(paints,5,'A new changing reading keeps smooth easing');
+state.now=11000;assert.equal(ctx.mykosHostChartAnimating(state.now),false);
+ctx.mykosChartViewEnd=9000;assert.equal(ctx.mykosHostChartAnimating(10000),false,'Recalled readings do not animate live transitions');
+ctx.mykosChartViewEnd=null;ctx.mykosChartReducedMotion=true;assert.equal(ctx.mykosHostChartAnimating(10000),false);
+dashboard.hidden=true;ctx.mykosAnimateHostChart(6000);assert.equal(paints,5);
+console.log('Graph schedule: idle1Hz, immediate/smooth new reading, stable recall, reduced motion and hidden dashboard checks passed.');

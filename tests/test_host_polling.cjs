@@ -40,7 +40,7 @@ const response = {ok:true, json:async () => ({cpu_percent:12, cpu_count:4, memor
     assert.equal(el('mykos-host-cpu-value').textContent,'12.0%');
     document.hidden = true; await poll(); assert.equal(requests.length,4);
     document.hidden = false; el('dashboard').hidden = true; await poll(); assert.equal(requests.length,4);
-    assert.match(html,/mykosChartReducedMotion \? 1000 : 50/);
+    assert.match(html,/mykosHostChartAnimating\(Date\.now\(\)\) \? 50 : 1000/);
     assert.match(html,/requestAnimationFrame\(mykosAnimateHostChart\)/);
     console.log('Host polling checks passed: three-second sampling, throttled dashboard reloads, animation-frame rendering, no overlapping requests, timeout recovery and hidden-page pause.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
