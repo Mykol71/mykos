@@ -13,9 +13,10 @@ class Element {
 }
 const elements = new Map();
 const el = id => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); };
+const chartItems = () => { const visit = nodes => nodes.flatMap(n => n.tag === 'defs' ? [] : [n,...visit(n.children || [])]); return visit(el('mykos-host-chart').children); };
 const clock = {now: 1000000};
 class FakeDate extends Date { static now() { return clock.now; } }
-const context = vm.createContext({el, Date:FakeDate, assert, clock, mykosHostBytes:String,
+const context = vm.createContext({el, Date:FakeDate, assert, clock, chartItems, mykosHostBytes:String,
     document:{createElement:tag => new Element(tag), createElementNS:(_,tag) => new Element(tag)},
     window:{addEventListener() {}}, requestAnimationFrame:() => 1, setInterval:() => 1});
 vm.runInContext(source + `
@@ -47,26 +48,26 @@ clock.now += 10000;
 mykosSetHostMetric('cpu', 90, '90%', '8 CPUs');
 mykosSetHostMetric('containers', mykosCountPercent(2), '2', 'running / 2');
 mykosSetHostMetric('vpns', mykosCountPercent(1), '1', 'up / 2'); mykosDrawHostChart();
-const countLines = el('mykos-host-chart').children.filter(e => e.tag === 'rect' && ['containers','vpns'].includes(e.attrs['data-series']));
+const countLines = chartItems().filter(e => e.tag === 'rect' && ['containers','vpns'].includes(e.attrs['data-series']));
 assert.equal(countLines.length,2);
-assert.equal(el('mykos-host-chart').children.filter(e=>e.tag==='rect').length,2);
+assert.equal(chartItems().filter(e=>e.tag==='rect').length,2);
 assert.equal(countLines[0].attrs.fill,'#fef08a');
 assert.equal(countLines[0].attrs['fill-opacity'],'0.09');
 assert.ok(Number(countLines[0].attrs.x)+Number(countLines[0].attrs.width) <= Number(countLines[1].attrs.x), 'Container and VPN columns never overlap');
-const chartChildren = el('mykos-host-chart').children;
+const chartChildren = chartItems();
 assert.ok(chartChildren.indexOf(countLines[1]) < chartChildren.findIndex(item => item.attrs['data-series'] === 'cpu'), 'Counts stay behind resource lines');
 assert.notEqual(countLines[0].attrs.height, countLines[1].attrs.height);
-assert.ok(!el('mykos-host-chart').children.some(e => e.tag === 'path' && e.attrs.stroke === '#fb923c'));
+assert.ok(!chartItems().some(e => e.tag === 'path' && e.attrs.stroke === '#fb923c'));
 assert.equal(el('mykos-host-cpu-metric').dataset.level, 'critical');
 assert.equal(el('mykos-host-containers-metric').dataset.level, '');
 assert.equal(el('mykos-chart-alert').dataset.level, 'critical');
-assert.ok(el('mykos-host-chart').children.some(e => e.tag === 'circle' && e.attrs.stroke === '#fb7185'));
-assert.ok(el('mykos-host-chart').children.some(e => e.tag === 'line' && e.attrs['stroke-width'] === '6'));
+assert.ok(chartItems().some(e => e.tag === 'circle' && e.attrs.stroke === '#fb7185'));
+assert.ok(chartItems().some(e => e.tag === 'line' && e.attrs['stroke-width'] === '6'));
 clock.now += 10000;
 mykosSetHostMetric('cpu', null, 'Unknown', 'Unavailable');
 clock.now += 10000;
 mykosSetHostMetric('cpu', 20, '20%', '8 CPUs'); mykosDrawHostChart();
-const cpuPath = el('mykos-host-chart').children.find(e => e.tag === 'path' && e.attrs.stroke === '#38bdf8');
+const cpuPath = chartItems().find(e => e.tag === 'path' && e.attrs.stroke === '#38bdf8');
 assert.equal((cpuPath.attrs.d.match(/M/g) || []).length, 2, 'Missing samples must break the line');
 mykosShowChartTooltip(clock.now);
 assert.equal(el('mykos-chart-tooltip').hidden, false);
@@ -77,7 +78,7 @@ assert.equal(el('mykos-chart-alert').hidden, true);
 clock.now += mykosChartWindow; mykosDrawHostChart();
 assert.ok(mykosChartMetrics.find(m => m.key === 'cpu').points.length > 0, 'Data older than five minutes must remain available for browsing');
 mykosSetHostMetric('load', 150, '12.00', '8 CPUs'); mykosDrawHostChart();
-assert.ok(el('mykos-host-chart').children.some(e => e.tag === 'text' && e.textContent === '150%'), 'Over-capacity load must remain visible');
+assert.ok(chartItems().some(e => e.tag === 'text' && e.textContent === '150%'), 'Over-capacity load must remain visible');
 mykosResetHostChart();
 assert.ok(mykosChartMetrics.every(m => m.points.length === 0));
 assert.equal(mykosChartStartedAt, null);
@@ -95,7 +96,7 @@ mykosSetHostMetric('containers', null, 'Unknown', 'Unavailable');
 clock.now += 10000;
 mykosSetHostMetric('containers', 80, '12', 'running');
 mykosDrawHostChart();
-const countBars = el('mykos-host-chart').children.filter(item => item.attrs['data-series'] === 'containers');
+const countBars = chartItems().filter(item => item.attrs['data-series'] === 'containers');
 assert.equal(countBars.length, 4, 'Only actual known count buckets are drawn; gaps remain empty');
 assert.ok(countBars.every(item => item.tag === 'rect' && Number(item.attrs.width)>0));
 assert.equal(countBars.filter(item=>item.attrs['data-changed']==='true').length,1, 'Only a known adjacent count change is emphasized');

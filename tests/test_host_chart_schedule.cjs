@@ -14,3 +14,12 @@ ctx.mykosChartViewEnd=9000;assert.equal(ctx.mykosHostChartAnimating(10000),false
 ctx.mykosChartViewEnd=null;ctx.mykosChartReducedMotion=true;assert.equal(ctx.mykosHostChartAnimating(10000),false);
 dashboard.hidden=true;ctx.mykosAnimateHostChart(6000);assert.equal(paints,5);
 console.log('Graph schedule: idle1Hz, immediate/smooth new reading, stable recall, reduced motion and hidden dashboard checks passed.');
+
+const transforms=[];ctx.recordTransform=value=>transforms.push(value);
+ctx.mykosChartLayout={left:0,right:1000};ctx.mykosChartWindow=300000;
+vm.runInContext("mykosChartPanGroup={setAttribute:(_,value)=>recordTransform(value)};mykosChartPaintClock=10000;mykosChartReducedMotion=false;mykosChartViewEnd=null;",ctx);
+ctx.mykosPanHostChart(10500);assert.equal(transforms.at(-1),'translate(-1.667 0)');
+ctx.mykosPanHostChart(20000);assert.equal(transforms.at(-1),'translate(-3.333 0)','Long pauses stay bounded until the next structural redraw');
+ctx.mykosChartViewEnd=9000;const count=transforms.length;ctx.mykosPanHostChart(10600);assert.equal(transforms.length,count,'Recalled history stays still');
+ctx.mykosChartViewEnd=null;ctx.mykosChartReducedMotion=true;ctx.mykosPanHostChart(10600);assert.equal(transforms.length,count,'Reduced motion stays still');
+console.log('Retained graph data pans smoothly without full history rebuilds; recalled/reduced-motion views stay still.');
