@@ -2,6 +2,8 @@
 
 **MYKOS is a Bring Your Own License (BYOL) virtualization solution. All vendor licensing rules apply.** You are responsible for obtaining and maintaining the licenses, subscriptions and permissions required for the operating systems, applications and other software you run with MYKOS. MYKOS does not grant vendor software licenses or override vendor terms, including virtualization and hardware restrictions.
 
+**Public source:** MYKOS core source is [available on GitHub](https://github.com/Mykol71/mykos). It is source-available under the [MYKOS Free-Use License](LICENSING.md), not open source. The existing rules for permitted use, redistribution and paid management access continue to apply.
+
 MYKOS aims to help fill the gap for organizations reassessing virtualization after VMware’s changes to ESXi and vSphere licensing. It offers a RHEL-based platform for managing supported virtual machines and Linux containers, with no MYKOS license charge for permitted personal and internal business use. Evaluate workload compatibility, operational requirements and vendor licensing before migrating. See [Broadcom’s licensing transition guidance](https://knowledge.broadcom.com/external/article/429208) and [current ESXi free-edition availability](https://knowledge.broadcom.com/external/article/399823).
 
 **Older applications on newer hardware**

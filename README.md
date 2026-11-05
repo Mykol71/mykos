@@ -21,6 +21,8 @@ See the [screen examples gallery](docs/SCREENSHOTS.md) for illustrated workflows
 
 ## Free use and licensing
 
+MYKOS core source is publicly available in the [GitHub repository](https://github.com/Mykol71/mykos). It is **source-available under the MYKOS Free-Use License**, not open source. Public visibility does not add unrestricted redistribution, resale or paid MYKOS management-service rights. The license permits inspection, building, testing and internal modification for its permitted uses; separate platform rights and third-party licenses still apply.
+
 MYKOS is available at no license charge for personal and internal business use,
 including running your own customer-facing applications. Optional hosting,
 setup, migration and support services are separate. See the

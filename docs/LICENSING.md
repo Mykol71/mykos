@@ -10,6 +10,14 @@ releases supplied with that license. You may run your own commercial
 applications, inspect supplied source and make internal modifications. Optional
 hosting, setup, migration and support are separate paid services.
 
+## Public source availability
+
+MYKOS core source is publicly available in the [GitHub repository](https://github.com/Mykol71/mykos). It is **source-available under the MYKOS Free-Use License**, not open source. Public visibility does not add unrestricted redistribution, resale or paid MYKOS management-service rights. The license permits inspection, building, testing and internal modification for its permitted uses; separate platform rights and third-party licenses still apply.
+
+Sections 3 and 4 of the full license already cover source access and the activities requiring separate permission. Publishing the repository does not replace those terms or require disclosure of your internal changes. Viewing and forking rights provided by GitHub’s platform terms remain separate; see [GitHub’s licensing guidance](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+
+This clarification describes the existing license; it does not amend the license or relicense third-party material. RTI business integration remains a separately distributed package.
+
 ## When separate permission is needed
 
 Redistributing or reselling covered MYKOS material, and selling access to its
