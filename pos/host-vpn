@@ -60,6 +60,9 @@ def identity(value):
 
 def save_connection(root, name, peer, local, remote, secret, *, local_id="192.168.222.0", remote_id="192.168.222.0", native_directory=None, full_tunnel_hook=None, site_only=False):
     local, remote = validate(name, peer, local, remote, secret)
+    sys.path.insert(0,'/usr/local/sbin')
+    from mykos_release_scope import require_network_creation
+    require_network_creation('native-site' if native_directory is not None and site_only else 'native-full' if native_directory is not None else 'host-site')
     directory = native_directory if native_directory is not None else root / 'ipsec.d'
     if directory.is_symlink() or not directory.is_dir():
         raise ValueError('Host /etc/ipsec.d must be an existing directory')
@@ -166,7 +169,7 @@ def main():
         if len(values)!=9 or values[-1]!='':raise ValueError('Invalid native VPN input')
         shop,name,peer,local,remote,secret,local_id,remote_id=values[:-1]
         if not re.fullmatch(r'[0-9]{8}',shop):raise ValueError('Invalid ID')
-        print(save_connection(Path.cwd(),name,peer,local,remote,secret,local_id=local_id,remote_id=remote_id,native_directory=Path('.'+shop),full_tunnel_hook=Path(__file__).with_name('vpn-updown').read_text(),site_only=os.environ.get('MYKOS_VPN_SITE_ONLY')=='1'))
+        print(save_connection(Path.cwd(),name,peer,local,remote,secret,local_id=local_id,remote_id=remote_id,native_directory=Path('.'+shop),full_tunnel_hook=Path(__file__).with_name('vpn-updown').read_text(),site_only=True))
         return
     if sys.argv[1:]==['--remove']:
         remove(Path('/etc'));return

@@ -152,10 +152,17 @@ class Bootstrap:
         self.managed(target, data)
         return target
 
+    def apache_defaults(self):
+        # mod_ssl supplies this vendor unit to create only missing stock files.
+        unit = self.root/'usr/lib/systemd/system/httpd-init.service'
+        cert = self.root/'etc/pki/tls/certs/localhost.crt'
+        key = self.root/'etc/pki/tls/private/localhost.key'
+        if unit.is_file() and (not cert.exists() or not key.exists()):
+            self.run(['systemctl','start','httpd-init.service'])
+
     def prerequisites(self, el):
         self.run(['dnf', '-y', 'install', 'httpd', 'mod_ssl', 'curl'])
-        if (self.root/'usr/lib/systemd/system/httpd-init.service').is_file():
-            self.run(['systemctl','start','httpd-init.service'])
+        self.apache_defaults()
         if shutil.which('certbot'): return
         key = self.key(el, 'https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-' + el)
         self.managed('/etc/yum.repos.d/mykos-bootstrap-epel.repo',
@@ -319,6 +326,7 @@ class Bootstrap:
             self.repository(el)
             self.run(['dnf','-y','--setopt=gpgcheck=1','install','mykos'])
         self.firewall(False)
+        self.apache_defaults()
         site=('<VirtualHost *:80>\nServerName '+host+'\nProxyPreserveHost On\n'
               'RequestHeader set X-Forwarded-Proto "http"\n'
               'RewriteEngine On\nRewriteCond %{HTTP:Upgrade} =websocket [NC]\n'
@@ -405,7 +413,7 @@ def main():
     args = parser.parse_args()
     if (args.domain or args.email) and not args.configure_https and not args.uninstall:
         parser.error('--domain and --email require --configure-https')
-    if args.installed_rpm and not args.configure_https and not args.uninstall and Path('/var/lib/mykos-installer/installed.json').is_file():
+    if args.installed_rpm and not args.address and not args.configure_https and not args.uninstall and Path('/var/lib/mykos-installer/installed.json').is_file():
         print('Existing MYKOS setup preserved; automatic configuration skipped.')
         return
     if args.uninstall:
@@ -427,7 +435,7 @@ def main():
     with os.fdopen(fd, 'a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         app = Bootstrap(domain,ip_only=ip_only)
-        if args.installed_rpm and not args.configure_https and not args.uninstall and Path('/var/lib/mykos-installer/installed.json').is_file():
+        if args.installed_rpm and not args.address and not args.configure_https and not args.uninstall and Path('/var/lib/mykos-installer/installed.json').is_file():
             print('MYKOS setup completed by another installer; no changes needed.')
         elif args.uninstall:
             for state_name in (IP_STATE,STATE):

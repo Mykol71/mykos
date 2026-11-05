@@ -333,3 +333,16 @@ def test_active_pxe_installation_blocks_source_replacement(tmp_path):
     assert not (root/'usr/local/share/mykos').exists()
     with sqlite3.connect(db) as connection:connection.execute("UPDATE jobs SET state='revoked'")
     run(root,'install')
+
+
+def test_removal_retains_only_installed_guest_and_network_runtimes():
+    import runpy
+    installer=runpy.run_path(str(INSTALL))
+    calls=[]
+    def query(args,**kwargs):
+        return subprocess.CompletedProcess(args,0,stdout='podman\nmykos-criu\nnetavark\nlibreswan\nfirewalld\npackage qemu-kvm is not installed\n')
+    installer['retain_runtime_packages'](query=query,runner=calls.append)
+    assert calls==[['dnf','-y','--disablerepo=*','mark','install','firewalld','libreswan','mykos-criu','netavark','podman']]
+    calls.clear()
+    installer['retain_runtime_packages'](query=lambda a,**kw:subprocess.CompletedProcess(a,0,stdout=''),runner=calls.append)
+    assert not calls

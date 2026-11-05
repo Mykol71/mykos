@@ -1,5 +1,7 @@
 # Free use and licensing
 
+**MYKOS is a Bring Your Own License (BYOL) virtualization solution. All vendor licensing rules apply.** You are responsible for obtaining and maintaining the licenses, subscriptions and permissions required for the operating systems, applications and other software you run with MYKOS. MYKOS does not grant vendor software licenses or override vendor terms, including virtualization and hardware restrictions.
+
 [Documentation index](README.md)
 
 MYKOS is free to download and use for personal and internal business purposes

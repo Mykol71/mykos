@@ -208,6 +208,35 @@ physical devices, their drivers, or their validation.
 **Read next:** [Desktop environments](DESKTOPS.md), [VPN architecture](NETWORKING.md#vpn-architecture-and-operations),
 and [deployment efficiency](DEPLOYMENT_EFFICIENCY.md).
 
+## 7. Consolidate many point-of-sale customers onto cloud servers
+
+### The situation
+
+A POS provider supports many customers, each with a bulky, expensive server at a store or office. Those machines repeat much of the same operating system and application setup, yet each needs hardware maintenance, replacement planning, backups and support. The provider wants to keep the customers’ working POS applications while moving server workloads onto one or more suitably sized cloud servers.
+
+### What you could build
+
+Prepare one compatible Linux OS image with the common POS application prerequisites, then create a separate MYKOS instance for each customer. Each instance has its own identity, accounts, application configuration, data and network access. Compatible native Linux instances share the cloud host’s Linux kernel and reuse the same prepared OS image as their starting point, reducing repeated OS preparation and the need for a separate full VM for every customer. Customers’ writable files remain separate.
+
+For example, a provider could move a group of stores using the same Linux POS stack from individual physical servers into customer-specific instances on a cloud host. As measured demand grows, additional MYKOS hosts can serve additional groups. Customers with different OS or runtime requirements use separate validated images. Where a workload needs its own guest kernel, evaluate a VM instead; the cloud host must support the required virtualization facilities.
+
+### An example migration workflow
+
+1. **Group customers by application and OS compatibility.** Record application versions, runtimes, databases, licensing, data size, peak usage and store devices. Choose a pilot customer with a representative workload.
+2. **Prepare the common OS image.** Install and validate the shared prerequisites once. Keep customer credentials and business data out of that reusable image. Image updates become the starting point for new instances; existing customer instances need their own controlled update process.
+3. **Create a separate instance for each customer.** Restore or install the customer’s application, accounts, permissions, configuration and data using a supported workflow. Verify that one customer cannot access another customer’s files or services. Keep management access restricted to authorized operators.
+4. **Connect stores to their hosted applications.** Use a tested network topology and verify store-to-server access, latency, printing, scanners, payment integrations and background jobs. Plan what the store does if its internet connection fails.
+5. **Rehearse and cut over in batches.** Compare representative sales, inventory updates, reports and end-of-day processing with the old server. Synchronize final writes within an agreed outage window, switch access, and retain an application-consistent backup and rollback plan until acceptance.
+6. **Measure capacity and expand deliberately.** Monitor concurrent store workloads, CPU, memory, storage performance and network demand. Leave capacity for peaks and recovery. Place further customer groups on additional hosts as needed, and prove the backup/restore procedure for each destination. Multiple hosts require an explicit placement and recovery plan; this workflow does not assume automatic failover or live migration.
+
+### What success looks like
+
+Customers retain their own POS environments while the provider manages a smaller fleet of cloud servers built around a common OS foundation. Potential benefits include fewer physical servers to purchase and replace, less repeated staging work, and more centralized maintenance and support. Actual savings depend on cloud compute and storage charges, connectivity, backups, licensing and support effort.
+
+Consolidation also concentrates failures: an outage on one host can affect several customers. Size the deployment within MYKOS’s instance limits, test recovery, and choose customer groupings and host boundaries appropriate to the service. Native containers share a kernel; evaluate that isolation model before placing unrelated customers together. All vendor licensing rules still apply, including any hosting or service-provider rights required for the POS software.
+
+**Read next:** [Image preparation](IMAGE_BUILDS.md), [networking](NETWORKING.md), [accounts and access](IDENTITY.md), [licensing](LICENSING.md), and [deployment efficiency](DEPLOYMENT_EFFICIENCY.md).
+
 ## Turn an example into a deployment plan
 
 For any of these cases, write down:

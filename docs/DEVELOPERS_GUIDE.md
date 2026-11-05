@@ -9,7 +9,7 @@ The baseline is **1.5.20261024-147**, Git commit
 `64f1c0ef725961f8be8d40e71c681a678713811d`, published 29 October 2026.
 The architectural walkthrough retains that baseline. Host-platform notes below
 reflect current RHEL 9/RHEL 10 support; RHEL 8 host support has been dropped.
-Local changes are not proof that a feature shipped. The separate PXE work is unpublished.
+Local changes are not proof that a feature shipped. PXE provisioning is supplied only through the separate business extension.
 
 **Find your way:** [Code map](#repository-map) · [Installed state](#source-code-versus-installed-state) · [Request walkthrough](#one-request-from-click-to-completion) · [Local setup](#get-a-safe-local-development-environment) · [Making changes](#how-to-make-a-change) · [Tests](#tests-and-what-they-establish) · [Troubleshooting](#debug-by-locating-the-boundary-that-failed) · [Release workflow](#from-a-change-to-an-installed-release)
 

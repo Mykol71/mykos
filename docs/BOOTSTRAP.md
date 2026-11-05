@@ -16,7 +16,7 @@
 
 ## Install from the signed repository
 
-**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
+**First stable-release host target: RHEL 9 (x86_64). RHEL 10 packages are preview-only; fresh installation is not yet supported because its repository lacks the native `mykos-criu` dependency.** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
 With the signed MYKOS repository configured, a fresh installation needs only:
 
@@ -114,6 +114,8 @@ only after successful renewal. Existing certificates keep their existing renewal
 mechanism. This bootstrap does not perform RPM upgrades; use the normal signed
 RPM update process and rerun `mykos-setup` after upgrading.
 
+Setup marks installed container, checkpoint, QEMU and VPN/firewall runtimes as explicitly retained packages. Removing MYKOS therefore does not automatically erase the runtimes that existing guests or connections depend on. Retire those resources before deliberately removing their runtime packages.
+
 Final package removal (`sudo dnf remove mykos`) invokes bootstrap cleanup.
 RPM upgrades do not invoke it. Final removal first stops/disables automatic setup. Cleanup removes unchanged Apache/proxy files,
 MYKOS-owned renewal units and bootstrap repository/key files. A certificate is
@@ -123,6 +125,16 @@ shared Apache/Certbot packages, guest data, users and API keys are retained.
 Administrator-edited files are preserved and reported. Firewall services added
 by bootstrap are removed only when no Apache virtual hosts remain. The shared
 SELinux permission remains enabled.
+
+### Reinstall after intentional package removal
+
+Reinstalling the RPM retains the saved installation manifest, identities and settings. Automatic firstboot therefore leaves the saved setup alone. Restore the access method explicitly after reinstalling: for IP access, use the same address as before removal:
+
+```bash
+sudo /usr/bin/python3.11 /usr/share/mykos/bin/mykos-bootstrap --installed-rpm --address YOUR_HOST_IP
+```
+
+For domain HTTPS, rerun `sudo mykos-setup --configure-https --domain YOUR_DOMAIN`. Existing or edited proxy files remain protected. Use the previous origin to preserve browser/API settings; selecting a different address or domain deliberately changes that origin.
 
 If setup failed before the RPM was installed, clean up using the same source:
 

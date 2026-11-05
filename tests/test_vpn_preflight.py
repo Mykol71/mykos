@@ -13,6 +13,7 @@ def test_vpn_preflight_rejects_wrong_mount_before_commands(monkeypatch,tmp_path)
     with pytest.raises(ValueError,match='customer folder'):native.vpn_preflight('01234567')
 
 
+@pytest.mark.skip(reason='Experimental creation retained and tested in RTI package')
 def test_gateway_mode_preflight_preserves_independent_configs(monkeypatch,tmp_path):
     monkeypatch.setattr(gateway,'ROOT',tmp_path/'missing')
     monkeypatch.setattr(gateway,'HOST_IPSEC',tmp_path/'host')

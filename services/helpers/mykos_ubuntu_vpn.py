@@ -103,6 +103,8 @@ def config_module():
 
 
 def add(shop, name, peer, remote, secret, local=None):
+    from mykos_release_scope import require_network_creation
+    require_network_creation('vm-vpn')
     value = selection(shop)
     common,path = config_module()
     remote = str(ipaddress.IPv4Network(remote, strict=True))

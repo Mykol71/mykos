@@ -57,7 +57,7 @@ changed disks. `podman commit` alone does not save this QEMU execution state.
 
 ## Requirements and networking
 
-**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
+**First stable-release host target: RHEL 9 (x86_64). RHEL 10 packages are preview-only; fresh installation is not yet supported because its repository lacks the native `mykos-criu` dependency.** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
 Use a supported Linux x86-64 host with usable `/dev/kvm` and `/dev/net/tun`, sufficient
 memory for each running guest (2048 MiB policy and 2 vCPUs), and at least 32 GiB of

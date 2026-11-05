@@ -2,10 +2,7 @@
 
 [Documentation index](README.md) · [Example use cases](USE_CASES.md) · [Snapshot Preview](DESKTOPS.md#snapshot-preview)
 
-These screenshots show the current MYKOS interface with **example data**. Hosts,
-IDs, addresses, locations, metrics and terminal output are illustrative; they do
-not reveal production customers or credentials. The dashboard is shown in a
-compact browser view.
+Dashboard and control screenshots use **example data**: hosts, IDs, addresses, locations, metrics and terminal output are illustrative. The desktop captures show actual guest desktops through the MYKOS browser console, without customer documents or credentials. The dashboard is shown in a compact browser view.
 
 ## Performance, workloads and VPN locations
 
@@ -41,3 +38,45 @@ session closes. Desktop VM previews can instead resume their saved RAM and disks
 
 See [Snapshot Preview](DESKTOPS.md#snapshot-preview) for session limits, automatic
 cleanup and the difference between native and desktop previews.
+
+## Windows XP workflow
+
+These examples use the actual MYKOS controls with an illustrative prepared XP image and instance. They show the UI workflow, not a newly tested Windows XP installation. Bring your own properly licensed Windows installation media and application software; see [licensing](LICENSING.md).
+
+### 1. Select the prepared XP image and an instance ID
+
+Prepare and validate a `winxp` image using the [image-build workflow](IMAGE_BUILDS.md), then open the Windows pane. Enter an eight-digit instance ID, select **XP**, and use the blue **Start** plus. Confirm the selected ID and image when prompted.
+
+![Windows pane with example instance ID 12345678, XP selected and the Start plus](screenshots/example-winxp-select.jpg)
+
+### 2. Open and manage the XP instance
+
+Once startup completes, the row shows **Up**, its XP version, address, uptime and memory. Use **HTTP graphical desktop** to open the guest console. The row also provides Start, Stop, Snapshot and Delete controls. Stop retains the instance disks; Delete removes the instance and its saved data after confirmation.
+
+![Example running Windows XP instance with graphical desktop and lifecycle controls](screenshots/example-winxp-instance.jpg)
+
+### The Windows XP desktop in the browser console
+
+Opening **HTTP graphical desktop** brings up the guest’s actual graphical console. This capture shows the Windows XP desktop, including its Start menu button and taskbar. Guest OS activation and all vendor licensing requirements remain the operator’s responsibility.
+
+![Actual Windows XP desktop opened through the MYKOS browser console](screenshots/example-winxp-desktop.jpg)
+
+[Open the full-size Windows XP desktop](screenshots/example-winxp-desktop.jpg).
+
+### 3. Choose a saved recovery point
+
+Use **Snapshot container** on the running instance to save a recovery point. In the Snapshots pane, select that instance's saved timestamp. **Preview** opens a separate temporary inspection session, **Restore** replaces the original instance's current state after confirmation, and **Delete** removes the selected snapshot. See [Snapshot Preview](DESKTOPS.md#snapshot-preview) for limits and cleanup behavior.
+
+![Windows XP snapshot selector with Restore, Delete and Preview actions](screenshots/example-winxp-snapshot.jpg)
+
+## Ubuntu desktop workflow
+
+Prepare a compatible Ubuntu desktop image using the [image-build workflow](IMAGE_BUILDS.md). In the Ubuntu pane, choose the prepared version and enter an eight-digit instance ID, then use the blue **Start** plus and confirm the selection. When the instance reports **Up**, open **HTTP graphical desktop** and sign in with the guest account configured for that image.
+
+The browser console opens the actual Ubuntu graphical desktop. This capture shows the desktop with its dock, Home and Trash icons. Each customer instance keeps its own accounts, configuration and data; the shared prepared image provides the starting OS environment.
+
+![Actual Ubuntu desktop opened through the MYKOS browser console](screenshots/example-ubuntu-desktop.jpg)
+
+[Open the full-size Ubuntu desktop](screenshots/example-ubuntu-desktop.jpg).
+
+Use the instance row’s Stop and Start controls to retain and resume its disks, and Snapshot to capture a supported recovery point. See [Snapshot Preview](DESKTOPS.md#snapshot-preview) before choosing Preview or Restore.

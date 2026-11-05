@@ -40,6 +40,9 @@ def ensure(settings=None):
                    '--gateway', str(subnet.network_address + 1)]
     exists = run([PODMAN, 'network', 'ls', '--format', '{{.Name}}']).splitlines()
     if selected not in exists:
+        if driver == 'macvlan':
+            from mykos_release_scope import require_network_creation
+            require_network_creation('macvlan')
         if driver == 'bridge':
             check_routes(subnet)
         run(create + [selected], timeout=30)

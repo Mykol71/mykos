@@ -283,3 +283,36 @@ def test_fresh_apache_configuration_does_not_reload_stopped_service(tmp_path):
     a.apache_write('/etc/httpd/conf.d/00-mykos-ip.conf','ServerName 192.168.22.10\n')
     assert ['httpd','-t'] in calls
     assert ['systemctl','reload','httpd'] not in calls
+
+
+def test_ip_firstboot_initializes_missing_vendor_tls_files_before_apache_check(tmp_path,monkeypatch):
+    a,calls=app(tmp_path)
+    a.ip_only=True;a.domain='192.168.22.10'
+    p=a.path('/etc/os-release');p.parent.mkdir(parents=True);p.write_text('ID=rhel\nVERSION_ID="9.8"\n')
+    unit=tmp_path/'usr/lib/systemd/system/httpd-init.service';unit.parent.mkdir(parents=True);unit.write_text('[Service]\n')
+    monkeypatch.setattr(b.shutil,'which',lambda name:None)
+    a.install_ip(installed_rpm=True)
+    assert calls.index(['systemctl','start','httpd-init.service']) < calls.index(['httpd','-t'])
+
+
+def test_apache_defaults_preserves_existing_certificate_and_key(tmp_path):
+    a,calls=app(tmp_path)
+    unit=tmp_path/'usr/lib/systemd/system/httpd-init.service';unit.parent.mkdir(parents=True);unit.write_text('[Service]\n')
+    for relative in ['etc/pki/tls/certs/localhost.crt','etc/pki/tls/private/localhost.key']:
+        p=tmp_path/relative;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('existing operator file')
+    a.apache_defaults()
+    assert not calls
+    assert (tmp_path/'etc/pki/tls/certs/localhost.crt').read_text()=='existing operator file'
+
+
+def test_explicit_ip_restore_is_not_skipped_by_saved_installation_manifest(tmp_path,monkeypatch,capsys):
+    import sys
+    from pathlib import Path as RealPath
+    marker=tmp_path/'installed.json';marker.write_text('{}')
+    monkeypatch.setattr(b,'Path',lambda value:marker if str(value)=='/var/lib/mykos-installer/installed.json' else RealPath(value))
+    monkeypatch.setattr(sys,'argv',['mykos-bootstrap','--installed-rpm','--plan'])
+    b.main()
+    assert 'preserved' in capsys.readouterr().out
+    monkeypatch.setattr(sys,'argv',['mykos-bootstrap','--installed-rpm','--address','192.0.2.8','--plan'])
+    b.main()
+    assert 'IP access: http://192.0.2.8/mykos/' in capsys.readouterr().out

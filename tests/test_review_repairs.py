@@ -113,9 +113,11 @@ def installer_module():
  loader=importlib.machinery.SourceFileLoader('review_installer',str(ROOT/'bin/mykos-install'));spec=importlib.util.spec_from_loader(loader.name,loader);m=importlib.util.module_from_spec(spec);loader.exec_module(m);return m
 
 
-def test_rpm_remove_calls_canonical_complete_unit_stop(monkeypatch):
+def test_rpm_remove_calls_canonical_complete_unit_stop(monkeypatch,tmp_path):
  m=installer_module();calls=[];monkeypatch.setattr(m,'command',lambda args:calls.append(args));monkeypatch.setattr(m.os,'geteuid',lambda:0)
- m.Installer(SimpleNamespace(root='/',action='stop_services',dry_run=False)).stop_services()
+ state=tmp_path/'var/lib/mykos-installer/installed.json';state.parent.mkdir(parents=True);state.write_text(json.dumps({'format':1,'files':[{'path':'/etc/systemd/system/mykos-extension-example.timer'}]}))
+ instance=m.Installer(SimpleNamespace(root=str(tmp_path),action='stop_services',dry_run=False));instance.live=True;instance.stop_services()
+ assert 'mykos-extension-example.timer' in calls[0] and 'mykos-extension-example.timer' in calls[1]
  assert set(m.UNITS+m.OPTIONAL_UNITS)<=set(calls[0][2:])
  assert set(m.UNITS+m.OPTIONAL_UNITS)<=set(calls[1][2:])
  assert 'mykos-podman-*' not in str(calls) and 'podman' not in str(calls)

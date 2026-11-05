@@ -24,13 +24,13 @@ from urllib.parse import urlsplit
 SOURCE = Path(__file__).resolve().parents[1]
 STATE = '/var/lib/mykos-installer/installed.json'
 BACKUPS = '/var/backups/mykos-installer'
-UNITS = ['mykos-pxe-gc.timer','mykos-idle-bases.timer','mykos-snapshot-preview-gc.timer','mykos-host-history.service','mykos-web.service','mykos-container-admin.socket','mykos-terminal.socket',
+UNITS = ['mykos-idle-bases.timer','mykos-snapshot-preview-gc.timer','mykos-host-history.service','mykos-web.service','mykos-container-admin.socket','mykos-terminal.socket',
          'mykos-speedtest-collector.timer','mykos-collector.timer','mykos-details.timer','mykos-extended.timer','mykos-command-collector.timer']
 PREFIXES = ('/opt/mykos-web/', '/usr/local/share/mykos/', '/etc/mykos/',
             '/etc/systemd/system/mykos-', '/usr/local/sbin/mykos-')
 # Keep the legacy path allowed for old recovery snapshots and upgrade cleanup.
-OPTIONAL_UNITS = ['mykos-pxe-gc.service','mykos-pxe-http.service','mykos-speedtest-collector.service','mykos-repo-sync.service','mykosreposync.slice','mykos-idle-bases.service','mykos-repository-inventory.service','mykos-repository-inventory.timer','mykos-snapshot-preview-gc.service','mykos-legacy-cgroups.service','mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service','mykos-vpn-gateway.timer']
-EXACT = {'/usr/local/sbin/mykos_business_desktops.py','/usr/local/sbin/mykos_extensions.py','/usr/local/sbin/mykos_fedora.py','/etc/systemd/system/mykosreposync.slice','/usr/local/sbin/mykos_peer_vpn.py','/usr/local/sbin/mykos_idle_bases.py','/usr/local/sbin/mykos_snapshot_preview.py','/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
+OPTIONAL_UNITS = ['mykos-speedtest-collector.service','mykos-repo-sync.service','mykosreposync.slice','mykos-idle-bases.service','mykos-repository-inventory.service','mykos-repository-inventory.timer','mykos-snapshot-preview-gc.service','mykos-legacy-cgroups.service','mykos-vpn-gateway-guard.service','mykos-vpn-gateway.service','mykos-vpn-gateway.timer']
+EXACT = {'/usr/local/sbin/mykos_release_scope.py','/usr/local/sbin/mykos_business_desktops.py','/usr/local/sbin/mykos_extensions.py','/usr/local/sbin/mykos_fedora.py','/etc/systemd/system/mykosreposync.slice','/usr/local/sbin/mykos_peer_vpn.py','/usr/local/sbin/mykos_idle_bases.py','/usr/local/sbin/mykos_snapshot_preview.py','/etc/sysctl.d/90-mykos-inotify.conf','/usr/local/sbin/mykos_criu_binary.py','/usr/local/sbin/mykos_criu_cgroups.py','/usr/local/sbin/mykos_criu_images.py','/usr/local/sbin/mykos_cgroups.py','/usr/local/sbin/mykos-podman-nm.conf','/usr/local/sbin/mykos_vpn_host.py','/usr/local/sbin/mykos_vpn_gateway.py','/usr/local/sbin/mykos_vpn_topology.py','/usr/local/sbin/mykos_backup_restore.py','/usr/local/sbin/mykos_backup_identity.py','/usr/local/sbin/mykos_watch_paths.py','/usr/local/sbin/mykos_base_session.py','/usr/local/sbin/mykos_image_admin.py','/usr/local/sbin/mykos_refresh.py','/usr/local/sbin/mykos_image_build.py','/usr/local/sbin/mykos_ubuntu_vpn.py','/usr/local/sbin/mykos_ssh.py', '/usr/local/sbin/mykos_powershell.py', '/usr/local/sbin/mykos_serial.py', '/usr/local/sbin/mykos_network.py', '/usr/local/sbin/mykos_host_monitoring.py', '/usr/local/sbin/mykos_profiles.py', '/usr/local/sbin/mykos_criu.py', STATE, '/usr/bin/mykos', '/usr/local/bin/mykos', '/usr/local/sbin/mykos_runtime.py', '/usr/local/sbin/mykos_admin.py', '/usr/local/sbin/mykos_vm.py', '/usr/local/sbin/mykos_linux.py', '/usr/local/sbin/mykos_snapshots.py', '/usr/local/sbin/mykos_commands.py', '/usr/local/sbin/mykos_containers.py', '/usr/local/sbin/mykos_prune.py',
          '/usr/local/bin/monthname.sh','/usr/local/bin/strip.sh','/usr/local/bin/recon.sh',
          '/usr/local/bin/cloud_pricing','/usr/local/bin/backup_perf.sh'}
 PACKAGES = ['dmidecode','podman','httpd','python3','python3-pip','openssh-server','openssh-clients','rsync',
@@ -39,6 +39,19 @@ PACKAGES = ['dmidecode','podman','httpd','python3','python3-pip','openssh-server
             'expect','nmap','time','ipset','iptables','git','criu','pykickstart']
 
 INOTIFY_INSTANCES = Path('/proc/sys/fs/inotify/max_user_instances')
+
+def retain_runtime_packages(query=None, runner=None):
+    """Keep guest/network runtimes when DNF later removes the management app."""
+    query=query or subprocess.run
+    runner=runner or command
+    names=['podman','mykos-criu','criu','netavark','containernetworking-plugins',
+           'qemu-kvm','qemu-kvm-core','qemu-img','libreswan','firewalld']
+    result=query(['rpm','-qa','--qf','%{NAME}\n'],capture_output=True,text=True,check=False)
+    if result.returncode:fail('Cannot determine installed guest runtimes')
+    installed=sorted(set(result.stdout.splitlines()).intersection(names))
+    if installed:
+        runner(['dnf','-y','--disablerepo=*','mark','install',*installed])
+
 
 def ensure_container_limits():
     # Raise the shared quota only when required; retain larger operator limits.
@@ -212,6 +225,41 @@ class Installer:
             entries,self.extensions=extension.merge(self.root,entries,allowed,self.live)
         return entries
 
+    def managed_units(self, entries=None):
+        """Include declared extension services in verification and removal."""
+        if entries is None:
+            entries=({entry['path']:entry for entry in self.manifest()['files']}
+                     if self.path(STATE).is_file() else self.entries())
+        declared=[Path(name).name for name in entries
+                  if str(Path(name).parent)=='/etc/systemd/system'
+                  and '@.' not in Path(name).name
+                  and Path(name).suffix in ('.service','.socket','.timer','.slice')]
+        return list(dict.fromkeys(UNITS+OPTIONAL_UNITS+declared))
+
+    def retire_units(self, units):
+        """Retire only formerly managed units, including RPM-removed files."""
+        for unit in units:
+            result=subprocess.run(['systemctl','show',unit,'-p','ActiveState','--value'],capture_output=True,text=True)
+            active=result.stdout.strip()
+            if active not in ('inactive','failed',''):
+                command(['systemctl','stop',unit])
+            path=self.path('/etc/systemd/system/'+unit)
+            if path.exists():
+                command(['systemctl','disable',unit])
+            else:
+                # RPM may remove the unit before setup. Remove only its own
+                # dangling enable links; unrelated service links are preserved.
+                for folder in self.path('/etc/systemd/system/mykos-web.service').parent.glob('*.wants'):
+                    link=folder/unit
+                    if link.is_symlink() and link.resolve()==path.resolve():link.unlink()
+
+    def activation_units(self, entries):
+        extension_units=[Path(name).name for name,entry in entries.items()
+                         if entry.get('extension') and str(Path(name).parent)=='/etc/systemd/system'
+                         and '@.' not in Path(name).name
+                         and Path(name).suffix in ('.timer','.socket')]
+        return list(dict.fromkeys(UNITS+extension_units))
+
     def snapshot(self, paths, output=None, include_data=False):
         files=[];absent=[]
         for name in sorted(set(paths)):
@@ -257,20 +305,22 @@ class Installer:
             command(args);return
         entries=self.entries()
         self.prepare_backups()
-        obsolete=[]
+        obsolete=[];retired_units=[]
         if self.path(STATE).is_file():
             for entry in self.manifest()['files']:
-                if entry.get('extension') and entry['path'] not in entries:
+                if (entry.get('extension') or not entry.get('mutable')) and entry['path'] not in entries:
+                    if str(Path(entry['path']).parent)=='/etc/systemd/system' and '@.' not in Path(entry['path']).name:
+                        retired_units.append(Path(entry['path']).name)
                     dest=self.path(entry['path'])
                     if dest.exists():
-                        if not dest.is_file() or sha(dest.read_bytes())!=entry['sha256']:fail('Modified extension file needs review: '+entry['path'])
+                        if not dest.is_file() or sha(dest.read_bytes())!=entry['sha256']:fail('Modified obsolete managed file needs review: '+entry['path'])
                         obsolete.append(entry['path'])
         selected={p:e for p,e in entries.items() if not e['mutable'] or not self.path(p).exists()}
         if getattr(self.args,'set_public_origin',False):selected['/etc/mykos/web.env']=entries['/etc/mykos/web.env']
         print(('Live' if self.live else 'Staging')+' installation: %d files; %d preserved settings/data files' % (len(selected),len(entries)-len(selected)))
         if self.args.dry_run:
             print(json.dumps({'root':str(self.root),'write':sorted(selected),'remove_extension_files':sorted(obsolete),'preserve':sorted(set(entries)-set(selected)),
-                'system_packages_if_requested':PACKAGES,'activate_if_requested':UNITS,
+                'system_packages_if_requested':PACKAGES,'activate_if_requested':self.activation_units(entries),
                 'desktop_network_if_requested':self.args.desktop_network},indent=2));return
         self.mutation()
         self.root.mkdir(parents=True,exist_ok=True)
@@ -288,6 +338,8 @@ class Installer:
         if self.live and self.args.enable and not self.path('/etc/mykos/web.env').exists() and self.args.public_origin=='https://mykos.example.com':
             fail('Supply the real --public-origin before activating a new installation')
         snap=self.snapshot([*selected,*obsolete,STATE,'/usr/local/bin/mykos'])
+        if self.live and retired_units:
+            self.retire_units(retired_units)
         self.identity()
         self.prepare_backups(create=True)
         for name in ('/opt/mykos-web','/opt/mykos-web/data','/etc/mykos','/var/lib/mykos/jobs'):
@@ -322,6 +374,7 @@ class Installer:
             # Empty schema only; no archived accounts, passwords or API keys are imported.
             command(['runuser','-u','mykosweb','--',venv/'bin/python','/opt/mykos-web/manage.py','users','list'])
             command(['runuser','-u','mykosweb','--',venv/'bin/python','/opt/mykos-web/manage.py','keys','list'])
+            retain_runtime_packages()
             ensure_container_limits()
             command(['systemctl','daemon-reload'])
             activate_apache(self.args.python)
@@ -339,7 +392,7 @@ class Installer:
             command([self.args.python,'/usr/local/sbin/mykos-desktop-setup','--network',self.args.desktop_network])
         if self.live and self.args.enable:
             # Restart long-running services so an update takes effect.
-            command(['systemctl','enable',*UNITS])
+            command(['systemctl','enable',*self.activation_units(entries)])
             # A recreated service identity can leave an already-running socket
             # owned by its former numeric group. Refresh only stale sockets.
             for unit in ('mykos-container-admin.socket','mykos-terminal.socket'):
@@ -411,13 +464,13 @@ class Installer:
                 if database.exists() and (database.stat().st_uid!=user.pw_uid or stat.S_IMODE(database.stat().st_mode)!=0o600):
                     errors.append('Expected mykosweb-owned 0600 '+str(database))
             command([self.path('/opt/mykos-web/.venv')/'bin/python','-c','import fastapi,pydantic,uvicorn'])
-            command(['systemd-analyze','verify',*[str(self.path('/etc/systemd/system/'+u)) for u in UNITS+OPTIONAL_UNITS]])
+            command(['systemd-analyze','verify',*[str(self.path('/etc/systemd/system/'+u)) for u in self.managed_units()]])
         if errors:fail('\n'.join(errors))
         print('Verified %d managed files%s' % (len(manifest['files']), ' (staged layout only)' if not self.live else ''))
 
     def status(self):
         print(json.dumps(self.manifest(),indent=2))
-        if self.live:command(['systemctl','--no-pager','status',*UNITS])
+        if self.live:command(['systemctl','--no-pager','status',*self.managed_units()])
 
     def backup(self):
         paths=[e['path'] for e in self.manifest()['files']]+[STATE]
@@ -460,7 +513,7 @@ class Installer:
         self.quiescent()
         if self.live:
             # Avoid workers/collectors racing restored code and SQLite WAL files.
-            command(['systemctl','stop',*UNITS,*OPTIONAL_UNITS,'mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service'])
+            command(['systemctl','stop',*self.managed_units(),'mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service'])
         self.snapshot([*contents,*absent],include_data=meta.get('includes_data',False))
         for name,(entry,data) in contents.items():
             if entry['mode'] & 0o7000:fail('Special permission bits are not accepted')
@@ -480,15 +533,15 @@ class Installer:
         """Stop MYKOS control-plane units; never target persistent Podman scopes."""
         self.mutation()
         if not self.live:fail('stop-services requires the live host')
-        units = list(dict.fromkeys(UNITS + OPTIONAL_UNITS + [
+        units = list(dict.fromkeys(self.managed_units() + [
             'mykos-collector.service','mykos-details.service','mykos-extended.service','mykos-command-collector.service']))
         workers = ['mykos-stage@*.service','mykos-command@*.service','mykos-terminal@*.service',
                    'mykos-container-admin@*.service','mykos-image-build@*.service',
                    'mykos-image-reset-*.service','mykos-image-remove-*.service','mykos-snapshot-preview-*.service']
         if self.args.dry_run:
-            print(json.dumps({'stop':units+workers,'disable':UNITS+OPTIONAL_UNITS}));return
+            print(json.dumps({'stop':units+workers,'disable':self.managed_units()}));return
         command(['systemctl','stop',*units,*workers])
-        command(['systemctl','disable',*UNITS,*OPTIONAL_UNITS])
+        command(['systemctl','disable',*self.managed_units()])
 
     def uninstall(self):
         manifest=self.manifest()
@@ -534,7 +587,7 @@ def main():
             p.add_argument('--python-deps',action='store_true',help='Install Python requirements only; preserve existing system packages')
             p.add_argument('--image-build-deps',action='store_true')
             p.add_argument('--enable',action='store_true',help='Enable sockets/timers and restart web service')
-            p.add_argument('--native-network',action='store_true',help='Create configured mykos-lan macvlan network and enable host DHCP proxy')
+            p.add_argument('--native-network',action='store_true',help='Initialize the configured private MYKOS network')
             p.add_argument('--desktop-network',help='Explicit trusted private IPv4 CIDR for desktop ports; checks KVM/storage and adds persistent LAN firewall rules')
         if action=='backup':
             p.add_argument('--output',required=True);p.add_argument('--include-data',action='store_true')

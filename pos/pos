@@ -87,7 +87,7 @@ LABEL org.label-schema.schema-version="1.0" \
     org.label-schema.vendor="$os_vendor" \
     org.label-schema.license="GPLv2" \
     org.label-schema.build-date="20261003"
-MAINTAINER “Mike Green" <mgreen@teleflora.com>
+MAINTAINER “Mike Green" <mgreen@myk.sh>
 ENV container $OS-docker
 VOLUME /sys/fs/cgroup
 $update_step
@@ -472,7 +472,7 @@ list_vpns() {
 }
 
 add_vpn() {
-local VPN_PSK vpn_psk_escaped host_connection VPN_LOCAL_CIDR VPN_PEER_CIDR= VPN_LOCAL_ID VPN_REMOTE_ID VPN_MODE=direct VPN_REMOTE_CIDR VPN_ROUTE_BASED=0 VPN_SITE_ONLY=0
+local VPN_PSK vpn_psk_escaped host_connection VPN_LOCAL_CIDR VPN_PEER_CIDR= VPN_LOCAL_ID VPN_REMOTE_ID VPN_MODE=direct VPN_REMOTE_CIDR VPN_ROUTE_BASED=0 VPN_SITE_ONLY=1
 VPN_LOCAL_CIDR=192.168.22.0/24
 if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
 [[ "${SHOPCODE:-}" =~ ^[0-9]{8}$ ]] || { echo "Invalid ID"; return 1; }
@@ -490,13 +490,12 @@ done
 [[ "$REMOTE_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] || { echo "Invalid remote name"; return 1; }
 [[ "$REMOTE_PUBLIC" =~ ^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$ ]] || { echo "Invalid remote public IP or hostname"; return 1; }
 VPN_REMOTE_CIDR=$("$MYKOS_PYTHON" -c 'import ipaddress,sys;v=sys.argv[1];print(ipaddress.IPv4Network(v if "/" in v else v+"/24",strict=True))' "$REMOTE_NET") || return 1
-if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
-  read -r -p 'VPN mode: direct guest tunnel [1], gateway for all MYKOS guests [2]: ' VPN_MODE || return 1
-  case "$VPN_MODE" in ''|1|direct) VPN_MODE=direct ;; 2|gateway) VPN_MODE=gateway ;; *) echo 'Choose 1 or 2'; return 1 ;; esac
-else
-  read -r -p 'Host VPN mode: host only [1], shared gateway for all guests and host [2]: ' VPN_MODE || return 1
-  case "$VPN_MODE" in ''|1|direct) VPN_MODE=direct ;; 2|gateway) VPN_MODE=host-gateway ;; *) echo 'Choose 1 or 2'; return 1 ;; esac
+if [ "${MYKOS_VPN_HOST:-0}" = 1 ]; then
+  echo 'Host VPN creation is outside the initial public release; use the validated MYKOS peer workflow for host pairing.' >&2
+  return 1
 fi
+# The initial public release creates direct native site tunnels only.
+VPN_MODE=direct
 VPN_LOCAL_ID=192.168.222.0; VPN_REMOTE_ID=192.168.222.0
 if [ "${MYKOS_VPN_HOST:-0}" != 1 ]; then
   VPN_LOCAL_ID="$SHOPCODE.$(hostname)"; VPN_REMOTE_ID="$REMOTE_PUBLIC"

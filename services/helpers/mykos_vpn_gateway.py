@@ -297,6 +297,9 @@ def apply_host(v):
 
 def preflight_mode(shop,connection,mode):
     """Keep shared-default and independent-tunnel scenarios explicit."""
+    if mode=='shared':
+        from mykos_release_scope import require_network_creation
+        require_network_creation('shared')
     key(shop,connection)
     if mode not in ('direct','shared'):raise ValueError('Choose direct or shared VPN mode')
     items=profiles()
@@ -336,6 +339,8 @@ def managed_connection(directory,connection,local,remote):
 
 
 def configure_host(connection,remote):
+    from mykos_release_scope import require_network_creation
+    require_network_creation('host-shared')
     with vm.locked():
         settings=config();dev=bridge(settings);local=str(network.address_pool(settings))
         site_remote=str(ipaddress.IPv4Network(remote,strict=True))
@@ -360,6 +365,8 @@ def configure_host(connection,remote):
 
 
 def configure(shop,connection,remote):
+    from mykos_release_scope import require_network_creation
+    require_network_creation('shared')
     with vm.locked():
         settings=config();dev=bridge(settings);local=str(network.address_pool(settings))
         site_remote=str(ipaddress.IPv4Network(remote,strict=True))

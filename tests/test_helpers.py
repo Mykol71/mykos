@@ -84,8 +84,8 @@ def test_host_terminal_executes_host_su_without_podman(monkeypatch):
     assert calls == [('/bin/su',['/bin/su','-','root'])]
     monkeypatch.setattr(module, 'request', lambda conn: {'shop':'host','action':'add-vpn'})
     monkeypatch.setattr(module, 'containers', lambda: pytest.fail('Host VPN must not inspect containers'))
-    with pytest.raises(RuntimeError,match='mock exec'): module.main()
-    assert calls[-1] == ('/usr/bin/python3',['/usr/bin/python3','/usr/local/share/mykos/pos/host-vpn'])
+    with pytest.raises(ValueError,match='outside the initial public release'): module.main()
+    assert calls == [('/bin/su',['/bin/su','-','root'])]
 
 def test_desktop_installer_firewall_rules_are_source_restricted():
     module=load('mykos-desktop-setup')
@@ -97,6 +97,7 @@ def test_desktop_installer_firewall_rules_are_source_restricted():
     assert '18006-19005' in rules[0]
     assert 'protocol="udp"' in rules[2]
 
+@pytest.mark.skip(reason='Experimental creation retained and tested in RTI package')
 def test_host_vpn_writes_only_new_host_connection(tmp_path):
     import runpy
     workflow = runpy.run_path(str(HELPERS.parents[1]/'pos/host-vpn'))
@@ -301,6 +302,7 @@ def test_add_vpn_function_creates_configuration_in_isolated_directory(tmp_path, 
     function=function.replace('/usr/local/sbin/mykos-vpn-gateway','mykos_gateway')
     function='mykos_gateway() { return 0; }\n'+function
     (tmp_path/'host-vpn').write_bytes((HELPERS.parents[1]/'pos/host-vpn').read_bytes())
+    (tmp_path/'mykos_release_scope.py').write_bytes((HELPERS/'mykos_release_scope.py').read_bytes())
     (tmp_path/'vpn-updown').write_bytes((HELPERS.parents[1]/'pos/vpn-updown').read_bytes())
     function=function.replace('/usr/local/sbin/mykos-linux','mykos_linux')
     script = 'MYKOS_PYTHON='+sys.executable+'\n'+function + '''
@@ -313,7 +315,7 @@ update_meraki() { echo unexpected-meraki; return 1; }
 add_vpn
 '''
     result = subprocess.run(['bash', '-c', script], cwd=tmp_path,
-        input='test-peer\n203.0.113.20\n10.1.2.0\n1\n'+secret+'\ny\nn\n', text=True, capture_output=True)
+        input='test-peer\n203.0.113.20\n10.1.2.0\n'+secret+'\ny\nn\n', text=True, capture_output=True)
     assert result.returncode == 0, result.stderr
     conf = (tmp_path/'.01234567/test-peer.conn.conf').read_text()
     assert 'conn test-peer' in conf and 'right=203.0.113.20' in conf
@@ -337,7 +339,7 @@ def test_add_vpn_requires_entered_psk_before_commands(tmp_path):
     function='mykos_gateway() { return 0; }\n'+function
     script = 'MYKOS_PYTHON='+sys.executable+'\n'+function + '\nVPN_PSK=old-environment-value; SHOPCODE=01234567; CONTAINER=01234567.example\ncurl() { echo unexpected-command; }; podman() { echo unexpected-command; }; add_vpn\n'
     result = subprocess.run(['bash', '-c', script], cwd=tmp_path,
-        input='test-peer\n203.0.113.20\n10.1.2.0\n1\n\n', text=True, capture_output=True)
+        input='test-peer\n203.0.113.20\n10.1.2.0\n\n', text=True, capture_output=True)
     assert result.returncode != 0
     assert 'shared secret cannot be empty' in result.stdout
     assert 'unexpected-command' not in result.stdout
@@ -595,6 +597,7 @@ def test_delete_container_queue_pins_identity_and_worker_dispatch(tmp_path,monke
 
 
 @pytest.mark.parametrize('push',['y','n'])
+@pytest.mark.skip(reason='Experimental creation retained and tested in RTI package')
 def test_host_add_vpn_reuses_container_workflow_without_container_commands(tmp_path,push):
     import subprocess
     source=(HELPERS.parents[1]/'pos/pos').read_text()
@@ -634,6 +637,7 @@ add_vpn
     assert (directory/'mykos-branch.secrets').stat().st_mode & 0o777==0o600
 
 
+@pytest.mark.skip(reason='Experimental creation retained and tested in RTI package')
 def test_host_add_vpn_cancel_makes_no_configuration_or_command_calls(tmp_path):
     import subprocess
     source=(HELPERS.parents[1]/'pos/pos').read_text()
@@ -777,7 +781,7 @@ SHOPCODE=12345678;CONTAINER=12345678.host
 add_vpn
 '''
     result=subprocess.run(['bash','-c',script],cwd=tmp_path,text=True,capture_output=True,
-        input='office\n203.0.113.1\n10.77.0.0/24\n1\nprivate-test-secret\ny\ny\n')
+        input='office\n203.0.113.1\n10.77.0.0/24\nprivate-test-secret\ny\ny\n')
     assert result.returncode!=0
     assert not list(tmp_path.iterdir()),'Failed selected upload must not create any local VPN state or activate services'
 
@@ -796,6 +800,7 @@ def test_meraki_concurrent_config_change_aborts_before_put(tmp_path):
     assert not (tmp_path/'request.json').exists()
 
 
+@pytest.mark.skip(reason='Experimental creation retained and tested in RTI package')
 def test_default_tunnel_renders_valid_independent_connection(tmp_path):
     import runpy,re
     workflow=runpy.run_path(str(HELPERS.parents[1]/'pos/host-vpn'))

@@ -290,6 +290,9 @@ img.mykos-pane-logo { object-fit: contain; }
 }
 
 
+/* Give lifecycle and image-start icons explicit dimensions in every theme. */
+:is(.mykos-start-button,.mykos-stop-button,.mykos-snapshot-button,.mykos-delete-button,button[id$="mykos-stage-button"]) > svg { display:block; width:20px; height:20px; flex:none; }
+
 /* MYKOS transparent container action buttons */
 .mykos-logs-button,
 .mykos-terminal-button,
@@ -1763,7 +1766,8 @@ function mykosVpnStatus(node,ext,family) {
     if (!supported && !via.length) return '<td class="mykos-vpn-spacer" aria-hidden="true"></td>';
     let status='';
     if (supported) {
-        if (node.vpn==='not_configured') status='<button type="button" class="mykos-add-vpn-button" data-shop="'+escape(node.id)+'" title="Add VPN" aria-label="Add VPN for '+escape(node.id)+'" '+(mykosTerminalAllowed && node.status==='online'?'':'disabled')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>';
+        if (node.vpn==='not_configured' && (family==='ubuntu'||mykosListDetails[node.id]?.desktop)) status=statusIcon('vpn',node.vpn);
+        else if (node.vpn==='not_configured') status='<button type="button" class="mykos-add-vpn-button" data-shop="'+escape(node.id)+'" title="Add VPN" aria-label="Add VPN for '+escape(node.id)+'" '+(mykosTerminalAllowed && node.status==='online'?'':'disabled')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>';
         else if(node.vpn==='up') status='<a href="#" class="mykos-ipsec-link" data-shop="'+escape(node.id)+'" title="View IPsec status" style="text-decoration:none">'+statusIcon('vpn',node.vpn)+'</a>';
         else status=statusIcon('vpn',node.vpn);
     }
@@ -2561,6 +2565,7 @@ function mykosRenderInventory() {
             }
         }
         if (mykosTerminalAllowed && ['linux', 'rocky', 'alma', 'oracle', 'centos', 'fedora', 'ubuntu', 'mssql'].includes(mykosNodeFamily(node)) && node?.vpn === 'up') {
+            if(mykosNodeFamily(node)!=='ubuntu' && !detail.desktop) {
             const addVpn = document.createElement('button');
             addVpn.type = 'button';
             addVpn.className = 'mykos-add-vpn-button';
@@ -2573,6 +2578,7 @@ function mykosRenderInventory() {
                 mykosOpenTerminal(row.dataset.mykosShop, false, 'add-vpn');
             });
             logCell.append(addVpn);
+            }
             const removeVpn=document.createElement('button');removeVpn.type='button';
             removeVpn.className='mykos-icon mykos-remove-vpn-button';removeVpn.style.color='#ef4444';
             removeVpn.title='Stop and remove VPN';removeVpn.setAttribute('aria-label','Remove VPN for '+row.dataset.mykosShop);
@@ -4016,7 +4022,6 @@ function mykosApplyPaneVisibility(headingId, panelId, automatic, preview = true)
     document.querySelector('.mykos-section-links a[href="#' + headingId + '"]').hidden = !visible;
 }
 function mykosSetOsPaneVisible(family, visible) {
-    visible=visible||window.mykosPXEFamilyVisible?.(family)===true;
     const headingId = mykosOsId(family, 'mykos-containers-pane');
     mykosApplyPaneVisibility(headingId, mykosOsId(family, 'mykos-container-panel'), visible, mykosCanPreviewFamily(family));
 }
@@ -4785,4 +4790,4 @@ function mykosReceiverSourceSelection(panes,selected){
 
 })();
 
-</script><script src="/mykos/pxe-ui.js"></script></body></html>
+</script></body></html>

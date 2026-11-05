@@ -18,6 +18,7 @@ def test_native_vpn_controls_retain_config_and_only_target_ipsec(monkeypatch,tmp
  with pytest.raises(ValueError):native.vpn_change('01234567','delete')
 
 
+@pytest.mark.skip(reason='Experimental creation retained and tested in RTI package')
 def test_ubuntu_default_subnet_is_shared_lan_and_secret_stays_stdin(monkeypatch,tmp_path):
  value={'os':'ubuntu22.04','name':'01234567.host','role':'instance','guest_agent':True};calls=[]
  monkeypatch.setattr(ubuntu,'selection',lambda s:value);monkeypatch.setattr(ubuntu.vm,'POS',tmp_path);monkeypatch.setattr(ubuntu.vm,'storage',lambda s:tmp_path)

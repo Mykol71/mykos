@@ -2,6 +2,11 @@
 
 [Documentation index](README.md)
 
+## Initial public release scope
+
+New public configurations are limited to the private NAT bridge, direct native guest site VPNs, and MYKOS peer connections between directly reachable IPv4 hosts. Shared guest gateways, host-shared gateways, manual host VPN creation and VM-agent VPN creation are deferred until their complete scenarios pass validation. Direct site VPNs leave ordinary internet routing unchanged. Existing saved configurations retain their status, lifecycle and removal paths. See the [public roadmap](ROADMAP.md) for deferred capabilities and return criteria.
+
+
 Both dev and production use the rootful Podman bridge `mykos-lan` with private NAT, subnet `192.168.22.0/24`, gateway `192.168.22.1`, and container addresses `.2` through `.254`. The same subnet on two separate hosts does not connect those networks together. The host LAN addresses remain unchanged. This works through Ethernet or Wi-Fi.
 
 Set `native_network_driver` to `bridge`, `native_network` to `mykos-lan`, and `native_network_subnet` to `192.168.22.0/24` in `/etc/mykos/config.json`. Initialize with `sudo /usr/local/sbin/mykos-network-setup` or `mykos-setup --native-network`. A new network is refused if the subnet overlaps an existing host route. Existing mismatched networks are left unchanged and must be replaced explicitly while unused.
@@ -10,7 +15,7 @@ New native Linux instances, native image build containers, and Windows/macOS/Ubu
 
 There is no pipework or guest dhclient dependency. NAT guests do not have individual `192.168.222.x` LAN addresses. Direct inbound LAN services need explicit publishing or routing; MYKOS terminals, guest-agent commands and HTTP desktops remain server-proxied. IPsec tunnel configuration and NAT-T need validation for the chosen peer/subnets; existing LAN-specific VPN selectors are not automatically rewritten.
 
-Optional `native_network_driver: macvlan` retains LAN DHCP mode on a wired parent selected with `network_device`. CNI uses `cni-dhcp.socket`; Netavark uses `netavark-dhcp-proxy.socket` for that optional mode. Private bridge mode uses neither. The primary interface is eth0, selected by labels; legacy eth1 monitoring and `eth1_ipv4` API aliases remain for compatibility with old instances. API clients should use `network.ipv4` and `network.interface`.
+New macvlan/LAN-DHCP network setup is deferred from the initial public release. Existing networks are retained for compatibility; upgrades do not rewire running containers. The default private bridge uses no host DHCP proxy.
 
 Existing running containers are not silently rewired. Recreate legacy pipework or older-network containers after preserving any needed data. New instances use the configured bridge.
 
@@ -76,56 +81,7 @@ other API clients during an update: this endpoint replaces the complete peer lis
 The detailed architecture, mode comparison, traffic paths, prerequisites and
 recovery procedure are in [VPN architecture and operations](#vpn-architecture-and-operations).
 
-New native Linux VPN setup offers independent guest tunnels or one shared default
-gateway. Independent mode supports multiple distinct remote site subnets, multiple
-guests to one site, and one remote site per guest. The first successfully connected
-tunnel owns that guest's default traffic. IKEv2 liveness checks run every 30 seconds with a 45-second retransmit timeout;
-host fallback waits until the local full-tunnel SA is actually removed, rather
-than assuming a peer is down from one lost packet. Rekeying does not change ownership; when
-the primary connection is removed, the earliest remaining established connection
-is promoted. Internet traffic and non-loopback DNS use that selected full tunnel.
-The DNS resolver is `8.8.8.8`. Generated configurations explicitly use `pfs=no` to match the existing Meraki
-child-SA policy. Default stanzas are rendered independently because overriding
-`also=` values is rejected by the tested Libreswan 4.x parser. See the
-[Libreswan configuration reference](https://libreswan.org/man/ipsec.conf.5.html).
-A separate default CHILD_SA uses `0.0.0.0/0`; a site
-SA alone is not evidence of working full-tunnel internet access.
-
-Shared mode supports either the MYKOS host or one native Linux guest as gateway.
-It routes all MYKOS guest types through that gateway and routes host internet
-traffic through it only after a matching full-tunnel SA is confirmed. Local host
-management replies and outer IKE/NAT-T/ESP transport are exempt. During an outage,
-protected guest traffic remains blocked; ordinary host WAN internet is restored.
-Only one shared default gateway may be selected. Combining this mode with other
-independent VPN configurations is currently rejected before local setup or a
-Meraki upload; existing tunnels are left unchanged.
-
-The existing customer `pos/.ID` folder remains mounted read/write at guest
-`/etc/ipsec.d`. Connection, secret, numeric endpoint, reconnect hook and default
-ownership/order files live there. Native setup checks the running guest's mount
-identity and required executables from a fixed host Python process, without
-executing guest code. The actual systemd reload/enable still runs inside the guest.
-Missing dependencies fail before the optional Meraki upload. Existing global
-IPsec configuration is preserved, with narrow include globs appended and a private
-backup before the first change. Secrets remain in mode-0600 per-connection files.
-
-The shared controller stores root-only profiles under
-`/var/lib/mykos/vpn-gateways`. Its boot guard protects configured guest routes
-before Podman automatic restart; its timer reconciles only explicitly configured
-profiles. Installing/updating MYKOS does not select a gateway, rewrite existing
-VPNs or enable these optional units. Removing the last profile disables the timer
-and guard. Uninstall deactivates owned routing/firewall changes while retaining
-operator profiles; explicit container-state purge removes profiles too.
-
-The IP address expansion shows network metadata, VPN connections and an icon
-map. **Show connected guests** adds shared-network members and gateway dependents.
-Green links require reported SA state; grey/dashed links are unconfirmed. A network
-membership edge does not prove connectivity. Read models use saved host metadata
-and cached kernel observations, never PSKs or extra guest polling.
-
-Ubuntu-specific new VPN/shared-folder work is deferred. Its released VM creation,
-RAM capture and existing individual VPN paths are unchanged. Shared host/native
-routing can still carry traffic from its wrapper, as for Windows and macOS.
+New public native VPN setup creates a direct site tunnel with its own return selector. The validated scope includes remote site access and reconnect after container stop/start. Multiple shared gateway, host-shared and VM-agent creation scenarios are not offered in the initial public release. Existing configurations are not automatically migrated or deleted.
 
 ### Meraki update checks
 
@@ -179,125 +135,23 @@ using any address. This review did not add, remove or reconnect a live VPN.
 
 ### Choose the tunnel owner and traffic scope
 
-| Selection in Add VPN | IPsec process and kernel policies | Local site selector | Traffic included | Host participation |
-| --- | --- | --- | --- | --- |
-| Native guest: direct guest tunnel (1) | Guest network namespace | That guest's bridge IPv4 `/32` | Guest's site traffic; first connected site also owns a separate full tunnel | Host retains ordinary WAN routing |
-| Native guest: gateway for all MYKOS guests (2) | Selected native Linux guest namespace | Entire MYKOS bridge subnet | Bridge guests, including VM wrappers, use one full-tunnel gateway | Host internet joins only after full-tunnel verification |
-| Host: host only (1) | Host network namespace | Legacy fixed `192.168.222.0/24` | Matching site-selector traffic; no managed full-tunnel default | Does not enroll the MYKOS private bridge |
-| Host: shared gateway for all guests and host (2) | Host network namespace | Entire MYKOS bridge subnet | Guest forwarding through host IPsec and selected host output | Conditional host full-tunnel diversion |
-
-Host-only's fixed selector and IKE IDs (`192.168.222.0`) are compatibility
-behavior, not automatic LAN discovery. It must match the site's actual routing
-and peer configuration. Do not assume it protects bridge guests or offers the
-shared modes' DNS redirection and fail-closed guards. The shared selection permits
-one gateway profile and rejects mixing with other saved independent connections.
-Direct mode permits multiple remote sites and multiple guests per site, but saved
-selectors must be distinct and accepted by the remote peer.
+Use a direct native guest site tunnel for validated site access, or the peer workflow for directly reachable MYKOS hosts. Shared routing scenarios are deferred; see the [public roadmap](ROADMAP.md).
 
 ### Direct native guest traffic
 
-![Direct native VPN: encryption and output guards are inside the guest namespace.](diagrams/vpn-direct.svg)
-
-[Editable Mermaid source](diagrams/vpn-direct.mmd)
-
-An application packet enters the guest's IPsec policy, is encrypted there, and
-crosses the Podman veth/private bridge as outer traffic. Normal bridge NAT carries
-that outer IKE/NAT-T transport to the WAN. The host does not become the guest's
-IPsec endpoint. UDP 500/4500 to saved numeric peers is exempt from the guest guard;
-the generated connection forces encapsulation. Return traffic traverses host NAT
-and is decrypted inside the same guest namespace.
-
-Every managed native connection has a site CHILD_SA and a separate
-`CONNECTION-mykos-default` CHILD_SA with remote selector `0.0.0.0/0`. The first
-successful site connection atomically claims `.mykos-first-tunnel`; its hook
-asynchronously starts that default CHILD_SA after returning to Libreswan. A site
-SA alone therefore does not prove internet access. The hook records establishment
-order in `.mykos-connected-order`. Rekeying retains ownership. Explicitly removing
-the owner promotes the earliest remaining established site. A temporary outage is
-not documented as automatic failover to another site: the owner marker remains
-and the guard stays installed for reconnect.
-
-Non-loopback UDP/TCP port 53 output is DNATed to `8.8.8.8` and follows the full
-tunnel. A local loopback DNS stub remains local; its upstream request is subject
-to the same rule. IPv6 output is rejected except loopback, since no IPv6 tunnel
-is configured. This is port-53 handling, not a claim that arbitrary encrypted
-DNS protocols are rewritten. Other outbound packets need IPsec policy or are
-rejected once the full-tunnel guard has been installed. Do not treat Add VPN's
-success message as proof that the first SA and guard are already established.
+New direct site VPNs protect traffic to the configured remote subnet and leave the ordinary internet route unchanged. The guest advertises its own return selector to avoid overlapping site routes. Retain the current peer and selector prerequisites and verify the intended remote address.
 
 ### Shared native gateway traffic
 
-![Shared native gateway: host policy routes bridge ingress back to the selected guest; IPsec is inside that guest.](diagrams/vpn-native-gateway.svg)
-
-[Editable Mermaid source](diagrams/vpn-native-gateway.mmd)
-
-A sibling's IPv4 packet reaches the host bridge gateway. A source-, destination-
-and ingress-scoped policy rule selects a private routing table whose default is
-via the selected native gateway address on that bridge. A higher-priority rule
-keeps the gateway's own outer transport on the main routing table. Host forwarding
-and NAT exemptions preserve the protected bridge subnet instead of masquerading
-it before encryption. Inside the gateway namespace MYKOS enables IPv4 forwarding
-and installs policy-allow then reject rules. The gateway encrypts the packet;
-outer traffic returns through the bridge and normal WAN NAT. Decrypted replies
-return to the bridge guest.
-
-The gateway profile pins the original full container ID, bridge and IPv4 address.
-A replacement guest with a reused eight-digit ID is not silently trusted. If the
-container is missing/stopped, MYKOS keeps an unreachable default in its owned
-route table; an SA outage in a running gateway is blocked by its forwarding
-IPsec-policy guard. VM traffic includes the wrapper boundary: Windows/macOS/
-Ubuntu internal guest NAT reaches the wrapper, then the common Podman bridge.
-This does not turn the VM's internal NIC into a directly routed site address.
-
-Host bridge-ingress UDP/TCP port 53 is redirected to `8.8.8.8`. Redirected DNS is
-source-translated to the host bridge address so replies return through host
-conntrack and reverse DNAT, even when the native gateway and client are siblings.
-These DNS rules remain during outages, preventing bridge DNS from escaping through
-host WAN fallback. IPv6 bridge forwarding and bridge-local port-53 input are blocked.
+Shared guest gateway creation is deferred from the initial public release. Existing profiles retain their lifecycle and removal behavior.
 
 ### Host shared gateway traffic
 
-![Host shared gateway: guest packets are encrypted in the host namespace, with conditional host output diversion.](diagrams/vpn-host-shared.svg)
-
-[Editable Mermaid source](diagrams/vpn-host-shared.mmd)
-
-There is no gateway container in this mode. The host Libreswan process and host
-kernel XFRM policies encrypt bridge traffic using the whole bridge subnet as local
-selector. Owned forwarding rules allow protected IPsec traffic and reject clear
-fallback. NAT exemptions preserve the inner source subnet. Marked bridge-local
-XFRM exceptions permit local requests and decrypted replies without treating
-clear WAN packets as authenticated tunnel traffic. Guest DNS uses the bridge
-redirection/return-NAT path described above.
-
-In **both shared modes**, host internet diversion requires an outbound full-tunnel
-policy whose selector matches the bridge subnet, whose ESP template targets the
-saved numeric peer, and whose request ID matches an actual ESP tunnel state.
-A UI green site link or an IKE SA alone is insufficient. The controller marks
-selected host output (`0x4d590000/0xffff0000`), uses the profile's route table, and
-SNATs sources outside the bridge subnet to its bridge address to match the VPN
-selector. Incoming management replies, outer UDP 500/4500 and ESP, loopback,
-link-local, multicast and connected networks have bypasses. Non-loopback port-53
-DNS is marked before connected-network exemptions and redirected to `8.8.8.8`.
-The host IPv6 guard blocks internet/DNS escape while diversion is active, retaining
-local and management-reply exceptions. The bridge reverse-path filter temporarily
-uses loose mode and its saved setting is restored on deactivation.
-
-When the full-tunnel policy/state disappears, reconciliation removes host output
-diversion so ordinary host internet uses WAN again. **Guest protection remains.**
-Detection follows Libreswan SA lifetime and a periodic controller; it is not an
-instant end-to-end health check. A stale local SA can still blackhole traffic.
+Host-shared gateway creation is deferred from the initial public release. Existing profiles are preserved; no host routing is changed by an application upgrade.
 
 ### Host-only traffic
 
-![Host-only VPN: selector-matching host traffic enters a site tunnel; ordinary host internet keeps its normal route.](diagrams/vpn-host-only.svg)
-
-[Editable Mermaid source](diagrams/vpn-host-only.mmd)
-
-This compatibility path writes a host site connection without the full-tunnel
-hook or shared-gateway profile. The generated connection uses `left=%defaultroute`
-and the fixed local subnet above. Normal host DNS and nonmatching traffic keep
-ordinary routing. Ensure host IPsec is available/running and selector-compatible;
-this mode does not provide the shared controller's managed all-guest behavior.
+Manual host VPN creation is deferred. The separately validated MYKOS peer workflow remains available between directly reachable IPv4 host addresses.
 
 ### Prerequisites and peer agreement
 

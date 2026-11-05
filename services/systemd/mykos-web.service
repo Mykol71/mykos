@@ -14,7 +14,6 @@ UMask=0077
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=tmpfs
-BindReadOnlyPaths=-/home/mykos-pxe/assets
 PrivateTmp=true
 ReadWritePaths=/opt/mykos-web/data
 

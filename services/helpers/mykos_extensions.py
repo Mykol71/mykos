@@ -37,6 +37,11 @@ def _directory(path,owner):
         raise ValueError('Unsafe extension directory ownership or mode')
 
 
+def unit_path(name):
+    return (isinstance(name,str) and str(Path(name).parent)=='/etc/systemd/system' and
+            bool(re.fullmatch(r'mykos-[A-Za-z0-9_.@-]+\.(?:service|socket|timer|slice)',Path(name).name)))
+
+
 def merge(root,entries,allowed,live=False):
     """Return verified runtime entries and provenance; never execute a hook."""
     root=Path(root);registry=root/'usr/share/mykos-extensions'
@@ -57,7 +62,7 @@ def merge(root,entries,allowed,live=False):
             if not isinstance(entry,dict) or set(entry)!={'path','source','sha256','base_sha256','mode','owner','mutable'}:
                 raise ValueError('Invalid extension file declaration')
             name=entry['path'];relative=entry['source']
-            if not isinstance(name,str) or not name.startswith(PREFIXES) or any(name==p.rstrip('/') or name.startswith(p) for p in DENIED) or not allowed(name):
+            if not isinstance(name,str) or not (name.startswith(PREFIXES) or unit_path(name)) or any(name==p.rstrip('/') or name.startswith(p) for p in DENIED) or not allowed(name):
                 raise ValueError('Unmanaged extension destination')
             if '..' in PurePosixPath(name).parts or any(p.startswith('.') for p in PurePosixPath(name).parts):
                 raise ValueError('Private state is not an extension destination')

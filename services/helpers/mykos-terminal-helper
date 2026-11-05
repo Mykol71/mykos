@@ -58,6 +58,11 @@ def main():
                 raise ValueError('Use the desktop browser console or RDP/VNC login for this VM')
     if not host and action in ('add-vpn','remove-vpn') and not any(item['name'] == name and item['state'].lower() == 'running' for item in containers()):
         raise ValueError('Start the container before adding a VPN')
+    if action=='add-vpn':
+        from mykos_release_scope import require_network_creation
+        from mykos_vm import record_path
+        if host:require_network_creation('host-site')
+        elif record_path(data['shop']).is_file():require_network_creation('vm-vpn')
     session_fd=None
     if image_shell:
         from mykos_base_session import acquire

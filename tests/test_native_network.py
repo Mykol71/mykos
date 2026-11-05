@@ -6,20 +6,21 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'services/helpers'))
 import mykos_network as network
 
 @pytest.mark.parametrize('backend,unit',[('cni','cni-dhcp.socket'),('netavark','netavark-dhcp-proxy.socket')])
-def test_network_setup_and_interface(monkeypatch,backend,unit):
+def test_existing_legacy_network_and_interface_remain_usable(monkeypatch,backend,unit):
     calls=[]
     monkeypatch.setattr(network,'network_device',lambda cfg:'enp2s0')
     def run(args,**kw):
         calls.append(args)
         if args[0]=='ip':return '[]'
         if args[1]=='info':return backend
-        if args[1:3]==['network','ls']:return ''
+        if args[1:3]==['network','ls']:return 'mykos-lan'
         if args[1:3]==['network','inspect']:return json.dumps([{'driver':'macvlan','network_interface':'enp2s0','ipam_options':{'driver':'dhcp'}}])
         return ''
     monkeypatch.setattr(network,'run',run)
     args=network.arguments({'native_network_driver':'macvlan'},'12345678.host')
     assert args[1]==('mykos-lan:interface_name=eth0' if backend=='netavark' else 'mykos-lan')
     assert ['systemctl','enable','--now',unit] in calls
+    assert not any(call[1:3]==['network','create'] for call in calls)
     assert args[3].startswith('02:')
     assert args==network.arguments({'native_network_driver':'macvlan'},'12345678.host')
 

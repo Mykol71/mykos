@@ -89,3 +89,36 @@ def test_staged_extension_install_remove_preserves_private_data_and_restores_cor
  assert (tmp_path/'opt/mykos-web/index.html').read_bytes()==original
  assert not (tmp_path/target.lstrip('/')).exists()
  assert config.read_text()=='{"private_setting":"preserve"}' and identity.read_bytes()==b'private identity sentinel'
+
+
+@pytest.mark.parametrize('target',['/etc/systemd/system/other.service','/etc/systemd/system/mykos-example.service.d/override.conf','/etc/systemd/system/mykos-example.service/evil'])
+def test_extension_units_are_confined_to_flat_mykos_units(tmp_path,target):
+ module(tmp_path,target=target,base=None)
+ with pytest.raises(ValueError,match='Unmanaged'):extensions.merge(tmp_path,base(),lambda n:True)
+
+
+def test_extension_units_participate_in_activation_and_cleanup(tmp_path):
+ target='/etc/systemd/system/mykos-example.timer'
+ folder,manifest=module(tmp_path,target=target,base=None,data=b'[Timer]\nOnBootSec=5min\n')
+ entry=manifest['files'][0];entry.update(mode=0o644,owner='root');(folder/'manifest.json').write_text(json.dumps(manifest))
+ loader=importlib.machinery.SourceFileLoader('installer_extension_units',str(ROOT/'bin/mykos-install'));spec=importlib.util.spec_from_loader(loader.name,loader);installer=importlib.util.module_from_spec(spec);loader.exec_module(installer)
+ args=SimpleNamespace(root=str(tmp_path),python='/usr/bin/python3.11',public_origin='https://example.test')
+ instance=installer.Installer(args);entries=instance.entries()
+ assert entries[target]['extension']=='business'
+ assert 'mykos-example.timer' in instance.activation_units(entries)
+ assert 'mykos-example.timer' in instance.managed_units(entries)
+ assert not any('@.' in name for name in instance.managed_units(entries))
+
+
+
+def test_retiring_RPM_removed_unit_stops_active_owner_and_removes_only_its_links(tmp_path,monkeypatch):
+ loader=importlib.machinery.SourceFileLoader('installer_retired_units',str(ROOT/'bin/mykos-install'));spec=importlib.util.spec_from_loader(loader.name,loader);mod=importlib.util.module_from_spec(spec);loader.exec_module(mod)
+ instance=mod.Installer(SimpleNamespace(root=str(tmp_path),python='/usr/bin/python3.11',public_origin='https://example.test'))
+ units=tmp_path/'etc/systemd/system';wants=units/'multi-user.target.wants';wants.mkdir(parents=True)
+ (wants/'mykos-retired.service').symlink_to('../mykos-retired.service')
+ unrelated=wants/'other.service';unrelated.symlink_to('../other.service')
+ calls=[];monkeypatch.setattr(mod,'command',lambda args:calls.append(args))
+ monkeypatch.setattr(mod.subprocess,'run',lambda *a,**kw:SimpleNamespace(stdout='active\n',returncode=0))
+ instance.retire_units(['mykos-retired.service'])
+ assert calls==[['systemctl','stop','mykos-retired.service']]
+ assert not (wants/'mykos-retired.service').is_symlink() and unrelated.is_symlink()

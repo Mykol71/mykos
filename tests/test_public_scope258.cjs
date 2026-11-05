@@ -1,0 +1,12 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert');
+const root=path.resolve(__dirname,'..'),privateEdition=fs.existsSync(path.join(root,'services/web/rti_access.py'));
+const html=fs.readFileSync(path.join(root,'services/web/index.html'),'utf8');
+const start=html.indexOf('function mykosVpnStatus('),end=html.indexOf('function mykosVpnGraph(',start);
+const context={mykosListDetails:{},mykosTerminalAllowed:true,escape:String,statusIcon:(kind,value)=>value};vm.createContext(context);vm.runInContext(html.slice(start,end),context);
+const node={id:'12345678',status:'online',vpn:'not_configured'};
+assert(context.mykosVpnStatus(node,{},'linux').includes('mykos-add-vpn-button'));
+assert.strictEqual(context.mykosVpnStatus(node,{},'ubuntu').includes('mykos-add-vpn-button'),privateEdition);
+context.mykosListDetails[node.id]={desktop:true};
+assert.strictEqual(context.mykosVpnStatus(node,{},'fedora').includes('mykos-add-vpn-button'),privateEdition);
+node.vpn='up';assert(context.mykosVpnStatus(node,{},'ubuntu').includes('mykos-ipsec-link'));
+console.log('Public creation scope and retained existing VPN status passed.');

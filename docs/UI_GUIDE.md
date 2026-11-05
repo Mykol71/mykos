@@ -424,11 +424,6 @@ The wood cabinet surrounds a brushed-aluminum face and black source-light bank. 
 Interactive terminals fit their text columns to the available pane or window width. Resizing updates the PTY dimensions without writing commands into the shell. Close/replacement disconnects the resize observer. Legacy API/raw terminal clients remain supported.
 
 
-## PXE desktop provisioning
-
-Full administrators can arm and revoke Windows 11 PXE jobs from the Windows pane. Physical rows show provisioning status only. See [PXE provisioning](PXE.md) for configuration, media imports and explicit erase confirmation.
-
-The environment label uses upright text in Dark and Light themes. Receiver retains its italic label.
 
 ## Refresh and startup responsiveness
 
@@ -437,4 +432,4 @@ A failed session request returns a retry message instead of leaving a permanent
 Checking session screen. New readings and interactions update the graph immediately;
 unchanged readings redraw once per second. Changing readings retain smooth easing.
 Compact peer panes collect Host metrics and history without polling hidden guest,
-image, repository, backup or PXE sections. Open the full node for those sections.
+image, repository or backup sections. Open the full node for those sections.

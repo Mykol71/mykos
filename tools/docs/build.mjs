@@ -49,7 +49,7 @@ for(const file of guides){
   return `<a href="${esc(documentationHref(href))}"${title?' title="'+esc(title)+'"':''}>${this.parser.parseInline(tokens)}</a>`;
  }}});
  const text=await fs.readFile(path.join(docs,file),'utf8'),title=text.match(/^# (.+)/m)?.[1]||file;
- const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${css}</style><header><span class="docs-brand">${flower}<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main>${md.parse(text)}<footer>MYKOS documentation</footer></main></html>`;
+ const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${css}</style><header><span class="docs-brand">${flower}<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main>${md.parse(text)}<footer>${flower}<span>MYKOS documentation · <a href="mailto:mgreen@myk.sh">mgreen@myk.sh</a></span></footer></main></html>`;
  await output('rendered/'+file.replace(/\.md$/,'.html'),html);
 }
 console.log(`${check?'Verified':'Generated'} ${count} files (${models.length} diagrams); permanent light theme.`);

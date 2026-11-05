@@ -28,7 +28,7 @@ It does not read the historical archive during installation.
 
 ## Prerequisites and scope
 
-**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
+**First stable-release host target: RHEL 9 (x86_64). RHEL 10 packages are preview-only; fresh installation is not yet supported because its repository lacks the native `mykos-criu` dependency.** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
 Use systemd and the packaged interpreter: Python 3.11 on RHEL 9, and distribution
 `python3` on RHEL 10. Python must provide `hashlib.scrypt`/OpenSSL. For a direct

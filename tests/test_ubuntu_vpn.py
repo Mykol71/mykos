@@ -13,6 +13,7 @@ def instance(monkeypatch,tmp_path,agent=True):
     return value
 
 
+@pytest.mark.skip(reason='Experimental creation retained and tested in RTI package')
 def test_add_uses_private_stdin_and_no_secret_in_host_marker(monkeypatch,tmp_path):
     value=instance(monkeypatch,tmp_path)
     calls=[]

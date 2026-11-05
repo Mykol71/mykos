@@ -77,7 +77,7 @@ A successful Accept and connect closes the pairing window immediately and clears
 ## Compact pane refresh
 
 The embedded pane monitors only its Host. It does not poll hidden guest details,
-image inventory, repositories, backups, snapshots or PXE sections. Its controls
+image inventory, repositories, backups or snapshots sections. Its controls
 attach when the document is ready, even if an optional map or terminal library
 is still loading. The flower opens the complete node dashboard with its normal
 refreshes and controls. Metrics, graph history and command targets remain bound

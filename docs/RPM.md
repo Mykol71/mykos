@@ -4,9 +4,11 @@
 
 Step-by-step starting points: [Packaging README](PACKAGING_README.md) · [Testing README](TESTING_README.md).
 
-**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
+**First stable-release host target: RHEL 9 (x86_64). RHEL 10 packages are preview-only; fresh installation is not yet supported because its repository lacks the native `mykos-criu` dependency.** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
-Each supported host major has its own signed binary RPM, source RPM and repository.
+**Clean-install pilot status:** RHEL 9 is the first qualification target. RHEL 10 candidate application RPMs are published, but a fresh install is currently blocked because the matching repository lacks the required native `mykos-criu` dependency. Do not treat staged RPM checks as fresh RHEL 10 installation certification.
+
+Each target host major has its own signed binary RPM, source RPM and repository.
 Older EL8 package archives are historical artifacts, not a supported host-installation path. Choose the repository
 matching the **host**, not the OS you want to run inside a guest.
 
@@ -14,13 +16,13 @@ matching the **host**, not the OS you want to run inside a guest.
 
 | Host | Repository configuration |
 | --- | --- |
-| RHEL 9 | `https://repo.myk.sh/mykos-1.5-for-x86_64-el9/mykos-el9.repo` |
-| RHEL 10 | `https://repo.myk.sh/mykos-1.5-for-x86_64-el10/mykos-el10.repo` |
+| RHEL 9 | [Download RHEL 9 repository configuration](https://myk.sh/repos/mykos-1.5-for-x86_64-el9/mykos-el9.repo) |
+| RHEL 10 | [Download RHEL 10 repository configuration](https://myk.sh/repos/mykos-1.5-for-x86_64-el10/mykos-el10.repo) |
 
 For example, on RHEL 9:
 
 ```bash
-sudo curl -fsSL https://repo.myk.sh/mykos-1.5-for-x86_64-el9/mykos-el9.repo -o /etc/yum.repos.d/mykos-el9.repo
+sudo curl -fsSL https://myk.sh/repos/mykos-1.5-for-x86_64-el9/mykos-el9.repo -o /etc/yum.repos.d/mykos-el9.repo
 sudo dnf install mykos
 rpm -q mykos
 sudo systemctl status mykos-firstboot.service --no-pager
@@ -146,8 +148,8 @@ longer the publication destination.
 
 Public download trees are limited to:
 
-- [MYKOS EL9](https://repo.myk.sh/mykos-1.5-for-x86_64-el9/)
-- [MYKOS EL10](https://repo.myk.sh/mykos-1.5-for-x86_64-el10/)
+- [MYKOS EL9](https://myk.sh/repos/mykos-1.5-for-x86_64-el9/)
+- [MYKOS EL10](https://myk.sh/repos/mykos-1.5-for-x86_64-el10/)
 
 `updateos` is LAN-only, along with the RHEL mirrors and other private trees.
 The only public repositories are MYKOS EL9 and MYKOS EL10.

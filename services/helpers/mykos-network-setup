@@ -4,6 +4,9 @@ from mykos_network import ensure
 from mykos_runtime import config
 if __name__ == '__main__':
     settings = config()
+    if settings.get('native_network_driver','bridge')!='bridge':
+        from mykos_release_scope import require_network_creation
+        require_network_creation('macvlan')
     selected, backend = ensure(settings)
     mode = 'private bridge NAT' if settings.get('native_network_driver', 'bridge') == 'bridge' else 'macvlan LAN DHCP'
     print(selected + ': ' + mode + ', eth0 (' + backend + ')')

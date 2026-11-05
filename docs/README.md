@@ -1,6 +1,17 @@
 # MYKOS documentation
 
-[PXE desktop provisioning](PXE.md) describes explicit Windows 11 staging, its disabled defaults and validation limits.
+**MYKOS is a Bring Your Own License (BYOL) virtualization solution. All vendor licensing rules apply.** You are responsible for obtaining and maintaining the licenses, subscriptions and permissions required for the operating systems, applications and other software you run with MYKOS. MYKOS does not grant vendor software licenses or override vendor terms, including virtualization and hardware restrictions.
+
+MYKOS aims to help fill the gap for organizations reassessing virtualization after VMware’s changes to ESXi and vSphere licensing. It offers a RHEL-based platform for managing supported virtual machines and Linux containers, with no MYKOS license charge for permitted personal and internal business use. Evaluate workload compatibility, operational requirements and vendor licensing before migrating. See [Broadcom’s licensing transition guidance](https://knowledge.broadcom.com/external/article/429208) and [current ESXi free-edition availability](https://knowledge.broadcom.com/external/article/399823).
+
+**Older applications on newer hardware**
+
+MYKOS could help businesses get more value from the systems they already own. By bringing compatible older applications onto newer hardware and reusing prepared operating-system environments, it can reduce the need to rebuild, reconfigure, or replace working software simply because a physical server is aging. Retailers, manufacturers, distributors, professional-services firms, and other organizations could benefit from less repetitive setup work, smoother migrations, and fewer disruptions to everyday operations.
+
+[POS customer consolidation](USE_CASES.md#7-consolidate-many-point-of-sale-customers-onto-cloud-servers): move separate customer server workloads onto one or more cloud hosts using a common prepared OS image.
+
+[Public roadmap](ROADMAP.md) covers the stable release pilot and planned provisioning and networking capabilities.
+
 
 [Release222 notes](VALIDATION.md#release222--fedora-gnome-desktop-vms) describe the Fedora GNOME VM addition and validation.
 
@@ -14,7 +25,7 @@
 
 These maintained guides include current operational features. Historical design baselines are identified in the guides that retain them.
 
-**Supported MYKOS hosts: RHEL 9 and RHEL 10 (x86_64).** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
+**First stable-release host target: RHEL 9 (x86_64). RHEL 10 packages are preview-only; fresh installation is not yet supported because its repository lacks the native `mykos-criu` dependency.** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
 Start with the [dashboard UI guide](UI_GUIDE.md) for the page layout, features,
 button-by-button reference, and common workflows.

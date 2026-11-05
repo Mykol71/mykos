@@ -1,6 +1,14 @@
 # MYKOS
 
-MYKOS is a virtualization and host-management solution for RHEL 9 and RHEL 10.
+**MYKOS is a Bring Your Own License (BYOL) virtualization solution. All vendor licensing rules apply.** You are responsible for obtaining and maintaining the licenses, subscriptions and permissions required for the operating systems, applications and other software you run with MYKOS. MYKOS does not grant vendor software licenses or override vendor terms, including virtualization and hardware restrictions.
+
+MYKOS aims to help fill the gap for organizations reassessing virtualization after VMware’s changes to ESXi and vSphere licensing. It offers a RHEL-based platform for managing supported virtual machines and Linux containers, with no MYKOS license charge for permitted personal and internal business use. Evaluate workload compatibility, operational requirements and vendor licensing before migrating. See [Broadcom’s licensing transition guidance](https://knowledge.broadcom.com/external/article/429208) and [current ESXi free-edition availability](https://knowledge.broadcom.com/external/article/399823).
+
+**Older applications on newer hardware**
+
+MYKOS could help businesses get more value from the systems they already own. By bringing compatible older applications onto newer hardware and reusing prepared operating-system environments, it can reduce the need to rebuild, reconfigure, or replace working software simply because a physical server is aging. Retailers, manufacturers, distributors, professional-services firms, and other organizations could benefit from less repetitive setup work, smoother migrations, and fewer disruptions to everyday operations.
+
+MYKOS is a virtualization and host-management solution with RHEL 9 as its first stable-release host target. RHEL 10 packages remain a preview pending dependency and fresh-install validation.
 RHEL 8 is no longer a supported MYKOS host; RHEL 8 guest images remain available.
 It combines a web control center, authenticated API, and text administration
 menus for native Linux containers and QEMU-based Windows, macOS, and Ubuntu
@@ -197,8 +205,8 @@ More guides: [architecture](docs/ARCHITECTURE.md), [API](docs/API.md),
 
 ## Repository downloads
 
-Production now serves the [EL9 MYKOS repository](https://repo.myk.sh/mykos-1.5-for-x86_64-el9/),
-[EL10 MYKOS repository](https://repo.myk.sh/mykos-1.5-for-x86_64-el10/), and
+Production now serves the [EL9 MYKOS repository](https://myk.sh/repos/mykos-1.5-for-x86_64-el9/),
+[EL10 MYKOS repository](https://myk.sh/repos/mykos-1.5-for-x86_64-el10/), and
 [updateos](https://repo.myk.sh/updateos/) publicly. RHEL mirrors and other repository
 content remain LAN-only. See [repository access and installation](docs/RPM.md#repository-visibility-and-production-storage)
 for current storage, client settings and publication destinations.
