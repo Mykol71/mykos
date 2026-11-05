@@ -1,5 +1,6 @@
 (()=>{
 'use strict';
+if(window.MYKOS_PEER_CONTEXT?.compact)return;
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={windows11:'Windows'};
 let current={enabled:false,jobs:[],profiles:['windows11']};

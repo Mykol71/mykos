@@ -3,8 +3,8 @@
 [Documentation index](README.md)
 
 Use this guide to find a feature, identify an icon, and understand what happens
-when you select a control. It describes the dashboard through the peer compact
-UI and peer-map updates (hotfix188). Controls depend on your role, host configuration, available
+when you select a control. It describes the current dashboard, including compact peer Host monitoring,
+the optional Receiver display, and installed extension panes. Controls depend on your role, host configuration, available
 images, and resource state. Hover over an icon for its action name; keyboard users
 can move between controls with Tab and activate buttons with Enter or Space.
 
@@ -429,3 +429,12 @@ Interactive terminals fit their text columns to the available pane or window wid
 Full administrators can arm and revoke Windows 11 PXE jobs from the Windows pane. Physical rows show provisioning status only. See [PXE provisioning](PXE.md) for configuration, media imports and explicit erase confirmation.
 
 The environment label uses upright text in Dark and Light themes. Receiver retains its italic label.
+
+## Refresh and startup responsiveness
+
+The session check does not wait for optional external map or terminal libraries.
+A failed session request returns a retry message instead of leaving a permanent
+Checking session screen. New readings and interactions update the graph immediately;
+unchanged readings redraw once per second. Changing readings retain smooth easing.
+Compact peer panes collect Host metrics and history without polling hidden guest,
+image, repository, backup or PXE sections. Open the full node for those sections.

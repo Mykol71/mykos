@@ -1,5 +1,6 @@
 // Deterministic documentation generation; no runtime state or production access.
 import fs from 'node:fs/promises';
+import {documentationHref} from './links.mjs';
 import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createRequire} from 'node:module';
@@ -45,7 +46,7 @@ for(const file of guides){
   const image=`<img src="${esc(href)}" alt="${esc(text||'')}"${title?' title="'+esc(title)+'"':''}>`;
   return href.startsWith('diagrams/')?`<a href="${esc(href)}" title="Open full-size diagram">${image}</a><a href="${esc(href)}">Open full-size diagram</a>`:image;
  },link({href,title,tokens}){
-  return `<a href="${esc(href.replace(/\.md(?=$|#)/,'.html'))}"${title?' title="'+esc(title)+'"':''}>${this.parser.parseInline(tokens)}</a>`;
+  return `<a href="${esc(documentationHref(href))}"${title?' title="'+esc(title)+'"':''}>${this.parser.parseInline(tokens)}</a>`;
  }}});
  const text=await fs.readFile(path.join(docs,file),'utf8'),title=text.match(/^# (.+)/m)?.[1]||file;
  const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>${css}</style><header><span class="docs-brand">${flower}<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main>${md.parse(text)}<footer>MYKOS documentation</footer></main></html>`;

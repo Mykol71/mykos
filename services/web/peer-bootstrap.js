@@ -2,7 +2,8 @@
 (() => {
     'use strict';
     const prefix = __MYKOS_PEER_PREFIX__;
-    window.MYKOS_PEER_CONTEXT = {prefix};
+    const compact = !['1','true','on','yes'].includes((new URL(location.href).searchParams.get('full') || '').toLowerCase());
+    window.MYKOS_PEER_CONTEXT = {prefix,compact};
     function route(value) {
         const url = new URL(String(value), location.href);
         if (url.origin === location.origin && url.pathname.startsWith('/mykos/') && !url.pathname.startsWith(prefix + '/')) {
@@ -34,6 +35,7 @@
     }, true);
     window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('logout')?.remove();
+        if (window.parent !== window) window.parent.postMessage({type:'mykos-peer-ready',prefix},location.origin);
         const report = () => {
             const pane = document.getElementById('mykos-host-pane');
             const footer=document.getElementById('mykos-host-hardware');

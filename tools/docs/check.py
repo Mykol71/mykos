@@ -39,6 +39,7 @@ for item in ast.parse((ROOT/'services/web/supporting_docs.py').read_text()).body
 public_guides=json.loads((ROOT/'tools/docs/guides.json').read_text())
 assert set(values['GUIDES'])==set(public_guides)
 assert all((DOCS/name).is_file() for name in public_guides)
+assert all((DOCS/name).is_file() for name in values['DOWNLOADS']),'Allowlisted download missing'
 assert set(pages)=={p[:-3]+'.html' for p in values['GUIDES']}
 assert values['DIAGRAMS']=={p.name for p in (DOCS/'diagrams').iterdir()}
 assert values['SCREENSHOTS']=={p.name for p in (DOCS/'screenshots').iterdir()}

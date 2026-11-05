@@ -77,8 +77,8 @@
     function syncAppearance(item) {
         const root=item.frame.contentDocument?.documentElement;
         if(!root)return;
-        root.dataset.theme=document.documentElement.dataset.theme;
-        root.dataset.mykosMapBackground=document.documentElement.dataset.mykosMapBackground;
+        if(root.dataset.theme!==document.documentElement.dataset.theme)root.dataset.theme=document.documentElement.dataset.theme;
+        if(root.dataset.mykosMapBackground!==document.documentElement.dataset.mykosMapBackground)root.dataset.mykosMapBackground=document.documentElement.dataset.mykosMapBackground;
     }
     function updateMapPeers() {
         window.mykosGeoPeers=[...frames.values()].filter(item=>item.peer.state==='active' && item.peer.connected).map(item=>{
@@ -207,10 +207,12 @@
         }
     }
     window.addEventListener('message', event => {
-        if (event.origin !== location.origin || event.data?.type !== 'mykos-peer-height') return;
+        if (event.origin !== location.origin || !['mykos-peer-height','mykos-peer-ready'].includes(event.data?.type)) return;
         for (const [id,item] of frames) {
-            if (event.source === item.frame.contentWindow && event.data.prefix === '/mykos/api/web/peers/' + id + '/proxy' && Number.isFinite(event.data.height))
-                item.frame.style.height = Math.max(60, Math.min(1800, event.data.height)) + 'px';
+            if (event.source === item.frame.contentWindow && event.data.prefix === '/mykos/api/web/peers/' + id + '/proxy') {
+                if(event.data.type==='mykos-peer-ready')attachActions(item);
+                else if(Number.isFinite(event.data.height))item.frame.style.height = Math.max(60, Math.min(1800, event.data.height)) + 'px';
+            }
         }
     });
     refresh(); window.setInterval(refresh, 15000);

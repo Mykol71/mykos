@@ -2,8 +2,9 @@
 
 A peer connection gives administrators reciprocal control of two MYKOS hosts over
 an independent IKEv2 VPN. Both dashboards show a complete Host pane for each
-node, labeled by hostname and address. Each pane retains its own live performance
-graph, metric toggles, history slider, status, diagnostics and hardware details.
+node, labeled by hostname and address. The embedded pane retains its own compact live performance
+graph, status, diagnostics and hardware details. The full node also exposes metric
+toggles and the history slider.
 Use the small MYKOS flower in the peer Host's **Actions** column for guest,
 image, snapshot and repository controls.
 All operations stay bound to that node, including terminals and desktop consoles.
@@ -72,3 +73,12 @@ Cancel closes Add Peer without validating the address fields or sending a pairin
 ### Pairing window completion
 
 A successful Accept and connect closes the pairing window immediately and clears its private invitation text. Creating an invitation keeps the window open for copying; after the other host connects, the normal peer refresh closes the window for that matching invitation. A failed or still-pending connection keeps its message visible. Other existing peer connections never close an unrelated invitation window.
+
+## Compact pane refresh
+
+The embedded pane monitors only its Host. It does not poll hidden guest details,
+image inventory, repositories, backups, snapshots or PXE sections. Its controls
+attach when the document is ready, even if an optional map or terminal library
+is still loading. The flower opens the complete node dashboard with its normal
+refreshes and controls. Metrics, graph history and command targets remain bound
+to the selected peer.

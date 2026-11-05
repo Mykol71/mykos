@@ -1,0 +1,12 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const src=fs.readFileSync(path.join(__dirname,'../services/web/peer-ui.js'),'utf8');
+const a=src.indexOf("    window.addEventListener('message',"),b=src.indexOf('\n    });',a)+7;
+const child={},id='a'.repeat(32),item={frame:{contentWindow:child,style:{}}};let callback,attached=0;
+const ctx={window:{addEventListener:(_,fn)=>callback=fn},location:{origin:'https://local.test'},frames:new Map([[id,item]]),attachActions:value=>{assert.equal(value,item);attached++;}};
+vm.runInNewContext(src.slice(a,b),ctx);
+const valid={origin:'https://local.test',source:child,data:{type:'mykos-peer-ready',prefix:'/mykos/api/web/peers/'+id+'/proxy'}};
+callback({...valid,origin:'https://foreign.test'});callback({...valid,source:{}});callback({...valid,data:{...valid.data,prefix:'/wrong'}});assert.equal(attached,0);
+callback(valid);assert.equal(attached,1,'Verified DOM readiness attaches peer controls before optional resource load');
+callback({...valid,data:{...valid.data,type:'mykos-peer-height',height:4000}});assert.equal(item.frame.style.height,'1800px');
+callback({...valid,data:{...valid.data,type:'mykos-peer-height',height:80}});assert.equal(item.frame.style.height,'80px');
+console.log('Peer readiness validates origin, exact frame and target prefix; early controls and bounded height updates passed.');

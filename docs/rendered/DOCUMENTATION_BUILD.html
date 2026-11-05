@@ -45,4 +45,11 @@ and deployed documentation synchronized, including rendered pages, allowlists
 and manifest hashes. Do not rerun the one-time formatting migration. Documentation
 verification must not start/stop guests, change VPNs/routes/peers, replace disks,
 restore snapshots, alter identities or modify repositories.</p>
+<h2 id="link-review">Link review</h2>
+<p>Local Markdown guide links become viewer HTML links; external Markdown source
+URLs keep their original suffix. Legacy MYKOS API-base links in historical guides
+lead to the interactive API reference. Keep protected historical source documents
+unchanged when correcting generated navigation. Verify local links and anchors,
+all allowlisted downloads/assets, and live URL status separately. A vendor bot
+challenge or a TLS failure in one checker is unverified, not proof of a dead page.</p>
 <footer>MYKOS documentation</footer></main></html>

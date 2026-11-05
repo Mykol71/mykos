@@ -1573,9 +1573,14 @@ async function load(){
         mykosGeoHosts = Array.isArray(data.hosts) ? data.hosts : [];
         mykosMerakiSites = Array.isArray(data.meraki_sites) ? data.meraki_sites : [];
         el('dashboard').hidden = false;
-        mykosStartLifecycleSignals();
         el('login').hidden = true;
         el('error').textContent = '';
+        // The embedded peer shows only its Host pane. Full-node windows keep all collectors.
+        if (window.MYKOS_PEER_CONTEXT?.compact) {
+            mykosLoadHostMetrics();mykosLoadHostHistory();
+            return;
+        }
+        mykosStartLifecycleSignals();
         await mykosLoadCurrentUser(controller.signal);mykosLoadHostVersion();mykosLoadHostMetrics();mykosLoadHostHistory();mykosLoadCountMetrics();mykosLoadStageImages();mykosRefreshMykos();
         el('total').textContent=nodes.length;el('online').textContent=nodes.filter(n=>n.status==='online').length;el('offline').textContent=nodes.filter(n=>n.status==='offline').length;el('vpnup').textContent=nodes.filter(n=>n.vpn==='up').length;el('updated').textContent='Refreshed '+new Date().toLocaleTimeString();
         mykosRefreshHeaderTotals();table();drawMap();topology();
@@ -1627,6 +1632,7 @@ let mykosListDetails = {};
 let mykosListMemory = {};
 
 async function mykosRefreshListStats() {
+    if (typeof window!=='undefined' && window.MYKOS_PEER_CONTEXT?.compact) return;
     try {
         const ext = await fetch('/mykos/api/web/extended', {cache:'no-store'});
         if (ext.ok) {
@@ -2445,6 +2451,7 @@ function mykosRenderSnapshots() {
     }
 }
 async function mykosRefreshSnapshots() {
+    if (typeof window!=='undefined' && window.MYKOS_PEER_CONTEXT?.compact) return;
     try {
         const data = await mykosStageJSON('/mykos/api/web/snapshots');
         mykosSnapshotData = data.snapshots || []; mykosSnapshotError = '';
@@ -3577,6 +3584,7 @@ function mykosRefreshOsChoices() {
     }
 }
 async function mykosLoadStageImages(force = false) {
+    if (typeof window!=='undefined' && window.MYKOS_PEER_CONTEXT?.compact) return;
     if (mykosStageImagesLoading || (!force && Date.now() - mykosStageImagesLoadedAt < 30000)) return;
     mykosStageImagesLoading = true;
     try {
@@ -3744,7 +3752,7 @@ async function mykosCheckTerminalPermission() {
                     mykosTerminalAllowed=allowed;
                     mykosLoadStageImages(true);
                     if(!allowed)mykosCloseTerminal();
-                    mykosRenderMykos();mykosRenderSnapshots();mykosRenderInventory();
+                    if (!(typeof window!=='undefined' && window.MYKOS_PEER_CONTEXT?.compact)) {mykosRenderMykos();mykosRenderSnapshots();mykosRenderInventory();}
                     if(typeof mykosHostStatusData!=='undefined' && mykosHostStatusData)mykosRenderHostStatus(mykosHostStatusData);
                 }
             }
@@ -4088,6 +4096,7 @@ function mykosRenderMykos() {
     mykosRefreshSampleRows();
 }
 async function mykosRefreshMykos(force = false, onlyKind = null) {
+    if (typeof window!=='undefined' && window.MYKOS_PEER_CONTEXT?.compact) return;
     if (mykosLoading || (!force && Date.now() - mykosRefreshed < 60000)) return;
     mykosLoading = true;
     await Promise.all((onlyKind ? [onlyKind] : ['repos']).map(async kind => {
