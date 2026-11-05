@@ -24,6 +24,7 @@ def env(tmp_path,monkeypatch):
     store.configure('https://stage.example.com',['192.0.2.0/24'])
     for name in ('boot.wim','install.wim','wimboot','curl.exe','curl-ca-bundle.crt','mykos-pe-guard.exe','chrome.msi'):
         path=tmp_path/name;path.write_bytes(('Fixture '+name).encode());store.register_asset(path,name)
+    store.private_write(store.ROOT/'media.json',json.dumps({'index':1,'install_wim_sha256':store.asset('install.wim')['sha256']}))
     app=FastAPI();app.include_router(pxe_api.router)
     client=TestClient(app,base_url='https://stage.example.com',client=('192.0.2.11',54321))
     return tmp_path,client
@@ -202,3 +203,24 @@ def test_cli_repairs_existing_private_cache_traversal(tmp_path,monkeypatch):
  assert cache.stat().st_mode&0o777==0o750
  assert (cache/'assets').stat().st_mode&0o777==0o750
  assert Path(result['path']).read_bytes()==source.read_bytes()
+
+
+@pytest.mark.parametrize('index',[0,2,100,True])
+def test_unvalidated_wim_index_never_arms_job(env,index):
+    with pytest.raises(ValueError,match='validated during media import'):arm(image_index=index,allow_wipe=True)
+    assert store.jobs()==[]
+
+
+def test_default_index_uses_exact_validated_media(env):
+    store.private_write(store.ROOT/'media.json',json.dumps({'index':3,'install_wim_sha256':store.asset('install.wim')['sha256']}))
+    job=arm()
+    with store.connect() as c:cfg=json.loads(c.execute('SELECT config FROM jobs WHERE id=?',(job['id'],)).fetchone()[0])
+    assert cfg['image_index']==3
+
+
+def test_replaced_or_legacy_media_requires_revalidation(env):
+    store.private_write(store.ROOT/'media.json',json.dumps({'index':1}))
+    with pytest.raises(ValueError,match='Reimport'):arm()
+    store.private_write(store.ROOT/'media.json',json.dumps({'index':1,'install_wim_sha256':'0'*64}))
+    with pytest.raises(ValueError,match='Reimport'):arm()
+    assert store.jobs()==[]

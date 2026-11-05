@@ -80,7 +80,7 @@ def main():
     p=sub.add_parser('configure');p.add_argument('--origin',required=True);p.add_argument('--allow-network',action='append',required=True)
     p=sub.add_parser('asset');p.add_argument('name');p.add_argument('path');p.add_argument('--sha256',required=True)
     p=sub.add_parser('import-media');p.add_argument('directory');p.add_argument('--index',type=int,default=1);p.add_argument('--tiny11-report')
-    p=sub.add_parser('arm');p.add_argument('--mac',required=True);p.add_argument('--customer',required=True);p.add_argument('--profile',choices=['windows11'],required=True);p.add_argument('--hostname');p.add_argument('--minutes',type=int,default=120);p.add_argument('--index',type=int,default=1);p.add_argument('--allow-wipe',action='store_true');p.add_argument('--with-apps',action='store_true');p.add_argument('--password-stdin',action='store_true')
+    p=sub.add_parser('arm');p.add_argument('--mac',required=True);p.add_argument('--customer',required=True);p.add_argument('--profile',choices=['windows11'],required=True);p.add_argument('--hostname');p.add_argument('--minutes',type=int,default=120);p.add_argument('--index',type=int);p.add_argument('--allow-wipe',action='store_true');p.add_argument('--with-apps',action='store_true');p.add_argument('--password-stdin',action='store_true')
     sub.add_parser('status')
     p=sub.add_parser('revoke');p.add_argument('job')
     args=parser.parse_args()
@@ -103,7 +103,7 @@ def main():
             for required in ('windows/system32/wuaueng.dll','windows/servicing/trustedinstaller.exe','windows/system32/spoolsv.exe','windows/system32/odbc32.dll','windows/system32/srvsvc.dll','program files/windows defender/msmpeng.exe'):
                 if required not in files:raise ValueError('Required image component is missing: '+required)
             result={name:copy_asset(path,name) for name,path in [('boot.wim',boot),('install.wim',image)]}
-            store.private_write(store.ROOT/'media.json',json.dumps({'index':args.index,'tiny11':bool(args.tiny11_report)}))
+            store.private_write(store.ROOT/'media.json',json.dumps({'index':args.index,'tiny11':bool(args.tiny11_report),'install_wim_sha256':result['install.wim']['sha256']}))
         elif args.command=='arm':
             secret=sys.stdin.readline().rstrip('\r\n') if args.password_stdin else getpass.getpass('Local Windows password: ')
             result=store.enroll(args.mac,args.customer,args.profile,secret,hostname=args.hostname,minutes=args.minutes,allow_wipe=args.allow_wipe,apps=args.with_apps,image_index=args.index)

@@ -462,6 +462,8 @@ def restore_native(shop,identifier):
             volume_sources={str(Path(m['Source']).resolve()) for m in state.get('Mounts',[]) if m.get('Type')=='volume'}
             if str(dest) not in volume_sources and not any(dest==p or p in dest.parents for p in permitted):raise ValueError('Refusing restore of unmanaged shared host data')
             targets.append((source,dest))
+        from mykos_containers import all_containers, unshared
+        unshared([dest for _,dest in targets],all_containers(),state['Id'])
         initialize();transaction=Path(tempfile.mkdtemp(prefix='.native-restore-',dir=str(root())))
         try:
             unpacked=transaction/'checkpoint';extract_checkpoint(folder/'checkpoint.tar.gz',unpacked)
@@ -491,6 +493,7 @@ def restore_native(shop,identifier):
             vm.run([vm.PODMAN,'unmount',name],timeout=30)
             merged=state['GraphDriver']['Data'].get('MergedDir')
             if merged and os.path.ismount(merged):raise ValueError('Container layer is still mounted')
+            unshared([dest for _,dest in targets],all_containers(),state['Id'])
             for index,(source,dest) in enumerate(targets):
                 if source.is_symlink() or not source.exists() or source.is_dir()!=dest.is_dir():raise ValueError('Snapshot filesystem is missing')
                 backup=transaction/('data-'+str(index))

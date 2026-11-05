@@ -211,4 +211,6 @@ credentials out of public source, release artifacts and unrelated summaries.</li
 <p>A test is complete when its expected assertions and cleanup checks pass. A
 release is complete only after signed publication and verification at all
 required destinations; see the <a href="PACKAGING_README.html#7-publish-verify-and-close-the-batch">release closeout steps</a>.</p>
+<h3 id="restore-and-pxe-regression-checks">Restore and PXE regression checks</h3>
+<p><code>tests/test_review256.py</code> covers shared writable mount rejection and independent repository/backup inventory reads. PXE enrollment accepts only the image index validated for the exact imported installation WIM digest. After upgrading an older media import, reimport its approved Windows media before arming another desktop. The validated index is displayed read-only in the provisioning dialog; omitted API/CLI indexes use that index. No physical desktop test is needed for these synthetic regressions.</p>
 <footer>MYKOS documentation</footer></main></html>

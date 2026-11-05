@@ -13,6 +13,8 @@ from container_admin import invoke
 router = APIRouter(prefix='/api/web/mykos')
 _cache = {}
 _lock = threading.Lock()
+_fetch_locks = {}
+_generation = {}
 
 
 def authorize(request, modify=False):
@@ -29,10 +31,20 @@ def listing(kind, refresh=False):
         cached = _cache.get(kind)
         if not refresh and cached and time.monotonic() - cached[0] < 60:
             return cached[1]
+        fetch_lock = _fetch_locks.setdefault(kind, threading.Lock())
+    # Slow root helper calls serialize only their own inventory kind.
+    with fetch_lock:
+        with _lock:
+            cached = _cache.get(kind)
+            if not refresh and cached and time.monotonic() - cached[0] < 60:
+                return cached[1]
+            generation = _generation.get(kind, 0)
         result = invoke(kind + '-list')
-        _cache[kind] = (time.monotonic(), result)
+        with _lock:
+            # A mutation during this read must not repopulate an invalidated cache.
+            if _generation.get(kind, 0) == generation:
+                _cache[kind] = (time.monotonic(), result)
         return result
-
 
 
 
@@ -65,6 +77,7 @@ def perform(kind, action, target, payload):
     finally:
         with _lock:
             _cache.pop(kind, None)
+            _generation[kind] = _generation.get(kind, 0) + 1
 
 
 

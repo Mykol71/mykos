@@ -284,6 +284,7 @@ retains the LAN endpoint for diagnostics. Native RDP/VNC login addresses still
 require LAN/VPN access; browser consoles need only public HTTPS access and a
 MYKOS admin session. Guests and their assigned ports are not restarted or changed.</p>
 <h3 id="native-snapshot-compatibility">Native snapshot compatibility</h3>
+<p>Native restore refuses writable storage mounted by another container, including overlapping parent or child paths. Retire the sharing relationship deliberately before restoring; stopping the other container alone does not make its data private.</p>
 <p>MYKOS uses a private CRIU RPC relay for each native snapshot. The filesystem copy
 runs at the post-dump notification before CRIU resumes source tasks. It does not
 install shell action scripts in <code>/etc/criu/runc.conf</code>; upgrades remove only the

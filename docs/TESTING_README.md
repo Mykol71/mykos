@@ -225,3 +225,7 @@ Before reporting any test complete, on success, failure or interruption:
 A test is complete when its expected assertions and cleanup checks pass. A
 release is complete only after signed publication and verification at all
 required destinations; see the [release closeout steps](PACKAGING_README.md#7-publish-verify-and-close-the-batch).
+
+### Restore and PXE regression checks
+
+`tests/test_review256.py` covers shared writable mount rejection and independent repository/backup inventory reads. PXE enrollment accepts only the image index validated for the exact imported installation WIM digest. After upgrading an older media import, reimport its approved Windows media before arming another desktop. The validated index is displayed read-only in the provisioning dialog; omitted API/CLI indexes use that index. No physical desktop test is needed for these synthetic regressions.

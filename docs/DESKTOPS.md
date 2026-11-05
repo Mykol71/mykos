@@ -350,6 +350,8 @@ MYKOS admin session. Guests and their assigned ports are not restarted or change
 
 ### Native snapshot compatibility
 
+Native restore refuses writable storage mounted by another container, including overlapping parent or child paths. Retire the sharing relationship deliberately before restoring; stopping the other container alone does not make its data private.
+
 MYKOS uses a private CRIU RPC relay for each native snapshot. The filesystem copy
 runs at the post-dump notification before CRIU resumes source tasks. It does not
 install shell action scripts in `/etc/criu/runc.conf`; upgrades remove only the

@@ -35,8 +35,9 @@ def overview(request:Request):
         if error.status_code!=503:raise
         return {'enabled':False,'profiles':store.PROFILES,'jobs':[],'assets':{},'media_index':1}
     assets,readiness_error=readable_assets()
-    try:index=json.loads((store.ROOT/'media.json').read_text())['index']
-    except (OSError,KeyError,ValueError):index=1
+    try:index=store.validated_media()['index']
+    except (ValueError,store.HTTPException) as error:
+        index=None;readiness_error=readiness_error or str(getattr(error,'detail',error))
     return {'enabled':True,'origin':cfg['origin'],'allowed_networks':cfg['allowed_networks'],'profiles':store.PROFILES,'assets':assets,'readiness_error':readiness_error,'jobs':store.jobs(),'media_index':index}
 class Arm(BaseModel):
     mac:str=Field(max_length=17)
@@ -47,7 +48,7 @@ class Arm(BaseModel):
     minutes:int=Field(default=120,ge=5,le=1440)
     allow_wipe:bool=False
     confirmation:str=Field(default='',max_length=17)
-    image_index:int=Field(default=1,ge=1,le=100)
+    image_index:int|None=Field(default=None,ge=1,le=100)
 @router.post('/jobs')
 def arm_job(data:Arm,request:Request):
     admin(request,True)

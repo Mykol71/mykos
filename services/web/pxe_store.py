@@ -145,7 +145,22 @@ def asset(name):
     return item
 
 
-def enroll(target, customer, profile, password, *, hostname=None, minutes=120, allow_wipe=False, apps=False, image_index=1):
+def validated_media():
+    """Only an index validated for this exact imported WIM may be armed."""
+    try:
+        media = json.loads((ROOT / 'media.json').read_text())
+        index = media['index']
+        digest = media['install_wim_sha256']
+        if type(index) is not int or not 1 <= index <= 100 or not SHA.fullmatch(digest):
+            raise ValueError()
+        if digest != asset('install.wim')['sha256']:
+            raise ValueError()
+        return media
+    except (OSError, KeyError, TypeError, ValueError):
+        raise ValueError('Reimport Windows media to validate its WIM index and digest') from None
+
+
+def enroll(target, customer, profile, password, *, hostname=None, minutes=120, allow_wipe=False, apps=False, image_index=None):
     target = mac(target); settings(); media = assets()
     required = ('boot.wim', 'install.wim', 'wimboot', 'curl.exe', 'curl-ca-bundle.crt', 'mykos-pe-guard.exe', 'chrome.msi')
     for name in required: asset(name)
@@ -154,7 +169,7 @@ def enroll(target, customer, profile, password, *, hostname=None, minutes=120, a
     if not password or len(password) > 128 or any(ord(ch) < 32 for ch in password): raise ValueError('Invalid local-account password')
     hostname = hostname or (('MYKOS' if profile=='windows11' else profile.upper()) + '-' + target.replace('-', '')[-6:])
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]{0,14}', hostname): raise ValueError('Windows hostname must be 1–15 letters, digits or hyphens')
-    if not 5 <= minutes <= 1440 or not 1 <= image_index <= 100: raise ValueError('Invalid lifetime or WIM index')
+    if not 5 <= minutes <= 1440: raise ValueError('Invalid lifetime')
     if apps:raise ValueError('Application installation requires a business extension')
     cfg = {'username':'mykos','password':password,'workgroup':'WORKGROUP','hostname':hostname,
            'allow_wipe':bool(allow_wipe),'apps':False,'image_index':image_index,'assets':media}
@@ -162,6 +177,11 @@ def enroll(target, customer, profile, password, *, hostname=None, minutes=120, a
     with connect() as c:
         c.execute('BEGIN IMMEDIATE')
         if assets() != media: raise ValueError('Media changed while arming; retry with the current image')
+        validated = validated_media()
+        if image_index is None: image_index = validated['index']
+        if type(image_index) is not int or image_index != validated['index']:
+            raise ValueError('Choose the WIM index validated during media import')
+        cfg['image_index'] = image_index
         active = c.execute("SELECT 1 FROM jobs WHERE mac=? AND expires>? AND state IN ('armed','booting','applying','firstboot')", (target, now)).fetchone()
         if active: raise ValueError('This MAC already has an active job; revoke it explicitly before staging again')
         c.execute('INSERT INTO jobs(id,mac,customer,profile,state,created,expires,ticket,config) VALUES(?,?,?,?,?,?,?,?,?)',
