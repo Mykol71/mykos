@@ -80,3 +80,31 @@ The browser console opens the actual Ubuntu graphical desktop. This capture show
 [Open the full-size Ubuntu desktop](screenshots/example-ubuntu-desktop.jpg).
 
 Use the instance row’s Stop and Start controls to retain and resume its disks, and Snapshot to capture a supported recovery point. See [Snapshot Preview](DESKTOPS.md#snapshot-preview) before choosing Preview or Restore.
+
+## macOS workflow
+
+This example uses a prepared **macOS 12 Monterey** (`mac12`) image and illustrative instance data. Follow the [image-build workflow](IMAGE_BUILDS.md) to prepare and validate the image first. All applicable Apple operating-system and application licensing requirements apply; see [licensing](LICENSING.md).
+
+### 1. Select macOS and an instance ID
+
+Open the macOS pane, enter an eight-digit instance ID, choose the prepared Monterey image, and use the blue **Start** plus. Confirm the selected image and ID when prompted.
+
+![macOS pane with illustrative instance ID 12345679, Monterey selected and the Start plus](screenshots/example-macos-select.jpg)
+
+### 2. Open the instance console
+
+When startup completes, the instance row reports **Up** with its address, uptime and memory. Use **HTTP graphical desktop** to open the guest's browser console and use its macOS desktop. The example below shows the MYKOS controls for that instance.
+
+![Example macOS Monterey instance with graphical-console and lifecycle controls](screenshots/example-macos-instance.jpg)
+
+[Open the full-size macOS instance example](screenshots/example-macos-instance.jpg).
+
+Use **Stop** and **Start** to retain and resume the instance's disks. **Delete** removes that instance and its saved data after confirmation.
+
+### 3. Choose a snapshot recovery action
+
+Use **Snapshot container** on a running instance to save a supported recovery point. In the Snapshots pane, choose that instance's saved timestamp. **Preview** opens a separate temporary session, **Restore** replaces the original instance's state after confirmation, and **Delete** removes the selected recovery point. Read [Snapshot Preview](DESKTOPS.md#snapshot-preview) before choosing Preview or Restore.
+
+![macOS snapshot selector with Restore, Delete and Preview actions](screenshots/example-macos-snapshot.jpg)
+
+[Open the full-size macOS snapshot example](screenshots/example-macos-snapshot.jpg).
