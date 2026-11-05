@@ -361,6 +361,12 @@ img.mykos-pane-logo { object-fit: contain; }
 .mykos-chart-history button { border:0; background:none; padding:0 2px; font:inherit; color:#38bdf8; cursor:pointer; }
 .mykos-chart-plot { position: relative; }
 #mykos-host-chart { width: 100%; height: 104px; display: block; outline-offset: -2px; }
+/* Compact peer strips never show range controls or independent scrollbars. */
+html.mykos-peer-compact, .mykos-peer-compact body { overflow:hidden!important; }
+.mykos-peer-compact :is(input[type="range"],.receiver-slider-controls,#receiver-history-input-slot) { display:none!important; }
+.mykos-peer-compact #mykos-host-pane > div:has(> table[aria-label="Host status"]) { overflow:visible!important; }
+.mykos-peer-compact #mykos-host-pane .mykos-row-actions { flex-wrap:wrap; }
+.mykos-peer-compact .mykos-host-status-rows td { white-space:normal; overflow-wrap:anywhere; }
 /* Embedded peer hosts keep full controls with a shorter performance plot. */
 /* Embedded peers use the owning page's backdrop, never an opaque inner map. */
 .mykos-peer-compact :is(#mykos-page-background,#mykos-geo-background,#mykos-location-layer) { display:none!important; }

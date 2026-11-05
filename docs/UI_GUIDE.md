@@ -433,3 +433,5 @@ Checking session screen. New readings and interactions update the graph immediat
 unchanged readings redraw once per second. Changing readings retain smooth easing.
 Compact peer panes collect Host metrics and history without polling hidden guest,
 image, repository or backup sections. Open the full node for those sections.
+
+Embedded peer strips show live status and actions without sliders or independent scrollbars. Open the full node to use its complete history controls.

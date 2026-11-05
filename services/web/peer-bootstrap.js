@@ -4,6 +4,7 @@
     const prefix = __MYKOS_PEER_PREFIX__;
     const compact = !['1','true','on','yes'].includes((new URL(location.href).searchParams.get('full') || '').toLowerCase());
     window.MYKOS_PEER_CONTEXT = {prefix,compact};
+    if (compact) document.documentElement?.classList?.add('mykos-peer-compact');
     function route(value) {
         const url = new URL(String(value), location.href);
         if (url.origin === location.origin && url.pathname.startsWith('/mykos/') && !url.pathname.startsWith(prefix + '/')) {
