@@ -427,3 +427,5 @@ Interactive terminals fit their text columns to the available pane or window wid
 ## PXE desktop provisioning
 
 Full administrators can arm and revoke Windows 11 PXE jobs from the Windows pane. Physical rows show provisioning status only. See [PXE provisioning](PXE.md) for configuration, media imports and explicit erase confirmation.
+
+The environment label uses upright text in Dark and Light themes. Receiver retains its italic label.
