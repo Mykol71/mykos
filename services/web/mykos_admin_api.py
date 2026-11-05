@@ -1,5 +1,7 @@
 """Dashboard views and administrator operations for MYKOS repositories."""
 import json
+import os
+from urllib.parse import urlsplit, urlunsplit
 import threading
 import time
 from typing import Literal, Optional
@@ -37,7 +39,17 @@ def listing(kind, refresh=False):
 @router.get('/repos')
 def repos(request: Request, refresh: bool = False):
     authorize(request)
-    return listing('repo', refresh)
+    data=dict(listing('repo', refresh))
+    if not data.get('download_base_url') and not data.get('public_base_url'):
+        # A forwarded UI or SSH tunnel can have a different browser origin.
+        # Use the configured server origin, never that incidental UI address.
+        origin=os.environ.get('MYKOS_PUBLIC_ORIGIN')
+        if origin:
+            url=urlsplit(origin)
+            if url.scheme not in ('http','https') or not url.hostname or url.username or url.password or url.query or url.fragment:
+                raise HTTPException(503,'Invalid repository origin configuration')
+            data['download_base_url']=urlunsplit((url.scheme,url.netloc,'/repos/','',''))
+    return data
 
 
 

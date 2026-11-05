@@ -11,7 +11,7 @@ async function check(state) {
         mykosStageShow:message=>{result.textContent=message;result.hidden=false;},
         clearInterval:()=>{clears++;},setInterval:(fn,ms)=>{tick=fn;interval=ms;return 1;},
         mykosStageJSON:()=>new Promise(r=>{resolve=r;}),
-        load:async()=>{loads++;},mykosRefreshListStats:async()=>{stats++;}});
+        mykosRefreshStartupInventory:async()=>{loads++;stats++;},load:async()=>{loads++;},mykosRefreshListStats:async()=>{stats++;}});
     vm.runInContext(source,ctx);
     await ctx.mykosStagePoll('12345678');
     assert.equal(interval,1000);
@@ -23,9 +23,9 @@ async function check(state) {
     assert.equal(button.disabled,false);
     assert.equal(clears,2);
     assert.equal(result.hidden,state==='done');
-    assert.equal(loads,state==='done'?1:0);
-    assert.equal(stats,loads);
+    assert.equal(loads,0,'Startup completion must not trigger a full inventory collection');
+    assert.equal(stats,0,'Normal polling supplies details separately from state-only completion');
     if(state==='done') assert.equal(result.textContent,'');
     else assert.match(result.textContent,/diagnostic output/);
 }
-(async()=>{await check('done');await check('failed');console.log('Startup polling: 1s, no overlaps, immediate refresh, successful output cleared and failures retained.');})().catch(error=>{console.error(error);process.exitCode=1;});
+(async()=>{await check('done');await check('failed');console.log('Startup polling: 1s, no overlaps, state-only completion, successful output cleared and failures retained.');})().catch(error=>{console.error(error);process.exitCode=1;});

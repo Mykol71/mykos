@@ -44,12 +44,12 @@ chmod 0644 %{buildroot}/opt/mykos-criu/%{version}/SOURCE.txt
 %attr(0644,root,root) /opt/mykos-criu/%{version}/SOURCE.txt
 
 %changelog
-* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 4.2.1-3
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@myk.sh> - 4.2.1-3
 - Retain portable paths for overlay watches even when handle opening succeeds at capture.
 
-* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 4.2.1-2
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@myk.sh> - 4.2.1-2
 - Backport the distribution overlay/inotify directory-walk fix and regression tests.
 
-* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 4.2.1-1
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@myk.sh> - 4.2.1-1
 - Package the QA-verified checkpoint engine separately for each EL host major.
 - Preserve the vendor executable and validate root-owned versioned paths.

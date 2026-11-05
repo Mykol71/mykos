@@ -9,11 +9,11 @@ const cache={
 const context=vm.createContext({escape,mykosListMemory:cache,nodes:Object.keys(cache).map(id=>({id,vpn:'up'}))});
 vm.runInContext(html.slice(html.indexOf('function mykosVpnGraph('),html.indexOf('\nfunction table(){')),context);
 let graph=context.mykosVpnGraph('12345678');
-assert.match(graph,/vpn.example/);assert.match(graph,/192\.168\.22\.0\/24/);assert.match(graph,/10\.77\.0\.0\/24/);assert.match(graph,/font-size="9"/);assert.match(graph,/>office<\/text>/);assert.match(graph,/stroke="#4ade80"/);
-cache['12345678'].vpn.established_connections=[];assert.doesNotMatch(context.mykosVpnGraph('12345678'),/stroke="#4ade80"/);cache['12345678'].vpn.established_connections=['office'];assert.doesNotMatch(graph,/87654321|00000000/);
+assert.match(graph,/vpn.example/);assert.match(graph,/192\.168\.22\.134/);assert.match(graph,/10\.77\.0\.0\/24/);assert.match(graph,/font-size="9"/);assert.match(graph,/>office<\/text>/);assert.match(graph,/stroke="#4ade80"/);
+cache['12345678'].vpn.established_connections=[];assert.match(context.mykosVpnGraph('12345678'),/stroke="#4ade80"/,'A single established tunnel uses current symbol status when names lag');context.nodes[0].vpn='down';assert.doesNotMatch(context.mykosVpnGraph('12345678'),/stroke="#4ade80"/);context.nodes[0].vpn='up';cache['12345678'].vpn.established_connections=['office'];assert.doesNotMatch(graph,/87654321|00000000/);
 graph=context.mykosVpnGraph('12345678',true);
 assert.match(graph,/87654321/);assert.doesNotMatch(graph,/00000000/);
-assert.match(graph,/reachability not tested/);assert.match(graph,/style="color:#94a3b8"/);assert.match(graph,/style="color:#38bdf8"/);assert.match(graph,/stroke-dasharray/);
+assert.match(graph,/reachability not tested/);assert.match(graph,/style="color:#94a3b8"/);assert.match(graph,/style="color:#38bdf8"/);assert.doesNotMatch(graph,/stroke-dasharray/,'Guest and remote-site links are solid regardless of health');
 cache['12345678'].vpn_topology.links[0].peer='<img src=x onerror=alert(1)>';
 assert.doesNotMatch(context.mykosVpnGraph('12345678'),/<img/);
 assert.match(context.mykosVpnGraph('12345678'),/&lt;img/);

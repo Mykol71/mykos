@@ -15,7 +15,7 @@ function setup(admin=true){
  const rows=nodes.map(n=>{const e=new Element();e.cells=[{textContent:n.id}];return e;});
  const requests=[],prompts=[];let response=null;
  const ctx=vm.createContext({nodes,mykosBusyContainers:new Map(),mykosSnapshotData:[],mykosRefreshSnapshots:async()=>{},mykosRenderSnapshots(){},mykosRefreshStartupInventory:async()=>{},
-  mykosListDetails:Object.fromEntries(nodes.map(n=>[n.id,{persistent_storage:true,desktop:n.family==='ubuntu'}])),mykosTerminalAllowed:admin,
+  mykosListMemory:{},mykosListDetails:Object.fromEntries(nodes.map(n=>[n.id,{persistent_storage:true,desktop:n.family==='ubuntu'}])),mykosTerminalAllowed:admin,
   mykosSelectedShop:null,mykosIpsecShop:null,mykosOriginalTable(){},mykosNodeFamily:n=>n.family,mykosRefreshSampleRows(){},
   document:{querySelectorAll:()=>rows,createElement:()=>new Element()},window:{confirm(){return true;},prompt(s){prompts.push(s);return response;}},
   alert(){},mykosRefreshListStats:async()=>{},load:async()=>{},mykosStageJSON:async(url,options)=>{requests.push({url,options});return {state:'done'};}});

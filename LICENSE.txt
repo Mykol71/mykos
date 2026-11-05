@@ -1,7 +1,7 @@
 MYKOS FREE-USE LICENSE
 Version 1.0 -- October 31, 2026
 Licensor: MYKOL-DOT-COM
-Permission requests: mgreen@mykol.com
+Permission requests: mgreen@myk.sh
 License identifier: LicenseRef-MYKOS-Free-Use-1.0
 
 1. Scope and separate third-party rights

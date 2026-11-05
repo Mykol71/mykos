@@ -67,7 +67,7 @@ This release packages all accepted changes since signed release197.
 - Larger, aligned CentOS and Oracle Linux marks; CentOS uses transparent vector artwork with provenance. Oracle keeps the approved20px size with independently aligned icon and label columns.
 - Compact peer panes have an unlabeled performance graph behind the status/actions row, without the past-view slider. Gray hardware details sit outside the pane as a footer. Local/full-node graph controls retain their layout.
 - Peer hover remains transparent. Peer backgrounds are slightly more transparent in dark/light themes, with the map either on or off; text/actions remain fully visible.
-- Footer leaves alternate with text: theme, email, pane preview, version, map, host OS. Contact link is mgreen@mykol.com.
+- Footer leaves alternate with text: theme, email, pane preview, version, map, host OS. Contact link is mgreen@myk.sh.
 - Container-count bar opacity is unchanged; the requested opacity change was canceled.
 
 ### Network speed

@@ -466,3 +466,7 @@ This review checked implementation and safe installed CLI/state only. Real Merak
 negotiation, remote internet egress, DNS, reconnection after peer loss, and every
 site-specific host-only selector were not re-tested. The current production
 shared-profile list was empty; that observation cannot validate an active gateway.
+
+### Network map state and addresses
+
+Instance nodes show their actual addresses rather than masked network CIDRs. A direct single-tunnel graph can use the current established VPN symbol while connection-name details are catching up; multi-tunnel graphs still require a matching established connection. Ordinary guest and remote-site links are solid. Dashed green geographic links identify connected MYKOS peer hosts only; this distinction does not imply that downstream service reachability has been tested.

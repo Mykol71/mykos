@@ -403,23 +403,21 @@ The four VU meters show actual CPU, memory, System and Data percentages from the
 
 ### Receiver control bank
 
-Illumination advances ten percentage points per click and wraps from100% to0%. Source advances through the available OS panes from left to right, moving its marker and amber source indicator while retaining a fixed brushed-aluminum knob body. Both controls support Enter/Space. The source knob sits above the overlaid container/VPN count meter; VPN bars remain in front. Counts follow the selected history and scale to50 containers and15 VPNs. Stale or missing counts show a dash.
+Illumination advances ten percentage points per click and wraps from 100% to 0%. Source advances through available OS panes, retaining visibility and permissions. Both controls support Enter/Space. Source is centered beside the time band, with Illumination directly below beside the VU meters. The overlaid container/VPN count meter occupies the brushed-aluminum source-light bank above; VPN bars remain in front. Counts follow selected history and scale to 50 containers and 15 VPNs. Missing or stale readings show a dash.
 
-### Receiver instruments and OS selector
+### Receiver instruments and display power
 
-A bordered black source-light section sits above a single framed bank containing the VU meters and recall controls. The blue light under the time band uses the same illumination and brightness as the VU faces. A small, faded seven-segment Host uptime display sits behind the time graduations. It reflects actual collector uptime; unavailable data shows a dash.
+The upper-left canister button switches instrument illumination on or off: its lamp is green when on and red when off. It affects only the appearance of source lights, count bars, uptime, time graduations and meters. It never starts or stops a host, container, VPN or collector. The hostname and italic environment plaque are at the upper right. Yellow seven-segment uptime sits behind the time graduations; small red bulbs inside VU faces illuminate only for high readings.
 
-### Receiver performance enclosure
-
-A Host status lamp at the upper left shows green for online and red for offline or unavailable collector state. It is an indicator, not a power control. Receiver has no Monitor/Display switch. Host action buttons sit beside the recall controls with the same raised brushed-aluminum finish. Their targets, permissions and confirmations are unchanged. The full bottom Host status row and hardware line are hidden in Receiver; Dark/Light retain their usual views and restore the original controls.
+Host actions form a row at the lower left and note buttons occupy the lower right. Targets, permissions and confirmations remain unchanged. Dark/Light restore the original control and note-button locations. Light-theme environment labels are black. The full bottom Host status row and hardware line remain hidden only in Receiver.
 
 ### Receiver radio controls
 
-The recall band scrolls through a trailing five-minute window at Live. Recall browses back up to one hour; the server retains65 minutes to cover the oldest window. White quarter-minute graduations move across blue-lit glass, and historical selection has a bright amber marker. Dragging and keyboard adjustment remain available; the recall knob steps one minute earlier and wraps to Live. Source choices retain each pane's configured visibility and permissions. Unavailable selections fall back to All OS panes.
+The time band is above the meters, with its slider and controls below. At Live it scrolls through the trailing five-minute window; recall browses back up to one hour while the server retains 65 minutes. The large recall knob sits at the upper right below the hostname plaque, with its label below and right. Live is below and left of the knob and reads black when current. Active/focused metal controls have a blue ring. Dragging and keyboard adjustment remain available; the recall knob steps one minute earlier and wraps to Live.
 
 ### Receiver component stack
 
-The wood cabinet surrounds the black instrument window and framed silver control bank. Enlarged round brushed-aluminum feet are half hidden beneath each component. The metal model plaque and recall/Live controls remain below the time band. Receiver remains a personal appearance option for mgreen; other users retain Dark/Light.
+The wood cabinet surrounds a brushed-aluminum face and black source-light bank. Component feet include a thin black bottom ring and an additional metal band. OS and utility panes share the metal face and raised-button treatment. Receiver remains a personal appearance option for mgreen; other users retain Dark/Light.
 
 ### Terminal pane width
 

@@ -109,6 +109,8 @@ for item in ET.parse(source).getroot().findall('r:data', ns):
 shutil.copyfile(source, os.path.join(root, 'repodata', 'repomd.xml'))
 METADATA
   else
-    dnf -y --config="$config_work/sync.conf" reposync --gpgcheck --download-metadata --repo="$repo" -p /stage
+    # reposync is a DNF plugin. Keep subscription/other plugins disabled,
+    # but explicitly enable this one for the download command only.
+    dnf -y --config="$config_work/sync.conf" --setopt=plugins=1 --disableplugin='*' --enableplugin=reposync reposync --gpgcheck --download-metadata --repo="$repo" -p /stage
   fi
 done < "$config_work/names"

@@ -3,7 +3,7 @@
     'use strict';
     const hostPane = document.getElementById('mykos-host-pane');
     if (!hostPane || window.MYKOS_PEER_CONTEXT) return;
-    let allowed = false, busy = false;
+    let allowed = false, busy = false, pendingDialogPeer = null;
     const region = document.createElement('div');
     region.id = 'mykos-peer-hosts'; hostPane.after(region);
     const add = document.createElement('button'); add.type = 'button';
@@ -42,7 +42,7 @@
         if (!dialog.open) dialog.showModal();
     }
     window.mykosOpenPeerDialog = open;
-    dialog.addEventListener('close', () => { dialog.querySelector('[name=invitation]').value = ''; });
+    dialog.addEventListener('close', () => { dialog.querySelector('[name=invitation]').value = ''; pendingDialogPeer = null; });
     dialog.addEventListener('cancel', event => { if (busy) event.preventDefault(); });
     dialog.addEventListener('submit', event => { if (busy) event.preventDefault(); });
     dialog.addEventListener('click', async event => {
@@ -59,16 +59,21 @@
             const invitation = dialog.querySelector('[name=invitation]');
             const data = await request('/' + action, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(action === 'invite' ? {local_ip:dialog.querySelector('[name=local]').value.trim(), remote_ip:dialog.querySelector('[name=remote]').value.trim()} : {invitation:invitation.value.trim()})});
             if (action === 'invite') {
+                pendingDialogPeer = data.id;
                 invitation.value = data.invitation;
                 invitation.focus(); invitation.select();
                 output.textContent = 'Copy this private invitation to the other host. Expires ' + new Date(data.expires * 1000).toLocaleTimeString() + '.';
             } else {
                 invitation.value = ''; output.textContent = 'Connected to ' + data.name + '.';
+                dialog.close();
             }
             await refresh();
         } catch (error) { output.textContent = error.message; }
         finally { busy = false; dialog.querySelectorAll('button').forEach(button => button.disabled = false); }
     });
+    function closeConnectedPairing(peers) {
+        if (dialog.open && pendingDialogPeer && peers.some(peer=>peer.id===pendingDialogPeer && peer.state==='active' && peer.connected)) dialog.close();
+    }
     function syncAppearance(item) {
         const root=item.frame.contentDocument?.documentElement;
         if(!root)return;
@@ -99,12 +104,20 @@
             item.frame.contentWindow.mykosScheduleHostChart?.();
         }
     }
+    async function removePairing(item, button) {
+        const peer=item.peer;
+        if (!confirm('Remove pairing with ' + peer.name + '? This revokes only this MYKOS peer connection.')) return;
+        button.disabled=true;
+        try { await request('/' + peer.id, {method:'DELETE'}); await refresh(); }
+        catch(error) { item.state.hidden=false; item.state.textContent=error.message; button.disabled=false; }
+    }
     function attachActions(item) {
         const doc = item.frame.contentDocument;
         const actions = doc?.querySelector('#mykos-host-status-row .mykos-row-actions');
         if (!actions) return;
         compactPane(item);
         syncAppearance(item);updateMapPeers();
+        item.removePairingButton.hidden=true;
         if (doc.getElementById('mykos-peer-open-node')) return;
         const link = doc.createElement('button'); link.type = 'button';
         link.id = 'mykos-peer-open-node'; link.className = 'mykos-icon';
@@ -124,14 +137,7 @@
         remove.id = 'mykos-peer-disconnect'; remove.className = 'mykos-icon'; remove.style.color = '#ef4444';
         remove.title = remove.ariaLabel = 'Disconnect peer · ' + item.peer.name;
         remove.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m3 3 18 18M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>';
-        remove.onclick = async event => {
-            event.stopPropagation();
-            const peer = item.peer;
-            if (!confirm('Disconnect peer ' + peer.name + '? This removes only its MYKOS peer VPN and shared controls.')) return;
-            remove.disabled = true;
-            try { await request('/' + peer.id, {method:'DELETE'}); await refresh(); }
-            catch (error) { item.state.hidden = false; item.state.textContent = error.message; remove.disabled = false; }
-        };
+        remove.onclick = event => { event.stopPropagation(); return removePairing(item,remove); };
         const addPeer = doc.createElement('button'); addPeer.type = 'button';
         addPeer.id = 'mykos-peer-add-another'; addPeer.className = 'mykos-icon mykos-add-vpn-button';
         addPeer.title = addPeer.ariaLabel = 'Add another peer on ' + item.peer.name;
@@ -156,11 +162,18 @@
             const state = document.createElement('p'); state.className = 'mykos-status'; state.role = 'status';
             const frame = document.createElement('iframe'); frame.title = 'Complete Host pane · ' + peer.name;
             frame.style.cssText = 'display:block;width:96%;height:90px;margin:8px 0 0 auto;border:0;background:transparent';
-            section.append(state, frame); region.append(section);
-            item = {section,state,frame,peer}; frames.set(peer.id, item);
+            const removePairingButton=document.createElement('button');removePairingButton.type='button';
+            removePairingButton.className='mykos-icon mykos-peer-remove-pairing';
+            removePairingButton.textContent='Remove pairing';
+            removePairingButton.onclick=event=>{event.stopPropagation();return removePairing(item,removePairingButton);};
+            section.append(state,removePairingButton,frame); region.append(section);
+            item = {section,state,frame,peer,removePairingButton}; frames.set(peer.id, item);
             frame.addEventListener('load', () => attachActions(item));
         }
         item.peer = peer;
+        item.removePairingButton.hidden=false;
+        item.removePairingButton.title=item.removePairingButton.ariaLabel='Remove pairing · '+peer.name;
+
         item.state.hidden = peer.state === 'active' && peer.connected;
         item.state.textContent = peer.name + ' · ' + (peer.expired ? 'Invitation expired' : peer.state === 'pending' ? 'Awaiting acceptance' : 'Offline');
         if (peer.state === 'active' && peer.connected) {
@@ -181,6 +194,7 @@
             const identifiers = new Set(data.peers.map(peer => peer.id));
             for (const [id,item] of frames) if (!identifiers.has(id)) { item.section.remove(); frames.delete(id); }
             data.peers.forEach(render);
+            closeConnectedPairing(data.peers);
             updateMapPeers();
             if (location.hash === '#add-peer') {
                 history.replaceState(null, '', location.pathname + location.search);

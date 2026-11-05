@@ -23,6 +23,7 @@ def sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr(mykos_admin, 'LOCK', tmp_path/'lock')
     monkeypatch.setattr(mykos_admin, 'REPO_SYNC_LOCK', tmp_path/'repo-sync.lock')
     monkeypatch.setattr(mykos_admin, 'REPOSITORY_SOURCE', tmp_path/'repository-source.json')
+    monkeypatch.setattr(mykos_admin, 'REPOSITORY_DOWNLOADS', tmp_path/'repository-downloads.json')
     monkeypatch.setattr(mykos_admin, 'SIZE_CACHE', tmp_path/'cache')
     monkeypatch.setattr(mykos_admin.pwd, 'getpwall', lambda: [user])
     monkeypatch.setattr(mykos_admin.pwd, 'getpwnam', lambda name: user)
@@ -148,6 +149,9 @@ def test_latest_rpm_ignores_symlinks_and_returns_relative_name(tmp_path):
 
 
 def test_remote_repository_inventory_and_action_guard(tmp_path, monkeypatch):
+    download=tmp_path/'repository-downloads.json'
+    download.write_text(json.dumps({'base_url':'http://192.0.2.80/'}));download.chmod(0o600)
+    monkeypatch.setattr(mykos_admin,'REPOSITORY_DOWNLOADS',download)
     import time
     from io import BytesIO
     import urllib.request
@@ -163,6 +167,7 @@ def test_remote_repository_inventory_and_action_guard(tmp_path, monkeypatch):
     result=mykos_admin.repo_status()
     assert result['source_host']=='repo.example' and result['read_only']
     assert result['public_base_url']=='https://example/repos/'
+    assert result['download_base_url']=='http://192.0.2.80/'
     with pytest.raises(ValueError,match='read-only'):
         mykos_admin.dispatch(['repo-action','delete','rhel-9-rpms','{}'])
     payload['collected_at']-=901
@@ -195,3 +200,26 @@ def test_sync_lock_blocks_delete_even_between_service_state_checks(sandbox, monk
         with pytest.raises(ValueError, match='sync is running'):
             mykos_admin.dispatch(['repo-action', 'delete', 'rhel-9-rpms', '{}'])
     assert (repos/'rhel-9-rpms').is_dir()
+
+
+@pytest.mark.parametrize('base', ['http://192.0.2.80/','https://repo.example/repos/'])
+def test_repository_download_base_is_explicit_and_protected(sandbox,monkeypatch,base):
+    path=mykos_admin.REPOSITORY_DOWNLOADS
+    path.write_text(json.dumps({'base_url':base}));path.chmod(0o600)
+    assert mykos_admin.repository_download_base()==base
+    path.chmod(0o666)
+    with pytest.raises(ValueError,match='protected'):mykos_admin.repository_download_base()
+
+
+@pytest.mark.parametrize('base',['javascript:alert(1)','https://user:secret@repo.example/','https://repo.example/?key=x','https://repo.example/#fragment'])
+def test_repository_download_base_rejects_unsafe_urls(sandbox,base):
+    path=mykos_admin.REPOSITORY_DOWNLOADS
+    path.write_text(json.dumps({'base_url':base}));path.chmod(0o600)
+    with pytest.raises(ValueError,match='Invalid'):mykos_admin.repository_download_base()
+
+
+def test_repository_download_config_rejects_symlink(sandbox):
+    path=mykos_admin.REPOSITORY_DOWNLOADS
+    target=path.with_suffix('.target');target.write_text('{"base_url":"http://192.0.2.80/"}');target.chmod(0o600)
+    path.symlink_to(target)
+    with pytest.raises(ValueError,match='protected'):mykos_admin.repository_download_base()

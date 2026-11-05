@@ -19,6 +19,7 @@ REPOS = Path('/var/www/html')
 LOCK = Path('/run/mykos-admin.lock')
 REPO_SYNC_LOCK = Path('/run/lock/mykos-repo-sync.lock')
 REPOSITORY_SOURCE = Path('/etc/mykos/repository-source.json')
+REPOSITORY_DOWNLOADS = Path('/etc/mykos/repository-downloads.json')
 
 
 def trusted_storage_alias(alias, label):
@@ -162,6 +163,19 @@ def latest_rpm(root):
     return latest[1] if latest else None
 
 
+def repository_download_base():
+    if not REPOSITORY_DOWNLOADS.exists():return None
+    info=REPOSITORY_DOWNLOADS.lstat()
+    if not stat.S_ISREG(info.st_mode) or info.st_uid not in (0,os.geteuid()) or info.st_mode & 0o022:
+        raise ValueError('Repository download configuration must be root-owned and protected')
+    from urllib.parse import urlsplit
+    value=json.loads(REPOSITORY_DOWNLOADS.read_text())['base_url']
+    url=urlsplit(value)
+    if url.scheme not in ('http','https') or not url.hostname or url.username or url.password or url.query or url.fragment:
+        raise ValueError('Invalid repository download base URL')
+    return value.rstrip('/')+'/'
+
+
 def repository_source():
     if not REPOSITORY_SOURCE.exists(): return None
     info=REPOSITORY_SOURCE.lstat()
@@ -192,7 +206,7 @@ def remote_repo_status(config):
         for item in value['repos']:
             if not isinstance(item,dict) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,127}',item.get('name','')):
                 raise ValueError('Invalid repository inventory name')
-        value.update(source_host=config['host'],public_base_url=config['public_base_url'],read_only=True)
+        value.update(source_host=config['host'],public_base_url=config['public_base_url'],download_base_url=repository_download_base() or config['public_base_url'].rstrip('/')+'/',read_only=True)
         return value
     except (OSError,ValueError,KeyError,TypeError) as error:
         raise ValueError('Repository server inventory unavailable: '+str(error)) from error
@@ -213,12 +227,13 @@ def repo_status():
             package=None if readonly else latest_rpm(path)
             row={'name': path.name, 'used_bytes': usage.get(path.name),
                  'latest_rpm': Path(package).name if package else None, 'latest_rpm_path':package, 'modified_at': int(path.stat().st_mtime)}
-            if readonly: row.update(read_only=True, access='LAN-only')
+            if path.name not in ('mykos-1.5-for-x86_64-el9','mykos-1.5-for-x86_64-el10'):row['access']='LAN-only'
+            if readonly: row.update(read_only=True)
             rows.append(row)
         except (OSError, ValueError):
             continue
     return {'repos': rows, 'storage': storage(REPOS), 'service': service_state('httpd'),
-            'sync': repo_sync_state(), 'collected_at': int(time.time())}
+            'sync': repo_sync_state(), 'collected_at': int(time.time()), 'download_base_url':repository_download_base()}
 
 
 

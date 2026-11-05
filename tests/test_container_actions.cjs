@@ -22,7 +22,7 @@ const rows = nodes.map(node => {
 const requests = [], prompts = [];
 const desktopClicks = [], terminalClicks = [];
 let reloads = 0;
-const context = vm.createContext({nodes, mykosBusyContainers:new Map(), mykosSnapshotData:[], mykosRefreshSnapshots:async()=>{}, mykosListDetails:{}, mykosTerminalAllowed:true, mykosTerminalPanel:null,
+const context = vm.createContext({nodes, mykosBusyContainers:new Map(), mykosSnapshotData:[], mykosRefreshSnapshots:async()=>{}, mykosListDetails:{},mykosListMemory:{}, mykosTerminalAllowed:true, mykosTerminalPanel:null,
     mykosSelectedShop:null, mykosIpsecShop:null, mykosOriginalTable(){},
     mykosNodeFamily:node => node.family, mykosRefreshSampleRows(){},
     document:{querySelectorAll:() => rows, createElement:() => new Element()},
@@ -52,7 +52,7 @@ vm.runInContext(source + '\nmykosRenderInventory();', context);
         if (!stop.disabled) await stop.listeners.click({stopPropagation(){}});
     }
     assert.equal(requests.length, 3);
-    assert.equal(reloads, 3);
+    assert.equal(reloads, 0,'Lifecycle completion uses its state-only signal; action handlers must not force a full inventory reload');
     assert.equal(prompts.length, 3);
     assert.deepEqual(desktopClicks,nodes.filter(node=>node.status==='online').map(node=>[node.id,'console']));
     assert.deepEqual(terminalClicks,nodes.filter(node=>node.status==='online').map(node=>node.id));

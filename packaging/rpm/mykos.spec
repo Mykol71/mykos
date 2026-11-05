@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        246%{?dist}
+Release:        248%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -119,380 +119,384 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
-* Wed Nov 04 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-246
+* Wed Nov 04 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-248
+- Refine Receiver controls and display-only power, offline peer removal and network map state/address labels.
+- Enable only the required DNF reposync plugin and refresh maintained contact/documentation links.
+
+* Wed Nov 04 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-246
 - Read established guest VPNs across Libreswan protocol versions using paired kernel ESP state and policy.
 - Distinguish VPN start and stop with up and down arrows.
 
-* Wed Nov 04 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-244
+* Wed Nov 04 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-244
 - Explain PXE readiness in the provisioning dialog; repair media cache traversal permissions.
 
-* Wed Nov 04 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-243
+* Wed Nov 04 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-243
 - Refine Receiver instrument layout and preserve theme control restoration.
 
-* Wed Nov 04 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-242
+* Wed Nov 04 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-242
 - Add opt-in Windows PXE staging with scoped HTTPS leases and explicit target disk guards.
 - Preserve active provisioning during application upgrades; scrub expired credentials.
 
-* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-231
+* Tue Nov 03 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-231
 - Restore the original updater backend without dropping download protections.
 - Include the validated Receiver component refinements and private extension boundary.
 
-* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-230
+* Tue Nov 03 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-230
 - Refine Receiver component cabinet, controls, source lamps and live peak indicators.
 - Add read-only local browser-login visibility command.
 - Deliver backup account management only through separately signed private extensions.
 
-* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-227
+* Tue Nov 03 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-227
 - Add verified separately packaged extension payloads without including them in core builds.
 - Preserve valid UID-zero image roots using nonzero primary groups during backup restore.
 - Include terminal width fitting and generic application boundaries.
 
-* Tue Nov 03 2026 MYKOS <mgreen@mykol.com> - 1.5.20261024-223
+* Tue Nov 03 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-223
 - Restore read-only updateos inventory and protected LAN download index.
 
-* Tue Nov 03 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-222
+* Tue Nov 03 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-222
 - Add separate Fedora43/44 GNOME desktop VMs with Xwayland
 - Preserve guest authentication and SELinux confinement
 - Capture matching RAM/disks with stable standard-VGA console restore
 
-* Mon Nov 02 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-212
+* Mon Nov 02 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-212
 - Reauthorize terminals and throttle login admission persistently
 - Isolate native builds through commit and share service removal lifecycle
 - Correct private-note OpenAPI authentication and speed-check documentation
 
-* Mon Nov 02 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-210
+* Mon Nov 02 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-210
 - Let Add Peer Cancel dismiss incomplete forms without submitting
 - Preserve busy-pairing guard and clear private invitation on close
 
-* Sun Nov 01 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-209
+* Sun Nov 01 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-209
 - Consolidate dashboard logo, peer layout and footer refinements
 - Schedule official Ookla collector twice daily in America/Chicago
 - Preserve running workloads and document release scope and limits
 
-* Sun Nov 01 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-197
+* Sun Nov 01 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-197
 - Vendor pane artwork, four-color Windows marks, and accumulated verified updates.
 
-* Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-182
+* Sat Oct 31 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-182
 - Add reciprocal IKEv2 peer pairing and complete per-node Host panes with independent graphs.
 - Broker authenticated peer controls and consoles while keeping private notes local.
 
-* Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-181
+* Sat Oct 31 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-181
 - Group physical memory details under one Host footer label
 - Include complete native EL and VM supported-instance documentation
 
-* Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-179
+* Sat Oct 31 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-179
 - Deliver MYKOS free-use terms and preserved third-party notices with source/RPM installs
 - Document free business use and separately permissioned redistribution/management hosting
 
-* Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-177
+* Sat Oct 31 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-177
 - Show installed memory type, configured speed and total capacity in the Host hardware line
 - Include validated idle-base and 50-instance capacity updates
 
-* Sat Oct 31 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-174
+* Sat Oct 31 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-174
 - Report proxy/service failures clearly and recover safe operation-status polls.
 - Preserve pane and personal notes during application upgrades.
 - Consolidate verified build-priority, inventory, hardware and documentation updates.
 
-* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-168
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-168
 - Consolidate verified production hotfixes: Snapshot Preview, graphical console framing and legacy/Ubuntu image capture.
 - Add host location and active VPN map lines, current documentation/screenshots and remote read-only repository inventory.
 - Scale the container graph to 40 running containers at 100 percent; preserve host-local configuration.
 
-* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-162
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-162
 - Include production RH7 private-namespace build repairs and fresh-host storage dependencies.
 - Add separate Root/Data metrics, account-specific password policy support, and read-only Meraki site enrichment.
 - Include coast-to-coast geographic background, passive status-glowing location labels and pane styling.
 
-* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-161
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-161
 - Include admin pane refresh and configurable generated-copy repository origins.
 - Raise the shared inotify instance quota for concurrent systemd containers.
 
-* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-160
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-160
 - Preserve complete bounded command JSON for larger container inventories.
 - Require portable OverlayFS watch paths during checkpoint restore.
 
-* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-159
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-159
 - Require the overlay/inotify-compatible checkpoint engine tested on split image storage.
 
-* Fri Oct 30 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-158
+* Fri Oct 30 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-158
 - Promote QA-verified minimal EL images, isolated builders, native RPM databases and snapshot/terminal repairs.
 - Use a versioned checkpoint engine while preserving vendor tools and operator kickstarts.
 
-* Wed Oct 28 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-146
+* Wed Oct 28 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-146
 - Keep documentation index redirects relative behind existing reverse proxies
 
-* Wed Oct 28 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-145
+* Wed Oct 28 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-145
 - Publish rendered supporting documentation in a permanent light theme
 - Add navigation, Markdown administrator guide, tables and editable diagrams
 - Preserve operator text, original Word guide and release144 installer procedures
 
-* Wed Oct 28 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-144
+* Wed Oct 28 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-144
 - Restore backup consoles and native container memory accounting
 - Exclude firmware and prevent image builds from blocking host logins
 - Default to IP access; make domain HTTPS opt-in and print the verified app URL
 - Add an EL10 RPM target using Python 3 and Netavark
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-79
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-79
 - Retain 30 minutes of shared host metrics and expose authenticated history APIs
 - Browse five-minute graph windows without losing data on page refresh
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-78
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-78
 - Link the green footer project name to its GitHub repository
 - Use a circular refresh icon for repository synchronization
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-77
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-77
 - Support macOS Recovery copy validation when cmp is unavailable
 - Automatically configure Apache/Certbot HTTPS and MYKOS after fresh RPM transactions
 - Preserve existing deployments and stop first-boot setup on final package removal
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-76
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-76
 - Replace the host globe with the supplied green apple icon at 23px
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-75
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-75
 - Enlarge the host globe by 3px and render continent silhouettes
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-74
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-74
 - Use the four-color Microsoft mark for the SQL Server pane
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-73
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-73
 - Shorten the SQL Server pane and navigation label
 - Add an idempotent HTTPS-first Certbot bootstrap followed by signed RPM installation
 - Remove bootstrap-owned Apache, renewal and certificate resources on final RPM removal
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-72
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-72
 - Fill the footer moon icon solid white and use a blue globe beside the certificate domain
 - Derive the host heading from Apache Certbot certificate metadata without guest calls
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-71
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-71
 - Make the light-theme footer sun bright yellow
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-70
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-70
 - Remove leading separators from all pane headings
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-69
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-69
 - Shorten the backup pane and navigation label to rsync
 
-* Mon Oct 26 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-68
+* Mon Oct 26 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-68
 - Add one-command unattended Ubuntu, Windows and macOS image builds and API operations
 - Commit installed sparse disk/state payloads and leave a generic base running
 - Use 2 GiB VM RAM with 12 GiB Windows/Ubuntu paging and retain guest integrations
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-64
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-64
 - Add Ubuntu VM VPN setup, private-agent status and admin-key API configuration
 - Use Podman IPs for Ubuntu and show unconfigured native VPNs correctly
 - Align backup/repository Disk and Last Modified columns
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-63
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-63
 - Restore the inventory collector to a fifteen-second interval
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-62
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-62
 - Build Windows desktop images at 8 GiB with a 3x installation pagefile
 - Restart at 2 GiB and Windows-managed paging before final live capture
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-61
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-61
 - Give Windows image builders nice -5 CPU priority without changing regular instances
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-60
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-60
 - Poll startup jobs every second; collect inventory every five seconds and after startup
 - Clear successful container creation output automatically; retain errors
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-59
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-59
 - Align host, all container families and rsync backups on shared fixed columns
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-58
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-58
 - Preserve full RedHat minor versions using build labels and cached host image metadata
 - Align container IDs left, status values centered and action columns right
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-57
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-57
 - Use private NAT and fixed 192.168.22.0/24 addresses for managed containers
 - Support Wi-Fi hosts without a physical LAN interface or DHCP client
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-56
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-56
 - Replace native pipework networking with mykos-lan host DHCP and eth0
 - Add direct Ubuntu root console, Windows PowerShell and macOS shell actions
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-55
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-55
 - Reconcile desktop and ballooning guides with the final memory policy
 - Reject incompatible old image RAM captures before creating instance state
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-54
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-54
 - Reject Ubuntu live/RAM filesystems and check disk space before swap allocation
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-53
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-53
 - Verify live storage identity and keep disk recovery copies before RAM resizing
 - Disable unattended Windows installation for existing instances
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-52
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-52
 - Support guarded VM RAM reconfiguration on production Podman 4.x
 - Remove consumed one-shot RAM restore hooks on subsequent container boots
 
-* Sun Oct 25 2026 Mike Green <mgreen@teleflora.com> - 1.5.20261024-51
+* Sun Oct 25 2026 Mike Green <mgreen@myk.sh> - 1.5.20261024-51
 - Host-only batched monitoring, optional application adapters and repo workers
 - Downward availability lines and guarded cold VM memory allocation
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-50
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-50
 - Remove legacy application monitoring from collectors, detail views and APIs.
 - Prefer readable image references and resolve native snapshot OS from host image tags.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-49
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-49
 - Resolve NetworkManager and polkit overlay inode watches during native live capture.
 - Promote operator kickstarts enabling the headless systemd mount/login profile.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-48
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-48
 - Remove only unused optional hugetlbfs/configfs mounts before native live snapshots.
 - Resolve overlay-backed D-Bus file watches through a scoped CRIU RPC inode hint.
 - Add guarded guest balloon inspection/control to the text menu, CLI and admin API.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-47
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-47
 - Display the server hostname in the Host pane heading.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-46
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-46
 - Reuse the container VPN workflow for host VPN setup, including PSK entry and the Meraki option.
 - Load new host tunnels individually and preserve existing connection files.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-44
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-44
 - Rename the snapshot Taken column to Most Recent.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-43
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-43
 - Capture native filesystems through scoped CRIU RPC notifications on RHEL 8/9.
 - Remove the incompatible global shell hook and report unsupported CRIU 3.x process state before freezing tasks.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-41
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-41
 - Route managed browser consoles through authenticated public HTTPS and WebSocket proxies.
 - Install Apache console routing during RPM/setup upgrades without changing guest ports or restarting VMs.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-40
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-40
 - Use uniform gaps between all panes and between pane headings and content.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-39
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-39
 - Tighten the space before the rsync Backups heading.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-38
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-38
 - Add the leading grey footer separator before the contact email.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-37
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-37
 - Simplify the footer to the application version, contact email and pane-toggle leaf.
 - Keep host uptime in the host status row.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-36
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-36
 - Add a blank line above rsync Backups regardless of snapshot pane visibility.
 - Remove kernel information from the dashboard footer.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-35
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-35
 - Match backup, repository and snapshot pane text, actions and controls to the smaller container panes.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-34
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-34
 - Scale container-pane text, action icons and creation controls to two-thirds size.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-33
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-33
 - Replace the text-menu purge with a confirmed complete container-state reset.
 - Preserve browser/API identities, rsync backups, repositories and installed sources.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-32
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-32
 - Add a distinct confirmed container-delete action and admin API endpoint.
 - Remove private container data while retaining images, snapshots and shared backups.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-31
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-31
 - Retain explicit VMX configuration for selected Windows guests using nested WSL.
 - Preserve the latest operator documentation.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-30
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-30
 - Package Ubuntu guest DHCP/networking dependency setup and image-build guidance.
 - Add a minimal Libreswan/dhclient container and guarded native WSL Containers deployment.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-29
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-29
 - Use migratable CPU defaults for Ubuntu image builds.
 - Enable CPU-profile recovery for existing Ubuntu image builds.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-28
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-28
 - Align active image installation rows and console icons with container table columns.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-27
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-27
 - Pause and flush outgoing VMs for snapshot replacement without a full OS shutdown wait.
 - Show snapshot date/time choices without the capture-mode suffix.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-26
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-26
 - Isolate persistent Podman monitors from short-lived worker service cleanup.
 - Recover snapshot restores from lost monitors only after verifying guest stop.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-25
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-25
 - Brighten the footer leaf while show-all pane preview is enabled.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-24
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-24
 - Refresh real snapshot actions when admin permissions arrive or change.
 - Preserve disabled example snapshots in the show-all preview.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-23
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-23
 - Show active desktop image installations and console links before capture.
 - Expose installation builds alongside startable images in the API.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-22
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-22
 - Include dhcp-client and its dependencies in staged RHEL 9 images.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-21
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-21
 - Add the Host pane heading with a pipe and Red Hat icon.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-20
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-20
 - Label container/account identifiers as ID in the web UI, prompts and text menus.
 - Retain existing API field names and stored identifiers for compatibility.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-19
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-19
 - Restore vendor colors for Red Hat, Ubuntu, Windows and Apple pane icons.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-18
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-18
 - Display environment titles with full-width aesthetic glyphs on dashboard and login.
 - Preserve plain stored values, browser titles, accessible names and API data.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-17
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-17
 - Install one executable /usr/bin/mykos launcher (also /bin/mykos on RHEL).
 - Prefer the RPM menu at /usr/share/mykos and remove the legacy local-bin launcher.
 - Modernize timezone/NTP syntax and remove obsolete Anaconda kickstart sections.
 - Adapt staging copies for older RHEL 8 image-building tools.
 - Preserve operator-edited kickstarts across RPM upgrades.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-16
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-16
 - Open host/Linux root terminals in popup dialogs with session cleanup on close.
 - Add admin-only scheduled host/Linux shell and Windows guest PowerShell jobs.
 
-* Sun Oct 25 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-15
+* Sun Oct 25 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-15
 - Rename the backup pane, navigation and notes labels to rsync Backups.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-14
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-14
 - Display full OS names and snapshot capture date/time; add explicit snapshot deletion to UI/API.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-12
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-12
 - Include the latest operator-authored KEY_ISSUES.md unchanged.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-11
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-11
 - Persistent lifecycle actions, live container snapshots and per-container restore UI/API.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-10
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-10
 - Keep only the current startup checkpoint; discard old and consumed captures.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-9
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-9
 - Remove completed template builders and unused upstream Dockurr image tags.
 - Preserve prepared-template staging without builder containers.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-8
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-8
 - Use the macOS spelling consistently in dashboard labels.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-7
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-7
 - Check usable KVM support during RPM installation and upgrades.
 - Stop and commit captured VM templates under readable local image tags.
 - Keep stopped prepared templates available for staging; update dashboard labels/IPs.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-6
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-6
 - Capture and restore running Windows/macOS guests with RAM and device state.
 - Add one-shot checkpoint loader and migratable Windows CPU configuration.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-5
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-5
 - Support macOS version subdirectories during safe live template capture.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-4
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-4
 - Live-capture desktop templates without shutdown; resume safely on failure.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-3
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-3
 - Include KEY_ISSUES.md in installed documentation and the web Docs index.
 
-* Sat Oct 24 2026 MYKOS Maintainers <mgreen@mykol.com> - 1.5.20261024-2
+* Sat Oct 24 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-2
 - Target RHEL 8 with Python 3.9; preserve existing pipework networking.

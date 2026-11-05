@@ -40,7 +40,7 @@ Press enter to continue..
 
 
 ---
-mgreen@teleflora.com
+mgreen@myk.sh
 
 ## Current production repository storage
 
@@ -105,3 +105,5 @@ background slice; the live tree is never a writable worker mount.
 The [Apache access policy example](apache-repository-access.conf.example) keeps
 `updateos` LAN-only across direct and `/repos/` aliases, including index assets.
 Only the EL9 and EL10 MYKOS trees are public.
+
+DNF workers for RHEL 8, 9 and 10 keep general plugins disabled in their private configuration, then enable only `reposync` for the actual download command using `--setopt=plugins=1 --disableplugin=\* --enableplugin=reposync`. Leaving all plugins disabled makes DNF report that the `reposync` command is unavailable. The allowlist does not activate subscription-manager or change the host DNF configuration.

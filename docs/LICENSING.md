@@ -14,7 +14,7 @@ Redistributing or reselling covered MYKOS material, and selling access to its
 management interface, API or equivalent management functions, require written
 permission. Ordinary application hosting and consulting on a customer's own
 licensed deployment are allowed within the license's boundaries. Contact
-[mgreen@mykol.com](mailto:mgreen@mykol.com) for permission requests.
+[mgreen@myk.sh](mailto:mgreen@myk.sh) for permission requests.
 
 ## Your rights and existing licenses
 

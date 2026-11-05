@@ -3,7 +3,7 @@ const html=fs.readFileSync(path.join(__dirname,'../services/web/index.html'),'ut
 const slice=(a,b)=>html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)));
 const items=new Map();
 const el=id=>{if(!items.has(id))items.set(id,{hidden:true,attrs:{},setAttribute(k,v){this.attrs[k]=v;}});return items.get(id);};
-const context=vm.createContext({assert,el,document:{readyState:'complete',querySelector:el},localStorage:{getItem:()=> 'true'},
+const context=vm.createContext({assert,el,window:{},document:{documentElement:{dataset:{role:'admin'}},readyState:'complete',querySelector:el},localStorage:{getItem:()=> 'true'},
  setInterval(){},setTimeout(){},mykosRefreshOsChoices(){},mykosRefreshSampleRows(){},mykosRenderSnapshots(){},mykosLoadStageImages(){},mykosCloseTerminal(){},mykosRenderMykos(){},mykosRenderInventory(){}});
 vm.runInContext(slice('const mykosOsFamilies','\nfunction drawMap')+'\n'+slice('const mykosPaneVisibility','\nfunction mykosRenderMykos')+'\n'+slice('let mykosTerminalAllowed = false;','\nsetTimeout(mykosCheckTerminalPermission'),context);
 (async()=>{

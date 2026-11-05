@@ -48,6 +48,8 @@ node is reachable. If the other node is offline, disconnect it there separately.
 Expired invitations and revoked connections are cleaned by the web service's
 maintenance worker. Teardown failures retain ownership records for retry.
 
+Pending, expired and offline pairings have a local **Remove pairing** button beside their status, even when the embedded peer pane cannot load. Confirming revokes that pairing through the same local administrator endpoint. A failed teardown remains visible and can be retried. Removing a failed pairing does not affect other peer connections.
+
 ## Current network and certificate limits
 
 The initial supported topology uses directly reachable, distinct IPv4 host
@@ -66,3 +68,7 @@ sharing its PSK or the private peer database.
 ### Cancel enrollment
 
 Cancel closes Add Peer without validating the address fields or sending a pairing request, and clears the invitation text. Cancel and Escape are disabled while an invitation or acceptance request is in progress; wait for its result before closing.
+
+### Pairing window completion
+
+A successful Accept and connect closes the pairing window immediately and clears its private invitation text. Creating an invitation keeps the window open for copying; after the other host connects, the normal peer refresh closes the window for that matching invitation. A failed or still-pending connection keeps its message visible. Other existing peer connections never close an unrelated invitation window.

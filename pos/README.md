@@ -132,7 +132,7 @@ Business-specific integration is provided by a separately installed local extens
 
 
 ---
-mgreen@teleflora.com
+mgreen@myk.sh
 
 ## Purge all container state
 

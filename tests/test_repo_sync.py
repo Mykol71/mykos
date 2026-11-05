@@ -244,6 +244,9 @@ if any('reposync' in x for x in args):
  config=next(x.split('=',1)[1] for x in args if x.startswith('--config='))
  p=configparser.RawConfigParser();p.read(config)
  assert p.get('main','plugins')=='0'
+ if args[0]=='dnf':
+  assert '--setopt=plugins=1' in args, 'reposync plugin must be enabled at command scope'
+  assert '--disableplugin=*' in args and '--enableplugin=reposync' in args
  assert not os.listdir(p.get('main','reposdir'))
  for name in p.sections():
   if name=='main':continue

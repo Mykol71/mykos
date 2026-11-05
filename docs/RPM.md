@@ -239,3 +239,8 @@ managed files. It stops/disables the complete maintained timer/service list,
 including idle-base, snapshot-preview garbage collection and speed measurement,
 and stops matching active control-plane workers. It does not target persistent
 Podman runtime scopes or remove guest disks, images, notes or intentional snapshots.
+
+
+### Repository links from forwarded dashboards
+
+Repository links use the configured download server rather than the browser's incidental host or SSH tunnel port. A root-owned `/etc/mykos/repository-downloads.json` can set `{"base_url":"http://192.0.2.80/"}` to a reachable LAN repository server (replace this documentation address with the actual server). Remote inventory clients retain their configured repository base. Otherwise the dashboard uses the configured MYKOS public origin's `/repos/` alias. Download configuration does not change Apache access controls: only supported MYKOS EL9/EL10 trees are public; updateos and other private repositories still require LAN access.
