@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const html = fs.readFileSync(require('node:path').join(__dirname, '../services/web/index.html'), 'utf8');
-const source = html.slice(html.indexOf('// Browser-local history:'), html.indexOf('\nfunction mykosLoadCountMetrics()'));
+const source = html.slice(html.indexOf('// Browser-local history:'), html.indexOf('\nfunction mykosLoadCountMetrics('));
 class Element {
     constructor(tag = 'div') { this.tag = tag; this.children = []; this.attrs = {}; this.dataset = {}; this.style = {}; this.hidden = false; this.clientWidth = 1000; this.offsetWidth = 180; }
     setAttribute(key, value) { this.attrs[key] = String(value); }
@@ -136,3 +136,20 @@ document.documentElement.classList.contains=()=>false;mykosDrawHostChart();
 assert.equal(mykosChartLayout.left,34);assert.equal(mykosChartLayout.right,992);
 `,context);
 console.log('Peer graph uses its whole pane while regular Host chart margins stay unchanged.');
+
+vm.runInContext(`
+mykosResetHostChart();clock.now=2000000;
+mykosSetHostMetric('cpu',20,'20%','8 CPUs',clock.now-100);
+clock.now+=1000;const measuredAt=clock.now-100;
+mykosSetHostMetric('cpu',80,'80%','8 CPUs',measuredAt);mykosDrawHostChart();
+const live=mykosChartLiveHeads.find(h=>h.metric.key==='cpu'),originalPath=live.path.attrs.d;
+const originalChildren=chartItems().length,pointCount=live.metric.points.length;
+clock.now+=500;mykosUpdateHostChartHeads(clock.now);
+assert.notEqual(live.path.attrs.d,originalPath,'Animate the retained newest segment');
+assert.equal(chartItems().length,originalChildren,'No SVG nodes are rebuilt for head easing');
+assert.equal(live.metric.points.at(-1).percent,80,'Never change actual measured percent');
+assert.equal(live.metric.points.at(-1).t,measuredAt,'Preserve actual collection timestamp');
+mykosSetHostMetric('cpu',80,'80%','8 CPUs',measuredAt);
+assert.equal(live.metric.points.length,pointCount,'Duplicate cached samples are not fabricated');
+`,context);
+console.log('Retained live-head easing and collection timestamp integrity passed.');

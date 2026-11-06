@@ -13,7 +13,7 @@ from urllib.parse import quote
 from mykos_config import BASE
 
 RETENTION = 65 * 60
-INTERVAL = 3
+INTERVAL = 1
 MAX_SAMPLES = RETENTION // INTERVAL + 2
 DATABASE = BASE / 'data/host-history.sqlite3'
 LIVE = Path('/run/mykos-host-metrics/latest.json')

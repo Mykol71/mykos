@@ -437,3 +437,5 @@ image, repository or backup sections. Open the full node for those sections.
 Embedded peer strips show live status and actions without sliders or independent scrollbars. Open the full node to use its complete history controls.
 
 Live chart traces move between bounded history redraws; reduced-motion and recalled history stay still. The login leaf cycles themes. A theme dropdown beside the leaf appears only after mgreen signs in; other accounts use the leaf without a dropdown.
+
+Performance readings are collected once per second and shared through the host cache. Browsers preserve collection timestamps, skip repeated cached readings, and animate retained trace heads without rebuilding the full history each frame. A delayed timer reschedules its remaining wait instead of losing a whole refresh interval.

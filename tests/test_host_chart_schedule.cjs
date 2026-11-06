@@ -8,11 +8,11 @@ assert.equal(ctx.mykosHostChartAnimating(state.now),false);
 for(let t=50;t<=4000;t+=50)ctx.mykosAnimateHostChart(t);
 assert.equal(paints,4,'Unchanged history redraws at one Hz, not twenty');
 ctx.mykosChartMetrics[0].points[1].percent=60;assert.equal(ctx.mykosHostChartAnimating(state.now),true);
-ctx.mykosAnimateHostChart(4050);assert.equal(paints,5,'A new changing reading keeps smooth easing');
+ctx.mykosAnimateHostChart(4050);assert.equal(paints,4,'New-reading easing updates retained heads without rebuilding history');
 state.now=11000;assert.equal(ctx.mykosHostChartAnimating(state.now),false);
 ctx.mykosChartViewEnd=9000;assert.equal(ctx.mykosHostChartAnimating(10000),false,'Recalled readings do not animate live transitions');
 ctx.mykosChartViewEnd=null;ctx.mykosChartReducedMotion=true;assert.equal(ctx.mykosHostChartAnimating(10000),false);
-dashboard.hidden=true;ctx.mykosAnimateHostChart(6000);assert.equal(paints,5);
+dashboard.hidden=true;ctx.mykosAnimateHostChart(6000);assert.equal(paints,4);
 console.log('Graph schedule: idle1Hz, immediate/smooth new reading, stable recall, reduced motion and hidden dashboard checks passed.');
 
 const transforms=[];ctx.recordTransform=value=>transforms.push(value);
