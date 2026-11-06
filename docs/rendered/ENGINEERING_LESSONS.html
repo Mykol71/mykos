@@ -317,5 +317,15 @@ No customer content or credentials belong in public qualification reports.</p>
 <td>Released local IPAM/proxy modes; RFC 2131 and Meraki relay documentation; remote relay not validated</td>
 </tr>
 </tbody></table>
+<h2 id="native-build-progress-must-exist-before-the-image">Native build progress must exist before the image</h2>
+<p>The native OCI builder was included in lifecycle safety checks but omitted from
+the dashboard build inventory, so its OS pane stayed hidden until completion.
+Reuse the read-only builder discovery to report one active row per supported
+native OS. Never expose process arguments or invent a VM installation console.
+Tests cover all five OCI profiles with no finished image or running base,
+process deduplication, completion and existing desktop build behavior.</p>
+<p>A private dashboard overlay also needs the new families in its central iteration
+list. DOM headings and image-to-family mappings alone do not register panes.
+Check both active builds and completed images in every shipped edition.</p>
 <footer><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
 <span>MYKOS documentation · <a href="mailto:mgreen@myk.sh">mgreen@myk.sh</a></span></footer></main></html>

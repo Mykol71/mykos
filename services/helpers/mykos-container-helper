@@ -93,7 +93,8 @@ def _dispatch(args):
         if len(args) != 1: raise ValueError('Unexpected arguments')
         from mykos_vm import installing_images
         from mykos_image_admin import catalog
-        result={'images':stage_images(),'builds':installing_images()}
+        from mykos_native_builds import installing_images as native_builds
+        result={'images':stage_images(),'builds':installing_images()+native_builds()}
         try:result['captured_images']=catalog()
         except (ValueError,RuntimeError,OSError):result['captured_images']=[]
         return result

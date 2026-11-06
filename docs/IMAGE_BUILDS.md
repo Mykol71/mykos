@@ -152,6 +152,11 @@ stopped previous attempt before building again. An active base builder is
 never stopped automatically by replacement. Existing ID-specific containers
 are not modified by an image build.
 
+Native OCI builds started from the text menu appear in their OS pane as
+**Installing**, even before an image or generic base exists. These builds need
+no installation console. After the next inventory refresh, a completed build
+appears as a prepared image.
+
 ### Android-x86 legacy installer
 
 Android-x86 9.0-r2 is an older compatibility guest, not a current Android release.

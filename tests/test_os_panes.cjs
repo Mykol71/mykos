@@ -55,6 +55,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(mykosImageFamily('mssql2025'), 'mssql');
         assert.equal(mykosNodeFamily({id:'sql',os_type:'Red Hat Enterprise Linux',image:'localhost/mssql2022:latest'}), 'mssql');
         for (const [os,family,label] of [['debian13','debian','13'],['archlinux','arch','Rolling'],['sles15sp7','sles','15 SP7 (BCI)'],['amazon2023','amazon','2023'],['alpine','alpine','3.24'],['android9','android','9.0-r2 (legacy)']]) {
+            assert.ok(mykosOsFamilies.includes(family),'Every mapped family participates in inventory visibility and rendering');
             assert.equal(mykosImageFamily(os),family);
             assert.equal(mykosNodeFamily({id:'new-os',image:'localhost/'+os+':latest'}),family);
             assert.equal(mykosImageVersionLabel(os),label);
@@ -111,6 +112,26 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
                 assert.equal(JSON.stringify(el(mykosOsId(family, 'mykos-stage-os')).options.slice(1).map(o => o.value)), JSON.stringify(expected));
             }
         }
+        for (const os of ['debian13','archlinux','sles15sp7','amazon2023','alpine']) {
+            responseImages=[];responseCapturedImages=[];responseBuilds=[{os,name:os,unattended:true,build_state:'building',build_message:'Building native image'}];
+            mykosStageImagesLoadedAt=0;await mykosLoadStageImages();
+            const family=mykosImageFamily(os);
+            assert.equal(el(mykosOsId(family,'mykos-containers-pane')).hidden,false);
+            assert.equal(el(mykosOsId(family,'mykos-container-panel')).hidden,false);
+            const markup=el(mykosOsId(family,'mykos-image-builds')).innerHTML;
+            assert.match(markup,/Installing/);assert.match(markup,/Building native image/);
+            assert.doesNotMatch(markup,/href=|<button/);
+            assert.equal(el(mykosOsId(family,'mykos-stage-os')).disabled,true);
+        }
+        for (const os of ['debian13','archlinux','sles15sp7','amazon2023','alpine','android9']) {
+            responseImages=[];responseBuilds=[];responseCapturedImages=[{os,version:mykosImageVersionLabel(os),size_bytes:1024,created_at:1793060009}];
+            mykosStageImagesLoadedAt=0;await mykosLoadStageImages();
+            const family=mykosImageFamily(os);
+            assert.equal(el(mykosOsId(family,'mykos-containers-pane')).hidden,false);
+            assert.equal(el(mykosOsId(family,'mykos-container-panel')).hidden,false);
+            assert.match(el(mykosOsId(family,'mykos-image-builds')).innerHTML,/Prepared image/);
+        }
+        responseCapturedImages=[];
         responseImages = []; responseBuilds = [{os:'ubuntu24.04', name:'ubuntu24.04', console_url:'/mykos/console/ubuntu24.04/'}];
         mykosStageImagesLoadedAt = 0; await mykosLoadStageImages();
         assert.equal(el('ubuntu-mykos-container-panel').hidden, false);

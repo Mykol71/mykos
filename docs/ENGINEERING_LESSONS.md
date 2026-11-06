@@ -266,3 +266,16 @@ This account uses the released source, recorded incident/validation notes, and t
 | Image build boundaries | Generated kickstart preparation; macOS account/bootstrap scripts and recorded clone checks |
 | Observation | `mykos_host_monitoring.py` and timestamped collector/API state |
 | Remote DHCP | Released local IPAM/proxy modes; RFC 2131 and Meraki relay documentation; remote relay not validated |
+
+## Native build progress must exist before the image
+
+The native OCI builder was included in lifecycle safety checks but omitted from
+the dashboard build inventory, so its OS pane stayed hidden until completion.
+Reuse the read-only builder discovery to report one active row per supported
+native OS. Never expose process arguments or invent a VM installation console.
+Tests cover all five OCI profiles with no finished image or running base,
+process deduplication, completion and existing desktop build behavior.
+
+A private dashboard overlay also needs the new families in its central iteration
+list. DOM headings and image-to-family mappings alone do not register panes.
+Check both active builds and completed images in every shipped edition.
