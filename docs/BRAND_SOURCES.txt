@@ -91,3 +91,13 @@ oracle-linux-pane.png — https://www.oracle.com/yum.oracle.com/a/yum/img/pengui
 Windows and Windows Server: four-color Microsoft window mark; identification only.
 
 CentOS transparent pane vector: CentOS Project, https://commons.wikimedia.org/wiki/File:CentOS_color_logo.svg ; original https://upload.wikimedia.org/wikipedia/commons/6/63/CentOS_color_logo.svg ; CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0/ . Original symbol paths/colors retained; presentation attributes added, no raster background. Oracle Linux PNG is unchanged; dashboard SVG viewport excludes surrounding transparent margins.
+
+Debian, SUSE Linux Enterprise, Alpine and Android pane badges:
+User-supplied artwork selected for dashboard headings/navigation. Only edge-connected
+white background pixels were made transparent with explicit user approval.
+Original RGB pixels and interior white artwork are preserved. Vendor trademarks
+remain with their respective owners; no additional trademark rights are granted.
+Files: debian-pane.png, sles-pane.png, alpine-pane.png, android-pane.png.
+Amazon Linux pane: user-supplied bird artwork, cropped before the wordmark;
+exterior white background cleared. Thin white CSS outline on dark themes.
+File: amazon-pane.png. Amazon trademarks remain with their owner.
