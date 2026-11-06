@@ -27,7 +27,7 @@ VERSIONS = {**{v: ('windows', v[3:]) for v in ('win11','win10','win8e','win7u','
             **{v: ('windows', v[3:]) for v in ('wns2025','wns2022','wns2019','wns2016')},
             **{v: ('macos', v[3:]) for v in ('mac15','mac14','mac13','mac12')},
             **{v: ('ubuntu', v[6:]) for v in ('ubuntu20.04','ubuntu22.04','ubuntu24.04')},
-            **{'fedora'+v+'vm': ('fedora', v) for v in ('43','44')}}
+            **{'fedora'+v+'vm': ('fedora', v) for v in ('43','44')}, 'android9':('android','9.0-r2')}
 
 
 def run(args, timeout=3600, env=None):
@@ -233,7 +233,7 @@ def launch(key, value):
             '--security-opt=label=disable', '--stop-timeout=120', '--restart=' + ('no' if value['role'] in ('template','preview') else 'unless-stopped'), '--pull=never',
             '--label', 'io.mykos.vm.os=' + value['os'], '--label', 'io.mykos.vm.role=' + value['role'],
             '--label', 'io.mykos.vm.host=' + value['host'],
-            '-e', ('BOOT=' + ('none' if kind=='fedora' and (value.get('installation_complete') or value.get('ready')) else value['boot'])) if kind in ('ubuntu','fedora') else 'VERSION=' + version,
+            '-e', ('BOOT=' + ('none' if kind in ('fedora','android') and (value.get('installation_complete') or value.get('ready')) else value['boot'])) if kind in ('ubuntu','fedora','android') else 'VERSION=' + version,
             '-e', 'RAM_SIZE=' + str(ram_mib) + 'M', '-e', 'RAM_MINIMUM=2G', '-e', 'CPU_CORES=2', '-e', 'DISK_SIZE=64G',
             '-v', str(storage(key) / 'storage') + ':/storage:rw',
             '-p', '%s:%s:8006/tcp' % (value['bind'], value['console_port']),
@@ -251,6 +251,11 @@ def launch(key, value):
     if kind in ('ubuntu','fedora'):
         args += ['-e', 'SERIAL=unix:/dev/shm/mykos-serial.sock,server=on,wait=off']
     if kind=='fedora':args+=['-e','DISK_FMT=qcow2','-e','VGA=std']
+    args+=['-e','MYKOS_ANDROID_INSTALL=N']
+    if kind=='android':
+        args+=['-e','BOOT_MODE=legacy','-e','DISK_TYPE=ide','-e','VGA=std']
+        if not value.get('installation_complete') and not value.get('ready'):
+            args+=['-v',str(Path(__file__).with_name('mykos-android-media'))+':/run/mykos-android-media:ro','-e','MYKOS_ANDROID_INSTALL=Y']
     # Never inherit an installation entry point from a committed build image.
     args += ['-e', 'MYKOS_UNATTENDED=']
     if value.get('unattended'):
@@ -331,7 +336,7 @@ def links(value):
 def checkpoint_cpu_profile(os_name):
     kind = VERSIONS[os_name][0]
     if kind == 'macos': return {'CPU_FLAGS':'-invtsc'}
-    if kind not in ('windows', 'ubuntu','fedora'): return {}
+    if kind not in ('windows', 'ubuntu','fedora','android'): return {}
     profile = {'CPU_MODEL':'host', 'CPU_FLAGS':'migratable=on,-invtsc'}
     if kind == 'windows': profile['HV'] = 'N'
     return profile
@@ -372,8 +377,9 @@ def create(os_name, username=None, password=None, ram_mib=None, unattended=False
         kind, _ = VERSIONS[os_name]
         if kind == 'windows' and (not username or not password or any(c in username + password for c in '\r\n\x00')):
             raise ValueError('Supply a Windows username and nonempty single-line password')
-        image = 'docker.io/qemux/qemu:latest' if kind in ('ubuntu','fedora') else 'docker.io/dockurr/' + kind + ':latest'
+        image = 'docker.io/qemux/qemu:latest' if kind in ('ubuntu','fedora','android') else 'docker.io/dockurr/' + kind + ':latest'
         boot = (ubuntu_iso(VERSIONS[os_name][1], unattended=True) if unattended else ubuntu_iso(VERSIONS[os_name][1])) if kind == 'ubuntu' else None
+        if kind=='android':boot='/storage/boot.iso'
         if kind=='fedora':
             from mykos_fedora import cloud_image
             boot=cloud_image(VERSIONS[os_name][1])
@@ -679,7 +685,7 @@ def checkpoint_enable(os_name):
     if os_name not in VERSIONS: raise ValueError('Select a template OS')
     with locked():
         value = read(os_name)
-        if VERSIONS[os_name][0] not in ('windows', 'ubuntu', 'fedora', 'macos'): return links(value)
+        if VERSIONS[os_name][0] not in ('windows', 'ubuntu', 'fedora', 'macos','android'): return links(value)
         profile = checkpoint_cpu_profile(os_name)
         if value.get('cpu_env') == profile: return links(value)
         old_value = dict(value)
@@ -730,7 +736,7 @@ def cleanup_unused_base_images():
     removed=[]
     for item in json.loads(run([PODMAN,'images','--format','json'],timeout=30)):
         for name in item.get('Names') or []:
-            if not re.fullmatch(r'localhost/(?:rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)(?:vm)?|macos[0-9]+|win[0-9a-z]+|wns[0-9]+|ubuntu[0-9.]+):base',name):continue
+            if not re.fullmatch(r'localhost/(?:rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)(?:vm)?|debian13|archlinux|sles15sp7|amazon2023|alpine|android9|macos[0-9]+|win[0-9a-z]+|wns[0-9]+|ubuntu[0-9.]+):base',name):continue
             image=json.loads(run([PODMAN,'image','inspect',name],timeout=30))[0]['Id']
             if image.removeprefix('sha256:') in used:continue
             try:run([PODMAN,'image','rm',name],timeout=120)
@@ -936,6 +942,38 @@ Write-Output 'Windows-managed paging enabled; restart required.'
             'message':'Image restarted at selected runtime RAM. Wait for the installed Windows desktop, then run Finish again to capture. No image has been published yet.'}
 
 
+def finish_android_install(value):
+    """Operator-confirmed manual install: cold-boot disk-only before RAM capture."""
+    if value.get('os')!='android9' or value.get('role')!='template' or value.get('ready'):
+        raise ValueError('Select the unfinished Android image')
+    original=value['name'];state=inspect(original);labels=state.get('Config',{}).get('Labels') or {}
+    if original!='android9' or labels.get('io.mykos.vm.os')!='android9' or labels.get('io.mykos.vm.role')!='template':
+        raise ValueError('Android builder identity mismatch')
+    source=storage('android9')/'storage'
+    if state.get('State',{}).get('Running'):
+        actual=Path('/proc/%d/root/storage'%state['State']['Pid']).stat();expected=source.stat()
+        if (actual.st_dev,actual.st_ino)!=(expected.st_dev,expected.st_ino):raise ValueError('Android storage changed')
+    media=source/'boot.iso';saved=storage('android9')/'android-installer.iso'
+    if media.is_symlink() or not media.is_file() or saved.exists() or saved.is_symlink():raise ValueError('Expected one verified Android installer')
+    old=dict(value);backup='mykos-recovery-android9-install-'+os.urandom(6).hex()
+    stop_container(original);run([PODMAN,'rename',original,backup],timeout=30);os.replace(media,saved)
+    try:
+        value.update(installation_complete=True,boot='none',ram_mib=runtime_memory(value))
+        launch('android9',value);save('android9',value)
+    except BaseException:
+        try:replacement=inspect(original)
+        except RuntimeError:replacement=None
+        if replacement is not None:
+            check=replacement.get('Config',{}).get('Labels') or {}
+            if check.get('io.mykos.vm.os')!='android9' or check.get('io.mykos.vm.role')!='template':raise RuntimeError('Android replacement changed; recovery retained')
+            run([PODMAN,'rm','--force',original],timeout=30)
+        os.replace(saved,media);run([PODMAN,'rename',backup,original],timeout=30);save('android9',old)
+        if state.get('State',{}).get('Running'):run([PODMAN,'start',original],timeout=120)
+        raise
+    run([PODMAN,'rm',backup],timeout=30)
+    return {**links(value),'capture_pending':True,'message':'Android restarted from disk without installer media. Wait for its installed desktop, then Finish again to capture.'}
+
+
 def verify_windows_installation(value):
     """Explicit image finish must capture installed Windows, never WinPE/setup."""
     if VERSIONS[value['os']][0] != 'windows': return
@@ -1049,6 +1087,8 @@ def prepare(os_name, replace=False, keep_running=False, embed_disk=False, confir
         if confirm_legacy is True and os_name in ('win98','winme','win2k','winxp','win7u'):
             value['legacy_installation_confirmed']=True
         verify_windows_installation(value)
+        if value['os']=='android9' and not value.get('ready') and not value.get('installation_complete'):
+            return finish_android_install(value)
         if value['os'].startswith('ubuntu') and not value.get('ready') and value.get('guest_agent'):
             from mykos_ubuntu_vpn import execute
             verify = """import pathlib,subprocess

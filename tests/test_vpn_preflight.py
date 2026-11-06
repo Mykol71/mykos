@@ -39,3 +39,10 @@ def test_shared_gateway_requires_complete_managed_connection(tmp_path):
 def test_host_prefix_supports_full_remote_name_length():
     assert gateway.key('host','mykos-'+'a'*64).endswith('a'*64)
     with pytest.raises(ValueError):gateway.key('01234567','a'*65)
+
+
+@pytest.mark.parametrize('os_name',['debian13','archlinux','sles15sp7','amazon2023','alpine'])
+def test_new_distro_unverified_vpn_creation_rejected_before_mount_or_commands(monkeypatch,os_name):
+    monkeypatch.setattr(native,'inspect',lambda shop:('fixture.host',{'State':{'Running':True},'Config':{'Labels':{'io.mykos.os':os_name}}}))
+    monkeypatch.setattr(native,'run',lambda *a,**kw:(_ for _ in ()).throw(AssertionError('Must not run guest commands')))
+    with pytest.raises(ValueError,match='not yet qualified'):native.vpn_preflight('01234567')

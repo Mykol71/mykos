@@ -122,7 +122,7 @@ def builders():
     selected = set()
     for pid, value in table.items():
         args = value['args']
-        executable = any(Path(a).name in ('livemedia-creator', 'anaconda') for a in args[:2] if a)
+        executable = any(Path(a).name in ('livemedia-creator', 'anaconda', 'build_native_oci.py') for a in args[:2] if a)
         from mykos_runtime import native_build_os
         staged_ks = native_build_os(args) is not None
         if executable and staged_ks: selected.add(pid)

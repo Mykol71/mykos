@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Fetch the exact upstream Android-x869.0-r2 installer into private storage.
+
+The legacy publisher supplies SHA1, not a signed modern checksum manifest.
+HTTPS plus that pinned release checksum guards accidental replacement; record
+SHA256 locally and clearly label this as an old compatibility guest.
+"""
+from pathlib import Path
+import hashlib,json,os,urllib.request
+URL='https://downloads.sourceforge.net/project/android-x86/Release%209.0/android-x86_64-9.0-r2.iso'
+SHA1='1cc85b5ed7c830ff71aecf8405c7281a9c995aa0'
+SHA256='f7eb8fc56f29ad5432335dc054183acf086c539f3990f0b6e9ff58bd6df4604e'
+
+def prepare(root):
+    root=Path(root);dest=root/'boot.iso';temporary=root/'.android-install.download';receipt=root/'android-media.json'
+    for p in (dest,temporary,receipt):
+        if p.is_symlink():raise ValueError('Unsafe Android installer path')
+    def digests(path):
+        one=hashlib.sha1();two=hashlib.sha256()
+        with path.open('rb') as source:
+            for block in iter(lambda:source.read(4*1024*1024),b''):one.update(block);two.update(block)
+        return one.hexdigest(),two.hexdigest()
+    if dest.exists():
+        actual,strong=digests(dest)
+        if actual!=SHA1 or strong!=SHA256:raise ValueError('Existing Android installer does not match the upstream release checksum')
+        return strong
+    try:
+        size=0
+        with urllib.request.urlopen(URL,timeout=90) as source,temporary.open('wb') as output:
+            if not source.geturl().startswith('https://'):raise ValueError('Android download redirected away from HTTPS')
+            for block in iter(lambda:source.read(4*1024*1024),b''):
+                size+=len(block)
+                if size>2*1024**3:raise ValueError('Android ISO exceeds the download limit')
+                output.write(block)
+        actual,strong=digests(temporary)
+        if actual!=SHA1 or strong!=SHA256:raise ValueError('Android-x86 release checksum mismatch; installer left unused')
+        temporary.chmod(0o600);os.replace(temporary,dest)
+        receipt.write_text(json.dumps({'source':URL,'publisher_sha1':SHA1,'local_sha256':strong,'bytes':size,'legacy_media':True},indent=2)+'\n');receipt.chmod(0o600)
+        return strong
+    finally:temporary.unlink(missing_ok=True)
+
+if __name__=='__main__':prepare('/storage')

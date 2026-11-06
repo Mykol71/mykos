@@ -108,8 +108,17 @@ def capture_vm(shop):
                     vm.safe_dir(source);shutil.rmtree(source)
 
 
+def check_native_timezone(state, proc=Path('/proc')):
+    labels=state.get('Config',{}).get('Labels') or {}
+    if labels.get('io.mykos.os') not in ('debian13','archlinux','sles15sp7','amazon2023','alpine'):return
+    timezone=proc/str(int(state['State']['Pid']))/'root/etc/localtime'
+    if os.path.lexists(timezone):
+        raise ValueError('This native snapshot profile requires its default UTC configuration; custom guest timezones are not yet qualified. No snapshot was created; the container was left running.')
+
+
 def check_native_compatibility(state, proc=Path('/proc')):
     """Reject known CRIU 3.x blockers before seizing any source processes."""
+    check_native_timezone(state,proc)
     version=vm.run([criu_binary(),'--version'],timeout=10)
     match=re.search(r'Version:\s*(\d+)\.(\d+)',version)
     if not match:raise ValueError('Cannot determine checkpoint tool capabilities')
@@ -274,6 +283,7 @@ def capture_native(shop):
         try:
             mounts=native_data_mounts(state)
             context={'upper':str(upper.resolve(strict=True)),'mounts':mounts,'directory':str(temporary)}
+            if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.os') in ('debian13','archlinux','sles15sp7','amazon2023','alpine'):context['portable_paths']=True
             cgroup=native_cgroup_context(state)
             if cgroup:context['cgroup']=cgroup
             context_path=temporary/'hook-context.json';context_path.write_text(json.dumps(context));context_path.chmod(0o600)

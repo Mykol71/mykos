@@ -10,7 +10,7 @@ import stat
 import time
 
 WATCH = re.compile(r'^inotify\s+.*?\bino:([0-9a-fA-F]+)\s+sdev:([0-9a-fA-F]+)',re.M)
-EXCLUDED = {'proc','sys','dev','run'}
+EXCLUDED = {'proc','sys','dev'}
 
 
 def device_number(value):
@@ -75,7 +75,6 @@ def watch_paths(pid,proc_root=Path('/proc'),seconds=5,max_entries=100000):
                         seeds.add(parts[:-1]);seeds.add(parts)
             except OSError:continue
         if not wanted:return []
-        wanted_inodes={ino for _,ino in wanted}
 
         def scan(seed):
             nonlocal count
@@ -96,13 +95,13 @@ def watch_paths(pid,proc_root=Path('/proc'),seconds=5,max_entries=100000):
                             if not parts and entry.name in EXCLUDED:continue
                             child=parts+(entry.name,)
                             try:
-                                # Directory entry inode lookup avoids stat'ing every
-                                # file when scanning a large added application.
-                                if entry.inode() in wanted_inodes:
-                                    info=os.stat(entry.name,dir_fd=fd,follow_symlinks=False)
-                                    identity=(device_number(info.st_dev),info.st_ino)
-                                    if identity in wanted and not stat.S_ISLNK(info.st_mode):
-                                        found[identity]='/'+'/'.join(child)
+                                # A bind mount covers the directory entry: d_ino
+                                # can name the hidden file, not the watched inode.
+                                # Use bounded no-follow namespace metadata instead.
+                                info=os.stat(entry.name,dir_fd=fd,follow_symlinks=False)
+                                identity=(device_number(info.st_dev),info.st_ino)
+                                if identity in wanted and not stat.S_ISLNK(info.st_mode):
+                                    found[identity]='/'+'/'.join(child)
                                 if entry.is_dir(follow_symlinks=False):pending.append(child)
                             except OSError:continue
                 finally:os.close(fd)

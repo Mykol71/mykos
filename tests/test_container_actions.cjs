@@ -13,8 +13,8 @@ class Element {
     querySelector() { return null; }
 }
 const nodes = [];
-for (const family of ['windows', 'windows-server', 'macos']) {
-    for (const status of ['online', 'offline', 'unknown']) nodes.push({id:String(10000000 + nodes.length), family, status});
+for (const family of ['windows', 'windows-server', 'macos', 'android']) {
+    for (const status of ['online', 'offline', 'unknown']) nodes.push({id:String(10000000 + nodes.length), family, status, vpn:family==='android'?'up':undefined});
 }
 const rows = nodes.map(node => {
     const row = new Element(); row.cells = [{textContent:node.id}]; return row;
@@ -49,16 +49,17 @@ vm.runInContext(source + '\nmykosRenderInventory();', context);
                 await buttons.find(button=>button.className===name).listeners.click({stopPropagation(){}});
             }
         }
+        if(nodes[i].family==='android'){assert.match(buttons.find(b=>b.className==='mykos-terminal-button').title,/Desktop login/);assert(!buttons.some(b=>b.dataset.vpnControl),'Android never exposes native VPN controls before details load');}
         if (!stop.disabled) await stop.listeners.click({stopPropagation(){}});
     }
-    assert.equal(requests.length, 3);
+    assert.equal(requests.length, 4);
     assert.equal(reloads, 0,'Lifecycle completion uses its state-only signal; action handlers must not force a full inventory reload');
-    assert.equal(prompts.length, 3);
-    assert.deepEqual(desktopClicks,nodes.filter(node=>node.status==='online').map(node=>[node.id,'console']));
-    assert.deepEqual(terminalClicks,nodes.filter(node=>node.status==='online').map(node=>node.id));
+    assert.equal(prompts.length, 4);
+    assert.deepEqual(desktopClicks,nodes.filter(node=>node.status==='online').flatMap(node=>[[node.id,'console'],...(node.family==='android'?[[node.id,'login']]:[])]));
+    assert.deepEqual(terminalClicks,nodes.filter(node=>node.status==='online'&&node.family!=='android').map(node=>node.id));
     for (let i = 0; i < requests.length; i++) {
         assert.equal(requests[i].url, `/mykos/api/web/containers/${nodes[i * 3].id}/stop`);
         assert.equal(requests[i].options.method, 'POST');
     }
-    console.log('Container action checks passed: stop icons for all three OS panes, disabled states, confirmation and stop requests.');
+    console.log('Container action checks passed: stop icons for all four desktop OS panes, disabled states, confirmation and stop requests.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

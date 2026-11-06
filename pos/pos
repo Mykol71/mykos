@@ -106,7 +106,7 @@ stop_container() {
 
 stage_image() {
   SHOPCODE=$(cat .shopcode) && POSTYPE=$(cat .$SHOPCODE.postype) && OS=$(cat .$SHOPCODE.imagetype)
-  case "$OS" in win*|wns*|mac*|ubuntu*|fedora43vm|fedora44vm) "$MYKOS_PYTHON" ./vm start "$SHOPCODE" "$OS"; return $? ;; esac
+  case "$OS" in win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm) "$MYKOS_PYTHON" ./vm start "$SHOPCODE" "$OS"; return $? ;; esac
   if podman container exists "$SHOPCODE.$(hostname)"; then
     /usr/local/sbin/mykos-linux start "$SHOPCODE"
     return $?
@@ -133,11 +133,17 @@ create-image() {
     '  Oracle Linux    oracle8 oracle9 oracle10' \
     '  CentOS Stream   centos8 centos9 centos10' \
     '  Fedora native   fedora43 fedora44' \
+    '  Debian native   debian13' \
+    '  Arch native     archlinux' \
+    '  SUSE Enterprise sles15sp7 (SLE BCI)' \
+    '  Amazon Linux    amazon2023' \
+    '  Alpine native   alpine (3.24)' \
     '  Fedora GNOME VM fedora43vm fedora44vm' \
     '  Windows         win11 win10 win8e win7u winxp winme win2k win98' \
     '  Windows Server  wns2025 wns2022 wns2019 wns2016' \
     '  macOS           mac15 mac14 mac13 mac12' \
     '  Ubuntu          ubuntu20.04 ubuntu22.04 ubuntu24.04' \
+    '  Android-x86 VM  android9 (legacy/manual installation)' \
     '  SQL Server      mssql2025 mssql2022' && printf 'OS: ' && read -r image_selection || return 1
   if [ "$image_selection" = all ]; then
     build-all-images
@@ -152,16 +158,17 @@ build-image() (
   renice -n 15 -p "$BASHPID" >/dev/null || return 1
   ionice -c 2 -n 7 -p "$BASHPID" || return 1
   case "$OS" in
-    win*|wns*|mac*|ubuntu*|fedora43vm|fedora44vm)
+    win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm)
       "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;;
   esac
-  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
+  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
   if podman image exists "$OS"; then echo "Image already built: $OS"; return 0; fi
   local BUILDROOT BUILD_KICKSTART native_lock
   mkdir -p -m 0700 /var/tmp/containers || return 1
   "$MYKOS_PYTHON" -c 'import os,stat; p="/var/tmp/containers"; s=os.lstat(p); assert stat.S_ISDIR(s.st_mode) and s.st_uid==os.geteuid() and not s.st_mode & 0o022, "Unsafe native build directory"' || return 1
   exec {native_lock}</var/tmp/containers || return 1
   flock -n "$native_lock" || { echo 'Another native image build is running; wait for its capture/commit to finish.' >&2; return 1; }
+  case "$OS" in debian13|archlinux|sles15sp7|amazon2023|alpine) "$MYKOS_PYTHON" ./build_native_oci.py "$OS"; return $? ;; esac
   BUILDROOT=$(mktemp -d "/var/tmp/containers/mykos-native-$OS.XXXXXXXX") || return 1
   trap 'rm -rf -- "$BUILDROOT"' EXIT
   trap 'exit 130' INT
@@ -215,13 +222,19 @@ set_working_shopcode() {
     '  Oracle Linux    oracle8 oracle9 oracle10' \
     '  CentOS Stream   centos8 centos9 centos10' \
     '  Fedora native   fedora43 fedora44' \
+    '  Debian native   debian13' \
+    '  Arch native     archlinux' \
+    '  SUSE Enterprise sles15sp7 (SLE BCI)' \
+    '  Amazon Linux    amazon2023' \
+    '  Alpine native   alpine (3.24)' \
     '  Fedora GNOME VM fedora43vm fedora44vm' \
     '  Windows         win11 win10 win8e win7u winxp winme win2k win98' \
     '  Windows Server  wns2025 wns2022 wns2019 wns2016' \
     '  macOS           mac15 mac14 mac13 mac12' \
     '  Ubuntu          ubuntu20.04 ubuntu22.04 ubuntu24.04' \
+    '  Android-x86 VM  android9 (legacy/manual installation)' \
     '  SQL Server      mssql2025 mssql2022' && printf 'OS: ' && read -r OS || return 1
-  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|fedora43vm|fedora44vm|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
+  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|android9|fedora43vm|fedora44vm|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
   printf '%s\n' "$OS" >".$SHOPCODE.imagetype"
   POSTYPE="$OS"; printf '%s\n' "$POSTYPE" >".$SHOPCODE.postype"
 }
@@ -744,8 +757,8 @@ while :; do
         read selection
         case $selection in
           1) podman container ls ;;
-	  2) case "$OS" in win*|wns*|mac*|ubuntu*|fedora43vm|fedora44vm) if "$MYKOS_PYTHON" ./vm info "$SHOPCODE" >/dev/null 2>&1; then "$MYKOS_PYTHON" ./vm toggle "$SHOPCODE"; else stage_image; fi ;; *) if podman container exists "$SHOPCODE.$(hostname)"; then /usr/local/sbin/mykos-linux toggle "$SHOPCODE"; else stage_image; fi ;; esac ;;
-          3) case "$OS" in win*|wns*|mac*|ubuntu*|fedora43vm|fedora44vm) "$MYKOS_PYTHON" ./vm info "$SHOPCODE" ;; *) [ -f .$SHOPCODE.container ] && CONTAINER=$(cat .$SHOPCODE.container) && podman exec -it $CONTAINER su - root || echo "No running container.." ;; esac ;;
+	  2) case "$OS" in win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm) if "$MYKOS_PYTHON" ./vm info "$SHOPCODE" >/dev/null 2>&1; then "$MYKOS_PYTHON" ./vm toggle "$SHOPCODE"; else stage_image; fi ;; *) if podman container exists "$SHOPCODE.$(hostname)"; then /usr/local/sbin/mykos-linux toggle "$SHOPCODE"; else stage_image; fi ;; esac ;;
+          3) case "$OS" in win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm) "$MYKOS_PYTHON" ./vm info "$SHOPCODE" ;; *) [ -f .$SHOPCODE.container ] && CONTAINER=$(cat .$SHOPCODE.container) && podman exec -it $CONTAINER su - root || echo "No running container.." ;; esac ;;
           4) list_vpns ;;
   	  5) add_vpn ;;
           6) rm_vpn ;;

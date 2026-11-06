@@ -228,7 +228,7 @@ def image_name(info, image):
     if not re.fullmatch(r'(?:sha256:)?[0-9a-f]{12,64}', stored):
         return stored
     tags = image.get('RepoTags') or []
-    return next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)(?:vm)?|ubuntu[0-9.]*|win[^/:]+|wns[0-9]+|macos[0-9]+):[^/]+', tag)), next(iter(tags), stored))
+    return next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)(?:vm)?|debian13|archlinux|sles15sp7|amazon2023|alpine|android9|ubuntu[0-9.]*|win[^/:]+|wns[0-9]+|macos[0-9]+):[^/]+', tag)), next(iter(tags), stored))
 
 
 def parse_os_release(text):
@@ -303,8 +303,10 @@ def image_os(info, image):
     labels = image.get('Labels') or image.get('Config', {}).get('Labels') or {}
     selected = (info.get('Config', {}).get('Labels') or {}).get('io.mykos.vm.os', '')
     ref = selected or labels.get('io.mykos.os') or image_name(info, image).split('/')[-1].split(':')[0]
-    families = [('mssql', 'Microsoft SQL Server'), ('rh', 'Red Hat Enterprise Linux'), ('rocky', 'Rocky Linux'), ('alma', 'AlmaLinux'), ('oracle','Oracle Linux'), ('centos','CentOS Stream'), ('fedora','Fedora'), ('ubuntu', 'Ubuntu'),
+    families = [('mssql', 'Microsoft SQL Server'), ('rh', 'Red Hat Enterprise Linux'), ('rocky', 'Rocky Linux'), ('alma', 'AlmaLinux'), ('oracle','Oracle Linux'), ('centos','CentOS Stream'), ('fedora','Fedora'), ('debian','Debian'), ('sles','SUSE Linux Enterprise'), ('amazon','Amazon Linux'), ('ubuntu', 'Ubuntu'),('android','Android-x86'),
                 ('wns', 'Windows Server'), ('win', 'Windows'), ('macos', 'macOS'), ('mac', 'macOS')]
+    if ref in ('archlinux','alpine'):
+        return {'os_type':{'archlinux':'Arch Linux','alpine':'Alpine Linux'}[ref],'os_version':labels.get('io.mykos.os.version') or ('rolling' if ref=='archlinux' else '3.24'),'os_codename':'','os_source':'image','image_id':info.get('Image')}
     for prefix, title in families:
         if ref.startswith(prefix) and re.fullmatch(r'[0-9][0-9.a-z]*', ref[len(prefix):]):
             version = ref[len(prefix):] if prefix == 'mssql' else labels.get('io.mykos.os.version') or labels.get('version') or ref[len(prefix):]

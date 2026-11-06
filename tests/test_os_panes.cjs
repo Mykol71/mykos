@@ -54,6 +54,12 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(mykosImageFamily('mssql2022'), 'mssql');
         assert.equal(mykosImageFamily('mssql2025'), 'mssql');
         assert.equal(mykosNodeFamily({id:'sql',os_type:'Red Hat Enterprise Linux',image:'localhost/mssql2022:latest'}), 'mssql');
+        for (const [os,family,label] of [['debian13','debian','13'],['archlinux','arch','Rolling'],['sles15sp7','sles','15 SP7 (BCI)'],['amazon2023','amazon','2023'],['alpine','alpine','3.24'],['android9','android','9.0-r2 (legacy)']]) {
+            assert.equal(mykosImageFamily(os),family);
+            assert.equal(mykosNodeFamily({id:'new-os',image:'localhost/'+os+':latest'}),family);
+            assert.equal(mykosImageVersionLabel(os),label);
+            assert.ok(mykosOsChoices[family].includes(os));
+        }
         assert.equal(mykosImageFamily('other'), null);
         el('rocky-mykos-image-builds').querySelectorAll=()=>[];
         mykosCapturedImages=[{os:'rocky9',version:'9.10',size_bytes:2147483648,created_at:1793060009,delete_state:'idle'}];
@@ -154,6 +160,8 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         }
         assert.equal(mykosNodeIp('linux', {}, {eth1_ip:'192.0.2.99'}), '192.0.2.99');
         assert.equal(mykosNodeIp('ubuntu', {}, {eth1_ip:'192.0.2.99'}), 'Unknown');
+        assert.equal(mykosNodeIp('android', {}, {eth1_ip:'192.0.2.99'}), 'Unknown');
+        assert.equal(mykosNodeIp('android', {ips:[{address:'192.0.2.10'}]}, {eth1_ip:'192.0.2.99'}), '192.0.2.10');
         assert.equal(mykosNodeIp('ubuntu', {ips:[{address:'192.168.22.232'}]}, {eth1_ip:'192.0.2.99'}), '192.168.22.232');
         const lastGoodVisibility = mykosOsFamilies.map(family => el(mykosOsId(family, 'mykos-container-panel')).hidden);
         fail = true; mykosStageImagesLoadedAt = 0; await mykosLoadStageImages();
@@ -167,7 +175,7 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
             assert.ok(select.options.slice(1).every(option => option.disabled), 'Unavailable preview images must be disabled');
         }
         fail = false;
-        responseImages = ['fedora44','ubuntu24.04','win11','wns2022','mac15','mssql2022'].map(os=>({os,image:'image-'+os}));
+        responseImages = ['debian13','archlinux','sles15sp7','amazon2023','alpine','android9','fedora44','ubuntu24.04','win11','wns2022','mac15','mssql2022'].map(os=>({os,image:'image-'+os}));
         mykosStageImagesLoadedAt=0;await mykosLoadStageImages();
         for (const family of mykosOsFamilies.filter(family=>!mykosPreviewOsFamilies.has(family))) {
             assert.equal(el(mykosOsId(family,'mykos-container-panel')).hidden,false,'Real non-EL images remain visible with the leaf on');

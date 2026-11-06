@@ -1,11 +1,11 @@
 # MYKOS: performance by design
 
-[Documentation index](README.md) · [Download PDF](ENGINEERING_LESSONS.md)
+[Documentation index](README.md)
 
 **Making complete customer environments available quickly and keeping them responsive**
 
 Engineering milestones, roadblocks, and design decisions  
-Released implementation baseline: 1.5.20261024-146
+Historical implementation baseline: 1.5.20261024-146; later qualification notes are identified below.
 
 Performance became a central engineering goal of MYKOS: get a complete customer environment ready quickly, then keep management and monitoring from getting in its way. The target is a usable system with its services, accounts, customer configuration, data, and connectivity intact. A fast container launch is only one part of that result.
 
@@ -214,6 +214,41 @@ Use application-ready time as the main startup endpoint: the required customer s
 | Is the faster path dependable? | Recheck addresses after interface recreation and delayed manager activity; test DNS/VPN recovery and restore real snapshots with application-data checks. |
 
 The current evidence supports the mechanisms and operator-observed responsiveness. These measurements would turn those observations into repeatable performance results. No general speedup factor, density limit, or compliance-scanning overhead has been established here.
+
+## Additional native Linux image qualification
+
+Native guest support requires more than a successful package installation. Each
+new profile is tested for boot, a locked default root password, SSH service
+readiness, managed networking, DNS, a live memory snapshot, and restoration of
+the matching filesystem. A marker changed after capture must revert after
+restore. Test resources are removed and the original inventory compared after
+each run, including failures.
+
+| Encountered issue | Correction and qualification boundary |
+| --- | --- |
+| Debian, SLE BCI and Amazon systemd timezone watches could not survive overlay rollback | The host kernel reports inconsistent overlay file device identities. A regular-file conversion did not fix it. Private temporary-filesystem and disk binds also failed CRIU path recovery. The final images use UTC defaults with a directory watch, retain vendor zoneinfo, and pass live capture/restore. Custom timezone changes remain unqualified. |
+| Arch startup replaced a mapped dynamic-linker cache | Scoped CRIU link remapping preserves that unlinked mapping for the new image profiles. Existing profiles keep their previous default RPC options. |
+| Arch systemd mounted unused credential imports read-only | Guest service checkpoint drop-ins clear unused credential imports while retaining the existing vendor security policy outside the checkpoint compatibility settings. |
+| Amazon's minimal base conflicted with full coreutils and lacked setup prerequisites | Retain coreutils-single, explicitly install passwd, and create the D-Bus machine-ID directory before its symlink. |
+| Alpine's OpenRC package omitted PID1 and SSH startup integration | Install the separate OpenRC-init and SSH OpenRC integration packages; select OpenRC from image metadata. |
+| Watched bind-mounted files were skipped by inode optimization | Compare bounded no-follow namespace stat metadata instead of assuming a directory entry inode identifies the visible mounted file. Namespace, timeout and symlink guards remain. |
+| A build could move a pre-existing upstream cache tag | Reuse and digest-pin existing vendor caches; pull only absent upstream tags. |
+| New image families were missing from UI test fixtures | Cover image routing, labels, availability, controls and errors for all new families; unavailable images remain hidden. |
+| Android could initially inherit native controls or an incorrect IP fallback | Classify it as a desktop independently of asynchronous detail loading in both editions; retain desktop-only access and Podman IP selection. |
+| New native images had no qualified VPN matrix | Reject new VPN creation for those families before changes; managed NAT remains available. |
+| A historical minimal RHEL image failed fsnotify restore | The same failure occurs with the prior released helpers. It is a pre-existing image compatibility limitation; current qualification does not certify every historical image. Requalify a representative snapshot before relying on an older custom image. |
+| Test cleanup compared image IDs with inconsistent digest prefixes | Normalize image identities and preserve baseline references. Non-forced removal refused the attempted shared-image deletion; exact baseline verification confirmed preservation before retry. |
+
+Android-x86 has a separate manual-install qualification path. Its verified legacy
+ISO must attach as optical media for the selected firmware rather than relying
+on generic hybrid-ISO USB detection. The installer-specific controller adjustment
+is guarded against unknown upstream formats; finished instances cannot inherit
+the installer-selection environment. Media-download and wrapper startup are not
+proof that installation or an installed desktop has succeeded.
+
+Local test-tool quoting mistakes, fixture assumptions, platform permissions,
+attempts that failed, and open limits are also retained in the private issue log.
+No customer content or credentials belong in public qualification reports.
 
 ## Evidence and implementation map
 

@@ -64,6 +64,8 @@ def vpn_preflight(shop):
     shopcode(shop)
     name,state=inspect(shop)
     if not state.get('State',{}).get('Running'):raise ValueError('Start this container first')
+    if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.os') in ('debian13','archlinux','sles15sp7','amazon2023','alpine'):
+        raise ValueError('VPN creation on this native image is not yet qualified; managed NAT networking is available')
     expected=(vm.POS/('.'+shop)).resolve()
     mounts=[m for m in state.get('Mounts',[]) if m.get('Destination')=='/etc/ipsec.d']
     if len(mounts)!=1 or Path(mounts[0].get('Source','')).resolve()!=expected or not mounts[0].get('RW'):

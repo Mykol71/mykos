@@ -1,4 +1,4 @@
-"""RHEL 7 systemd compatibility on a cgroup v2 host, without changing host mode."""
+"""Native guest init/checkpoint compatibility without changing host settings."""
 import json
 import os
 from pathlib import Path
@@ -25,6 +25,10 @@ def legacy_image(image):
 
 
 def init_command(image):
+    if image in ('alpine','alpine:latest','localhost/alpine:latest'):return ['/sbin/openrc-init']
+    if image not in NATIVE_OS_NAMES:
+        value=json.loads(run([PODMAN,'image','inspect',image],timeout=20))[0]
+        if (value.get('Config',{}).get('Labels') or value.get('Labels') or {}).get('io.mykos.init')=='openrc':return ['/sbin/openrc-init']
     return ['/usr/bin/python','/usr/local/libexec/mykos-rh7-init'] if legacy_image(image) else ['/sbin/init']
 
 

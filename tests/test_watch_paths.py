@@ -75,3 +75,38 @@ def test_dump_rpc_hints_are_dynamic_deduplicated_and_restore_unchanged(monkeypat
     assert rpc.directory_fds(result,os.getpid(),[])==result
     restore=b'\x08\x02\x12\x02\x10\x2a'
     assert rpc.directory_fds(restore,os.getpid(),[])==restore
+
+
+def test_guest_runtime_watch_has_path_after_inode_replacement(instance):
+    proc,process,guest,watched=instance
+    path=guest/'run/systemd/example';path.mkdir(parents=True)
+    watched(path)
+    assert watch.watch_paths(42,proc)==['/run/systemd/example']
+
+def test_scoped_dump_requires_paths_and_deleted_mapping_remap():
+    options=b'\x10\x2a'
+    request=b'\x08\x01\x12'+rpc.integer(len(options))+options
+    updated=rpc.directory_fds(request,os.getpid(),[],portable_paths=True)
+    fields=rpc.fields(rpc.fields(updated)[2])
+    assert fields[18]==1 and fields[21]==1 and fields[2]==42
+    original=rpc.fields(rpc.fields(rpc.directory_fds(request,os.getpid(),[]))[2])
+    assert 18 not in original and 21 not in original
+    restore=b'\x08\x02\x12'+rpc.integer(len(options))+options
+    assert rpc.directory_fds(restore,os.getpid(),[])==restore
+
+
+def test_bind_mount_entry_inode_is_not_used_as_watch_identity(instance,monkeypatch):
+    proc,process,guest,watched=instance
+    path=guest/'etc/localtime';path.parent.mkdir();path.write_bytes(b'UTC timezone fixture')
+    watched(path)
+    scandir=watch.os.scandir
+    class Entry:
+        def __init__(self,entry):self.entry=entry;self.name=entry.name
+        def inode(self):return 0  # Covered directory entry differs from mount inode.
+        def is_dir(self,**kwargs):return self.entry.is_dir(**kwargs)
+    class Scan:
+        def __init__(self,fd):self.scan=scandir(fd)
+        def __enter__(self):return (Entry(e) for e in self.scan)
+        def __exit__(self,*args):self.scan.close()
+    monkeypatch.setattr(watch.os,'scandir',Scan)
+    assert watch.watch_paths(42,proc)==['/etc/localtime']

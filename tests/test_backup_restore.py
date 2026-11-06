@@ -81,6 +81,7 @@ def launcher():
 def test_restore_is_prepared_before_start_and_failure_removes_only_created_guest(customer,tmp_path,monkeypatch):
     account,cfg=customer;module=launcher();events=[]
     monkeypatch.setattr(module,'cgroup_arguments',lambda image:[])
+    monkeypatch.setattr(module,'init_command',lambda image:['/sbin/init'])
     monkeypatch.setattr(module.vm,'locked',nullcontext)
     monkeypatch.setattr(module,'config',lambda:cfg)
     monkeypatch.setattr(module,'containers',lambda:[])

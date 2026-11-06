@@ -95,7 +95,7 @@ fresh guest installation has been retested on every host.
 #### Native EL and other Linux containers
 
 Run `sudo mykos`, choose **c. Build image**, then enter one OS identifier from
-this table. Native builds use Kickstart/rootfs creation and Podman, rather than
+this table. Native builds use Kickstart/rootfs creation or official OCI bases and Podman, rather than
 `pos/vm build` or the VM-only `mykos-image-build` command.
 
 | Native guest/image type | OS identifier entered at the menu |
@@ -120,6 +120,23 @@ this table. Native builds use Kickstart/rootfs creation and Podman, rather than
 | Fedora 44 | `fedora44` |
 | SQL Server 2022 on native Linux | `mssql2022` |
 | SQL Server 2025 on native Linux | `mssql2025` |
+| Debian 13 | `debian13` |
+| Arch Linux (rolling) | `archlinux` |
+| SUSE Linux Enterprise BCI Init 15 SP7 | `sles15sp7` |
+| Amazon Linux 2023 | `amazon2023` |
+| Alpine Linux 3.24 (OpenRC) | `alpine` |
+
+The five additional native selections use official vendor OCI bases with a
+recorded digest and vendor package verification. Existing locally cached upstream
+tags are preserved. They use managed NAT networking; distro-specific VPN creation
+is not yet qualified and is unavailable. These images default to UTC. Custom guest
+timezone changes have not been qualified for memory snapshot restoration;
+snapshot preflight rejects changed timezone files without modifying the guest.
+SUSE uses the SLE BCI Init base; it does not include a full SLES subscription or
+paid vendor support. Guest support does not add Debian, Arch, SUSE, Amazon or
+Alpine as MYKOS host platforms.
+These OCI builds produce an image without keeping a generic base running;
+its base console opens on demand, and instances start from the stored image.
 
 For a new instance, choose **s. ID**, enter its eight-digit ID and OS selection,
 then use **2. Start/Stop**. Build the required base image first if it is not yet
@@ -127,7 +144,7 @@ available. Repository access, installation media and applicable vendor licenses
 are still required for the chosen guest.
 
 The menu's `all` selection covers the **16 EL images**: RHEL 7–10 plus Rocky,
-AlmaLinux, Oracle and CentOS Stream 8–10. Fedora and SQL Server are individual
+AlmaLinux, Oracle and CentOS Stream 8–10. Fedora, SQL Server and the five additional native families are individual
 selections. Each example is an alternative; do not start a full image batch just
 to check application or documentation changes.
 
@@ -166,6 +183,10 @@ These selections use `create` and `prepare`, rather than the unattended builder.
 | Windows Me | `sudo /usr/share/mykos/pos/vm create winme` | `sudo /usr/share/mykos/pos/vm prepare winme` |
 | Windows 2000 | `sudo /usr/share/mykos/pos/vm create win2k` | `sudo /usr/share/mykos/pos/vm prepare win2k` |
 | Windows 98 | `sudo /usr/share/mykos/pos/vm create win98` | `sudo /usr/share/mykos/pos/vm prepare win98` |
+
+Android-x86 9.0-r2 uses manual installation and two Finish steps; see the
+[Android-x86 workflow](docs/IMAGE_BUILDS.md#android-x86-legacy-installer). It is a
+legacy compatibility guest with graphical access only.
 
 Ubuntu uses autoinstall, Windows uses Autounattend.xml, and macOS uses
 startosinstall. Completed builds commit the installed payload under a readable

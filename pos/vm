@@ -61,7 +61,7 @@ def main():
             if input('Rebuild this image at the selected RAM? Existing instances stay unchanged. [y/N] ').strip().lower()!='y':
                 raise ValueError('Image left unchanged')
             args.replace=True
-    if args.action in ('build','create') and args.selection not in ('win98','winme','win2k','winxp','win7u'):
+    if args.action in ('build','create') and args.selection not in ('win98','winme','win2k','winxp','win7u','android9'):
         from mykos_image_build import build, STATE
         options={'replace':args.replace}
         if args.ram_mib is not None:options['ram_mib']=args.ram_mib
@@ -80,6 +80,7 @@ def main():
         show(vm.create(os_name, username, password, ram_mib))
         print('Complete installation in console_url. Then run: ./vm prepare ' + os_name)
         print('For macOS/Ubuntu, complete account setup in the browser console.')
+        if os_name=='android9':print('Legacy Android9: install only to this new virtual disk. First Finish boots disk-only; second Finish captures the installed desktop. No SSH/ADB is exposed.')
         if os_name.startswith('ubuntu'):
             print('Inside Ubuntu before capture: sudo apt-get update && sudo apt-get install -y isc-dhcp-client iproute2 net-tools')
             ubuntu_swap_instructions(os_name)

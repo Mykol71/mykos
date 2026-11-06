@@ -1,6 +1,23 @@
 #!/bin/bash
 set -euo pipefail
 checkpoint=/storage/.mykos-checkpoint
+if [[ ${MYKOS_ANDROID_INSTALL:-N} == Y ]]; then
+    python3 /run/mykos-android-media
+    # The legacy ISO needs an optical controller: generic hybrid detection
+    # selects USB, which SeaBIOS cannot boot through this xHCI profile.
+    python3 - <<'MYKOS_ANDROID_OPTICAL'
+from pathlib import Path
+path=Path('/run/disk.sh')
+text=path.read_text()
+original='if [[ "$hybrid" != "0000" ]]; then'
+patched='if [[ "$hybrid" != "0000" && "${MYKOS_ANDROID_INSTALL:-N}" != Y ]]; then'
+if text.count(original)==1:
+    path.write_text(text.replace(original,patched,1))
+elif text.count(patched)!=1:
+    raise SystemExit('Unsupported Android installer media controller profile')
+MYKOS_ANDROID_OPTICAL
+    export BOOT=/storage/boot.iso
+fi
 # MYKOS MACOS AUTOMATIC BOOT
 # A fresh runtime wrapper must retain unattended boot after installer devices leave.
 if [[ -f /assets/config.plist ]]; then

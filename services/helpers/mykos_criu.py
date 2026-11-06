@@ -77,7 +77,7 @@ def enable_dump_notifications(data):
     return replace_fields(data,{2:options})
 
 
-def directory_fds(packet, peer_pid, retained):
+def directory_fds(packet, peer_pid, retained, portable_paths=False):
     # CRIU opens images_dir_fd/work_dir_fd through /proc/<RPC peer>/fd.
     # The relay is now that peer; retain equivalent directory descriptors here.
     request = fields(packet)
@@ -93,6 +93,13 @@ def directory_fds(packet, peer_pid, retained):
     # D-Bus/NetworkManager directories only to DUMP requests; preserve runtime options.
     # RPC keeps the path storage alive on older CRIU config-parser versions.
     if request.get(1) == 1:
+        # Native filesystem rollback can replace watched inodes. Record paths
+        # rather than handles that become stale; retain mapped unlinked files
+        # through CRIU's scoped remap mechanism (e.g. startup ld.so.cache).
+        if portable_paths:
+            for option in (18,21):
+                if option in fields(options_data):options_data=replace_fields(options_data,{option:1})
+                else:options_data+=integer(option<<3)+b'\x01'
         existing = [v for n, w, v, _ in wire_fields(options_data) if n == 36 and w == 2]
         from mykos_watch_paths import watch_paths
         dynamic=[os.fsencode(path) for path in watch_paths(options.get(2))]
@@ -116,7 +123,7 @@ def receive(sock):
     return data, ancillary, descriptors
 
 
-def relay(client, worker, pid, callback, peer_pid=None, retained=None, cgroup=None):
+def relay(client, worker, pid, callback, peer_pid=None, retained=None, cgroup=None, portable_paths=False):
     dumping = False; captured = False; own_notifications = False
     if retained is None: retained = []
     while True:
@@ -160,7 +167,7 @@ def relay(client, worker, pid, callback, peer_pid=None, retained=None, cgroup=No
                     if not success:raise ValueError('Unsupported CRIU dump notification: '+repr(action))
                     continue
                 if source is client and peer_pid is not None:
-                    data = directory_fds(data,peer_pid,retained)
+                    data = directory_fds(data,peer_pid,retained,portable_paths=portable_paths)
                 if source is client and cgroup is not None:data=cgroup.request(data)
                 destination = worker if source is client else client
                 if destination.sendmsg([data], ancillary) != len(data):
@@ -213,7 +220,7 @@ def main():
     if cgroup is not None:cgroup.worker=process.pid;cgroup.peer=peer_pid
     child.close()
     try:
-        relay(client, worker, pid, capture, peer_pid, retained,cgroup)
+        relay(client, worker, pid, capture, peer_pid, retained,cgroup,portable_paths=value.get('portable_paths') is True)
         if cgroup is not None and operation=='restore' and cgroup.succeeded and not cgroup.prepared:
             raise ValueError('CRIU did not prepare the saved cgroup controllers')
     except BaseException as error:
