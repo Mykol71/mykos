@@ -52,3 +52,15 @@ def test_managed_bootstrap_include_upgrade_preserves_other_settings():
     assert 'api/web/peers/[0-9a-f]{32}/proxy/' in updated
     assert module.transform(updated)==updated
     assert 'ProxyPreserveHost On' in updated
+
+
+@pytest.mark.parametrize('selection',list(vm.VERSIONS))
+def test_every_registered_vm_template_has_a_console_route(selection):
+    from desktop_proxy import SELECTION
+    assert SELECTION.fullmatch(selection),selection
+
+
+@pytest.mark.parametrize('selection',['android','android10','android9/../host','android9;id','android9\n'])
+def test_android_console_route_rejects_unregistered_or_malformed_selection(selection):
+    from desktop_proxy import SELECTION
+    assert not SELECTION.fullmatch(selection)

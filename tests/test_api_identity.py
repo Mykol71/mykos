@@ -604,7 +604,8 @@ def test_purge_api_is_admin_only_and_browser_requires_origin(environment,monkeyp
     assert schema['paths']['/api/v2/system/purge']['post']['security']==[{'MYKOSApiKey':[]}]
 
 
-def test_desktop_proxy_http_auth_assets_and_public_websocket_settings(environment,monkeypatch):
+@pytest.mark.parametrize('selection',['ubuntu24.04','android9'])
+def test_desktop_proxy_http_auth_assets_and_public_websocket_settings(environment,monkeypatch,selection):
     import desktop_proxy
     calls=[]
     monkeypatch.setattr(container_admin,'invoke',lambda *a:calls.append(a) or {'host':'127.0.0.1','port':18006})
@@ -615,15 +616,15 @@ def test_desktop_proxy_http_auth_assets_and_public_websocket_settings(environmen
     monkeypatch.setattr(desktop_proxy,'fetch',asset)
     client=TestClient(app.app,base_url='https://testserver')
     reader=login('reader','reader-password-123');operator=login('operator','operator-password-123')
-    url='/console/ubuntu24.04/mandatory.json'
+    url='/console/'+selection+'/mandatory.json'
     assert client.get(url).status_code==401
     assert reader.get(url).status_code==403
     response=operator.get(url)
     assert response.status_code==200
     settings=response.json()
     assert settings['host']=='testserver' and settings['port']=='443' and settings['encrypt'] is True
-    assert settings['path']=='/mykos/console/ubuntu24.04/websockify'
-    assert calls[-1]==('console-target','ubuntu24.04')
+    assert settings['path']=='/mykos/console/'+selection+'/websockify'
+    assert calls[-1]==('console-target',selection)
     assert requests[-1]==('127.0.0.1',18006,'mandatory.json','','GET')
     assert response.headers['cache-control']=='no-store'
     read_key=mykos_api_keys.create('console-read','read');key=mykos_api_keys.create('console-admin','admin')
@@ -638,7 +639,8 @@ def test_desktop_proxy_http_auth_assets_and_public_websocket_settings(environmen
     assert len(calls)==before
 
 
-def test_desktop_proxy_websocket_auth_binary_bridge_and_logout(environment,monkeypatch):
+@pytest.mark.parametrize('selection',['ubuntu24.04','android9'])
+def test_desktop_proxy_websocket_auth_binary_bridge_and_logout(environment,monkeypatch,selection):
     import desktop_proxy,asyncio
     from starlette.websockets import WebSocketDisconnect
     monkeypatch.setattr(desktop_proxy,'AUTH_INTERVAL',.01)
@@ -656,7 +658,7 @@ def test_desktop_proxy_websocket_auth_binary_bridge_and_logout(environment,monke
     monkeypatch.setattr(desktop_proxy,'connect',connect)
     client=TestClient(app.app,base_url='https://testserver')
     reader=login('reader','reader-password-123');operator=login('operator','operator-password-123')
-    url='wss://testserver/console/ubuntu24.04/websockify';origin={'Origin':'https://testserver'}
+    url='wss://testserver/console/'+selection+'/websockify';origin={'Origin':'https://testserver'}
     for who,headers in [(client,origin),(reader,origin),(operator,{'Origin':'https://evil.test'})]:
         with pytest.raises(WebSocketDisconnect):
             with who.websocket_connect(url,headers=headers):pass

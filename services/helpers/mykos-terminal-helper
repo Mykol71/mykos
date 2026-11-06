@@ -106,7 +106,7 @@ def main():
                 raise SystemExit(0)
             if image_shell:
                 from mykos_base_session import shell_command
-                os.execv(PODMAN,[PODMAN,'exec','-it','--user','0',name,'/bin/su','--login','--shell','/bin/bash','--command',shell_command(),'root'])
+                os.execv(PODMAN,[PODMAN,'exec','-it','--user','0',name,'/bin/su','-l','-s','/bin/bash','-c',shell_command(),'root'])
             os.execv(PODMAN,[PODMAN,'exec','-it',name,'/bin/su','-','root'])
     def closing_signal(signum,frame):raise SystemExit(0)
     if image_shell:

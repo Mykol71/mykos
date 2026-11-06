@@ -290,3 +290,12 @@ link updates defensive. Mock DOM helpers that invent every requested element
 cannot detect this failure; check structural contracts and real browser startup
 for full administrators and restricted RTI users. Account privileges must not
 be changed to work around a client initialization failure.
+
+## Qualify base-image access for new guest families
+
+BusyBox su supports short login/shell/command flags but rejects GNU long options.
+Use portable su flags for the guarded base shell and verify a real Alpine image,
+including its root identity and power-command guard. Adding a VM template also
+requires checking browser-console route validation and both authenticated HTTP
+and WebSocket transport. Keep the Android selection exact and retain existing
+authorization, origin, endpoint and malformed-selection checks.
