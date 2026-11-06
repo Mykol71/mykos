@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        263%{?dist}
+Release:        264%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -119,6 +119,9 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Thu Nov 05 2026 MYKOL-DOT-COM <mgreen@myk.sh> - 1.5.20261024-264
+- Brighten Receiver container and VPN count gauge bars
+
 * Thu Nov 05 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-263
 - Stream cached one-second metrics without skipped polling ticks or duplicate readings.
 - Ease retained trace heads without per-frame full-history rebuilds.

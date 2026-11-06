@@ -439,3 +439,5 @@ Embedded peer strips show live status and actions without sliders or independent
 Live chart traces move between bounded history redraws; reduced-motion and recalled history stay still. The login leaf cycles themes. A theme dropdown beside the leaf appears only after mgreen signs in; other accounts use the leaf without a dropdown.
 
 Performance readings are collected once per second and shared through the host cache. Browsers preserve collection timestamps, skip repeated cached readings, and animate retained trace heads without rebuilding the full history each frame. A delayed timer reschedules its remaining wait instead of losing a whole refresh interval.
+
+Receiver count gauges use brighter lit segments for both series, with the VPN foreground distinct from the container background. Unlit segments and unavailable-data behavior remain dim.
