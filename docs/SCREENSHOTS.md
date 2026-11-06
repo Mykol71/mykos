@@ -4,6 +4,8 @@
 
 Dashboard and control screenshots use **example data**: hosts, IDs, addresses, locations, metrics and terminal output are illustrative. The desktop captures show actual guest desktops through the MYKOS browser console, without customer documents or credentials. The dashboard is shown in a compact browser view.
 
+[Android desktop](#android-x86-desktop-workflow) · [Debian native container](#debian-native-container-workflow) · [SUSE native container](#suse-linux-enterprise-native-container-workflow)
+
 ## Performance, workloads and VPN locations
 
 System measures the host’s root volume; Data measures the home volume. The
@@ -143,3 +145,151 @@ Once the instance reports Up, use **HTTP graphical desktop** and sign in to its 
 Use Snapshot on the instance row. In the Snapshots pane, select the saved recovery point. Preview creates a separate temporary inspection session; Restore replaces the selected instance state after confirmation. Stop and Start retain the VM disks; Delete removes the instance and its data after confirmation. Read [snapshot guidance](DESKTOPS.md#snapshot-preview) before restoring or previewing.
 
 ![Example Fedora snapshot recovery controls](screenshots/example-fedora-snapshot.jpg)
+
+
+## Android-x86 desktop workflow
+
+This example uses the legacy **Android-x86 9.0-r2 VM** (`android9`). The MYKOS
+control images use illustrative prepared-image and instance data. The setup and
+desktop images are actual captures from a running MYKOS-hosted Android guest.
+Android-x86 9.0-r2 is an older compatibility guest; use an isolated test environment
+and review the [Android image-build guidance](IMAGE_BUILDS.md#android-x86-legacy-installer).
+All vendor and application licensing requirements apply.
+
+### 1. Complete Android setup and prepare an image
+
+Run `sudo mykos`, choose **c. Build image**, enter `android9`, and choose the
+required RAM. Follow the linked manual installer instructions and open the base
+image's **HTTP graphical desktop**. Complete Android's welcome wizard until the
+home screen with app icons appears. Guest setup is separate from signing in to
+MYKOS.
+
+![Actual Android-x86 first-run welcome screen in a MYKOS guest](screenshots/example-android-setup.png)
+
+[Open the full-size Android setup screen](screenshots/example-android-setup.png).
+
+After installation is complete, use the documented `vm prepare android9` action
+to capture and validate the reusable image before creating customer instances.
+
+### 2. Select the prepared Android image and an instance ID
+
+Open the Android-x86 pane, enter an eight-digit instance ID, select **9.0-r2**,
+and use the blue **Start** plus. Confirm the selected ID and prepared image.
+
+![Illustrative Android-x86 image selection and instance ID](screenshots/example-android-select.jpg)
+
+[Open the full-size Android selection example](screenshots/example-android-select.jpg).
+
+### 3. Open the Android desktop
+
+When the instance reports **Up**, choose **HTTP graphical desktop**. Use the
+Android home screen and app launcher inside the browser console.
+
+![Illustrative running Android-x86 instance and graphical-console controls](screenshots/example-android-instance.jpg)
+
+![Actual Android-x86 home screen from a running MYKOS-hosted guest](screenshots/example-android-desktop.png)
+
+[Open the full-size Android desktop](screenshots/example-android-desktop.png).
+
+### 4. Save and select a recovery point
+
+Use **Snapshot container** on a supported running Android instance. In the
+Snapshots pane, choose its saved timestamp. **Preview** opens a temporary VM
+inspection session; **Restore** replaces that instance's saved state after
+confirmation; **Delete** removes the selected recovery point. Read
+[Snapshot Preview](DESKTOPS.md#snapshot-preview) for limitations and cleanup.
+
+![Illustrative Android snapshot selector and recovery controls](screenshots/example-android-snapshot.jpg)
+
+[Open the full-size Android snapshot example](screenshots/example-android-snapshot.jpg).
+
+## Debian native container workflow
+
+This example uses **Debian 13** (`debian13`) as a native Linux container. It
+shares the MYKOS host kernel and provides a shell-based environment. The screen
+examples use illustrative IDs, addresses, memory and recovery points.
+
+### 1. Build and select Debian
+
+Run `sudo mykos`, choose **c. Build image**, and enter `debian13`. Wait for the
+individual build to complete. Open the Debian pane, enter an eight-digit instance
+ID, choose **13**, and use the blue **Start** plus. Confirm the selected ID and
+image. See [native image builds](IMAGE_BUILDS.md#native-el-and-other-linux-containers).
+
+![Illustrative Debian 13 image selection and instance ID](screenshots/example-debian-select.jpg)
+
+[Open the full-size Debian selection example](screenshots/example-debian-select.jpg).
+
+### 2. Use the Debian shell and lifecycle controls
+
+Once the instance reports **Up**, use **su - root (admin only)** to open its
+terminal. Commands such as `cat /etc/os-release`, `id`, and `uname -r` identify
+the guest userspace, current user and shared host kernel. Use the row's console
+log to inspect startup messages. **Stop** and **Start** manage a persistent
+instance; **Delete** removes its saved data after confirmation.
+
+![Illustrative running Debian container with terminal and lifecycle controls](screenshots/example-debian-instance.jpg)
+
+[Open the full-size Debian instance example](screenshots/example-debian-instance.jpg).
+
+### 3. Select a Debian recovery point
+
+Use **Snapshot container** on the supported running container. Select a saved
+recovery point in the Snapshots pane. Native **Preview** opens a separate,
+filesystem-only shell without guest networking; it does not resume the saved
+services or RAM. **Restore** replaces the original instance's state after
+confirmation. See [Snapshot Preview](DESKTOPS.md#snapshot-preview).
+
+![Illustrative Debian snapshot selector and recovery controls](screenshots/example-debian-snapshot.jpg)
+
+[Open the full-size Debian snapshot example](screenshots/example-debian-snapshot.jpg).
+
+The qualified native workflow uses the default **UTC timezone and managed NAT**.
+Custom-timezone snapshots and VPN creation for this family remain outside the
+qualified workflow; see [image-build limitations](IMAGE_BUILDS.md).
+
+## SUSE Linux Enterprise native container workflow
+
+This example uses **SUSE Linux Enterprise BCI Init 15 SP7** (`sles15sp7`), the
+container base supported by MYKOS. A full SLES installation, desktop environment,
+subscription and paid vendor support are separate from this BCI container.
+Vendor licensing and any subscription requirements for additional software apply.
+The screen examples use illustrative instance data.
+
+### 1. Build and select the SUSE BCI image
+
+Run `sudo mykos`, choose **c. Build image**, and enter `sles15sp7`. After the
+individual image is ready, open the SUSE Linux Enterprise pane, enter an
+eight-digit instance ID, select **15 SP7 (BCI)**, and use the blue **Start** plus.
+Confirm the selected ID and image. See [native image builds](IMAGE_BUILDS.md#native-el-and-other-linux-containers).
+
+![Illustrative SUSE BCI image selection and instance ID](screenshots/example-suse-select.jpg)
+
+[Open the full-size SUSE selection example](screenshots/example-suse-select.jpg).
+
+### 2. Open the SUSE container terminal
+
+When the row reports **Up**, use **su - root (admin only)**. Inspect
+`cat /etc/os-release` and `id` to confirm the SLE BCI userspace and root shell.
+Native containers share the host kernel. The row also exposes console logs,
+Start, Stop, Snapshot and Delete controls for the managed instance.
+
+![Illustrative running SUSE BCI container with terminal and lifecycle controls](screenshots/example-suse-instance.jpg)
+
+[Open the full-size SUSE instance example](screenshots/example-suse-instance.jpg).
+
+### 3. Choose a SUSE recovery action
+
+Use **Snapshot container**, then choose the saved timestamp in the Snapshots pane.
+**Preview** provides a temporary filesystem-only shell without guest networking;
+**Restore** replaces the original instance's state after confirmation. **Delete**
+removes the selected recovery point. Read [Snapshot Preview](DESKTOPS.md#snapshot-preview)
+before choosing an action.
+
+![Illustrative SUSE BCI snapshot selector and recovery controls](screenshots/example-suse-snapshot.jpg)
+
+[Open the full-size SUSE snapshot example](screenshots/example-suse-snapshot.jpg).
+
+Use the qualified **UTC / managed-NAT** native workflow. Custom-timezone snapshots
+and VPN creation for this family remain unqualified; follow the current
+[image-build limitations](IMAGE_BUILDS.md).
