@@ -722,6 +722,9 @@ def test_cold_memory_allocation_requires_admin_and_exact_confirmation(environmen
     assert client.put(path,headers=headers,json={**body,'confirmation':'87654321'}).status_code==400
     assert client.put(path,headers=headers,json=body).status_code==200
     assert environment[1][-1]==('memory-configure','01234567','2048','01234567')
+    assert client.put(path,headers=headers,json={**body,'target_mib':4096}).status_code==200
+    assert environment[1][-1]==('memory-configure','01234567','4096','01234567')
+    assert client.put(path,headers=headers,json={**body,'target_mib':8192}).status_code==400
 
 
 def test_ubuntu_vpn_configuration_requires_admin_key_and_keeps_secret_out_of_response(environment):

@@ -140,11 +140,15 @@ Business-specific integration is provided by a separately installed local extens
 
 ## Host utilities
 
+### updateos
+
 `bin/updateos [groupname|scriptname|help] [dry]` is a legacy root script downloader
 and executor. It defaults to a historical HTTP backend, caches scripts under
 `/usr/bin/.updateos`, and uses MD5 comparison. Its `dry` behavior is specific to
 individual commands and may still perform downloads. It is not used by the new
 installer; audit and configure trusted delivery before operational use.
+
+The usage documentation is public. Updater script downloads and staging repositories are LAN-only; a public-host download returning403 does not mean they should be exposed. Use the reachable LAN repository configured for this installation. `MYKOS_UPDATEOS_BACKEND` selects the trusted updater backend. The maintained downloader keeps anchor-only directory parsing and rejects failed, empty or HTML script downloads before execution.
 
 `bin/blacklist.sh` downloads IP lists and modifies iptables/ipset rules; it reads
 `/etc/ip-blacklist.conf` and related manual-blacklist state. `bin/blacklist_login_attempts`

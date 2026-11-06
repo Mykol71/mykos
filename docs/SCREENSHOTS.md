@@ -99,6 +99,14 @@ When startup completes, the instance row reports **Up** with its address, uptime
 
 [Open the full-size macOS instance example](screenshots/example-macos-instance.jpg).
 
+### The macOS desktop in the browser console
+
+After signing in to the guest, the console displays the actual macOS Monterey desktop. The desktop capture below comes from a running MYKOS-hosted macOS instance. Guest accounts and application data remain separate for each instance; Apple and third-party licensing requirements still apply.
+
+![Actual macOS Monterey desktop from a MYKOS-hosted guest](screenshots/example-macos-desktop.png)
+
+[Open the full-size macOS desktop](screenshots/example-macos-desktop.png).
+
 Use **Stop** and **Start** to retain and resume the instance's disks. **Delete** removes that instance and its saved data after confirmation.
 
 ### 3. Choose a snapshot recovery action
@@ -108,3 +116,30 @@ Use **Snapshot container** on a running instance to save a supported recovery po
 ![macOS snapshot selector with Restore, Delete and Preview actions](screenshots/example-macos-snapshot.jpg)
 
 [Open the full-size macOS snapshot example](screenshots/example-macos-snapshot.jpg).
+
+
+## Fedora desktop workflow
+
+This example uses a prepared Fedora 44 GNOME **VM** (`fedora44vm`), distinct from a native Fedora container. Example MYKOS control captures use illustrative instance data; the desktop image comes from an actual running Fedora guest.
+
+### 1. Select the prepared Fedora desktop image
+
+Follow the [image-build workflow](IMAGE_BUILDS.md), choose Fedora GNOME VM in the text menu and select its RAM allocation. In the Fedora pane, choose the prepared Fedora 44 desktop VM image, enter an eight-digit instance ID, and use the blue Start plus.
+
+![Example Fedora desktop image selection](screenshots/example-fedora-select.jpg)
+
+### 2. Open the running desktop
+
+Once the instance reports Up, use **HTTP graphical desktop** and sign in to its guest account. Guest credentials are separate from the MYKOS website login.
+
+![Example running Fedora desktop VM and its console controls](screenshots/example-fedora-instance.jpg)
+
+![Actual GNOME desktop from a running Fedora 44 guest](screenshots/example-fedora-desktop.png)
+
+[Open the full-size Fedora desktop](screenshots/example-fedora-desktop.png).
+
+### 3. Save and select a recovery point
+
+Use Snapshot on the instance row. In the Snapshots pane, select the saved recovery point. Preview creates a separate temporary inspection session; Restore replaces the selected instance state after confirmation. Stop and Start retain the VM disks; Delete removes the instance and its data after confirmation. Read [snapshot guidance](DESKTOPS.md#snapshot-preview) before restoring or previewing.
+
+![Example Fedora snapshot recovery controls](screenshots/example-fedora-snapshot.jpg)

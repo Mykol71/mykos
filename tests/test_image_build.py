@@ -331,3 +331,19 @@ def test_ubuntu_media_cache_tracks_seed_and_discards_vendor_boot_copy(tmp_path,m
     exec(compile(code,'mykos-ubuntu-iso','exec'),{})
     assert len(builds)==2 and not (storage/'boot.iso').exists()
     assert (storage/'custom.iso').read_text()=='corrected seed'
+
+
+@pytest.mark.parametrize('ram',[2048,4096,8192])
+def test_embedded_capture_records_selected_ram(state,monkeypatch,ram):
+    mount=state/'mounted';mount.mkdir();source=state/'capture';source.mkdir()
+    calls=[]
+    def run(args,**kwargs):
+        calls.append(args)
+        if args[1]=='mount':return str(mount)
+        if args[0]=='/usr/bin/tar':Path(args[-2]).write_bytes(b'test capture archive')
+        return ''
+    monkeypatch.setattr(b.vm,'run',run)
+    b.embed_capture({'os':'mac12','name':'mac12','ram_mib':ram},source)
+    metadata=json.loads((mount/'opt/mykos-image/image.json').read_text())
+    assert metadata['ram_mib']==ram and metadata['capture_mode']=='memory'
+    assert calls[-1][1]=='unmount'

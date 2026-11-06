@@ -205,10 +205,7 @@ This reclaims unused base RAM without rebooting the host or stopping customer
 instances. It does not promise a fixed memory reduction: the amount depends on
 which bases were running and their resident memory.
 
-Runtime guests and their startup captures use 2048 MiB RAM. Unattended macOS
-installation temporarily uses 4096 MiB because Apple mounts a 2.5 GiB temporary
-filesystem during its second stage. The builder returns to 2048 MiB and verifies
-an installed boot before capture. Windows and Ubuntu use 12 GiB pagefile/swap. macOS manages its own swap. New native ID-specific containers use `--memory=2g` and a read-only
+Runtime guests and startup captures use the RAM chosen during image creation, default2048 MiB. Unattended macOS installation temporarily uses at least4096 MiB for its second-stage filesystem, then boots at the selected runtime size before capture. Windows and Ubuntu use 12 GiB pagefile/swap. macOS manages its own swap. New native ID-specific containers use `--memory=2g` and a read-only
 `/sys/fs/cgroup` mount. The temporary native image-start helper uses 4 GiB;
 existing containers retain their creation-time limits. The QEMU image already supplies the ISO tools, and the
 macOS package generator uses Python's standard library. No additional helper
@@ -236,7 +233,7 @@ Run only the version you need. The builder downloads the matching official
 [Fedora Cloud Generic disk](https://fedoraproject.org/cloud/download/), checks its
 SHA256 against Fedora's checksum file over HTTPS, and installs explicit GNOME,
 GDM, Xwayland and QEMU guest-agent packages without weak dependencies. A private
-NoCloud seed provisions the account and 12 GiB swap. The VM uses 2 GiB RAM,
+NoCloud seed provisions the account and 12 GiB swap. The VM uses its image-selected RAM (2 GiB by default),
 2 vCPUs, standard 2D VGA and a 64 GiB sparse disk; no host GPU is required.
 Installation-only seed media is detached before
 capturing the startup state.
@@ -470,3 +467,9 @@ busy message before modifying a kickstart or archive. Each job uses its own
 private generated kickstart, rootfs output and Docker context; original source
 kickstarts are not edited. The owned job workspace is removed on success, failure
 or interruption. Installer diagnostics remain in the printed diagnostic location.
+
+## Select image and instance RAM
+
+When building a VM image from the text menu, the image command prompts for runtime RAM in MiB:2048 (default),4096 or8192. Legacy Windows selections retain2048 for compatibility. Native Linux container builds do not use this VM prompt. The CLI equivalent is `sudo ./vm create mac12 --ram-mib 4096`; `build` accepts the same option. The chosen size is preserved through installed boot, checkpoint capture, packaged image metadata and new instances. Resuming an existing image preserves its original selection; changing it requires an explicit replacement build. Installer-only RAM allowances do not change the selected runtime size.
+
+Larger image allocations require available host RAM for the selected guest plus4 GiB of host headroom. A missing or mismatched RAM checkpoint is rejected rather than resumed at another size.

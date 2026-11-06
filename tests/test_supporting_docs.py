@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'services/web'))
-from supporting_docs import router,GUIDES
+from supporting_docs import router,GUIDES,SCREENSHOTS
 
 
 @pytest.fixture
@@ -64,9 +64,9 @@ def test_maintained_guides_are_public_and_legacy_downloads_excluded(client):
 
 
 def test_only_named_example_screenshots_are_public(client):
-    for name in ('example-dashboard.jpg','example-snapshot-actions.jpg','example-snapshot-preview.jpg'):
+    for name in SCREENSHOTS:
         response=client.get('/docs/screenshots/'+name)
-        assert response.status_code==200 and response.headers['content-type'].startswith('image/jpeg')
+        assert response.status_code==200 and response.headers['content-type'].startswith('image/png' if name.endswith('.png') else 'image/jpeg')
         assert response.content==(ROOT/'docs/screenshots'/name).read_bytes()
     assert client.get('/docs/screenshots/private.jpg').status_code==404
     assert client.get('/docs/screenshots/auth.db').status_code==404

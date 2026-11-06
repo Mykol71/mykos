@@ -549,8 +549,8 @@ class MemoryAllocation(MemoryTarget):
 def configure_guest_memory(request: Request, shop: str, data: MemoryAllocation):
     administrator(request)
     validate_shop(shop)
-    if data.confirmation != shop or data.target_mib != 2048:
-        raise HTTPException(400, 'Confirm the exact instance ID and select 2048 MiB')
+    if data.confirmation != shop or data.target_mib not in (2048,4096):
+        raise HTTPException(400, 'Confirm the exact instance ID; select 2048 MiB or4096 MiB for macOS')
     return safe_helper('memory-configure', shop, str(data.target_mib), data.confirmation)
 
 

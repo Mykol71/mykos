@@ -721,7 +721,7 @@ def test_windows_desktop_build_ram_cannot_leak_to_runtime(desktop):
     assert 'RAM_SIZE=2048M' in command
     value=vm.read('win10');value.update(role='instance',name='12345678.test',ready=True,ram_mib=8192)
     calls.clear()
-    with pytest.raises(ValueError,match='runtime containers require 2048'): vm.launch('12345678',value)
+    with pytest.raises(ValueError,match='Runtime RAM must match'): vm.launch('12345678',value)
     assert calls==[]
 
 
@@ -963,3 +963,14 @@ def test_fedora_vm_uses_qemu_and_detaches_seed_before_runtime(desktop, monkeypat
     assert 'BOOT=none' in launch and 'MYKOS_UNATTENDED=fedora' not in launch
     assert not any('/run/mykos-fedora-media' in x for x in launch)
     assert value['ram_mib']==2048 and vm.links(value)['guest_login_required'] is True
+
+
+def test_selected_image_ram_is_used_by_template_and_instance(desktop):
+    root,calls=desktop
+    vm.create('ubuntu24.04',ram_mib=4096)
+    value=vm.read('ubuntu24.04');assert value['runtime_ram_mib']==4096
+    assert 'RAM_SIZE=4096M' in [c for c in calls if c[1]=='run'][-1]
+    value.update(role='instance',name='12345678.test',ready=True)
+    vm.launch('12345678',value)
+    assert 'RAM_SIZE=4096M' in [c for c in calls if c[1]=='run'][-1]
+    with pytest.raises(ValueError,match='Runtime RAM must match'):vm.launch('12345678',{**value,'ram_mib':8192})

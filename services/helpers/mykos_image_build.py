@@ -480,7 +480,7 @@ def boot_installed(os_name):
         value=vm.read(os_name);kind=vm.VERSIONS[os_name][0]
         vm.stop_container(value['name'])
         vm.run([vm.PODMAN,'rm',value['name']],timeout=30)
-        value['installation_complete']=True;value['ram_mib']=2048
+        value['installation_complete']=True;value['ram_mib']=vm.runtime_memory(value)
         value['cpu_env']=vm.checkpoint_cpu_profile(os_name)
         if kind=='windows':value.update(runtime_memory_prepared=True,runtime_pagefile='fixed-12288')
         complete=folder(os_name)/'complete'
@@ -499,7 +499,7 @@ def boot_installed(os_name):
         vm.save(os_name,value);vm.launch(os_name,value)
 
 
-def build(os_name, username=None, password=None, replace=False):
+def build(os_name, username=None, password=None, replace=False, ram_mib=None):
     selection(os_name)
     from mykos_runtime import build_priority
     build_priority()
@@ -508,7 +508,10 @@ def build(os_name, username=None, password=None, replace=False):
     with (folder(os_name)/'build.lock').open('a') as lock:
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise ValueError('This OS image is already building')
+        selected_ram=vm.image_memory(os_name,ram_mib)
         previous=vm.read(os_name) if vm.record_path(os_name).exists() and not replace else None
+        if previous and ram_mib is not None and selected_ram!=vm.runtime_memory(previous):
+            raise ValueError('Existing image uses another RAM size; resume without --ram-mib or rebuild explicitly with --replace')
         if previous and previous.get('role')=='template' and previous.get('ready') and previous.get('committed') and not previous.get('pending_commit'):
             result=vm.ensure_prepared_base(os_name)
             report(os_name,'ready','Saved image reused; the generic base container is running')
@@ -531,7 +534,7 @@ def build(os_name, username=None, password=None, replace=False):
                     if vm.VERSIONS[os_name][0]=='macos': renew_completion_window(os_name)
                     vm.resume(os_name)
                 else:
-                    vm.create(os_name,values['username'],values['password'],2048,unattended=True)
+                    vm.create(os_name,values['username'],values['password'],selected_ram,unattended=True)
                 wait_installed(os_name)
                 report(os_name,'configuring','Booting the installed system without installation-only devices')
                 if not vm.read(os_name).get('installation_complete'):boot_installed(os_name)
@@ -585,7 +588,7 @@ def embed_capture(value, source):
         payload=parent/'golden.tar.gz'
         vm.run(['/usr/bin/tar','--sparse','--numeric-owner','-C',str(source),'-czf',str(payload),'.'])
         payload.chmod(0o600)
-        write(parent/'image.json',json.dumps({'format':2,'os':value['os'],'capture_mode':'memory','ram_mib':2048,'payload':'golden.tar.gz'}))
+        write(parent/'image.json',json.dumps({'format':2,'os':value['os'],'capture_mode':'memory','ram_mib':value.get('ram_mib',2048),'payload':'golden.tar.gz'}))
     finally:vm.run([vm.PODMAN,'unmount',value['name']],timeout=30)
 
 

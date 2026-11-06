@@ -100,7 +100,7 @@ def _dispatch(args):
     if action == 'memory-configure':
         if len(args) != 4 or args[1] != args[3]: raise ValueError('Confirm the exact instance ID for cold restart')
         code = shopcode(args[1])
-        if not args[2].isascii() or not args[2].isdigit() or int(args[2]) != 2048:
+        if not args[2].isascii() or not args[2].isdigit() or int(args[2]) not in (2048,4096):
             raise ValueError('Invalid memory allocation')
         unit = 'mykos-memory-' + code + '-' + str(time.time_ns())
         run(['/usr/bin/systemd-run','--unit='+unit,'--property=RuntimeMaxSec=600',

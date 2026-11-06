@@ -3,10 +3,8 @@
 [Documentation index](README.md)
 
 Native RedHat containers share the host kernel and do not use VM ballooning.
-The operator-selected VM policy is now **2048 MiB RAM per guest**. Removing a
-Podman memory limit alone does not reclaim guest RAM. Existing 4096 MiB RAM
-captures cannot resume at 2048 MiB; published images must be recaptured at the new
-size before creating instances from their RAM state.
+The default VM allocation is **2048 MiB**. New modern VM images can select 2048,4096 or8192 MiB during the text-menu build; legacy Windows image choices retain2048 MiB. The selected runtime size is saved with the image and its RAM checkpoint, and new instances inherit it. Existing images keep their recorded size. Removing a
+Podman memory limit alone does not reclaim guest RAM. A RAM checkpoint must resume at its recorded memory size; changing a future build selection never rewrites an existing checkpoint.
 
 Inspect driver support from the installed pos directory:
 
@@ -47,7 +45,7 @@ installed Ubuntu OS, reboot and verify swap before capture. It rejects live
 installers and RAM-backed roots and checks free disk space. These settings are
 not proof that an unfinished or unavailable guest has applied its pagefile/swap.
 Stock macOS manages swap in its kernel and does not expose a fixed-total setting.
-Its configured RAM is still 2048 MiB. Windows 11 at 2048 MiB is below Microsoft's
+Existing macOS instances can explicitly cold-restart at4096 MiB with the exact-ID confirmation. This keeps a disk recovery copy and stopped recovery wrapper, and requires at least4 GiB of available host headroom after the increase. Live macOS ballooning remains unverified. Windows 11 at 2048 MiB is below Microsoft's
 published supported minimum; installation success is not guaranteed.
 
 ## Native snapshot compatibility
@@ -67,3 +65,5 @@ A headless native container may also run systemd-logind with an open input-event
 device. CRIU cannot save these device handles. MYKOS reports the process/device
 before capture instead of stopping services automatically. An operator must
 review active sessions and approve stopping/masking that service if appropriate.
+
+To allocate4 GiB to one existing macOS instance: `sudo ./vm memory-configure INSTANCE_ID --target-mib 4096 --confirm INSTANCE_ID`. This restarts only that instance; other running VMs are unchanged.

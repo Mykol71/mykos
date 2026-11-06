@@ -258,11 +258,13 @@ running it against production mirrors.</p>
 </tbody></table>
 <p>Business-specific integration is provided by a separately installed local extension.</p>
 <h2 id="host-utilities">Host utilities</h2>
+<h3 id="updateos">updateos</h3>
 <p><code>bin/updateos [groupname|scriptname|help] [dry]</code> is a legacy root script downloader
 and executor. It defaults to a historical HTTP backend, caches scripts under
 <code>/usr/bin/.updateos</code>, and uses MD5 comparison. Its <code>dry</code> behavior is specific to
 individual commands and may still perform downloads. It is not used by the new
 installer; audit and configure trusted delivery before operational use.</p>
+<p>The usage documentation is public. Updater script downloads and staging repositories are LAN-only; a public-host download returning403 does not mean they should be exposed. Use the reachable LAN repository configured for this installation. <code>MYKOS_UPDATEOS_BACKEND</code> selects the trusted updater backend. The maintained downloader keeps anchor-only directory parsing and rejects failed, empty or HTML script downloads before execution.</p>
 <p><code>bin/blacklist.sh</code> downloads IP lists and modifies iptables/ipset rules; it reads
 <code>/etc/ip-blacklist.conf</code> and related manual-blacklist state. <code>bin/blacklist_login_attempts</code>
 follows <code>/var/log/secure</code> and appends invalid-login source IPs to a manual blacklist.

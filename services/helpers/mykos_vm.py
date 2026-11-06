@@ -138,7 +138,7 @@ def preflight(os_name, ram_mib=2048):
         raise ValueError('macOS requires an AVX2-capable CPU')
     safe_dir(storage_root())
     available = re.search(r'^MemAvailable:\s+(\d+) kB$', Path('/proc/meminfo').read_text(), re.M)
-    required_gib = ram_mib // 1024 + 1
+    required_gib = ram_mib // 1024 + (4 if ram_mib > 2048 else 1)
     if available and int(available.group(1)) < required_gib * 1024**2:
         raise ValueError('At least %s GiB of available host memory is required' % required_gib)
     if shutil.disk_usage(storage_root()).free < 32 * 1024**3:
@@ -223,9 +223,10 @@ def launch(key, value):
     kind, version = VERSIONS[value['os']]
     ram_mib = value.get('ram_mib', 4096)
     installing = value['role'] == 'template' and not value.get('ready') and not value.get('installation_complete')
-    allowed = (2048, 4096) if installing and kind == 'macos' else (2048, 8192) if installing and value['os'].startswith('win') else (2048,)
+    configured = runtime_memory(value)
+    allowed = tuple({configured,4096}) if installing and kind == 'macos' else tuple({configured,8192}) if installing and value['os'].startswith('win') else (configured,)
     if type(ram_mib) is not int or ram_mib not in allowed:
-        raise ValueError('Extra RAM is limited to unfinished image installation; runtime containers require 2048 MiB')
+        raise ValueError('Runtime RAM must match the selected image size (default 2048 MiB); installation-only RAM cannot leak into runtime')
     desktop = 3389 if kind == 'windows' else 5900
     args = [PODMAN, 'run', '-d', '--name', value['name'], '--hostname', value['name'],
             '--device=/dev/kvm', '--device=/dev/net/tun', '--cap-add=NET_ADMIN',
@@ -337,18 +338,30 @@ def checkpoint_cpu_profile(os_name):
 
 
 def image_memory(os_name, requested=None):
-    if os_name not in VERSIONS:
-        raise ValueError('Unsupported OS')
-    if requested is not None and requested != 2048:
-        raise ValueError('VM image builds and runtime guests require 2048 MiB')
-    return 2048
+    if os_name not in VERSIONS: raise ValueError('Unsupported OS')
+    selected = 2048 if requested is None else requested
+    choices = (2048,) if os_name in ('win98','winme','win2k','winxp','win7u') else (2048,4096,8192)
+    if type(selected) is not int or selected not in choices:
+        raise ValueError('VM RAM must be '+', '.join(map(str,choices))+' MiB for '+os_name)
+    return selected
+
+
+def runtime_memory(value):
+    return image_memory(value['os'],value.get('runtime_ram_mib',2048))
+
+
+def available_memory_mib():
+    match=re.search(r'^MemAvailable:\s+(\d+) kB$',Path('/proc/meminfo').read_text(),re.M)
+    if not match: raise ValueError('Cannot verify available host memory')
+    return int(match.group(1))//1024
 
 
 def create(os_name, username=None, password=None, ram_mib=None, unattended=False):
     ram_mib = image_memory(os_name, ram_mib)
+    runtime_ram_mib = ram_mib
     # Apple's second-stage installer mounts a 2.5 GiB temporary filesystem.
     # boot_installed lowers this installation-only allowance before capture.
-    if unattended and VERSIONS[os_name][0] == 'macos': ram_mib = 4096
+    if unattended and VERSIONS[os_name][0] == 'macos': ram_mib = max(4096,ram_mib)
     with locked():
         preflight(os_name, ram_mib)
         if record_path(os_name).exists(): raise ValueError('Template exists; resume or prepare it instead')
@@ -401,6 +414,7 @@ def create(os_name, username=None, password=None, ram_mib=None, unattended=False
             stage(os_name, {'username':username,'password':password}, image_id)
             value['unattended'] = True
         value['ram_mib'] = ram_mib
+        value['runtime_ram_mib'] = runtime_ram_mib
         value['cpu_env'] = checkpoint_cpu_profile(os_name)
         save(os_name, value)  # Reserve ports even if launch fails; resume can retry.
         launch(os_name, value)
@@ -896,7 +910,7 @@ Write-Output 'Windows-managed paging enabled; restart required.'
     stop_container(original)
     run([PODMAN, 'rename', original, backup], timeout=30)
     try:
-        value.update(ram_mib=2048, installation_complete=True, runtime_memory_prepared=True,
+        value.update(ram_mib=runtime_memory(value), installation_complete=True, runtime_memory_prepared=True,
                      runtime_pagefile='automatic' if value.get('build_pagefile_mib') else 'unchanged')
         launch(os_name, value)
         save(os_name, value)
@@ -918,8 +932,8 @@ Write-Output 'Windows-managed paging enabled; restart required.'
     try: run([PODMAN, 'rm', backup], timeout=30)
     except RuntimeError as error:
         print('Stopped build wrapper cleanup deferred: ' + backup + ': ' + str(error), flush=True)
-    return {**links(value), 'ram_mib':2048, 'capture_pending':True,
-            'message':'Image restarted at 2 GiB. Wait for the installed Windows desktop, then run Finish again to capture. No image has been published yet.'}
+    return {**links(value), 'ram_mib':runtime_memory(value), 'capture_pending':True,
+            'message':'Image restarted at selected runtime RAM. Wait for the installed Windows desktop, then run Finish again to capture. No image has been published yet.'}
 
 
 def verify_windows_installation(value):
@@ -958,7 +972,7 @@ def pending_capture(value):
         if path.is_symlink() or info.st_uid!=os.geteuid() or info.st_mode & 0o022:
             raise ValueError('Unsafe pending capture path')
     manifest=json.loads((captured/'.mykos-checkpoint/manifest.json').read_text())
-    if (manifest.get('os')!=value['os'] or manifest.get('ram_mib')!=2048 or
+    if (manifest.get('os')!=value['os'] or manifest.get('ram_mib')!=runtime_memory(value) or
         manifest.get('memory_bytes',0)<=0 or manifest['memory_bytes']!=(captured/'.mykos-checkpoint/memory.gz').stat().st_size or
         manifest.get('image') not in (pending['source_image'],pending.get('image_id'))):
         raise ValueError('Pending capture is incomplete or belongs to another VM')
@@ -1045,18 +1059,18 @@ if ('ID=ubuntu' not in release and 'ID=\"ubuntu\"' not in release) or root not i
 print('Installed Ubuntu verified')
 """
             execute(value,'/usr/bin/python3',('-c',verify),timeout=8)
-        if value['os'].startswith('win') and not value.get('ready') and not value.get('runtime_memory_prepared') and (value.get('ram_mib', 2048) > 2048 or value.get('build_pagefile_mib')):
+        if value['os'].startswith('win') and not value.get('ready') and not value.get('runtime_memory_prepared') and (value.get('ram_mib', 2048) != runtime_memory(value) or value.get('build_pagefile_mib')):
             return finish_windows_build_memory(value)
-        if value.get('ram_mib', 2048) != 2048:
-            raise ValueError('Capture requires 2048 MiB so the image can start in a 2 GiB container')
+        if value.get('ram_mib', 2048) != runtime_memory(value):
+            raise ValueError('Capture RAM must match the selected runtime size; default is 2048 MiB')
         if not value.get('ready') and value.get('runtime_memory_prepared') and value.get('runtime_pagefile') == 'automatic':
             from mykos_commands import powershell
             result = powershell(value, """$ErrorActionPreference = 'Stop'
 $computer = Get-CimInstance Win32_ComputerSystem
 if (-not $computer.AutomaticManagedPagefile) { throw 'Windows-managed paging is not enabled' }
-if ($computer.TotalPhysicalMemory -gt 2304MB) { throw 'Wait for the 2 GiB Windows restart to finish' }
+if ([math]::Abs($computer.TotalPhysicalMemory - MYKOS_TARGET_MIB*1MB) -gt 256MB) { throw 'Wait for the selected-RAM Windows restart to finish' }
 Write-Output 'Runtime RAM and Windows-managed paging verified.'
-""", 60, allow_image_builder=True)
+""".replace('MYKOS_TARGET_MIB',str(runtime_memory(value))), 60, allow_image_builder=True)
             if result.get('timed_out') or result.get('exit_code') != 0:
                 raise RuntimeError('Runtime memory verification failed; no image captured: ' + result.get('output', ''))
 
@@ -1108,10 +1122,10 @@ def start(shop, os_name=None):
         else:
             from mykos_runtime import require_container_capacity
             require_container_capacity()
-            preflight(os_name)
             template = read(os_name)
-            if template.get('ram_mib', 4096) != 2048:
-                raise ValueError('Recapture this image at 2048 MiB before creating instances; its existing RAM state uses a different size')
+            preflight(os_name, runtime_memory(template))
+            if template.get('ram_mib', 4096) != runtime_memory(template):
+                raise ValueError('Recapture this image at its selected RAM size (default 2048 MiB); existing RAM state uses a different size')
             if not template['ready']: raise ValueError('Finish installing and prepare the template first')
             items = json.loads(run([PODMAN, 'ps', '-a', '--format', 'json'], timeout=30))
             for item in items:
@@ -1300,8 +1314,11 @@ def configure_memory(key, target_mib, *, enable_guest_agent=False):
         raise ValueError('Select an instance ID')
     with locked():
         value = read(key)
-        if type(target_mib) is not int or target_mib != 2048:
-            raise ValueError('MYKOS VM RAM policy is 2048 MiB per guest')
+        if type(target_mib) is not int or target_mib not in (2048,4096) or (target_mib==4096 and not value['os'].startswith('mac')):
+            raise ValueError('Cold allocation supports 2048 MiB, or 4096 MiB for macOS instances')
+        additional=max(0,target_mib-value.get('ram_mib',2048))
+        if additional and available_memory_mib()<additional+4096:
+            raise ValueError('Leave at least 4 GiB of available host memory after increasing this guest')
         if enable_guest_agent and (value.get('role')!='instance' or not value.get('os','').startswith('ubuntu')):
             raise ValueError('Guest-agent enable requires an Ubuntu instance')
         old = dict(value)
@@ -1351,7 +1368,7 @@ def configure_memory(key, target_mib, *, enable_guest_agent=False):
             # Explicitly stopped unless-stopped containers stay stopped on reboot.
             # Podman 4.x cannot change this policy using `podman update`.
             if enable_guest_agent: value['guest_agent'] = True
-            value.update(ram_mib=target_mib, capture_mode='disk', last_start='boot',
+            value.update(ram_mib=target_mib, runtime_ram_mib=target_mib, capture_mode='disk', last_start='boot',
                          previous_container=backup, balloon_request={}, memory_recovery=str(recovery) if recovery else None)
             launch(key, value)
             save(key, value)

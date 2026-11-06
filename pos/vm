@@ -32,10 +32,10 @@ def main():
     parser.add_argument('--replace', action='store_true', help='Replace an existing prepared checkpoint')
     parser.add_argument('--target-mib', type=int, help='Guarded balloon target; omit to inspect driver support')
     parser.add_argument('--confirm', help='Exact instance ID confirming a cold restart for RAM resizing')
-    parser.add_argument('--ram-mib', type=int, help='VM RAM: 2048 MiB; native RedHat containers have no memory cap')
+    parser.add_argument('--ram-mib', type=int, help='Selected image/runtime RAM in MiB: 2048,4096,8192 (legacy Windows2048); native containers have no cap')
     args = parser.parse_args()
-    if args.ram_mib is not None and args.action != 'create': parser.error('--ram-mib requires create')
-    if args.ram_mib is not None and args.ram_mib != 2048: parser.error('VM images use 2048 MiB RAM')
+    if args.ram_mib is not None and args.action not in ('create','build'): parser.error('--ram-mib requires create or build')
+    if args.ram_mib is not None: vm.image_memory(args.selection,args.ram_mib)
     if args.target_mib is not None and args.action not in ('memory','memory-configure'): parser.error('--target-mib requires memory')
     if args.action == 'list':
         for path in vm.ROOT.glob('*.json'):
@@ -49,9 +49,23 @@ def main():
     if args.action == 'build-status':
         from mykos_image_build import status
         show(status(args.selection));return
+    if args.action == 'create' and args.ram_mib is None and sys.stdin.isatty():
+        choices='2048' if args.selection in ('win98','winme','win2k','winxp','win7u') else '2048/4096/8192'
+        entered=input('Image and guest RAM in MiB ('+choices+') [2048]: ').strip()
+        if entered:
+            if not entered.isascii() or not entered.isdigit():raise ValueError('Enter RAM as integer MiB')
+            args.ram_mib=vm.image_memory(args.selection,int(entered))
+    if args.action=='create' and args.ram_mib is not None and not args.replace and sys.stdin.isatty() and vm.record_path(args.selection).exists():
+        existing=vm.read(args.selection)
+        if args.ram_mib!=vm.runtime_memory(existing):
+            if input('Rebuild this image at the selected RAM? Existing instances stay unchanged. [y/N] ').strip().lower()!='y':
+                raise ValueError('Image left unchanged')
+            args.replace=True
     if args.action in ('build','create') and args.selection not in ('win98','winme','win2k','winxp','win7u'):
         from mykos_image_build import build, STATE
-        show(build(args.selection,replace=args.replace))
+        options={'replace':args.replace}
+        if args.ram_mib is not None:options['ram_mib']=args.ram_mib
+        show(build(args.selection,**options))
         print('Image credentials (root only): ' + str(STATE/args.selection/'credentials.json'))
         return
     if args.action == 'create':
@@ -63,12 +77,6 @@ def main():
             password = getpass.getpass('Windows password: ')
             if password != getpass.getpass('Confirm password: '): raise ValueError('Passwords do not match')
         ram_mib = args.ram_mib
-        if ram_mib is None and sys.stdin.isatty():
-            default = vm.image_memory(os_name)
-            entered = input('Image RAM in MiB [' + str(default) + ']: ').strip()
-            if entered:
-                if not entered.isascii() or not entered.isdigit(): raise ValueError('Enter RAM as integer MiB')
-                ram_mib = int(entered)
         show(vm.create(os_name, username, password, ram_mib))
         print('Complete installation in console_url. Then run: ./vm prepare ' + os_name)
         print('For macOS/Ubuntu, complete account setup in the browser console.')

@@ -56,7 +56,10 @@ def test_unconsumed_restore_is_not_discarded(monkeypatch,tmp_path):
 def test_image_memory_defaults_and_minimums(os_name):
     assert vm.image_memory(os_name)==2048
     assert vm.image_memory(os_name,2048)==2048
-    with pytest.raises(ValueError):vm.image_memory(os_name,4096)
+    assert vm.image_memory(os_name,4096)==4096
+    assert vm.image_memory(os_name,8192)==8192
+    for bad in (True,'4096',0,3072,16384):
+        with pytest.raises(ValueError):vm.image_memory(os_name,bad)
 
 
 def test_live_resize_rejects_wrong_storage_before_stop(monkeypatch,tmp_path):
@@ -70,3 +73,60 @@ def test_live_resize_rejects_wrong_storage_before_stop(monkeypatch,tmp_path):
     monkeypatch.setattr(vm,'QemuMonitor',Monitor)
     with pytest.raises(FileNotFoundError):vm.configure_memory('12345678',2048)
     assert not calls and not saved
+
+
+@pytest.mark.parametrize('os_name',['win98','winme','win2k','winxp','win7u'])
+def test_legacy_windows_retains_two_gib_compatibility(os_name):
+    with pytest.raises(ValueError):vm.image_memory(os_name,4096)
+
+
+def test_explicit_macos_resize_tracks_runtime_size(monkeypatch,tmp_path):
+    calls,saved=setup(monkeypatch,tmp_path)
+    old_read=vm.read
+    monkeypatch.setattr(vm,'read',lambda key:{**old_read(key),'os':'mac12','ram_mib':2048})
+    monkeypatch.setattr(vm,'available_memory_mib',lambda:12288)
+    result=vm.configure_memory('12345678',4096)
+    assert result['ram_mib']==4096 and saved[-1]['runtime_ram_mib']==4096
+    assert saved[-1]['capture_mode']=='disk' and ['launch',4096,'disk'] in calls
+
+
+def test_increase_rejects_low_headroom_before_stop(monkeypatch,tmp_path):
+    calls,saved=setup(monkeypatch,tmp_path);old_read=vm.read
+    monkeypatch.setattr(vm,'read',lambda key:{**old_read(key),'os':'mac12','ram_mib':2048})
+    monkeypatch.setattr(vm,'available_memory_mib',lambda:4096)
+    with pytest.raises(ValueError,match='available host memory'):vm.configure_memory('12345678',4096)
+    assert not calls and not saved
+
+
+def test_four_gib_cold_resize_does_not_apply_to_other_running_os(monkeypatch,tmp_path):
+    calls,saved=setup(monkeypatch,tmp_path)
+    with pytest.raises(ValueError,match='macOS'):vm.configure_memory('12345678',4096)
+    assert not calls and not saved
+
+
+def test_text_menu_ram_choice_reaches_unattended_build(monkeypatch,tmp_path):
+    import runpy,sys,builtins,mykos_runtime,mykos_image_build
+    calls=[]
+    monkeypatch.setattr(sys,'argv',['vm','create','mac12'])
+    monkeypatch.setattr(vm,'ROOT',tmp_path/'vm')
+    monkeypatch.setattr(sys.stdin,'isatty',lambda:True)
+    monkeypatch.setattr(builtins,'input',lambda prompt:'4096')
+    monkeypatch.setattr(mykos_runtime,'build_priority',lambda:None)
+    monkeypatch.setattr(mykos_image_build,'build',lambda selection,**kwargs:calls.append((selection,kwargs)) or {})
+    monkeypatch.setattr(mykos_image_build,'STATE',tmp_path)
+    runpy.run_path(str(Path(__file__).resolve().parents[1]/'pos/vm'),run_name='__main__')
+    assert calls==[('mac12',{'replace':False,'ram_mib':4096})]
+
+
+def test_menu_rebuild_requires_explicit_confirmation(monkeypatch,tmp_path):
+    import runpy,sys,builtins,mykos_runtime,mykos_image_build
+    root=tmp_path/'vm';root.mkdir();(root/'mac12.json').write_text('{}')
+    monkeypatch.setattr(vm,'ROOT',root)
+    monkeypatch.setattr(vm,'read',lambda key:{'os':'mac12','ram_mib':2048})
+    monkeypatch.setattr(sys,'argv',['vm','create','mac12'])
+    monkeypatch.setattr(sys.stdin,'isatty',lambda:True)
+    replies=iter(['4096','n']);monkeypatch.setattr(builtins,'input',lambda prompt:next(replies))
+    monkeypatch.setattr(mykos_runtime,'build_priority',lambda:None)
+    calls=[];monkeypatch.setattr(mykos_image_build,'build',lambda *a,**kw:calls.append(kw))
+    with pytest.raises(SystemExit):runpy.run_path(str(Path(__file__).resolve().parents[1]/'pos/vm'),run_name='__main__')
+    assert not calls

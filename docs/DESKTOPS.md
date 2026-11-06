@@ -60,7 +60,7 @@ changed disks. `podman commit` alone does not save this QEMU execution state.
 **First stable-release host target: RHEL 9 (x86_64). RHEL 10 packages are preview-only; fresh installation is not yet supported because its repository lacks the native `mykos-criu` dependency.** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
 Use a supported Linux x86-64 host with usable `/dev/kvm` and `/dev/net/tun`, sufficient
-memory for each running guest (2048 MiB policy and 2 vCPUs), and at least 32 GiB of
+memory for each running guest (image-selected RAM, default2048 MiB, and2 vCPUs), and at least 32 GiB of
 free storage for creation. Guest disks default to 64 GiB sparse disks. macOS
 also requires AVX2. Guest installation and licensing remain the operator's
 responsibility. Supported current builds run unattended; legacy Windows releases
@@ -122,7 +122,7 @@ sudo python3 ./vm list
 These commands now run unattended for current Windows/Windows Server, macOS,
 and Ubuntu versions. No separate Finish step is required. Generated credentials
 are root-only in `/var/lib/mykos/image-builds/OS/credentials.json`. Builds and
-runtime VMs use 2 GiB RAM; Windows/Ubuntu use 12 GiB paging. For details,
+runtime VMs default to2 GiB RAM, with2/4/8 GiB selections for modern images; Windows/Ubuntu use 12 GiB paging. For details,
 resuming a failed build and API operations, see [Image builds](IMAGE_BUILDS.md).
 
 For existing images installed manually, Finish and compatibility commands remain:
@@ -377,19 +377,13 @@ config/secret includes are appended to the global files with private backups.
 
 ## Current memory policy
 
-All finished VM images and their instances use 2048 MiB RAM. Unattended macOS
-installation temporarily requires 4096 MiB for Apple’s second-stage temporary
-filesystem; it returns to 2048 MiB before the installed-boot check and capture.
-The image creation menu records the allocation so live state captures remain compatible. Existing
-4096 MiB captures require recapturing at 2048 MiB before new instances can resume
-that state. Existing instances can be cold-resized through `vm memory-configure`;
-see BALLOONING.md for recovery, driver and API details.
+New modern VM image builds offer2048,4096 or8192 MiB in the text menu. The choice is recorded as runtime RAM, preserved through capture and embedded image metadata, and inherited by new instances. Legacy Windows selections retain2048 MiB for compatibility. Existing images and instances keep their recorded settings. Unattended macOS installation uses at least4096 MiB temporarily, then boots at the selected runtime size before capture. RAM captures must resume with their recorded size; no checkpoint is rewritten to another size. An explicit cold restart can give an existing macOS instance4096 MiB while preserving disk recovery and other running VMs; see [memory allocation](BALLOONING.md).
 
 The Windows/Ubuntu/Fedora desktop pagefile or swap target is 12 GiB, configured inside the
 installed guest before capture. The Ubuntu helper rejects the live installer;
 finish installation, boot the installed OS, apply setup, reboot and verify first.
 macOS swap stays kernel-managed because a fixed total is not exposed by the
-stock OS. Its RAM allocation is 2048 MiB. Windows 11 at this allocation is below
+stock OS. Its RAM allocation follows the selected image size. The2 GiB default for Windows11 is below
 Microsoft's supported minimum.
 
 

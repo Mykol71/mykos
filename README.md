@@ -170,7 +170,7 @@ These selections use `create` and `prepare`, rather than the unattended builder.
 Ubuntu uses autoinstall, Windows uses Autounattend.xml, and macOS uses
 startosinstall. Completed builds commit the installed payload under a readable
 OS image name and leave a generic base running for fast instance creation.
-Native RedHat images use the kickstarts in `pos/ks`. VM guests use 2 GiB RAM;
+Native RedHat images use the kickstarts in `pos/ks`. VM guests default to 2 GiB RAM; modern VM image builds can select 2, 4 or 8 GiB and new instances inherit the recorded image size;
 Windows, Ubuntu and Fedora desktop VMs use 12 GiB pagefile/swap, while macOS manages its swap.
 Native Linux containers share host memory without a fixed VM RAM allocation.
 See [image builds](docs/IMAGE_BUILDS.md), [desktop lifecycle](docs/DESKTOPS.md),
@@ -208,7 +208,7 @@ More guides: [architecture](docs/ARCHITECTURE.md), [API](docs/API.md),
 ## Repository downloads
 
 Production now serves the [EL9 MYKOS repository](https://myk.sh/repos/mykos-1.5-for-x86_64-el9/),
-[EL10 MYKOS repository](https://myk.sh/repos/mykos-1.5-for-x86_64-el10/), and
-[updateos](https://repo.myk.sh/updateos/) publicly. RHEL mirrors and other repository
-content remain LAN-only. See [repository access and installation](docs/RPM.md#repository-visibility-and-production-storage)
+[EL10 MYKOS repository](https://myk.sh/repos/mykos-1.5-for-x86_64-el10/) publicly.
+[updateos documentation](docs/SCRIPTS.md#updateos) is public, while the updater
+downloads, RHEL mirrors and other private repository content remain LAN-only. See [repository access and installation](docs/RPM.md#repository-visibility-and-production-storage)
 for current storage, client settings and publication destinations.

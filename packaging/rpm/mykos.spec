@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        264%{?dist}
+Release:        265%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -119,6 +119,9 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Thu Nov 05 2026 MYKOL-DOT-COM <mgreen@myk.sh> - 1.5.20261024-265
+- Add live desktop gallery examples and selectable image RAM
+
 * Thu Nov 05 2026 MYKOL-DOT-COM <mgreen@myk.sh> - 1.5.20261024-264
 - Brighten Receiver container and VPN count gauge bars
 
