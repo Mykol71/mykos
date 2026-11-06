@@ -279,3 +279,14 @@ process deduplication, completion and existing desktop build behavior.
 A private dashboard overlay also needs the new families in its central iteration
 list. DOM headings and image-to-family mappings alone do not register panes.
 Check both active builds and completed images in every shipped edition.
+
+## Verify complete startup with real DOM elements
+
+Registering a pane family requires its heading, panel, controls, navigation link
+and labels. The new OS headings existed but their header links were missing.
+Pane visibility dereferenced a missing link, interrupted startup and left an
+admin session with a partial dashboard. Complete the markup and keep optional
+link updates defensive. Mock DOM helpers that invent every requested element
+cannot detect this failure; check structural contracts and real browser startup
+for full administrators and restricted RTI users. Account privileges must not
+be changed to work around a client initialization failure.
