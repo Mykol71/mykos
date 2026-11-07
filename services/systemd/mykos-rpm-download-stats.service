@@ -1,0 +1,21 @@
+[Unit]
+Description=MYKOS private RPM download statistics
+After=httpd.service network-online.target
+ConditionPathExists=/etc/mykos/rpm-download-stats.json
+
+[Service]
+Type=oneshot
+ExecStart=@PYTHON@ -B /usr/local/sbin/mykos_download_stats.py collect
+UMask=0077
+StateDirectory=mykos/rpm-download-stats
+StateDirectoryMode=0700
+Nice=15
+IOSchedulingClass=idle
+CPUWeight=10
+IOWeight=10
+TimeoutStartSec=180
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/mykos/rpm-download-stats /opt/mykos-web/data

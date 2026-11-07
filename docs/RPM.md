@@ -265,3 +265,53 @@ Podman runtime scopes or remove guest disks, images, notes or intentional snapsh
 ### Repository links from forwarded dashboards
 
 Repository links use the configured download server rather than the browser's incidental host or SSH tunnel port. A root-owned `/etc/mykos/repository-downloads.json` can set `{"base_url":"http://192.0.2.80/"}` to a reachable LAN repository server (replace this documentation address with the actual server). Remote inventory clients retain their configured repository base. Otherwise the dashboard uses the configured MYKOS public origin's `/repos/` alias. Download configuration does not change Apache access controls: only supported MYKOS EL9/EL10 trees are public; updateos and other private repositories still require LAN access.
+
+
+## Private RPM download statistics
+
+Administrators can open **RPM stats** in the Repos pane. JSON and HTML reports
+are `/mykos/api/web/mykos/rpm-downloads` and the same path plus `/view`.
+Viewer, RTI-restricted and peer-forwarded access is denied. Unconfigured hosts
+report that state explicitly. Server commands are:
+
+```bash
+sudo /usr/local/sbin/mykos-download-stats report
+sudo /usr/local/sbin/mykos-download-stats report --json
+sudo systemctl start mykos-rpm-download-stats.service
+```
+
+Collection is optional and only configured on the repository host. Review the
+Apache, logrotate and JSON examples in `repo/`. The configuration is root-owned
+mode0600 `/etc/mykos/rpm-download-stats.json`, with `format: 1`, public
+`github_repository: OWNER/REPOSITORY`, and `log_directory: /var/log/httpd/rpm-downloads`.
+The global Apache include requires mod_unique_id; use `apachectl configtest`
+before graceful reload. Initialize collection before enabling the logging
+include, then enable `mykos-rpm-download-stats.timer` (fifteen-minute refresh).
+Create root-owned mode0700 `/var/log/httpd/rpm-downloads` before enabling the
+Apache include; its nested location avoids the existing top-level Apache
+logrotate wildcard. Logs use rename/create rotation with fourteen-day retention. The root-only
+statistics database is in `/var/lib/mykos/rpm-download-stats/`; the aggregate
+snapshot is root-owned and mykosweb-readable at
+`/opt/mykos-web/data/rpm-download-stats.json`. Public GitHub assets need no token;
+API failures retain last-good counters with an explicit stale status.
+
+Only public EL9/EL10 RPM GET requests are included, with direct and `/repos/`
+aliases normalized. Metadata and HEAD requests are excluded. A full-file
+response requires HTTP200, positive bytes matching Content-Length, and no
+logged connection abort. Partial/range206 responses, aborts and failures are
+separate; ranges are not stitched into full downloads. Explicitly marked
+MYKOS validation traffic is excluded. Opaque request IDs prevent duplicate
+collection through rotation/compression; inode/head checkpoints handle
+replacement and truncation. Repository history starts when enabled; general
+access logs are not backfilled because they include unmarked deployment tests.
+
+Daily dates are UTC. Byte totals include every matching response body.
+Internal/external classification uses the client address Apache observes and
+configured internal ranges; adjust trusted proxy handling where applicable.
+The example covers loopback and the two established MYKOS LAN subnets. GitHub
+RPM asset counters (including source RPMs) are shown separately, with their last
+refresh time; they include repeat and validation downloads. Neither source
+measures unique users, customers or successful installations, and the sources
+are not deduplicated. The dedicated log and report contain no client IPs,
+query strings, referrers, cookies or user-agent text. Existing access logs and
+public/LAN repository restrictions are unchanged.

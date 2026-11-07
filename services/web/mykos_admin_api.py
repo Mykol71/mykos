@@ -86,3 +86,30 @@ def perform(kind, action, target, payload):
 def repo_action(data: RepoAction, request: Request):
     authorize(request, modify=True)
     return perform('repo', data.action, data.name, {})
+
+
+def statistics_authorize(request):
+    from app import mykos_terminal_permission
+    permission = mykos_terminal_permission(request, include_user=True)
+    if not permission.get('allowed') or str(permission.get('username','')).startswith('peer:'):
+        raise HTTPException(403, 'Local administrator login required')
+
+
+@router.get('/rpm-downloads')
+def rpm_downloads(request: Request):
+    statistics_authorize(request)
+    from fastapi.responses import JSONResponse
+    from rpm_download_stats_view import load
+    try: value = load()
+    except (OSError, ValueError):raise HTTPException(503, 'RPM statistics snapshot unavailable')
+    return JSONResponse(value, headers={'Cache-Control':'no-store'})
+
+
+@router.get('/rpm-downloads/view')
+def rpm_downloads_view(request: Request):
+    statistics_authorize(request)
+    from fastapi.responses import HTMLResponse
+    from rpm_download_stats_view import load, render
+    try: value = load()
+    except (OSError, ValueError):raise HTTPException(503, 'RPM statistics snapshot unavailable')
+    return HTMLResponse(render(value), headers={'Cache-Control':'no-store', 'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",'Referrer-Policy':'no-referrer'})

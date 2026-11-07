@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh private MYKOS RPM statistics every fifteen minutes
+ConditionPathExists=/etc/mykos/rpm-download-stats.json
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+RandomizedDelaySec=30s
+
+[Install]
+WantedBy=timers.target

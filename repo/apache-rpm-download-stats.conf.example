@@ -1,0 +1,5 @@
+# Optional host-local collector. Requires the standard mod_unique_id module.
+# No IP addresses, query strings, referrers, cookies or user-agent strings are logged.
+SetEnvIfExpr "-R '127.0.0.0/8' || -R '::1/128' || -R '192.168.222.0/24' || -R '192.168.22.0/24'" rpm_stats_local=1
+SetEnvIf User-Agent "^MYKOS-RPM-Stats-Validation/" rpm_stats_test=1
+GlobalLog /var/log/httpd/rpm-downloads/mykos-rpm-downloads.log "%{UNIQUE_ID}e|%{%s}t|%m|%U|%>s|%B|%X|%{Content-Length}o|%{rpm_stats_local}e|%{rpm_stats_test}e|v1" "expr=%{REQUEST_METHOD} == 'GET' && %{REQUEST_URI} =~ m#^/(repos/)?mykos-1[.]5-for-x86_64-el(9|10)/[A-Za-z0-9_.+-]+[.]rpm$#"

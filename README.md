@@ -261,3 +261,5 @@ Production now serves the [EL9 MYKOS repository](https://myk.sh/repos/mykos-1.5-
 [updateos documentation](docs/SCRIPTS.md#updateos) is public, while the updater
 downloads, RHEL mirrors and other private repository content remain LAN-only. See [repository access and installation](docs/RPM.md#repository-visibility-and-production-storage)
 for current storage, client settings and publication destinations.
+
+Administrators can track repository RPM transfers and separate GitHub release-asset counters through the Repos pane’s **RPM stats** report and the server CLI. Collection is opt-in on the repository host; see [private RPM download statistics](docs/RPM.md#private-rpm-download-statistics) for accounting semantics and setup.

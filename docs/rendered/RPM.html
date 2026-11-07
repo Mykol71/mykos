@@ -213,5 +213,47 @@ and stops matching active control-plane workers. It does not target persistent
 Podman runtime scopes or remove guest disks, images, notes or intentional snapshots.</p>
 <h3 id="repository-links-from-forwarded-dashboards">Repository links from forwarded dashboards</h3>
 <p>Repository links use the configured download server rather than the browser&#39;s incidental host or SSH tunnel port. A root-owned <code>/etc/mykos/repository-downloads.json</code> can set <code>{&quot;base_url&quot;:&quot;http://192.0.2.80/&quot;}</code> to a reachable LAN repository server (replace this documentation address with the actual server). Remote inventory clients retain their configured repository base. Otherwise the dashboard uses the configured MYKOS public origin&#39;s <code>/repos/</code> alias. Download configuration does not change Apache access controls: only supported MYKOS EL9/EL10 trees are public; updateos and other private repositories still require LAN access.</p>
+<h2 id="private-rpm-download-statistics">Private RPM download statistics</h2>
+<p>Administrators can open <strong>RPM stats</strong> in the Repos pane. JSON and HTML reports
+are <code>/mykos/api/web/mykos/rpm-downloads</code> and the same path plus <code>/view</code>.
+Viewer, RTI-restricted and peer-forwarded access is denied. Unconfigured hosts
+report that state explicitly. Server commands are:</p>
+<pre><code class="language-bash">sudo /usr/local/sbin/mykos-download-stats report
+sudo /usr/local/sbin/mykos-download-stats report --json
+sudo systemctl start mykos-rpm-download-stats.service
+</code></pre>
+<p>Collection is optional and only configured on the repository host. Review the
+Apache, logrotate and JSON examples in <code>repo/</code>. The configuration is root-owned
+mode0600 <code>/etc/mykos/rpm-download-stats.json</code>, with <code>format: 1</code>, public
+<code>github_repository: OWNER/REPOSITORY</code>, and <code>log_directory: /var/log/httpd/rpm-downloads</code>.
+The global Apache include requires mod_unique_id; use <code>apachectl configtest</code>
+before graceful reload. Initialize collection before enabling the logging
+include, then enable <code>mykos-rpm-download-stats.timer</code> (fifteen-minute refresh).
+Create root-owned mode0700 <code>/var/log/httpd/rpm-downloads</code> before enabling the
+Apache include; its nested location avoids the existing top-level Apache
+logrotate wildcard. Logs use rename/create rotation with fourteen-day retention. The root-only
+statistics database is in <code>/var/lib/mykos/rpm-download-stats/</code>; the aggregate
+snapshot is root-owned and mykosweb-readable at
+<code>/opt/mykos-web/data/rpm-download-stats.json</code>. Public GitHub assets need no token;
+API failures retain last-good counters with an explicit stale status.</p>
+<p>Only public EL9/EL10 RPM GET requests are included, with direct and <code>/repos/</code>
+aliases normalized. Metadata and HEAD requests are excluded. A full-file
+response requires HTTP200, positive bytes matching Content-Length, and no
+logged connection abort. Partial/range206 responses, aborts and failures are
+separate; ranges are not stitched into full downloads. Explicitly marked
+MYKOS validation traffic is excluded. Opaque request IDs prevent duplicate
+collection through rotation/compression; inode/head checkpoints handle
+replacement and truncation. Repository history starts when enabled; general
+access logs are not backfilled because they include unmarked deployment tests.</p>
+<p>Daily dates are UTC. Byte totals include every matching response body.
+Internal/external classification uses the client address Apache observes and
+configured internal ranges; adjust trusted proxy handling where applicable.
+The example covers loopback and the two established MYKOS LAN subnets. GitHub
+RPM asset counters (including source RPMs) are shown separately, with their last
+refresh time; they include repeat and validation downloads. Neither source
+measures unique users, customers or successful installations, and the sources
+are not deduplicated. The dedicated log and report contain no client IPs,
+query strings, referrers, cookies or user-agent text. Existing access logs and
+public/LAN repository restrictions are unchanged.</p>
 <footer><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
 <span>MYKOS documentation · <a href="mailto:mgreen@myk.sh">mgreen@myk.sh</a></span></footer></main></html>
