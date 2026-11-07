@@ -11,13 +11,38 @@ MYKOS could help businesses get more value from the systems they already own. By
 MYKOS is a virtualization and host-management solution with RHEL 9 as its first stable-release host target. RHEL 10 packages remain a preview pending dependency and fresh-install validation.
 RHEL 8 is no longer a supported MYKOS host; RHEL 8 guest images remain available.
 It combines a web control center, authenticated API, and text administration
-menus for native Linux containers and QEMU-based Windows, macOS, and Ubuntu
-VMs managed through Podman.
+menus for native Linux containers and QEMU-based Windows, macOS, Ubuntu,
+Fedora GNOME, and Android-x86 VMs managed through Podman.
 
 The dashboard includes host performance history, OS-specific container panes,
 live snapshots, rsync accounts, repository management, and per-pane notes.
 Browser sessions and scoped API keys use separate authentication.
 See the [screen examples gallery](docs/SCREENSHOTS.md) for illustrated workflows.
+
+## Supported images at a glance
+
+**47 image selections: 25 native Linux containers and 22 VM-backed guests.**
+Guest image support is separate from host support: **RHEL 9 is the stable host
+platform; RHEL 10 remains a preview.** RHEL 8 host support is not offered.
+
+| Environment | Supported guest images |
+| --- | --- |
+| Native enterprise Linux | RHEL 7, 8, 9, 10; Rocky Linux 8, 9, 10; AlmaLinux 8, 9, 10; Oracle Linux 8, 9, 10; CentOS Stream 8, 9, 10 |
+| Other native Linux | Fedora 43, 44; Debian 13; Arch Linux (rolling); SUSE Linux Enterprise BCI Init 15 SP7; Amazon Linux 2023; Alpine Linux 3.24 (OpenRC) |
+| Native SQL Server environments | SQL Server 2022 and 2025 on Linux |
+| Windows desktop VMs | Windows 11, 10, 8.1 Enterprise, 7 Ultimate, XP, Me, 2000, 98 |
+| Windows Server VMs | Windows Server 2025, 2022, 2019, 2016 |
+| macOS VMs | Monterey 12, Ventura 13, Sonoma 14, Sequoia 15 |
+| Ubuntu VMs | Ubuntu 20.04, 22.04, 24.04 |
+| Fedora desktop VMs | Fedora 43 and 44 GNOME |
+| Android VM | Android-x86 9.0-r2 (legacy, manual installation, graphical access only) |
+
+See the complete [native image identifiers](#native-el-and-other-linux-containers)
+and [VM build commands](#all-supported-vm-types) below. These are accepted
+image selections, not a claim that every new installation has been qualified
+on every host. Vendor licensing and hardware restrictions still apply. SUSE
+uses the SLE BCI Init base rather than a full subscribed SLES installation;
+its scope and the native networking/timezone limits are described below.
 
 ## Free use and licensing
 
@@ -172,7 +197,7 @@ The commands below use the installed toolkit path.
 | macOS 14 Sonoma | `sudo /usr/share/mykos/pos/vm build mac14` |
 | macOS 15 Sequoia | `sudo /usr/share/mykos/pos/vm build mac15` |
 
-Legacy Windows versions use interactive setup. Open the returned console, finish
+Legacy Windows and Android-x86 use interactive setup. Open the returned console, finish
 installation and reach the installed desktop, then run the matching Finish command.
 These selections use `create` and `prepare`, rather than the unattended builder.
 
@@ -183,8 +208,11 @@ These selections use `create` and `prepare`, rather than the unattended builder.
 | Windows Me | `sudo /usr/share/mykos/pos/vm create winme` | `sudo /usr/share/mykos/pos/vm prepare winme` |
 | Windows 2000 | `sudo /usr/share/mykos/pos/vm create win2k` | `sudo /usr/share/mykos/pos/vm prepare win2k` |
 | Windows 98 | `sudo /usr/share/mykos/pos/vm create win98` | `sudo /usr/share/mykos/pos/vm prepare win98` |
+| Android-x86 9.0-r2 | `sudo /usr/share/mykos/pos/vm create android9` | `sudo /usr/share/mykos/pos/vm prepare android9` (run twice as described below) |
 
-Android-x86 9.0-r2 uses manual installation and two Finish steps; see the
+Android-x86 requires two Finish steps: run `prepare android9` once after installation
+to switch to the installed disk, then again after that desktop boots to capture
+the image. See the
 [Android-x86 workflow](docs/IMAGE_BUILDS.md#android-x86-legacy-installer). It is a
 legacy compatibility guest with graphical access only.
 
