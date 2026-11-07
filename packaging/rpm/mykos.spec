@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        272%{?dist}
+Release:        273%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -39,8 +39,9 @@ Requires: containernetworking-plugins
 %endif
 Requires: dmidecode curl wget jq util-linux procps-ng tar gzip cronie chrony firewalld
 Requires: policycoreutils-python-utils ksh unzip expect nmap time ipset iptables git pykickstart
-Requires(pre): shadow-utils
+Requires(pre): shadow-utils %{mykos_python_packages}
 Requires(post): systemd %{mykos_python_packages}
+Requires(posttrans): systemd %{mykos_python_packages}
 Requires(preun): systemd
 Requires(postun): systemd
 
@@ -88,6 +89,11 @@ echo 'MYKOS free-use license and third-party notices: /usr/share/mykos/LICENSE.t
 echo 'MYKOS installed. Fresh installations configure IP access; domain HTTPS requires mykos-setup --configure-https.'
 
 %posttrans
+# Leapp can retain an EL8 Python 3.9 venv even after the EL9 RPM is installed.
+# Repair an existing runtime independently of firstboot, without reconfiguring the host.
+if [ -f /var/lib/mykos-installer/installed.json ] && [ -f /etc/mykos/web.env ]; then
+  %{mykos_python} /usr/share/mykos/bin/mykos-install ensure_runtime --python %{mykos_python} || exit 1
+fi
 if [ -d /opt/mykos-web/data ]; then
   systemctl enable mykos-host-history.service >/dev/null 2>&1 || :
   systemctl restart --no-block mykos-host-history.service || :
@@ -119,6 +125,10 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Sat Nov 07 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-273
+- Repair inherited web Python environments during RPM transactions after Leapp.
+- Preserve scoped IPsec includes covering MYKOS peer connection secrets.
+
 * Fri Nov 06 2026 MYKOL-DOT-COM <mgreen@myk.sh> - 1.5.20261024-266
 - Add five native Linux image profiles, legacy Android-x86 and qualification safeguards
 

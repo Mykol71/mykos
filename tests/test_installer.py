@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tarfile
+import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 INSTALL = REPO / 'bin/mykos-install'
@@ -346,3 +347,80 @@ def test_removal_retains_only_installed_guest_and_network_runtimes():
     calls.clear()
     installer['retain_runtime_packages'](query=lambda a,**kw:subprocess.CompletedProcess(a,0,stdout=''),runner=calls.append)
     assert not calls
+
+
+def runtime_fixture(tmp_path, monkeypatch, active=True):
+    from types import SimpleNamespace
+    module=load_venv_installer(); venv=tmp_path/'.venv'
+    (venv/'bin').mkdir(parents=True); (venv/'bin/python').write_text('old')
+    (venv/'old-library').write_text('original')
+    settings=tmp_path/'web.env'; settings.write_text('MYKOS_PUBLIC_ORIGIN=https://operator.example\n')
+    identity=tmp_path/'auth.db'; identity.write_bytes(b'preserve identities and private notes')
+    calls=[]
+    def probe(executable, packages=False):
+        if str(executable)==str(venv/'bin/python') and (venv/'old-library').exists():
+            raise subprocess.CalledProcessError(1,[executable])
+        return [3,11]
+    monkeypatch.setattr(module,'runtime_probe',probe)
+    monkeypatch.setattr(module.subprocess,'check_output',lambda args,**kw:'[3,9]' if (venv/'old-library').exists() and str(args[0])==str(venv/'bin/python') else '[3,11]')
+    monkeypatch.setattr(module.subprocess,'run',lambda args,**kw:SimpleNamespace(returncode=0 if active else 3))
+    monkeypatch.setattr(module,'readable_venv',lambda *a:None)
+    def runner(args):
+        calls.append(args)
+        if args[1:3]==['-m','venv']:
+            (venv/'bin').mkdir(parents=True);(venv/'bin/python').write_text('new')
+    return module,venv,calls,runner,settings,identity
+
+
+def test_leapp_runtime_repair_rebuilds_once_preserves_host_state_and_cleans_old_runtime(tmp_path,monkeypatch):
+    module,venv,calls,runner,settings,identity=runtime_fixture(tmp_path,monkeypatch)
+    assert module.repair_web_runtime(venv,'/selected/python',tmp_path/'requirements',0,runner=runner,ready=lambda:None)
+    assert (venv/'bin/python').read_text()=='new'
+    assert not list(tmp_path.glob('.venv-before-runtime-*'))
+    assert settings.read_text()=='MYKOS_PUBLIC_ORIGIN=https://operator.example\n'
+    assert identity.read_bytes()==b'preserve identities and private notes'
+    assert calls[0]==['systemctl','stop','mykos-web.service']
+    assert calls[-1]==['systemctl','start','mykos-web.service']
+    assert not any('enable' in c or 'disable' in c for c in calls)
+    calls.clear()
+    assert not module.repair_web_runtime(venv,'/selected/python',tmp_path/'requirements',0,runner=runner)
+    assert calls==[]
+
+
+def test_leapp_runtime_repair_keeps_disabled_web_stopped(tmp_path,monkeypatch):
+    module,venv,calls,runner,*_=runtime_fixture(tmp_path,monkeypatch,active=False)
+    assert module.repair_web_runtime(venv,'/selected/python',tmp_path/'requirements',0,runner=runner)
+    assert not any(c[0]=='systemctl' for c in calls)
+
+
+@pytest.mark.parametrize('failure',['download','startup','interrupt'])
+def test_leapp_runtime_repair_rolls_back_failures_and_interruptions(tmp_path,monkeypatch,failure):
+    module,venv,calls,normal,settings,identity=runtime_fixture(tmp_path,monkeypatch)
+    def runner(args):
+        normal(args)
+        if args[1:4]==['-m','pip','install'] and failure=='download':raise RuntimeError('download unavailable')
+        if args[1:4]==['-m','pip','install'] and failure=='interrupt':raise KeyboardInterrupt()
+    def ready():raise RuntimeError('startup failed')
+    with pytest.raises((RuntimeError,KeyboardInterrupt)):
+        module.repair_web_runtime(venv,'/selected/python',tmp_path/'requirements',0,runner=runner,ready=ready)
+    assert (venv/'old-library').read_text()=='original'
+    assert (venv/'bin/python').read_text()=='old'
+    assert not list(tmp_path.glob('.venv-before-runtime-*'))
+    assert calls[-1]==['systemctl','start','mykos-web.service']
+    assert identity.read_bytes()==b'preserve identities and private notes'
+
+
+def test_runtime_repair_rejects_staging_without_host_calls(tmp_path):
+    root=tmp_path/'root';root.mkdir()
+    result=run(root,'ensure_runtime','--python',sys.executable,ok=False)
+    assert 'staging never changes host services' in result.stdout+result.stderr
+
+
+def test_failed_fresh_venv_creation_cleans_partial_environment(tmp_path,monkeypatch):
+    module=load_venv_installer();venv=tmp_path/'.venv'
+    monkeypatch.setattr(module.subprocess,'check_output',lambda *a,**kw:'[3,11]')
+    def runner(args):
+        if args[1:3]==['-m','venv']:venv.mkdir();(venv/'partial').touch()
+        else:raise RuntimeError('failed')
+    with pytest.raises(RuntimeError):module.provision_venv(venv,'/selected/python',tmp_path/'requirements',runner=runner)
+    assert not venv.exists()

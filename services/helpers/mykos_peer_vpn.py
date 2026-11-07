@@ -1,5 +1,6 @@
 """Narrow root operations for independent MYKOS host-to-host IKEv2 peers."""
 import fcntl
+import fnmatch
 import ipaddress
 import json
 import os
@@ -81,6 +82,17 @@ def firewall_change(items, add):
         command(args + [('--add-rich-rule=' if add else '--remove-rich-rule=') + item['rule']])
 
 
+def includes_path(config, target):
+    """Accept active standard or narrowly scoped includes covering this file."""
+    for line in config.read_text().splitlines():
+        directive = line.split('#', 1)[0].split()
+        if len(directive) == 2 and directive[0] == 'include':
+            pattern = directive[1]
+            if Path(pattern).parent == target.parent and fnmatch.fnmatchcase(target.name, Path(pattern).name):
+                return True
+    return False
+
+
 def configure(identifier, settings):
     name = selection(identifier)
     if set(settings) != {'local', 'remote', 'secret'}:
@@ -98,13 +110,13 @@ def configure(identifier, settings):
     for existing in STATE.glob('*.json'):
         if json.loads(existing.read_text()).get('remote') == remote:
             raise ValueError('A peer VPN already manages this address')
-    # Standard RHEL includes are required; never rewrite unrelated VPN configuration.
-    if 'include /etc/ipsec.d/*.conf' not in Path('/etc/ipsec.conf').read_text():
-        raise ValueError('Standard IPsec configuration include is required')
-    if 'include /etc/ipsec.d/*.secrets' not in Path('/etc/ipsec.secrets').read_text():
-        raise ValueError('Standard IPsec secrets include is required')
     conf = IPSEC / (name + '.conf')
     key = IPSEC / (name + '.secrets')
+    # Preserve operator include scopes; require active coverage for these exact files.
+    if not includes_path(Path('/etc/ipsec.conf'), conf):
+        raise ValueError('Standard IPsec configuration include is required')
+    if not includes_path(Path('/etc/ipsec.secrets'), key):
+        raise ValueError('Standard IPsec secrets include is required')
     if any(path.exists() or path.is_symlink() for path in (conf, key)):
         raise ValueError('Peer configuration path already exists')
     created = []

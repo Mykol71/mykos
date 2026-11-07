@@ -209,7 +209,7 @@ def test_root_helper_config_is_host_only_and_removal_scoped(tmp_path, monkeypatc
     monkeypatch.setattr(vpn,'command',command)
     monkeypatch.setattr(vpn,'firewall_plan',lambda remote: [])
     original=Path.read_text
-    monkeypatch.setattr(Path,'read_text',lambda self,*a,**k: 'include /etc/ipsec.d/*.conf' if str(self)=='/etc/ipsec.conf' else 'include /etc/ipsec.d/*.secrets' if str(self)=='/etc/ipsec.secrets' else original(self,*a,**k))
+    monkeypatch.setattr(Path,'read_text',lambda self,*a,**k: f'include {ipsec}/*.conf' if str(self)=='/etc/ipsec.conf' else f'include {ipsec}/mykos-*.secrets' if str(self)=='/etc/ipsec.secrets' else original(self,*a,**k))
     vpn.configure(identifier, {'local':'192.0.2.10','remote':'192.0.2.20','secret':'2'*64})
     conf=(ipsec/('mykos-peer-'+identifier+'.conf')).read_text()
     assert 'leftsubnet=192.0.2.10/32' in conf and 'rightsubnet=192.0.2.20/32' in conf
@@ -358,3 +358,19 @@ def test_rpm_replaced_template_still_activates_apache(monkeypatch):
     calls.clear();Result.returncode=3
     module.activate_apache('/usr/bin/python3.11')
     assert not calls
+
+
+@pytest.mark.parametrize('line,accepted', [
+    ('include /etc/ipsec.d/*.secrets', True),
+    ('include /etc/ipsec.d/mykos-*.secrets', True),
+    ('  include /etc/ipsec.d/mykos-peer-*.secrets # scoped peers', True),
+    ('# include /etc/ipsec.d/*.secrets', False),
+    ('include /etc/ipsec.d/customer-*.secrets', False),
+    ('include /other/*.secrets', False),
+    ('someinclude /etc/ipsec.d/*.secrets', False),
+])
+def test_peer_secrets_include_uses_active_actual_coverage(tmp_path, line, accepted):
+    config=tmp_path/'ipsec.secrets';config.write_text(line+'\n')
+    before=config.read_bytes()
+    assert vpn.includes_path(config, Path('/etc/ipsec.d/mykos-peer-'+'1'*32+'.secrets')) is accepted
+    assert config.read_bytes()==before

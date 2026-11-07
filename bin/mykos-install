@@ -2,6 +2,7 @@
 """Install, inspect, snapshot, and remove MYKOS from explicit maintained sources."""
 import argparse
 import datetime
+import fcntl
 import hashlib
 import io
 import importlib.util
@@ -85,7 +86,7 @@ def readable_venv(root,gid):
         mode=0o750 if path.is_dir() or path.stat().st_mode&0o111 else 0o640
         os.chmod(path,mode);os.chown(path,0,gid)
 
-def provision_venv(venv, python, requirements, install=False, runner=None):
+def provision_venv(venv, python, requirements, install=False, runner=None, rebuild=False):
     """Keep repeated installs stable; retain the old runtime on failed migration."""
     runner=runner or command
     venv=Path(venv)
@@ -96,20 +97,78 @@ def provision_venv(venv, python, requirements, install=False, runner=None):
     if (venv/'bin/python').is_file():
         try:current=version(venv/'bin/python')
         except (OSError,subprocess.CalledProcessError,ValueError):pass
-    if venv.exists() and current!=wanted:
+    if venv.exists() and (rebuild or current!=wanted):
         backup=Path(tempfile.mkdtemp(prefix='.venv-before-runtime-',dir=str(venv.parent)))
         os.replace(venv,backup)
     created=not (venv/'bin/python').is_file()
     try:
         if created:runner([python,'-m','venv',venv])
-        if install or created:runner([venv/'bin/python','-m','pip','install','-r',requirements])
+        if install or created:runner([venv/'bin/python','-m','pip','install','--no-cache-dir','--disable-pip-version-check','--timeout','30','--retries','2','-r',requirements])
         runner([venv/'bin/python','-c','import fastapi,pydantic,uvicorn'])
     except BaseException:
+        if created and venv.exists():shutil.rmtree(venv)
+        if backup:os.replace(backup,venv)
+        raise
+    return backup
+
+
+def runtime_probe(executable, packages=False):
+    code = ('import sys,ssl,hashlib,json; '
+            'assert sys.version_info >= (3,11), "Python 3.11+ required"; '
+            'assert hasattr(ssl,"VERIFY_X509_PARTIAL_CHAIN"), "Peer TLS support required"; '
+            'assert hasattr(hashlib,"scrypt"), "Password hashing support required"; ')
+    if packages:code += 'import fastapi,pydantic,uvicorn; '
+    code += 'print(json.dumps(list(sys.version_info[:2])))'
+    return json.loads(subprocess.check_output([str(executable),'-c',code],text=True,stderr=subprocess.PIPE))
+
+
+def web_runtime_ready():
+    import time
+    from urllib.request import ProxyHandler,build_opener
+    opener=build_opener(ProxyHandler({}))
+    for attempt in range(30):
+        try:
+            with opener.open('http://127.0.0.1:8000/',timeout=2) as response:
+                if response.status==200:return
+        except OSError:pass
+        time.sleep(0.5)
+    fail('MYKOS web did not become ready after Python runtime migration')
+
+
+def repair_web_runtime(venv, python, requirements, gid, runner=None, ready=None):
+    """Migrate only Python; preserve settings, identities and service enablement."""
+    runner=runner or command
+    ready=ready or web_runtime_ready
+    venv=Path(venv)
+    if venv.is_symlink():fail('Preserving custom symlink Python environment')
+    wanted=runtime_probe(python)
+    try:current=runtime_probe(venv/'bin/python',packages=True)
+    except (OSError,ValueError,subprocess.SubprocessError):current=None
+    if current==wanted:
+        print('MYKOS Python runtime is compatible; existing setup preserved.')
+        return False
+    active=subprocess.run(['systemctl','is-active','--quiet','mykos-web.service']).returncode==0
+    if active:runner(['systemctl','stop','mykos-web.service'])
+    backup=None
+    try:
+        backup=provision_venv(venv,python,requirements,install=True,runner=runner,rebuild=True)
+        readable_venv(venv,gid)
+        assert runtime_probe(venv/'bin/python',packages=True)==wanted
+        runner(['runuser','-u','mykosweb','--',venv/'bin/python','-c',
+                'import fastapi,pydantic,uvicorn,ssl; assert hasattr(ssl,"VERIFY_X509_PARTIAL_CHAIN")'])
+        if active:
+            runner(['systemctl','start','mykos-web.service'])
+            ready()
+    except BaseException:
+        if active:runner(['systemctl','stop','mykos-web.service'])
         if backup:
             if venv.exists():shutil.rmtree(venv)
             os.replace(backup,venv)
+        if active:runner(['systemctl','start','mykos-web.service'])
         raise
-    return backup
+    if backup:shutil.rmtree(backup)
+    print('MYKOS Python runtime repaired; host settings and service enablement preserved.')
+    return True
 
 
 class Installer:
@@ -120,6 +179,22 @@ class Installer:
         self.live=self.root==Path('/')
         if not self.live and not self.root.is_dir() and args.action not in ('install',): fail('Staging root does not exist')
         self.uid=self.gid=None
+
+    def ensure_runtime(self):
+        if not self.live:fail('Runtime repair requires the live host; staging never changes host services')
+        if self.args.dry_run:
+            print('Would check the existing web Python runtime without changing host configuration.')
+            return
+        self.mutation()
+        if not self.path(STATE).is_file() or not self.path('/etc/mykos/web.env').is_file():
+            print('Fresh installation: Python runtime setup remains with mykos-firstboot.service.')
+            return
+        Path('/run/lock').mkdir(parents=True,exist_ok=True)
+        fd=os.open('/run/lock/mykos-runtime.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
+        with os.fdopen(fd,'a') as lock:
+            fcntl.flock(lock,fcntl.LOCK_EX)
+            repair_web_runtime(self.path('/opt/mykos-web/.venv'),self.args.python,
+                               SOURCE/'services/requirements.txt',grp.getgrnam('mykosweb').gr_gid)
 
     def path(self, name):
         if not allowed(name) and name not in (BACKUPS,'/var/lib/mykos-installer','/var/lib/mykos/jobs','/backups','/opt/mykos-web','/etc/mykos'):
@@ -572,17 +647,19 @@ class Installer:
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     sub=parser.add_subparsers(dest='action',required=True)
-    for action in ('install','verify','status','backup','restore','uninstall','stop_services'):
+    for action in ('install','verify','status','backup','restore','uninstall','stop_services','ensure_runtime'):
         p=sub.add_parser(action)
         p.add_argument('--root',default='/',help='Alternate staging filesystem; never runs host operations')
         p.add_argument('--dry-run',action='store_true')
+        if action=='ensure_runtime':
+            p.add_argument('--python',required=True,help='RPM-selected target interpreter')
         if action=='install':
             p.add_argument('--configure-https',action='store_true',help='Opt in to Apache domain and Certbot HTTPS setup')
             p.add_argument('--domain',help='Domain for --configure-https')
             p.add_argument('--email',help='Certbot account email for --configure-https')
             p.add_argument('--set-public-origin',action='store_true',help='Explicitly replace the saved browser origin during web setup')
             p.add_argument('--public-origin',default='https://mykos.example.com')
-            p.add_argument('--python',default='/usr/bin/python3',help='Target Python 3.9+ interpreter')
+            p.add_argument('--python',default='/usr/bin/python3',help='Target Python 3.11+ interpreter')
             p.add_argument('--install-deps',action='store_true')
             p.add_argument('--python-deps',action='store_true',help='Install Python requirements only; preserve existing system packages')
             p.add_argument('--image-build-deps',action='store_true')

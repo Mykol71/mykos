@@ -316,3 +316,15 @@ def test_explicit_ip_restore_is_not_skipped_by_saved_installation_manifest(tmp_p
     monkeypatch.setattr(sys,'argv',['mykos-bootstrap','--installed-rpm','--address','192.0.2.8','--plan'])
     b.main()
     assert 'IP access: http://192.0.2.8/mykos/' in capsys.readouterr().out
+
+
+def test_rpm_posttrans_repairs_retained_leapp_runtime_before_firstboot_checks():
+    spec=(Path(__file__).resolve().parents[1]/'packaging/rpm/mykos.spec').read_text()
+    posttrans=spec.split('%posttrans\n',1)[1].split('%preun',1)[0]
+    repair='mykos-install ensure_runtime --python %{mykos_python} || exit 1'
+    assert repair in posttrans
+    assert 'Requires(pre): shadow-utils %{mykos_python_packages}' in spec
+    assert 'Requires(posttrans): systemd %{mykos_python_packages}' in spec
+    assert posttrans.index(repair)<posttrans.index('mykos-firstboot.service')
+    assert '&& [ -f /etc/mykos/web.env ]' in posttrans
+    assert '--configure-https' not in posttrans

@@ -82,3 +82,13 @@ attach when the document is ready, even if an optional map or terminal library
 is still loading. The flower opens the complete node dashboard with its normal
 refreshes and controls. Metrics, graph history and command targets remain bound
 to the selected peer.
+
+## After a host operating-system upgrade
+
+Use the MYKOS RPM for the new host release after a supported Red Hat Leapp
+upgrade. An EL8 Python environment can survive the operating-system upgrade;
+the current RPM checks and migrates it to the target runtime. A Python 3.9
+`ssl.VERIFY_X509_PARTIAL_CHAIN` error during Accept indicates an old web runtime.
+See [RPM installation and upgrades](RPM.md) for the automatic migration and
+rollback behavior. Existing scoped IPsec includes such as
+`include /etc/ipsec.d/mykos-*.secrets` are supported when they cover peer files.

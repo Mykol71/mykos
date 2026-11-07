@@ -82,6 +82,25 @@ sudo python3.11 /usr/share/mykos/bin/mykos-install verify
 rpm -q mykos
 ```
 
+The RPM transaction checks an existing dashboard's Python environment before
+firstboot handling. After a RHEL 8 to RHEL 9 Leapp upgrade, an inherited Python
+3.9 environment is rebuilt with EL9's Python 3.11 and the packaged pinned
+requirements. EL10 uses its distribution Python. The check also requires the
+TLS partial-chain support used for pinned peer certificates and password hashing
+support. A compatible environment is left running unchanged.
+
+Only the web runtime is migrated. Existing origins, certificates, firewall rules,
+accounts, private notes, peer configuration, guests and service enablement remain
+unchanged. A running web service is briefly stopped for a required migration;
+a stopped service stays stopped. A failed dependency install or web startup
+restores the previous runtime and reports an RPM scriptlet error. Migration
+requires access to the configured Python package source. Fresh installations
+continue through the normal firstboot setup.
+
+Peer VPN checks accept active IPsec include patterns covering their exact
+connection/secrets files, including an existing `mykos-*.secrets` include. They
+do not broaden operator VPN include scopes.
+
 `mykos-setup` uses the installed interpreter, pinned Python dependencies and
 existing settings. Rerun it after an upgrade to snapshot/configure deployed files
 and restart the MYKOS services. It does not select a VPN gateway or create images.
