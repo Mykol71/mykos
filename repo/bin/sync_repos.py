@@ -143,9 +143,8 @@ def preserve_previous(live, staged):
             new = staged / rel
             if new.exists() or new.is_symlink():
                 relative_file(staged, str(rel))
-                # Unchanged COW clones have matching size/mtime. Compare changed paths.
-                a, b = old.stat(), new.stat()
-                if (a.st_size, a.st_mtime_ns) != (b.st_size, b.st_mtime_ns) and digest(old, 'sha256') != digest(new, 'sha256'):
+                # File attributes are not content identity, even for a COW clone.
+                if digest(old, 'sha256') != digest(new, 'sha256'):
                     raise ValueError('Refusing to replace an existing immutable URL: ' + str(rel))
             else:
                 new.parent.mkdir(parents=True, exist_ok=True)

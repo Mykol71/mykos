@@ -100,10 +100,11 @@ def test_windows_timeout_kills_only_its_guest_process(monkeypatch):
     class Agent:
         def __init__(self,value):pass
         def call(self,cmd,args=None):
-            calls.append((cmd,args));return {'pid':42} if cmd=='guest-exec' else {'exited':False}
+            calls.append((cmd,args));return {'pid':42} if cmd=='guest-exec' else {'exited':any(a and a.get('path','').endswith('taskkill.exe') for _,a in calls)}
         def close(self):pass
     monkeypatch.setattr(q,'GuestAgent',Agent)
     result=q.powershell({},'Get-Date',-1)
     assert result['timed_out']
-    assert calls[-1][1]['path'].endswith('taskkill.exe')
-    assert calls[-1][1]['arg']==['/PID','42','/T','/F']
+    kill=next(args for _,args in calls if args and args.get('path','').endswith('taskkill.exe'))
+    assert kill['arg']==['/PID','42','/T','/F']
+    assert calls[-1]==('guest-exec-status',{'pid':42})

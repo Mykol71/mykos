@@ -422,3 +422,24 @@ or support demonstrations without interrupting the active customer environment.
 Network-dependent checks and native process/RAM recovery belong in a deliberate
 restore workflow, not this inspection session. The original **Restore** action
 remains separate and still asks before replacing a container's current state.
+
+
+## Interrupted snapshot restores and deletion retries
+
+New restore operations write a private durable recovery journal before stopping
+or replacing the original instance. Cooperative worker interruption unwinds the
+restore; a hard worker exit or reboot is reconciled under the next lifecycle
+lock before another lifecycle mutation is admitted. Recovery checks the original
+container identity and exclusive native storage ownership. If those checks or
+recovery fail, the operation stops and reports the retained recovery directory;
+do not delete it or start the instance manually against partially restored disks.
+A verified committed restore only retries removal of its obsolete recovery copy.
+Older recovery directories without a journal are retained for operator review.
+
+If snapshot deletion fails partway through, its private tombstone keeps the saved
+state visible as **deletion pending; retry Delete**. Restore and preview are
+unavailable for that entry. Retry Delete to finish filesystem and image-tag
+cleanup; this does not stop or remove the live instance. A tombstone is removed
+only when both cleanup steps succeed. Older hidden deletion directories from
+before this release may need operator inspection; never remove unrelated images
+or storage to resolve them.

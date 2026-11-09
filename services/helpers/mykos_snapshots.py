@@ -28,7 +28,7 @@ def allocated_bytes(folder):
 
 
 def public_metadata(value):
-    return {key:value[key] for key in ('format','id','code','name','os','created_at','capture_mode','image','path','source_running','size_bytes') if key in value}
+    return {key:value[key] for key in ('format','id','code','name','os','created_at','capture_mode','image','path','source_running','size_bytes','deletion_pending') if key in value}
 
 
 def root():
@@ -50,7 +50,15 @@ def list_snapshots(shop=None):
     if not folder.exists(): return []
     vm.safe_dir(folder)
     result=[]
+    deleting={}
+    for marker in folder.glob('.deleting-*.json'):
+        identifier=marker.name[len('.deleting-'):-len('.json')]
+        snapshot_id(identifier)
+        _,metadata=read_snapshot(shop,identifier,allow_deleting=True)
+        deleting[identifier]=metadata
+        result.append(public_metadata(dict(metadata,deletion_pending=True)))
     for entry in sorted(folder.iterdir(), reverse=True):
+        if entry.name in deleting:continue
         if not re.fullmatch(r'[0-9]{10,}-[0-9a-f]{12}',entry.name) or entry.is_symlink() or not entry.is_dir(): continue
         path=entry/'metadata.json'
         if path.is_symlink() or not path.is_file(): continue
@@ -357,9 +365,16 @@ def snapshot_id(value):
     return value
 
 
-def read_snapshot(shop, identifier):
+def read_snapshot(shop, identifier, *, allow_deleting=False):
     shopcode(shop);snapshot_id(identifier)
     folder=root()/shop/identifier
+    marker=folder.parent/('.deleting-'+identifier+'.json')
+    if marker.exists() or marker.is_symlink():
+        if marker.is_symlink() or marker.stat().st_uid!=os.geteuid() or marker.stat().st_mode & 0o077:raise ValueError('Unsafe snapshot deletion marker')
+        value=json.loads(marker.read_text())
+        if value.get('format')!=1 or value.get('code')!=shop or value.get('id')!=identifier:raise ValueError('Snapshot identity mismatch')
+        if not allow_deleting:raise ValueError('Snapshot deletion pending; retry Delete')
+        return folder.parent/('.deleting-'+identifier),value
     if not folder.is_dir():raise ValueError('Snapshot not found')
     vm.safe_dir(folder)
     path=folder/'metadata.json'
@@ -390,6 +405,9 @@ def restore_vm(shop,identifier):
         backup_name='mykos-restore-'+os.urandom(8).hex()
         running=bool(state.get('State',{}).get('Running'))
         renamed=False;swapped=False;launched=False
+        recovery={'kind':'vm','shop':shop,'current':current,'original_id':state.get('Id'),
+                  'backup_name':backup_name,'running':running,'phase':'prepared'}
+        recovery_record(transaction,recovery)
         try:
             print('Restore: preparing saved disks',flush=True)
             vm.tree_copy(folder/'storage',replacement)
@@ -400,17 +418,19 @@ def restore_vm(shop,identifier):
                 print('Restore: pausing and flushing current VM',flush=True)
                 vm.stop_for_restore(current,parent/'storage')
             if vm.inspect(current['name']).get('State',{}).get('Running'):raise RuntimeError('Original container did not stop')
+            durable_tree(replacement)
             vm.run([vm.PODMAN,'rename',current['name'],backup_name]);renamed=True
-            os.replace(parent/'storage',previous)
+            os.replace(parent/'storage',previous);fsync_directory(parent);fsync_directory(transaction)
             try:os.replace(replacement,parent/'storage')
-            except Exception:
+            except BaseException:
                 os.replace(previous,parent/'storage');raise
+            fsync_directory(parent);fsync_directory(transaction)
             swapped=True;launched=True
             print('Restore: loading saved RAM and device state',flush=True)
             vm.launch(shop,value);vm.wait_for_restore(value,parent/'storage')
             print('Restore: saved VM state resumed',flush=True)
             value.update(ready=True,last_start='snapshot-restore',restored_snapshot=identifier);vm.save(shop,value)
-        except Exception as original:
+        except BaseException as original:
             try:
                 if launched:
                     try:failed=vm.inspect(current['name'])
@@ -423,12 +443,13 @@ def restore_vm(shop,identifier):
                 vm.save(shop,current)
                 if renamed:vm.run([vm.PODMAN,'rename',backup_name,current['name']])
                 if running:vm.run([vm.PODMAN,'start',current['name']],timeout=120)
-            except Exception as recovery:
+            except BaseException as recovery:
                 raise RuntimeError('Restore failed; recovery files retained at '+str(transaction)+': '+str(recovery)) from original
-            shutil.rmtree(transaction);raise
+            finish_transaction(transaction);raise
+        recovery['phase']='committed';recovery_record(transaction,recovery)
         try:
             vm.run([vm.PODMAN,'rm',backup_name],timeout=30)
-            vm.prune_checkpoints(shop);shutil.rmtree(transaction)
+            vm.prune_checkpoints(shop);finish_transaction(transaction)
         except (RuntimeError,OSError) as error:
             return {'shop':shop,'state':'restored','snapshot':identifier,'warning':'Verified restore; recovery cleanup deferred: '+str(error)}
         return {'shop':shop,'state':'restored','snapshot':identifier}
@@ -491,8 +512,10 @@ def restore_native(shop,identifier):
                 script.write_text('#!'+sys.executable+'\nimport os,sys\nos.environ.update('+repr(settings)+')\nsys.path.insert(0,'+repr(str(Path(__file__).parent))+')\nfrom mykos_criu import main\nmain()\n');script.chmod(0o700)
                 environment=dict(os.environ,PATH=str(launcher)+os.pathsep+os.environ.get('PATH',''))
         except Exception:
-            shutil.rmtree(transaction);raise
+            finish_transaction(transaction);raise
         running=bool(state.get('State',{}).get('Running'));changed=False;backed=[]
+        recovery={'kind':'native','shop':shop,'name':name,'original_id':state['Id'],'running':running,'changed':False,'backed':[],'phase':'prepared'}
+        recovery_record(transaction,recovery)
         def sync(source,dest):
             if source.is_dir():vm.run(['/usr/bin/rsync','-aHAX','--numeric-ids','--delete',str(source)+'/',str(dest)+'/'],timeout=900)
             else:vm.run(['/usr/bin/cp','--preserve=all','--reflink=auto',str(source),str(dest)],timeout=900)
@@ -508,7 +531,11 @@ def restore_native(shop,identifier):
                 if source.is_symlink() or not source.exists() or source.is_dir()!=dest.is_dir():raise ValueError('Snapshot filesystem is missing')
                 backup=transaction/('data-'+str(index))
                 vm.run(['/usr/bin/cp','-a','--reflink=auto','--sparse=auto',str(dest),str(backup)],timeout=900)
+                durable_tree(backup)
                 backed.append((backup,dest))
+                recovery['backed'].append({'backup':backup.name,'destination':str(dest)})
+                recovery_record(transaction,recovery)
+            recovery['changed']=True;recovery_record(transaction,recovery)
             changed=True
             for source,dest in targets:sync(source,dest)
             for entry in unpacked.iterdir():
@@ -520,16 +547,19 @@ def restore_native(shop,identifier):
                 else:shutil.copy2(entry,dest)
             vm.run([vm.PODMAN,'container','restore','--tcp-established','--file-locks',name],timeout=900,env=environment)
             if not mykos_linux.inspect(shop)[1].get('State',{}).get('Running'):raise RuntimeError('CRIU did not resume the container')
-        except Exception as original_error:
+            for _,dest in targets:durable_tree(dest)
+        except BaseException as original_error:
             try:
                 if changed:
                     if mykos_linux.inspect(shop)[1].get('State',{}).get('Running'):vm.run([vm.PODMAN,'stop','--time','120',name],timeout=150)
                     vm.run([vm.PODMAN,'unmount',name],timeout=30)
-                    for backup,dest in reversed(backed):sync(backup,dest)
+                    for backup,dest in reversed(backed):
+                        sync(backup,dest);durable_tree(dest)
                 if running:vm.run([vm.PODMAN,'start',name],timeout=120)
-            except Exception as recovery:raise RuntimeError('Restore failed; recovery retained at '+str(transaction)+': '+str(recovery)) from original_error
-            shutil.rmtree(transaction);raise
-        shutil.rmtree(transaction)
+            except BaseException as recovery:raise RuntimeError('Restore failed; recovery retained at '+str(transaction)+': '+str(recovery)) from original_error
+            finish_transaction(transaction);raise
+        recovery['phase']='committed';recovery_record(transaction,recovery)
+        finish_transaction(transaction)
         return {'shop':shop,'state':'restored','snapshot':identifier}
 
 
@@ -566,18 +596,173 @@ def remove_native_hook():
 
 
 def delete_snapshot(shop,identifier):
-    """Delete one explicit saved state; never stop or remove its live container."""
+    """Delete saved state with a durable, visible and retryable tombstone."""
     with vm.locked():
-        folder,metadata=read_snapshot(shop,identifier)
+        folder,metadata=read_snapshot(shop,identifier,allow_deleting=True)
         reference='localhost/mykos-snapshots/'+shop+':'+identifier
         if metadata.get('image_ref')!=reference:raise ValueError('Snapshot image reference mismatch')
-        pending=folder.parent/('.deleting-'+identifier+'-'+os.urandom(6).hex())
-        os.replace(folder,pending)
-        try:shutil.rmtree(pending)
-        except OSError as error:
-            raise RuntimeError('Snapshot deletion incomplete; remaining files retained at '+str(pending)+': '+str(error)) from error
-        result={'shop':shop,'state':'deleted','snapshot':identifier}
-        # Drop only this snapshot tag. Other snapshots, images and containers retain their own references.
-        try:vm.run([vm.PODMAN,'untag',metadata['image'],reference],timeout=30)
-        except RuntimeError as error:result['warning']='Snapshot deleted; image tag cleanup deferred: '+str(error)
-        return result
+        marker=folder.parent/('.deleting-'+identifier+'.json')
+        pending=folder.parent/('.deleting-'+identifier)
+        if not marker.exists():durable_json(marker,metadata)
+        original=folder.parent/identifier
+        if original.exists():
+            if pending.exists():raise ValueError('Ambiguous snapshot deletion; manual inspection required')
+            os.replace(original,pending);fsync_directory(folder.parent)
+        try:
+            if pending.exists():
+                vm.safe_dir(pending);shutil.rmtree(pending)
+            # A retry may reach this point after the data or tag was removed.
+            try:vm.run([vm.PODMAN,'untag',metadata['image'],reference],timeout=30)
+            except RuntimeError:
+                tags=vm.run([vm.PODMAN,'images','--format','{{.Repository}}:{{.Tag}}'],timeout=30).splitlines()
+                if reference in tags:raise
+        except (OSError,RuntimeError) as error:
+            raise RuntimeError('Snapshot deletion incomplete; retry Delete for '+identifier+': '+str(error)) from error
+        marker.unlink();fsync_directory(marker.parent)
+        return {'shop':shop,'state':'deleted','snapshot':identifier}
+
+
+def durable_json(path,value):
+    """Publish private recovery state before a destructive operation."""
+    fd,temporary=tempfile.mkstemp(prefix='.journal-',dir=path.parent)
+    try:
+        with os.fdopen(fd,'w') as out:
+            json.dump(value,out);out.flush();os.fsync(out.fileno())
+        os.replace(temporary,path)
+        fsync_directory(path.parent)
+    finally:
+        if os.path.exists(temporary):os.unlink(temporary)
+
+
+def fsync_directory(path):
+    fd=os.open(path,os.O_RDONLY|os.O_DIRECTORY)
+    try:os.fsync(fd)
+    finally:os.close(fd)
+
+
+def durable_tree(path):
+    if path.is_symlink():return
+    if path.is_dir():
+        for entry in path.iterdir():durable_tree(entry)
+        fsync_directory(path)
+    elif path.is_file():
+        with path.open('rb') as handle:os.fsync(handle.fileno())
+
+
+def recovery_record(transaction,value):
+    value=dict(format=1,**value)
+    durable_json(transaction/'recovery.json',value)
+    index=vm.ROOT/'restore-recovery';vm.safe_dir(index)
+    durable_json(index/(transaction.name+'.json'),{'journal':str(transaction/'recovery.json'),'recovery':value})
+
+
+def finish_transaction(transaction):
+    index=vm.ROOT/'restore-recovery'/(transaction.name+'.json')
+    if index.exists():
+        value=json.loads(index.read_text());value['cleanup_only']=True
+        durable_json(index,value)
+    if transaction.exists():shutil.rmtree(transaction)
+    if index.exists():index.unlink();fsync_directory(index.parent)
+
+
+def recover_locked():
+    """Reconcile indexed restores under the global lifecycle lock.
+
+    The private index avoids consulting storage configuration on ordinary locks.
+    New transactions publish this index before their first destructive action.
+    Older unjournaled recovery directories remain available for manual review.
+    """
+    index=vm.ROOT/'restore-recovery'
+    if not index.exists():return
+    vm.safe_dir(index)
+    for entry in sorted(index.glob('*.json')):
+        if entry.is_symlink() or entry.stat().st_uid!=os.geteuid() or entry.stat().st_mode & 0o077:
+            raise ValueError('Unsafe restore recovery index')
+        record=json.loads(entry.read_text());journal=Path(record['journal']);transaction=journal.parent;data=record['recovery']
+        shopcode(data['shop'])
+        if journal.name!='recovery.json' or entry.name!=transaction.name+'.json' or data.get('format')!=1:
+            raise ValueError('Invalid restore recovery index')
+        expected=vm.storage(data['shop']) if data['kind']=='vm' else root()
+        prefix='.restore-' if data['kind']=='vm' else '.native-restore-'
+        if transaction.parent!=expected or not transaction.name.startswith(prefix):raise ValueError('Recovery path mismatch')
+        if transaction.exists():vm.safe_dir(transaction)
+        try:
+            if record.get('cleanup_only'):
+                finish_transaction(transaction)
+            elif data['kind']=='vm':recover_vm(transaction,data)
+            elif data['kind']=='native':recover_native(transaction,data)
+            else:raise ValueError('Unknown restore recovery kind')
+        except BaseException as error:
+            raise RuntimeError('Unfinished snapshot restore; recovery retained at '+str(transaction)+': '+str(error)) from error
+
+
+def maybe_inspect(name):
+    try:return vm.inspect(name)
+    except RuntimeError:return None
+
+
+def recover_vm(transaction,data):
+    shop=data['shop'];parent=vm.storage(shop);current=data['current'];name=current['name']
+    if transaction.parent!=parent or not re.fullmatch(r'mykos-restore-[0-9a-f]{16}',data['backup_name']):raise ValueError('Recovery path mismatch')
+    backup=maybe_inspect(data['backup_name']);active=maybe_inspect(name)
+    if backup and backup.get('Id')!=data['original_id']:raise ValueError('Original VM identity changed')
+    if data['phase']=='committed':
+        if backup:
+            if backup.get('State',{}).get('Running'):raise ValueError('Recovery backup unexpectedly running')
+            vm.run([vm.PODMAN,'rm',data['backup_name']],timeout=30)
+        finish_transaction(transaction);return
+    if backup:
+        if active:
+            labels=active.get('Config',{}).get('Labels') or {}
+            if active.get('Id')==data['original_id'] or labels.get('io.mykos.vm.os')!=current['os'] or labels.get('io.mykos.vm.role')!='instance':raise ValueError('Replacement VM identity changed')
+            if active.get('State',{}).get('Running'):vm.run([vm.PODMAN,'kill','--signal','KILL',name],timeout=30)
+            vm.run([vm.PODMAN,'rm',name],timeout=30)
+    elif not active or active.get('Id')!=data['original_id']:
+        raise ValueError('Original VM unavailable; manual recovery required')
+    previous=transaction/'previous'
+    if previous.exists():
+        if not backup and active.get('State',{}).get('Running'):raise ValueError('Refusing disk recovery under a running VM')
+        if (parent/'storage').exists():
+            failed=transaction/'failed-recovery'
+            if failed.exists():shutil.rmtree(failed)
+            os.replace(parent/'storage',failed)
+        os.replace(previous,parent/'storage');fsync_directory(parent);fsync_directory(transaction)
+    vm.save(shop,current)
+    if backup:vm.run([vm.PODMAN,'rename',data['backup_name'],name])
+    if data['running'] and not (maybe_inspect(name) or {}).get('State',{}).get('Running'):
+        vm.run([vm.PODMAN,'start',name],timeout=120)
+    finish_transaction(transaction)
+
+
+def sync_recovery(source,dest):
+    if source.is_dir():vm.run(['/usr/bin/rsync','-aHAX','--numeric-ids','--delete',str(source)+'/',str(dest)+'/'],timeout=900)
+    else:vm.run(['/usr/bin/cp','--preserve=all','--reflink=auto',str(source),str(dest)],timeout=900)
+
+
+def recover_native(transaction,data):
+    import mykos_linux
+    from mykos_containers import all_containers,unshared
+    if transaction.parent!=root():raise ValueError('Native recovery path mismatch')
+    name,state=mykos_linux.inspect(data['shop']);mykos_linux.require_persistent(state)
+    if state['Id']!=data['original_id'] or name!=data['name']:raise ValueError('Native recovery identity changed')
+    if data['phase']=='committed':finish_transaction(transaction);return
+    allowed={str(Path(state['GraphDriver']['Data']['UpperDir']))}
+    allowed.update(m['source'] for m in native_data_mounts(state) if m['rw'])
+    backed=[]
+    for entry in data['backed']:
+        dest=Path(entry['destination']);backup=transaction/entry['backup']
+        if str(dest) not in allowed or backup.parent!=transaction or not re.fullmatch(r'data-[0-9]+',entry['backup']) or backup.is_symlink() or not backup.exists() or dest.is_symlink():raise ValueError('Native recovery data changed')
+        backed.append((backup,dest))
+    unshared([dest for _,dest in backed],all_containers(),state['Id'])
+    if data['changed']:
+        if state.get('State',{}).get('Running'):vm.run([vm.PODMAN,'stop','--time','120',name],timeout=150)
+        if mykos_linux.inspect(data['shop'])[1].get('State',{}).get('Running'):raise ValueError('Native recovery container did not stop')
+        vm.run([vm.PODMAN,'unmount',name],timeout=30)
+        merged=state['GraphDriver']['Data'].get('MergedDir')
+        if merged and os.path.ismount(merged):raise ValueError('Native recovery layer remains mounted')
+        for backup,dest in reversed(backed):
+            sync_recovery(backup,dest);durable_tree(dest)
+    if data['running'] and not mykos_linux.inspect(data['shop'])[1].get('State',{}).get('Running'):
+        vm.run([vm.PODMAN,'start',name],timeout=120)
+    finish_transaction(transaction)
+

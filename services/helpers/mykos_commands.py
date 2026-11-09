@@ -20,6 +20,7 @@ ROOT = Path('/var/lib/mykos/commands')
 LIMIT = 64 * 1024
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z')
 ACTIVE = ('starting', 'running')
+BUSY = ACTIVE + ('unknown',)
 
 class QueueError(ValueError):
     def __init__(self, message, status=400):
@@ -137,10 +138,12 @@ def collect():
         values=[read(p.stem) for p in sorted(ROOT.glob('*.json'))]
         for value in values:
             if value['state'] in ACTIVE and not service_active(value['id']) and time.time()-value['updated_at']>90:
-                value.update(state='interrupted',updated_at=time.time(),error='Worker stopped; command will not be retried automatically')
+                value.update(state='unknown' if value.get('guest_launch_pending') else 'interrupted',updated_at=time.time(),error='Worker stopped; command will not be retried automatically')
                 save(value)
-        slots=max(0,4-sum(v['state'] in ACTIVE for v in values))
-        busy={v['target'] for v in values if v['state'] in ACTIVE}
+        for value in values:
+            if value['state']=='unknown' and value.get('guest_pid') and not service_active(value['id']):reconcile_guest(value)
+        slots=max(0,4-sum(v['state'] in BUSY for v in values))
+        busy={v['target'] for v in values if v['state'] in BUSY}
         for value in sorted(values,key=lambda v:v['due_at']):
             if slots==0: break
             if value['state']!='pending' or value['due_at']>time.time() or value['target'] in busy: continue
@@ -197,6 +200,7 @@ class GuestAgent:
         if (not state.get('State',{}).get('Running') or not isinstance(pid,int) or pid<=0
             or labels.get('io.mykos.vm.os')!=value['os'] or labels.get('io.mykos.vm.role')!=role):
             raise QueueError('Windows guest must be a running managed instance')
+        self.identity=state.get('Id')
         self.socket=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM);self.socket.settimeout(timeout);self.buffer=b''
         try:
             self.socket.connect('/proc/%d/root/dev/shm/mykos-qga.sock'%pid)
@@ -231,13 +235,15 @@ class GuestAgent:
     def close(self): self.socket.close()
 
 
-def powershell(value,script,timeout,*,allow_image_builder=False,allow_prepared_image=False):
+def powershell(value,script,timeout,*,allow_image_builder=False,allow_prepared_image=False,track=None):
     agent=GuestAgent(value,allow_prepared_image=True) if allow_prepared_image else GuestAgent(value,allow_image_builder=True) if allow_image_builder else GuestAgent(value)
     try:
         encoded=base64.b64encode(script.encode('utf-16le')).decode()
+        if track:track(guest_launch_pending=True,guest_identity=getattr(agent,'identity',None))
         pid=agent.call('guest-exec',{'path':r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe',
                                   'arg':['-NoLogo','-NoProfile','-NonInteractive','-EncodedCommand',encoded],
                                   'capture-output':True})['pid']
+        if track:track(guest_pid=pid)
         deadline=time.monotonic()+timeout
         while True:
             status=agent.call('guest-exec-status',{'pid':pid})
@@ -246,8 +252,16 @@ def powershell(value,script,timeout,*,allow_image_builder=False,allow_prepared_i
                 return dict(exit_code=status.get('exitcode',-1),output=out[:LIMIT].decode('utf-8','replace'),
                             truncated=len(out)>LIMIT or status.get('out-truncated',False) or status.get('err-truncated',False),timed_out=False)
             if time.monotonic()>=deadline:
+                if track:track(guest_timeout_requested=True)
                 agent.call('guest-exec',{'path':r'C:\Windows\System32\taskkill.exe','arg':['/PID',str(pid),'/T','/F']})
-                return dict(exit_code=None,output='',truncated=False,timed_out=True)
+                # Starting taskkill is asynchronous. Release the target only once
+                # QGA confirms the original PowerShell process has exited.
+                kill_deadline=time.monotonic()+10
+                while time.monotonic()<kill_deadline:
+                    if agent.call('guest-exec-status',{'pid':pid}).get('exited'):
+                        return dict(exit_code=None,output='',truncated=False,timed_out=True)
+                    time.sleep(.25)
+                raise QueueError('Guest command termination unconfirmed; target remains blocked')
             time.sleep(.25)
     finally: agent.close()
 
@@ -261,7 +275,11 @@ def execute(value):
     if record_path(code).exists():
         vm=vm_read(code)
         if VERSIONS[vm['os']][0]!='windows': raise QueueError('Scheduled commands for macOS/Ubuntu VMs are not supported yet')
-        return 'powershell',powershell(vm,value['command'],value['timeout_seconds'])
+        def track(**fields):
+            value.update(fields,guest_vm=vm,updated_at=time.time())
+            if 'id' in value:
+                with locked():save(value)
+        return 'powershell',powershell(vm,value['command'],value['timeout_seconds'],track=track)
     result=shell([PODMAN,'exec','--user','0',target(code),'/usr/bin/timeout','--signal=TERM','--kill-after=5s',str(value['timeout_seconds']),'/bin/bash','--noprofile','--norc','-c',value['command']],value['timeout_seconds']+10)
     if result['exit_code'] in (124,137): result['timed_out']=True
     return 'shell',result
@@ -276,8 +294,35 @@ def work(key):
         interpreter,result=execute(value)
         value.update(result,interpreter=interpreter,state='timed_out' if result['timed_out'] else ('succeeded' if result['exit_code']==0 else 'failed'))
     except Exception as exc:
-        value.update(state='failed',error=str(exc)[:2000])
+        value.update(state='unknown' if value.get('guest_launch_pending') else 'failed',error=str(exc)[:2000])
     from mykos_refresh import best_effort
     best_effort(value['target'],value)
     with locked():
         value.update(finished_at=time.time(),updated_at=time.time());save(value)
+
+
+def reconcile_guest(value):
+    """Observe an uncertain Windows job; never rerun or kill an uncertain PID.
+
+    Missing launch acknowledgement stays blocked for explicit operator recovery.
+    Only a confirmed exit releases the target after a transport interruption.
+    """
+    agent=None
+    try:
+        agent=GuestAgent(value['guest_vm'])
+        if not value.get('guest_identity') or getattr(agent,'identity',None)!=value['guest_identity']:
+            return
+        status=agent.call('guest-exec-status',{'pid':value['guest_pid']})
+        if not status.get('exited'):return
+        output=b'\n'.join(base64.b64decode(status.get(k,'')) for k in ('out-data','err-data'))
+        timed_out=bool(value.get('guest_timeout_requested'))
+        value.update(state='timed_out' if timed_out else ('succeeded' if status.get('exitcode',-1)==0 else 'failed'),
+                     exit_code=status.get('exitcode',-1),output=output[:LIMIT].decode('utf-8','replace'),
+                     truncated=len(output)>LIMIT or status.get('out-truncated',False) or status.get('err-truncated',False),
+                     timed_out=timed_out,interpreter='powershell',finished_at=time.time(),updated_at=time.time(),
+                     reconciled=True)
+        value.pop('error',None);save(value)
+    except (QueueError,OSError,ValueError,KeyError):
+        pass  # Preserve unknown state and the per-target block for the next poll.
+    finally:
+        if agent:agent.close()

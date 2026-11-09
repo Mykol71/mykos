@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        275%{?dist}
+Release:        276%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -125,6 +125,11 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Mon Nov 09 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-276
+- Recover interrupted snapshot restores and retain retryable snapshot deletions.
+- Preserve terminal pastes, uncertain Windows command ownership and immutable repository bytes.
+- Package legacy bundles from the exact hashed bytes; include daily totals report ordering.
+
 * Sun Nov 08 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-275
 - Portable repository URLs and safe repository-only management.
 

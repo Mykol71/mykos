@@ -460,8 +460,10 @@ async def mykos_terminal_bridge(ws: WebSocket, shop: str, action: str = 'shell',
                     value=cols.to_bytes(2,'big')+rows.to_bytes(2,'big')
                     writer.write(b'R'+len(value).to_bytes(4,'big')+value)
                 else:
-                    value=chunk[:4096]
-                    writer.write((b'I'+len(value).to_bytes(4,'big') if framed else b'')+value)
+                    for offset in range(0,len(chunk),4096):
+                        value=chunk[offset:offset+4096]
+                        writer.write((b'I'+len(value).to_bytes(4,'big') if framed else b'')+value)
+                        await writer.drain()
                 await writer.drain()
 
     async def to_browser():

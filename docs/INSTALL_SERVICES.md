@@ -497,3 +497,11 @@ are exposed by the API. A root-managed test may additionally set
 ## Browser login visibility
 
 Run `sudo mykos-who` on the host to list unexpired browser logins and their latest expiry. Add `--json` for structured output. Names, counts and expiration times are read without exposing credentials or session tokens. An unexpired login does not prove that the dashboard is currently open. API keys, SSH users and guest logins are outside this command.
+
+
+Legacy `install-services package --with-data` stages each selected file once in a
+private temporary directory and hashes those exact bytes before archiving. The
+staging directory is removed on success or failure. This prevents a changing
+source file from invalidating its newly created bundle; it is not a database-wide
+transaction. Use the current installer snapshot workflow for SQLite online backup
+and coherent database capture.

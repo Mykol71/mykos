@@ -2398,7 +2398,7 @@ function mykosRenderSnapshots() {
         for (const item of snapshots) {
             const option = document.createElement('option');
             option.value = item.id;
-            option.textContent = new Date(item.created_at * 1000).toLocaleString();
+            option.textContent = new Date(item.created_at * 1000).toLocaleString() + (item.deletion_pending ? ' (deletion pending; retry Delete)' : '');
             select.append(option);
         }
         if (sample) {
@@ -2422,8 +2422,8 @@ function mykosRenderSnapshots() {
         button.title = sample ? 'Sample restore unavailable' : 'Restore selected snapshot';
         button.setAttribute('aria-label', button.title);
         button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7"/></svg>';
-        button.disabled = sample || !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code);
-        select.onchange = () => { mykosSnapshotSelection.set(code, select.value); updateTaken(); button.disabled = !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code); deleteButton.disabled = button.disabled; };
+        button.disabled = sample || !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code) || !!snapshots.find(item => item.id === select.value)?.deletion_pending;
+        select.onchange = () => { mykosSnapshotSelection.set(code, select.value); updateTaken(); deleteButton.disabled = !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code); button.disabled = deleteButton.disabled || !!snapshots.find(item => item.id === select.value)?.deletion_pending; };
         button.onclick = async () => {
             const identifier = select.value;
             if (button.disabled || !snapshots.some(item => item.id === identifier)) return;
@@ -2438,7 +2438,7 @@ function mykosRenderSnapshots() {
         deleteButton.type = 'button'; deleteButton.className = 'mykos-icon'; deleteButton.style.color = '#ef4444';
         deleteButton.title = sample ? 'Sample delete unavailable' : 'Delete selected snapshot';
         deleteButton.setAttribute('aria-label', deleteButton.title);
-        deleteButton.disabled = button.disabled;
+        deleteButton.disabled = sample || !mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code);
         deleteButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>';
         deleteButton.onclick = async () => {
             const identifier = select.value;
@@ -2470,7 +2470,7 @@ function mykosRenderSnapshots() {
                 if(url.origin!==window.location.origin || !/^\/mykos\/api\/web\/snapshot-preview\/[0-9a-f]{32}\/page$/.test(url.pathname))throw Error('Invalid preview link');
                 popup.opener=null;popup.location.replace(window.mykosNodeURL ? window.mykosNodeURL(url.href) : url.href);
             } catch(error){popup.close();alert('Preview failed: '+error.message);}
-            finally{preview.disabled=!mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code);}
+            finally{preview.disabled=!mykosTerminalAllowed || !select.value || mykosBusyContainers.has(code) || !!snapshots.find(item => item.id === select.value)?.deletion_pending;}
         };
         choiceCell.append(select); actions.append(button, deleteButton, preview); tbody.append(row);
     }

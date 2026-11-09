@@ -412,8 +412,14 @@ is 1–3600 seconds. Output retains up to 64 KiB and reports truncation. Results
 and scripts are stored root-only under <code>/var/lib/mykos/commands</code>, retained across
 updates. Treat admin keys as root-equivalent credentials.</p>
 <p>States are <code>pending</code>, <code>starting</code>, <code>running</code>, <code>succeeded</code>, <code>failed</code>, <code>timed_out</code>,
-<code>cancelled</code>, and <code>interrupted</code>. Dispatch is at most once: a worker lost during a
-reboot or service failure is marked interrupted and is not automatically retried.
+<code>cancelled</code>, <code>interrupted</code>, and <code>unknown</code>. Dispatch is at most once: a worker lost during a
+reboot or service failure is not automatically retried. A Windows command whose
+launch or exit cannot be confirmed stays <code>unknown</code> and blocks further commands
+to that target. The collector checks a recorded guest PID and releases the target
+only after a confirmed exit in the same managed container. A lost launch reply
+without a PID requires root-operator recovery after verifying the command has
+stopped inside the guest; do not remove queue records or unblock the target while
+it might still be running. A timeout is complete only after guest exit is confirmed.
 It may have executed some or all of the script; inspect the result before choosing
 a new ID. Timeouts kill the host process group or invoke guest timeout/taskkill;
 a disconnected Windows agent can prevent confirmation of termination. Detached

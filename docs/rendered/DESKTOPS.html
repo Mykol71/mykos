@@ -356,5 +356,22 @@ or support demonstrations without interrupting the active customer environment.
 Network-dependent checks and native process/RAM recovery belong in a deliberate
 restore workflow, not this inspection session. The original <strong>Restore</strong> action
 remains separate and still asks before replacing a container&#39;s current state.</p>
+<h2 id="interrupted-snapshot-restores-and-deletion-retries">Interrupted snapshot restores and deletion retries</h2>
+<p>New restore operations write a private durable recovery journal before stopping
+or replacing the original instance. Cooperative worker interruption unwinds the
+restore; a hard worker exit or reboot is reconciled under the next lifecycle
+lock before another lifecycle mutation is admitted. Recovery checks the original
+container identity and exclusive native storage ownership. If those checks or
+recovery fail, the operation stops and reports the retained recovery directory;
+do not delete it or start the instance manually against partially restored disks.
+A verified committed restore only retries removal of its obsolete recovery copy.
+Older recovery directories without a journal are retained for operator review.</p>
+<p>If snapshot deletion fails partway through, its private tombstone keeps the saved
+state visible as <strong>deletion pending; retry Delete</strong>. Restore and preview are
+unavailable for that entry. Retry Delete to finish filesystem and image-tag
+cleanup; this does not stop or remove the live instance. A tombstone is removed
+only when both cleanup steps succeed. Older hidden deletion directories from
+before this release may need operator inspection; never remove unrelated images
+or storage to resolve them.</p>
 <footer><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
 <span>MYKOS documentation · <a href="mailto:mgreen@myk.sh">mgreen@myk.sh</a></span></footer></main></html>

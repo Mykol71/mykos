@@ -403,8 +403,14 @@ and scripts are stored root-only under `/var/lib/mykos/commands`, retained acros
 updates. Treat admin keys as root-equivalent credentials.
 
 States are `pending`, `starting`, `running`, `succeeded`, `failed`, `timed_out`,
-`cancelled`, and `interrupted`. Dispatch is at most once: a worker lost during a
-reboot or service failure is marked interrupted and is not automatically retried.
+`cancelled`, `interrupted`, and `unknown`. Dispatch is at most once: a worker lost during a
+reboot or service failure is not automatically retried. A Windows command whose
+launch or exit cannot be confirmed stays `unknown` and blocks further commands
+to that target. The collector checks a recorded guest PID and releases the target
+only after a confirmed exit in the same managed container. A lost launch reply
+without a PID requires root-operator recovery after verifying the command has
+stopped inside the guest; do not remove queue records or unblock the target while
+it might still be running. A timeout is complete only after guest exit is confirmed.
 It may have executed some or all of the script; inspect the result before choosing
 a new ID. Timeouts kill the host process group or invoke guest timeout/taskkill;
 a disconnected Windows agent can prevent confirmation of termination. Detached

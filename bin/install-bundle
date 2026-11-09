@@ -94,28 +94,33 @@ def package(output, with_data):
     if not (APP / 'app.py').is_file(): fatal('Missing /opt/mykos-web/app.py; not an MYKOS source host')
     files = candidates(with_data)
     if not files: fatal('No MYKOS files found')
-    entries = []
-    for p in files:
-        content = p.read_bytes()
-        st = p.stat()
-        entries.append({'path': str(p), 'sha256': sha(content), 'mode': st.st_mode & 0o7777,
-                        'uid': st.st_uid, 'gid': st.st_gid, 'size': len(content),
-                        'data': is_data(str(p))})
-    enabled = []
-    for e in entries:
-        p = e['path']
-        if p.startswith(str(UNIT_DIR) + '/') and p.endswith(('.timer', '.socket', '.service')):
-            unit = Path(p).name
-            status = run(['systemctl', 'is-enabled', unit], check=False).stdout.strip()
-            if status == 'enabled': enabled.append(unit)
-    meta = {'format': VERSION, 'kind': 'bundle', 'created': datetime.datetime.now().isoformat(),
-            'files': entries, 'enabled_units': enabled}
     output.parent.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(output, 'w:gz') as tar:
-        b = json.dumps(meta, indent=2).encode()
-        add_bytes(tar, 'manifest.json', b, 0o600)
+    with tempfile.TemporaryDirectory(prefix='.mykos-bundle-',dir=output.parent) as directory:
+        entries = []
+        contents = {}
+        for p in files:
+            content = p.read_bytes()
+            staged=Path(directory)/str(len(entries))
+            staged.write_bytes(content)
+            contents[str(p)] = staged
+            st = p.stat()
+            entries.append({'path': str(p), 'sha256': sha(content), 'mode': st.st_mode & 0o7777,
+                            'uid': st.st_uid, 'gid': st.st_gid, 'size': len(content),
+                            'data': is_data(str(p))})
+        enabled = []
         for e in entries:
-            add_bytes(tar, 'files/' + e['path'].lstrip('/'), Path(e['path']).read_bytes(), e['mode'])
+            p = e['path']
+            if p.startswith(str(UNIT_DIR) + '/') and p.endswith(('.timer', '.socket', '.service')):
+                unit = Path(p).name
+                status = run(['systemctl', 'is-enabled', unit], check=False).stdout.strip()
+                if status == 'enabled': enabled.append(unit)
+        meta = {'format': VERSION, 'kind': 'bundle', 'created': datetime.datetime.now().isoformat(),
+                'files': entries, 'enabled_units': enabled}
+        with tarfile.open(output, 'w:gz') as tar:
+            b = json.dumps(meta, indent=2).encode()
+            add_bytes(tar, 'manifest.json', b, 0o600)
+            for e in entries:
+                add_bytes(tar, 'files/' + e['path'].lstrip('/'), contents[e['path']].read_bytes(), e['mode'])
     os.chmod(output, 0o600)
     print('Created %s (%d files; %d enabled units; data=%s)' %
           (output, len(entries), len(enabled), with_data))

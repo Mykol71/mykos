@@ -185,7 +185,7 @@ def _dispatch(args):
     if action in ('restore-snapshot','delete-snapshot'):
         from mykos_snapshots import read_snapshot
         if len(args)!=3:raise ValueError('Expected ID and snapshot')
-        read_snapshot(shopcode(args[1]),args[2])
+        read_snapshot(shopcode(args[1]),args[2],allow_deleting=action=='delete-snapshot')
     if (action == 'stage-start' and len(args) not in (3, 4)) or (action not in ('stage-start','restore-snapshot','delete-snapshot') and len(args) != 2):
         raise ValueError('Wrong argument count')
     shop = shopcode(args[1])
@@ -310,6 +310,11 @@ def dispatch(args):
 
 
 def worker(shop):
+    # Turn cooperative service stops into an unwind through restore rollback.
+    # SIGKILL/reboot is handled by the durable journal on the next lifecycle lock.
+    import signal
+    def interrupted(signum,frame):raise InterruptedError('Lifecycle worker interrupted')
+    for signum in (signal.SIGTERM,signal.SIGINT,signal.SIGHUP):signal.signal(signum,interrupted)
     shopcode(shop)
     value=job(shop)
     value.update(state='running',updated_at=int(time.time()));save_job(shop,value)

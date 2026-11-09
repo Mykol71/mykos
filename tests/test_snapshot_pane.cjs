@@ -67,6 +67,15 @@ console.log('Snapshot pane checks passed: grouping, per-container choices, prese
  await run('mykosCheckTerminalPermission()');
  assert.equal(el('mykos-snapshots-rows').children[0].children[5].children[0].children[0].disabled,true);
  assert.deepEqual(imageRefreshes,[true,true]);
+ run("mykosTerminalAllowed=true;mykosSnapshotData[1].deletion_pending=true;mykosSnapshotSelection.set('12345678',mykosSnapshotData[1].id);mykosRenderSnapshots()");
+ const pendingRow=el('mykos-snapshots-rows').children[0],pendingSelect=pendingRow.children[3].children[0],pendingActions=pendingRow.children[5].children[0].children;
+ assert.match(pendingSelect.children[1].textContent,/deletion pending; retry Delete/);
+ assert.equal(pendingActions[0].disabled,true);assert.equal(pendingActions[1].disabled,false);assert.equal(pendingActions[2].disabled,true);
+ pendingSelect.value='1792900000-abcdef123456';pendingSelect.onchange();
+ assert.equal(pendingActions[0].disabled,false);assert.equal(pendingActions[1].disabled,false);assert.equal(pendingActions[2].disabled,false);
+ pendingSelect.value='1792900001-abcdef123457';pendingSelect.onchange();
+ assert.equal(pendingActions[0].disabled,true);assert.equal(pendingActions[1].disabled,false);assert.equal(pendingActions[2].disabled,true);
+ console.log('Incomplete deletion remains retryable; restore and preview are disabled only for the pending entry.');
  console.log('Snapshot permission arrival enables real actions with preview off; revocation disables them.');
  console.log('Snapshot delete sends the selected ID with DELETE; sample actions remain disabled.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
