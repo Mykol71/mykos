@@ -132,7 +132,11 @@ def repo_path(name):
     if name in {'lost+found', 'GPG', 'updateos', 'ostools', 'support'} or name.startswith('RPM-GPG'):
         raise ValueError('Not a managed repository')
     directory(REPOS)
-    return directory(REPOS/name)
+    path = directory(REPOS/name)
+    metadata = path/'repodata/repomd.xml'
+    if metadata.is_symlink() or not metadata.is_file() or (path/'repodata').is_symlink():
+        raise ValueError('Not an RPM repository: repodata/repomd.xml is required')
+    return path
 
 
 def service_state(unit):
@@ -215,6 +219,12 @@ def remote_repo_status(config):
 def repo_status():
     config=repository_source()
     if config: return remote_repo_status(config)
+    # A fresh installation may not have enabled Apache or created its document root.
+    # Inspection must not create it or scan unrelated website directories.
+    if not REPOS.exists() and not REPOS.is_symlink():
+        return {'repos': [], 'storage': None, 'service': service_state('httpd'),
+                'sync': repo_sync_state(), 'collected_at': int(time.time()),
+                'download_base_url': repository_download_base()}
     usage = sizes(REPOS)
     rows = []
     root = directory(REPOS)
@@ -269,7 +279,7 @@ def dispatch(args):
                     raise ValueError('Cannot delete while repository sync is running')
                 shutil.rmtree(repo_path(target))
         elif action in ('enable', 'disable') and target == 'all':
-            run(['/usr/bin/systemctl', 'start' if action == 'enable' else 'stop', 'httpd'])
+            raise ValueError('Repository serving is configured in Apache; MYKOS never starts or stops the shared web server from the Repos pane')
         elif action == 'sync' and target == 'all':
             if repo_sync_state() in ('active', 'activating', 'reloading'):
                 raise ValueError('Repository sync is already running')

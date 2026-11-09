@@ -60,7 +60,7 @@ def repos(request: Request, refresh: bool = False):
             url=urlsplit(origin)
             if url.scheme not in ('http','https') or not url.hostname or url.username or url.password or url.query or url.fragment:
                 raise HTTPException(503,'Invalid repository origin configuration')
-            data['download_base_url']=urlunsplit((url.scheme,url.netloc,'/repos/','',''))
+            data['download_base_url']=urlunsplit((url.scheme,url.netloc,'/','',''))
     return data
 
 

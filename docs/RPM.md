@@ -264,7 +264,7 @@ Podman runtime scopes or remove guest disks, images, notes or intentional snapsh
 
 ### Repository links from forwarded dashboards
 
-Repository links use the configured download server rather than the browser's incidental host or SSH tunnel port. A root-owned `/etc/mykos/repository-downloads.json` can set `{"base_url":"http://192.0.2.80/"}` to a reachable LAN repository server (replace this documentation address with the actual server). Remote inventory clients retain their configured repository base. Otherwise the dashboard uses the configured MYKOS public origin's `/repos/` alias. Download configuration does not change Apache access controls: only supported MYKOS EL9/EL10 trees are public; updateos and other private repositories still require LAN access.
+Repository links use the configured download server rather than the browser's incidental host or SSH tunnel port. A root-owned `/etc/mykos/repository-downloads.json` can set `{"base_url":"http://192.0.2.80/"}` to a reachable LAN repository server (replace this documentation address with the actual server). Remote inventory clients retain their configured repository base. Otherwise the dashboard uses the configured MYKOS public origin's document root (`/`), matching a fresh bootstrap installation. Existing deployments serving repositories at `/repos/` or another path must set that exact base URL explicitly. Download configuration does not change Apache access controls: only supported MYKOS EL9/EL10 trees are public; updateos and other private repositories still require LAN access.
 
 
 ## Private RPM download statistics
@@ -315,3 +315,12 @@ measures unique users, customers or successful installations, and the sources
 are not deduplicated. The dedicated log and report contain no client IPs,
 query strings, referrers, cookies or user-agent text. Existing access logs and
 public/LAN repository restrictions are unchanged.
+
+
+## Repos on a new installation
+
+The Repos pane manages **this server's** RPM repository directories under `/var/www/html`; installing MYKOS does not copy the myk.sh mirrors, configure a Red Hat subscription, or publish private downloads. An empty pane inventory is normal until repositories are created. Only directories containing a regular `repodata/repomd.xml` are managed; unrelated website folders are neither listed nor deletable. The `updateos` directory, when present, remains a read-only LAN tree.
+
+A fresh `mykos-bootstrap` Apache site serves `/var/www/html` at the configured hostname's root. For a different virtual host or alias, set root-owned `/etc/mykos/repository-downloads.json` (mode 0600) to the reachable base, for example `{"base_url":"https://packages.example.com/repos/"}`. This setting changes links only. Configure Apache aliases, TLS and access rules separately; never expose entitled RHEL content, updateos or private support trees publicly. No myk.sh LAN address is required.
+
+The pane's Sync action runs the installed low-priority RHEL mirror service on the local host. It requires valid local Red Hat entitlements, network access and disk capacity; follow the synchronization prerequisites above. A separately configured remote inventory stays read-only and requires the remote server's explicit URLs. MYKOS does not stop or start shared Apache from the pane: manage serving and access policy through the host's Apache configuration so the dashboard and other sites stay reachable. RPM download statistics remain opt-in and show “not configured” until configured for that installation.

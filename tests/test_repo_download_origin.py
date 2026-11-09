@@ -9,7 +9,7 @@ def test_forwarded_dashboard_uses_trusted_download_origin(monkeypatch,explicit):
     monkeypatch.setattr(api,'listing',lambda *a:listing)
     monkeypatch.setenv('MYKOS_PUBLIC_ORIGIN','https://mykos.example/mykos')
     value=api.repos(object())
-    assert value['download_base_url']==(explicit or 'https://mykos.example/repos/')
+    assert value['download_base_url']==(explicit or 'https://mykos.example/')
     assert listing['download_base_url']==explicit
 
 @pytest.mark.parametrize('origin',['javascript:x','https://user:secret@example/','https://example/?secret=x'])

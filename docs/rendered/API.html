@@ -168,7 +168,7 @@ curl --fail-with-body -sS -H &quot;X-MYKOS-API-Key: $MYKOS_KEY&quot; &quot;$BASE
 </code></pre>
 <p>Business-specific integration is provided by a separately installed local extension.</p>
 <p>Backup account management is supplied by a separately installed private business extension. It is absent from the base platform API.</p>
-<p>Repository POST bodies use <code>action: delete|enable|disable|sync</code> and <code>name</code>.
+<p>Repository POST bodies use <code>action: delete|sync</code> and <code>name</code>. Legacy <code>enable</code>/<code>disable</code> requests are rejected so shared Apache stays available.
 Deletion requires an existing repository name. Other actions use <code>name: &quot;all&quot;</code>
 (the default). Actions use the same helper validation and locks as the dashboard,
 and invalidate the shared listing cache. Enable/disable operates on all of Apache;
@@ -278,15 +278,8 @@ type and version; missing or stale details show <code>OS unknown</code>.</p>
 <p>Repository storage may use a root-controlled symlink, such as
 <code>/var/www/html -&gt; /home/html</code>, when its target and parent directories are trusted.
 Symlinks inside the repository root are excluded from listing and deletion.</p>
-<p>Repo actions: <code>delete</code> requires an existing immediate directory <code>name</code>; <code>enable</code>,
-<code>disable</code>, and <code>sync</code> use <code>name: &quot;all&quot;</code>. Enable/disable starts/stops <strong>all of Apache</strong>,
-matching the CLI menu, and may interrupt this UI and other sites. Sync starts
-<code>mykos-repo-sync.service</code> asynchronously using the toolkit&#39;s existing sync script;
-it installs dependencies and runs privileged mirror containers as that script
-specifies. Sync state is the systemd ActiveState (<code>activating</code> while the oneshot
-runs, <code>inactive</code> after exit, <code>failed</code> after a unit failure). Delete is rejected
-while sync is active. Service output is available via
-<code>journalctl -u mykos-repo-sync.service</code>.</p>
+<p>Repo actions: <code>delete</code> requires an immediate RPM repository directory <code>name</code>;
+<code>sync</code> uses <code>name: &quot;all&quot;</code>. Legacy enable/disable actions are rejected; manage serving through the Apache configuration without stopping the dashboard.</p>
 <p>Lists refresh every minute and are cached for up to 60 seconds. The Refresh button
 passes <code>refresh=true</code> to collect immediately. Disk usage collection is limited to
 20 seconds per pane; unavailable size values display <code>Unknown</code>. No account, key,

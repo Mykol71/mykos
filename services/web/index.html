@@ -4158,7 +4158,7 @@ for (const kind of ['repos', 'snapshots']) mykosSetPaneVisible(kind, false);
 
 function mykosRenderMykos() {
     document.querySelectorAll('[data-repo-action]').forEach(button => {
-        button.hidden = !mykosTerminalAllowed || Boolean(mykosData.repos?.read_only);
+        button.hidden = button.dataset.repoAction !== 'sync' || !mykosTerminalAllowed || Boolean(mykosData.repos?.read_only);
         const repos = mykosData.repos;
         const syncing = ['active', 'activating', 'reloading'].includes(repos?.sync);
         button.disabled = !repos || (button.dataset.repoAction === 'sync' && syncing) ||
@@ -4170,7 +4170,7 @@ function mykosRenderMykos() {
         const tbody = el('mykos-' + kind + '-rows');
         tbody.replaceChildren();
         const items = data?.['repos'] || [];
-        mykosSetPaneVisible(kind, items.length > 0);
+        mykosSetPaneVisible(kind, Boolean(data));
         if (!data) continue;
         const state = kind === 'repos' ? (data.source_host ? ' · Server: ' + data.source_host : '') + ' · Apache: ' + data.service + ' · Sync: ' + data.sync : '';
         el('mykos-' + kind + '-status').textContent = items.length + (items.length === 1 ? ' repository' : ' repositories') +
@@ -4180,7 +4180,7 @@ function mykosRenderMykos() {
 
                 const cell = mykosCell(row, '');
                 const link = document.createElement('a');
-                const url = new URL(encodeURIComponent(item.name) + '/', new URL(data.download_base_url || data.public_base_url || '/repos/', window.location.origin));
+                const url = new URL(encodeURIComponent(item.name) + '/', new URL(data.download_base_url || data.public_base_url || '/', window.location.origin));
                 link.href = url.href; link.textContent = item.name; if (item.access === 'LAN-only') link.title = 'LAN-only repository'; link.target = '_blank'; link.rel = 'noopener';
                 cell.append(link);
                 mykosCell(row, mykosHostBytes(item.used_bytes));
@@ -4196,7 +4196,7 @@ function mykosRenderMykos() {
         if (!items.length) {
             const row = document.createElement('tr');
             row.className = 'mykos-empty-row';
-            const cell = mykosCell(row, 'No repositories found.');
+            const cell = mykosCell(row, 'No RPM repositories found. Repository hosting and RHEL subscriptions are configured on this server; see Docs → RPM repositories.');
             cell.colSpan = 5;
             tbody.append(row);
         }

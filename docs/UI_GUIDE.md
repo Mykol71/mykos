@@ -292,12 +292,12 @@ buttons hidden; its Server label identifies the source.
 
 | Control | What happens |
 | --- | --- |
-| Up arrow — Enable repositories | Confirms, then starts Apache. |
-| Down arrow — Disable repositories | Confirms, then stops Apache. This can also disconnect the dashboard and other Apache sites; recovery may require the host CLI. |
 | Circular arrows — Sync repositories | Confirms and queues the background repository sync workflow. It may install dependencies and use substantial disk/network capacity. Disabled while sync is active. |
 | Row trash can — Delete | Requires typing the repository name, then permanently deletes that repository and its content. |
 
 The `updateos` download tree appears as a read-only entry; it is not an RPM repository and has no Delete action. Its directory remains LAN-only. The repository download landing page shows an updateos link to permitted LAN clients; public visitors see only MYKOS EL9/EL10.
+
+Only directories with `repodata/repomd.xml` can be managed. Shared Apache service controls are unavailable in this pane; configure serving through the host.
 
 The status line reports storage, Apache state, sync state, and collection time.
 Enabling Apache is different from starting a repository sync.

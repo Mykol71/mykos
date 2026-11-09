@@ -51,7 +51,7 @@ def test_repository_symlink_and_delete_during_sync(sandbox, tmp_path, monkeypatc
     outside = tmp_path/'outside'; outside.mkdir()
     (repos/'linked').symlink_to(outside)
     with pytest.raises(ValueError): mykos_admin.repo_path('linked')
-    (repos/'rhel-9-rpms').mkdir()
+    (repos/'rhel-9-rpms/repodata').mkdir(parents=True);(repos/'rhel-9-rpms/repodata/repomd.xml').write_text('<repomd/>')
     monkeypatch.setattr(mykos_admin, 'service_state', lambda _: 'activating')
     with pytest.raises(ValueError):
         mykos_admin.dispatch(['repo-action', 'delete', 'rhel-9-rpms', '{}'])
@@ -61,9 +61,10 @@ def test_repository_symlink_and_delete_during_sync(sandbox, tmp_path, monkeypatc
 def test_repository_actions_are_fixed(sandbox):
     _, _, calls = sandbox
     mykos_admin.dispatch(['repo-action', 'sync', 'all', '{}'])
-    mykos_admin.dispatch(['repo-action', 'disable', 'all', '{}'])
+    with pytest.raises(ValueError,match='shared web server'):
+        mykos_admin.dispatch(['repo-action', 'disable', 'all', '{}'])
     assert ['/usr/bin/systemctl', 'start', '--no-block', 'mykos-repo-sync.service'] in calls
-    assert ['/usr/bin/systemctl', 'stop', 'httpd'] in calls
+    assert not any('httpd' in command for command in calls)
     with pytest.raises(ValueError): mykos_admin.dispatch(['repo-action', 'exec', 'all', '{}'])
 
 
@@ -76,6 +77,8 @@ def test_repository_listing_excludes_support_directories(sandbox, monkeypatch):
     names = ['updateos', 'ostools', 'support', 'rhel-9-rpms']
     for name in names:
         (root/name).mkdir()
+        if name=='rhel-9-rpms':
+            (root/name/'repodata').mkdir();(root/name/'repodata/repomd.xml').write_text('<repomd/>')
     monkeypatch.setattr(mykos_admin, 'sizes', lambda _: {})
     result = mykos_admin.repo_status()
     assert [row['name'] for row in result['repos']] == ['rhel-9-rpms', 'updateos']
@@ -88,7 +91,7 @@ def test_repository_listing_excludes_support_directories(sandbox, monkeypatch):
 def test_repository_storage_alias_lists_and_confines_deletion(sandbox, tmp_path, monkeypatch):
     _, storage, _ = sandbox
     alias = tmp_path/'web-root'; alias.symlink_to(storage, target_is_directory=True)
-    (storage/'rhel-9-rpms').mkdir()
+    (storage/'rhel-9-rpms/repodata').mkdir(parents=True);(storage/'rhel-9-rpms/repodata/repomd.xml').write_text('<repomd/>')
     unrelated = tmp_path/'unrelated'; unrelated.mkdir()
     (unrelated/'sentinel').write_text('preserved')
     (storage/'linked').symlink_to(unrelated, target_is_directory=True)
@@ -180,7 +183,7 @@ def test_remote_repository_inventory_and_action_guard(tmp_path, monkeypatch):
 
 def test_cli_sync_blocks_delete_and_duplicate_dashboard_sync(sandbox, monkeypatch):
     _, repos, calls = sandbox
-    (repos/'rhel-9-rpms').mkdir()
+    (repos/'rhel-9-rpms/repodata').mkdir(parents=True);(repos/'rhel-9-rpms/repodata/repomd.xml').write_text('<repomd/>')
     monkeypatch.setattr(mykos_admin, 'service_state', lambda unit: 'activating' if unit == 'mykos-repo-sync-cli.service' else 'inactive')
     assert mykos_admin.repo_sync_state() == 'activating'
     for action, target in [('delete', 'rhel-9-rpms'), ('sync', 'all')]:
@@ -193,7 +196,7 @@ def test_cli_sync_blocks_delete_and_duplicate_dashboard_sync(sandbox, monkeypatc
 def test_sync_lock_blocks_delete_even_between_service_state_checks(sandbox, monkeypatch):
     import fcntl
     _, repos, _ = sandbox
-    (repos/'rhel-9-rpms').mkdir()
+    (repos/'rhel-9-rpms/repodata').mkdir(parents=True);(repos/'rhel-9-rpms/repodata/repomd.xml').write_text('<repomd/>')
     monkeypatch.setattr(mykos_admin, 'service_state', lambda unit: 'inactive')
     with mykos_admin.REPO_SYNC_LOCK.open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -223,3 +226,28 @@ def test_repository_download_config_rejects_symlink(sandbox):
     target=path.with_suffix('.target');target.write_text('{"base_url":"http://192.0.2.80/"}');target.chmod(0o600)
     path.symlink_to(target)
     with pytest.raises(ValueError,match='protected'):mykos_admin.repository_download_base()
+
+
+def test_fresh_unconfigured_repository_root_is_empty(sandbox, monkeypatch):
+    _, root, calls = sandbox
+    root.rmdir()
+    assert mykos_admin.repo_status()['repos'] == []
+    assert not root.exists()
+
+
+def test_unrelated_website_directories_cannot_be_deleted(sandbox, monkeypatch):
+    _, root, calls = sandbox
+    (root/'website').mkdir();(root/'website/index.html').write_text('preserve')
+    monkeypatch.setattr(mykos_admin,'sizes',lambda _: {})
+    assert mykos_admin.repo_status()['repos']==[]
+    with pytest.raises(ValueError,match='Not an RPM repository'):
+        mykos_admin.dispatch(['repo-action','delete','website','{}'])
+    assert (root/'website/index.html').read_text()=='preserve'
+
+
+@pytest.mark.parametrize('action',['enable','disable'])
+def test_repo_service_controls_never_stop_or_start_dashboard(sandbox, action):
+    _, root, calls = sandbox
+    with pytest.raises(ValueError,match='shared web server'):
+        mykos_admin.dispatch(['repo-action',action,'all','{}'])
+    assert not any('httpd' in command for command in calls)

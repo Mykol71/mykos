@@ -201,7 +201,7 @@ Business-specific integration is provided by a separately installed local extens
 
 Backup account management is supplied by a separately installed private business extension. It is absent from the base platform API.
 
-Repository POST bodies use `action: delete|enable|disable|sync` and `name`.
+Repository POST bodies use `action: delete|sync` and `name`. Legacy `enable`/`disable` requests are rejected so shared Apache stays available.
 Deletion requires an existing repository name. Other actions use `name: "all"`
 (the default). Actions use the same helper validation and locks as the dashboard,
 and invalidate the shared listing cache. Enable/disable operates on all of Apache;
@@ -288,15 +288,8 @@ Repository storage may use a root-controlled symlink, such as
 `/var/www/html -> /home/html`, when its target and parent directories are trusted.
 Symlinks inside the repository root are excluded from listing and deletion.
 
-Repo actions: `delete` requires an existing immediate directory `name`; `enable`,
-`disable`, and `sync` use `name: "all"`. Enable/disable starts/stops **all of Apache**,
-matching the CLI menu, and may interrupt this UI and other sites. Sync starts
-`mykos-repo-sync.service` asynchronously using the toolkit's existing sync script;
-it installs dependencies and runs privileged mirror containers as that script
-specifies. Sync state is the systemd ActiveState (`activating` while the oneshot
-runs, `inactive` after exit, `failed` after a unit failure). Delete is rejected
-while sync is active. Service output is available via
-`journalctl -u mykos-repo-sync.service`.
+Repo actions: `delete` requires an immediate RPM repository directory `name`;
+`sync` uses `name: "all"`. Legacy enable/disable actions are rejected; manage serving through the Apache configuration without stopping the dashboard.
 
 Lists refresh every minute and are cached for up to 60 seconds. The Refresh button
 passes `refresh=true` to collect immediately. Disk usage collection is limited to

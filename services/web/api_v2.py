@@ -307,7 +307,7 @@ def repository(request: Request, name: str, refresh: bool = False):
     raise HTTPException(404, 'Repository not found')
 
 
-@router.post('/repos', summary='Delete, enable, disable or sync repositories (admin only)')
+@router.post('/repos', summary='Delete or sync RPM repositories (admin only)')
 def repo_action(request: Request, data: RepoAction):
     administrator(request)
     from mykos_admin_api import perform
@@ -462,7 +462,7 @@ def actions(request: Request):
                         'terminal': 'WS /api/v2/terminal/{shop}',
                         'add_vpn': 'WS /api/v2/terminal/{shop}?action=add-vpn',
                         'remove_vpn': 'WS /api/v2/terminal/{shop}?action=remove-vpn'},
-            'action_options': {'repos': ['delete', 'enable', 'disable', 'sync']},
+            'action_options': {'repos': ['delete', 'sync']},
             'admin_required': True}
 
 
