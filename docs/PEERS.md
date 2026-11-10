@@ -92,3 +92,60 @@ the current RPM checks and migrates it to the target runtime. A Python 3.9
 See [RPM installation and upgrades](RPM.md) for the automatic migration and
 rollback behavior. Existing scoped IPsec includes such as
 `include /etc/ipsec.d/mykos-*.secrets` are supported when they cover peer files.
+
+## Copy an instance to a peer
+
+A full administrator signed in to the source host can select **Copy instance to a
+peer** in a persistent instance's Actions. This creates an independent instance;
+the original stays on its host. Peer-forwarded views and scoped operator accounts
+do not offer this control.
+
+1. Connect the peer first. Both hosts need a version supporting instance copies
+   and any extension required by the selected instance.
+2. Select the destination peer and an eight-digit destination ID. An existing
+   destination container or saved data is never overwritten.
+3. Select **Check copy** and read the proposed capture mode. **Copy with RAM
+   state** is offered only for a running VM with a compatible CPU and runtime.
+   Otherwise **Copy and restart** captures disks/filesystem and starts a fresh
+   guest process. Native Linux copies currently use restart mode because their
+   existing CRIU snapshots are bound to the original container.
+4. Confirm the proposed copy. The source can pause during consistent capture;
+   it resumes before the encrypted upload. Native capture has a two-minute work
+   budget and an independent recovery timer. Closing the dialog leaves the host
+   worker running. Reopen Copy to see recent transfer states.
+5. Open the destination host to inspect the new instance through its console or
+   root terminal. Both its data and lifecycle are independent of the source.
+
+**Copies start with guest networking isolated.** This prevents a copied VPN or
+guest network identity from becoming active alongside the source. VM console
+replies remain available; native copies have no attached network. Isolation
+survives container restarts. This release does not provide an automatic network
+activation button: configure a distinct guest/VPN identity and have a full host
+operator explicitly provision networking before using the copy on the network.
+
+Memory mode retains the captured running RAM only for the first destination
+start. Later starts boot its current disks normally. CPU model/vendor/features,
+architecture, exact runtime image, RAM settings and checkpoint integrity are
+checked; a failed RAM restore is reported as a failure, never described as a
+successful memory copy. Cold-copy mode does not require a portable RAM stream.
+
+The transfer includes the pinned runtime image, VM disks or native writable
+filesystem, and supported exclusive instance mounts. Shared or unmanaged mounted
+data is rejected rather than silently omitted. Host accounts, browser sessions,
+peer credentials, host configuration and personal/pane notes are not copied.
+Paired hosts retain their existing administrator trust and pinned TLS checks.
+
+Two transfers may be active per host. Space reservations, startup capacity and
+available RAM are checked before work and again before import. SHA256 checks
+cover chunks, the capsule and image configuration. Retries are idempotent and a
+lost response cannot cancel an importing or verified destination. If a peer goes
+offline after import begins, the source reports an unknown destination outcome
+until it can reconcile the receipt; check the destination before retrying with
+another ID.
+
+Incomplete uploads expire after 24 hours. An owned cleanup timer removes their
+staging and stale upload chunks, and recovers interrupted source captures.
+Failed recovery keeps its ownership records and original checkpoint backup for
+operator review; it never guesses at unrelated containers or files. Operational
+receipts are root-private under `/var/lib/mykos/instance-transfers`; transfer
+staging is under the configured VM storage's `.peer-transfers` directory.

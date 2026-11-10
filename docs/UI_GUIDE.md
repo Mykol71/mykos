@@ -441,3 +441,12 @@ Live chart traces move between bounded history redraws; reduced-motion and recal
 Performance readings are collected once per second and shared through the host cache. Browsers preserve collection timestamps, skip repeated cached readings, and animate retained trace heads without rebuilding the full history each frame. A delayed timer reschedules its remaining wait instead of losing a whole refresh interval.
 
 Receiver count gauges use brighter lit segments for both series, with the VPN foreground distinct from the container background. Unlit segments and unavailable-data behavior remain dim.
+
+### Copy an instance to another peer
+
+Full administrators have a **Copy instance to a peer** action on persistent
+instance rows in their local dashboard. Select the peer and destination ID,
+check the proposed RAM or restart mode, and confirm. Existing destination data
+is protected. The source stays in place and the destination starts with isolated
+guest networking, including on later restarts. See [Peer hosts](PEERS.md#copy-an-instance-to-a-peer)
+for modes, source capture pauses, progress, identity preparation and limits.

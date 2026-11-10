@@ -17,6 +17,9 @@ Fedora GNOME, and Android-x86 VMs managed through Podman.
 The dashboard includes host performance history, OS-specific container panes,
 live snapshots, rsync accounts, repository management, and per-pane notes.
 Browser sessions and scoped API keys use separate authentication.
+Full administrators can [copy persistent instances to connected peers](docs/PEERS.md#copy-an-instance-to-a-peer),
+retaining compatible VM RAM when supported. The source stays in place and the
+new copy starts with isolated guest networking.
 See the [screen examples gallery](docs/SCREENSHOTS.md) for illustrated workflows.
 
 ## Supported images at a glance

@@ -241,6 +241,8 @@ def launch(key, value):
             '-p', '%s:%s:8006/tcp' % (value['bind'], value['console_port']),
             '-p', '%s:%s:%s/tcp' % (value['bind'], value['desktop_port'], desktop),
             '-p', '%s:%s:%s/udp' % (value['bind'], value['desktop_port'], desktop)]
+    if value.get('peer_copy'):
+        args += ['--image-volume=ignore', '--label', 'io.mykos.network.isolated=true', '--label', 'io.mykos.peer-copy=' + value['peer_copy'], '-e', 'MYKOS_NETWORK_ISOLATED=1']
     if value['role']=='preview':args+=['--label','io.mykos.snapshot.preview='+value['preview_token']]
     building_image = value['role'] == 'template' and not value.get('ready')
     if building_image:
@@ -264,7 +266,7 @@ def launch(key, value):
         from mykos_image_build import launch_arguments
         args += launch_arguments(value, key)
     args += network.arguments(host_config(), value['name'])
-    credentials = storage(key if value['role']=='preview' else value['os']) / 'windows.env'
+    credentials = storage(key if value['role']=='preview' or value.get('peer_copy') else value['os']) / 'windows.env'
     if kind == 'windows':
         preserve = value['role'] == 'instance' or value.get('ready') or value.get('installation_complete')
         args += ['-e', 'MYKOS_PRESERVE_WINDOWS_DISK=' + ('Y' if preserve else 'N')]
@@ -272,7 +274,7 @@ def launch(key, value):
             args += ['-e', 'MANUAL=Y', '-e', 'SHUTDOWN=N']
         if credentials.is_symlink() or not credentials.is_file(): raise ValueError('Missing template credentials')
         args += ['--env-file', str(credentials)]
-        oem = storage(key if value['role']=='preview' else value['os']) / 'oem'
+        oem = storage(key if value['role']=='preview' or value.get('peer_copy') else value['os']) / 'oem'
         if oem.is_dir() and not oem.is_symlink():
             args += ['-v', str(oem) + ':/oem:ro']
     if value.get('guest_agent') and kind in ('windows','ubuntu','fedora'):
@@ -326,6 +328,8 @@ def links(value):
         'unattended': value.get('unattended', False),
         'capture_mode': value.get('capture_mode', 'disk'),
         'last_start': value.get('last_start'),
+        'network_isolated': bool(value.get('network_isolated')),
+        'peer_copy': bool(value.get('peer_copy')),
         'terminal_transport': 'serial' if value['os'].startswith(('ubuntu','fedora')) else 'powershell' if VERSIONS[value['os']][0] == 'windows' else 'ssh' if value['os'].startswith('mac') else None,
         'root_terminal_url': '/mykos/api/v2/terminal/' + value['name'][:8] if value['os'].startswith(('ubuntu','fedora')) and value['role'] == 'instance' else None,
         'console_url': console_path(value),
@@ -655,6 +659,40 @@ def restore_manifest(value, disk):
     return manifest
 
 
+def verify_copy_isolation(value):
+    if not value.get('peer_copy'):
+        return
+    for family in ('iptables', 'ip6tables'):
+        output = run([PODMAN, 'exec', value['name'], family, '-S', 'OUTPUT'])
+        forward = run([PODMAN, 'exec', value['name'], family, '-S', 'FORWARD'])
+        chain = run([PODMAN, 'exec', value['name'], family, '-S', 'MYKOS_COPY_OUT'])
+        rules = [line for line in output.splitlines() if line.startswith('-A ')]
+        forwarding = [line for line in forward.splitlines() if line.startswith('-A ')]
+        if not rules or rules[0] != '-A OUTPUT -j MYKOS_COPY_OUT' or not forwarding or forwarding[0] != '-A FORWARD -j DROP':
+            raise RuntimeError('Copied VM isolation policy was replaced')
+        if '-A MYKOS_COPY_OUT -j REJECT' not in chain or '-o lo -j ACCEPT' not in chain:
+            raise RuntimeError('Copied VM isolation policy is incomplete')
+
+
+def wait_for_copy_boot(value):
+    deadline = time.monotonic() + 150
+    while time.monotonic() < deadline:
+        if not inspect(value['name']).get('State', {}).get('Running'):
+            raise RuntimeError('Copied VM exited during startup')
+        monitor = None
+        try:
+            monitor = QemuMonitor(value)
+            if monitor.command('info status') == 'VM status: running':
+                verify_copy_isolation(value)
+                return
+        except (FileNotFoundError, ConnectionRefusedError):
+            pass
+        finally:
+            if monitor is not None: monitor.close()
+        time.sleep(.25)
+    raise RuntimeError('Copied VM startup timed out')
+
+
 def wait_for_restore(value, disk):
     manifest = restore_manifest(value, disk)
     deadline = time.monotonic() + 150
@@ -670,6 +708,7 @@ def wait_for_restore(value, disk):
                 registers = cpu_checkpoint_registers(monitor.command('info registers'))
                 if registers != manifest['registers']:
                     raise RuntimeError('Restored CPU state does not match the captured running VM')
+                verify_copy_isolation(value)
                 monitor.command('cont')
                 if monitor.command('info status') != 'VM status: running':
                     raise RuntimeError('Restored VM did not resume')

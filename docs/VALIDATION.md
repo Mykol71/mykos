@@ -1,5 +1,23 @@
 # Validation record and remaining integration work
 
+## Release277 — Peer instance copies
+
+Peer copies require full local administrator access, authenticated connected
+peers, destination collision/capacity checks, integrity validation and complete
+owned-resource cleanup. Qualification includes a real native filesystem copy
+and a tiny real KVM guest with a RAM-only sentinel that differs from its current
+boot disk, plus one-shot restore and persistent IPv4/IPv6 isolation after restart.
+These fixtures do not constitute new installation qualification of every guest OS.
+Full public/private regression suites, browser flows, signed staging, guarded
+dev/prod installation and an actual paired-host copy gate publication. Exact
+results and preservation/cleanup receipts accompany the release.
+
+Native copies restart their processes; cross-host native CRIU clone restoration
+is not claimed. CPU-incompatible VMs use explicit cold-copy mode. New copies
+remain network-isolated until a full operator configures distinct guest/VPN
+identity and separately provisions networking. EL10 remains preview; the prior
+fresh-install/native-CRIU qualification limits remain.
+
 ## Release223 — LAN-only updateos listing
 
 The dashboard inventory includes the updateos download tree as read-only while the destructive repository path continues to reject it. The download landing page selects a protected LAN index only for loopback and the existing two LAN ranges. Direct private-index requests and updateos downloads remain forbidden to public clients. Focused inventory/UI checks and isolated Apache LAN/public tests gate dev/prod promotion. Existing updater fixes and all release222 behavior are retained.

@@ -1,0 +1,13 @@
+[Unit]
+Description=Clean abandoned MYKOS peer-copy staging and recover interrupted captures
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mykos-instance-transfer cleanup
+TimeoutStartSec=15min
+Nice=15
+IOSchedulingClass=idle
+CPUWeight=10
+IOWeight=10
+UMask=0077

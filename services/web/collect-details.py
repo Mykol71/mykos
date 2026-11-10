@@ -66,6 +66,7 @@ def collect(shop_filter=None):
             **os_info,
             'desktop': desktop,
             'persistent_storage': info.get('HostConfig', {}).get('AutoRemove') is False,
+            'network_isolated': (info.get('Config', {}).get('Labels') or {}).get('io.mykos.network.isolated') == 'true',
             'desktop_host': (info.get('Config', {}).get('Labels') or {}).get('io.mykos.vm.host') if desktop else None,
             "running": running,
             "started_at": started,

@@ -63,6 +63,8 @@ def vpn_preflight(shop):
     """Inspect dependencies in a host Python child; never execute guest code."""
     shopcode(shop)
     name,state=inspect(shop)
+    if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.network.isolated') == 'true':
+        raise ValueError('Copied instance networking is isolated; VPN activation is disabled')
     if not state.get('State',{}).get('Running'):raise ValueError('Start this container first')
     if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.os') in ('debian13','archlinux','sles15sp7','amazon2023','alpine'):
         raise ValueError('VPN creation on this native image is not yet qualified; managed NAT networking is available')
@@ -101,6 +103,8 @@ def _prepare_vpn(shop):
     """Install boot reconnect support only for the existing customer bind mount."""
     shopcode(shop)
     name,state=inspect(shop)
+    if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.network.isolated') == 'true':
+        raise ValueError('Copied instance networking is isolated; VPN activation is disabled')
     if not state.get('State',{}).get('Running'):raise ValueError('Start this container first')
     vpn_preflight(shop)
     expected=vm.POS/('.'+shop)
@@ -164,6 +168,13 @@ def start(shop):
         from mykos_runtime import require_container_capacity
         require_container_capacity(name)
         labels=state.get('Config',{}).get('Labels') or {}
+        if labels.get('io.mykos.network.isolated') == 'true':
+            if state.get('HostConfig',{}).get('NetworkMode') != 'none':
+                raise ValueError('Copied instance network isolation changed')
+            run([PODMAN,'start',name],timeout=120)
+            if not inspect(shop)[1].get('State',{}).get('Running'):
+                raise RuntimeError('Copied instance exited during startup')
+            return {'shop':shop,'state':'running','network_isolated':True}
         if labels.get('io.mykos.network.interface') != 'eth0':
             raise ValueError('Legacy pipework container: recreate on mykos-lan before startup; saved data was preserved')
         selected,_=network.ensure()

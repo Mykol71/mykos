@@ -665,6 +665,8 @@ app.include_router(snapshot_preview_router)
 from mykos_peers import PeerAuthentication
 from peers_api import router as peers_router
 app.include_router(peers_router)
+from instance_transfers import router as instance_transfer_router
+app.include_router(instance_transfer_router)
 app.add_middleware(PeerAuthentication)
 
 _peer_cleanup_task = None

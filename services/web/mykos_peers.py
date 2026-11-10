@@ -231,7 +231,9 @@ def allowed_path(path, confirming=False):
         return False
     if path in ('/api/peers/confirm', '/api/peers/disconnect'):
         return confirming
-    if path.startswith(('/api/web/peers', '/api/web/notes', '/api/web/personal-notes', '/api/web/id-notes')):
+    if re.fullmatch(r'/api/peers/instance-transfers/(?:capabilities/[0-9]{8}|begin|[0-9a-f]{32}(?:/finish|/abort|/chunk/[0-9]{1,13}/[0-9a-f]{64})?)', path):
+        return True
+    if path.startswith(('/api/web/instance-transfers', '/api/web/peers', '/api/web/notes', '/api/web/personal-notes', '/api/web/id-notes')):
         return False
     return bool(re.fullmatch(r'/api/(?:web(?:/[^?]*)?|nodes(?:/[0-9]{8}/details)?|admin/containers/[^?]+|terminal/(?:permission|window/[A-Za-z0-9][A-Za-z0-9._-]{0,63}|[A-Za-z0-9][A-Za-z0-9._-]{0,63}))', path)
                 or re.fullmatch(r'/console/(?:preview-[0-9a-f]{32}|[0-9]{8}|(?:win|wns|mac|ubuntu)[A-Za-z0-9.]+)/[^?]*', path))

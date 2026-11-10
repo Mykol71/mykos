@@ -291,13 +291,16 @@ img.mykos-pane-logo { object-fit: contain; }
 
 
 /* Give lifecycle and image-start icons explicit dimensions in every theme. */
-:is(.mykos-start-button,.mykos-stop-button,.mykos-snapshot-button,.mykos-delete-button,button[id$="mykos-stage-button"]) > svg { display:block; width:20px; height:20px; flex:none; }
+:is(.mykos-start-button,.mykos-stop-button,.mykos-snapshot-button,.mykos-copy-button,.mykos-delete-button,button[id$="mykos-stage-button"]) > svg { display:block; width:20px; height:20px; flex:none; }
+
+[data-network-isolated="true"] td:first-child::after { content:'isolated';display:block;font-size:10px;line-height:1.2;color:#c4b5fd; }
 
 /* MYKOS transparent container action buttons */
 .mykos-logs-button,
 .mykos-terminal-button,
 .mykos-start-button,
 .mykos-snapshot-button,
+.mykos-copy-button,
 .mykos-delete-button,
 .mykos-stop-button {
     background: transparent !important;
@@ -309,6 +312,7 @@ img.mykos-pane-logo { object-fit: contain; }
 .mykos-terminal-button:hover,
 .mykos-start-button:hover,
 .mykos-snapshot-button:hover,
+.mykos-copy-button:hover,
 .mykos-delete-button:hover,
 .mykos-stop-button:hover {
     background: transparent !important;
@@ -2545,6 +2549,7 @@ function mykosContainerActionButton(shop, action, enabled, label, color, icon) {
 }
 
 function mykosVpnControlAvailable(node,detail={},memory={}) {
+    if (detail.network_isolated === true) return false;
     const family=mykosNodeFamily(node);
     return !['android','windows','windows-server','macos'].includes(family) && (!detail.desktop || family==='ubuntu') &&
         (['up','down'].includes(node?.vpn) || (memory?.vpn_topology?.links || []).length>0);
@@ -2577,6 +2582,8 @@ function mykosRenderInventory() {
         const desktop = ['android', 'windows', 'windows-server', 'macos'].includes(mykosNodeFamily(node)) || mykosListDetails[node.id]?.desktop;
         const detail = mykosListDetails[node.id] || {};
         const persistent = desktop || detail.persistent_storage === true;
+        row.dataset.networkIsolated = detail.network_isolated === true ? 'true' : 'false';
+        if (detail.network_isolated && row.cells[0]) row.cells[0].setAttribute('aria-label', row.dataset.mykosShop + ', guest networking isolated');
         if(mykosTerminalAllowed && mykosVpnControlAvailable(node,detail,mykosListMemory[node.id])) {
             for(const [operation,label,color,icon] of [
                 ['start','Start VPN','#4ade80','<path d="M12 20V4m-6 6 6-6 6 6"/>'],
@@ -2585,7 +2592,7 @@ function mykosRenderInventory() {
                 control.dataset.vpnControl=operation;logCell.append(control);
             }
         }
-        if (mykosTerminalAllowed && ['linux', 'rocky', 'alma', 'oracle', 'centos', 'fedora', 'ubuntu', 'mssql'].includes(mykosNodeFamily(node)) && node?.vpn === 'up') {
+        if (mykosTerminalAllowed && !detail.network_isolated && ['linux', 'rocky', 'alma', 'oracle', 'centos', 'fedora', 'ubuntu', 'mssql'].includes(mykosNodeFamily(node)) && node?.vpn === 'up') {
             if(mykosNodeFamily(node)!=='ubuntu' && !detail.desktop) {
             const addVpn = document.createElement('button');
             addVpn.type = 'button';
@@ -2667,6 +2674,15 @@ function mykosRenderInventory() {
                 logCell.append(mykosContainerActionButton(shop, 'snapshot', persistent && node.status === 'online',
                     persistent ? 'Snapshot container' : unavailable, '#38bdf8', '<path d="M8 5l2-2h4l2 2h4v15H4V5Z"/><circle cx="12" cy="12" r="4"/>'));
             }
+            if (persistent && window.mykosCopyAllowed === true && (!document.documentElement.dataset.role || ['admin','arch','owner'].includes(document.documentElement.dataset.role)) && !window.MYKOS_PEER_CONTEXT && typeof window.mykosCopyInstance === 'function') {
+                const copy = document.createElement('button'); copy.type = 'button'; copy.className = 'mykos-copy-button';
+                copy.title = 'Copy instance to a peer'; copy.setAttribute('aria-label', copy.title);
+                copy.style.cssText = 'color:#c4b5fd;margin-left:8px';
+                copy.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="8" width="12" height="13" rx="2"/><path d="M8 3h11a2 2 0 0 1 2 2v11M11 13h8m-3-3 3 3-3 3"/></svg>';
+                copy.disabled = mykosBusyContainers.has(row.dataset.mykosShop);
+                copy.addEventListener('click', event => {event.stopPropagation(); window.mykosCopyInstance(row.dataset.mykosShop);});
+                logCell.append(copy);
+            }
             logCell.append(mykosContainerActionButton(row.dataset.mykosShop, 'delete', true,
                 'Delete container and saved data', '#ef4444', '<path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/>'));
 
@@ -2720,7 +2736,7 @@ document.getElementById('mykos-os-panes').addEventListener(
             '.mykos-logs-button'
         )) return;
         if (event.target.closest('.mykos-terminal-button')) return;
-        if (event.target.closest('.mykos-snapshot-button')) return;
+        if (event.target.closest('.mykos-snapshot-button,.mykos-copy-button')) return;
         if (event.target.closest('.mykos-start-button')) return;
         if (event.target.closest('.mykos-stop-button')) return;
         if (event.target.closest('.mykos-delete-button')) return;
@@ -4754,6 +4770,7 @@ document.getElementById('mykos-id-notes-form').addEventListener('submit',async e
 })();
 </script>
 <script src="/mykos/peer-ui.js"></script>
+<script src="/mykos/instance-copy.js"></script>
 <script>
 function mykosReceiverRadioTicks(now,end){
  if(!Number.isFinite(now)||!Number.isFinite(end))return [];

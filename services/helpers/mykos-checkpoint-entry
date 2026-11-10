@@ -66,6 +66,24 @@ if [[ -f /run/entry.sh ]]; then
     cat "$rewrite" > /run/entry.sh
     rm -f "$rewrite"
 fi
+# Vendor startup may initialize firewall rules and perform host-side checks.
+# Install isolation after that setup and before QEMU can start any guest CPU.
+if [[ ${MYKOS_NETWORK_ISOLATED:-0} == 1 ]]; then
+    grep -q '^\. finish.sh' /run/entry.sh || { echo 'Unsupported isolated VM entry script' >&2; exit 1; }
+    cat > /run/mykos-peer-isolation <<'ISOLATE'
+for command in iptables ip6tables; do
+    "$command" -w 5 -N MYKOS_COPY_OUT 2>/dev/null || "$command" -w 5 -F MYKOS_COPY_OUT
+    "$command" -w 5 -A MYKOS_COPY_OUT -o lo -j ACCEPT
+    "$command" -w 5 -A MYKOS_COPY_OUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    "$command" -w 5 -A MYKOS_COPY_OUT -j REJECT
+    "$command" -w 5 -I FORWARD 1 -j DROP
+    "$command" -w 5 -I OUTPUT 1 -j MYKOS_COPY_OUT
+done
+ISOLATE
+    rewrite=$(mktemp /run/.mykos-isolate.XXXXXX)
+    awk '$0 == " . /run/mykos-peer-isolation" {next} /^\. finish.sh/ {print; print " . /run/mykos-peer-isolation"; next} {print}' /run/entry.sh > "$rewrite"
+    cat "$rewrite" > /run/entry.sh; rm -f "$rewrite"
+fi
 if [[ -f "$checkpoint/restore.request" ]]; then
     [[ -f "$checkpoint/memory.gz" && ! -L "$checkpoint/memory.gz" ]] || { echo 'Missing VM memory checkpoint' >&2; exit 1; }
     grep -q '^\. finish.sh' /run/entry.sh || { echo 'Unsupported VM entry script' >&2; exit 1; }
