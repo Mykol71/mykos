@@ -697,18 +697,21 @@ def test_balloon_api_is_admin_only_and_validates_targets(environment):
 def test_application_monitoring_fields_are_removed_even_from_old_caches(environment):
     base,calls=environment
     now=int(time.time())
-    (base/'data/details.json').write_text(json.dumps({'collected_at':now,'details':{'01234567':{'image':'localhost/rh8:latest','rti_version':'old-app-version'}}}))
+    (base/'data/details.json').write_text(json.dumps({'collected_at':now,'details':{'01234567':{'image':'localhost/rh8:latest','rti_version':'old-app-version','rti_backup_mounted':True,'RTI_status':'private'}}}))
     (base/'data/extended.json').write_text(json.dumps({'collected_at':now,'nodes':{'01234567':{'running':True,'rti':{'version':'old-app-version'},'resources':{'cpu':'1%'}}}}))
     client=TestClient(app.app,base_url='https://testserver')
     headers={'X-MYKOS-API-Key':mykos_api_keys.create('generic-monitoring','read')}
     node=client.get('/api/v2/nodes/01234567',headers=headers).json()
     assert 'rti' not in node and 'rti' not in node['extended']
     assert 'rti_version' not in node['details']
+    assert not any(str(key).lower()=='rti' or str(key).lower().startswith('rti_') for key in node['details'])
     assert node['resources']=={'cpu':'1%'}
     assert client.get('/api/v2/nodes/01234567/rti',headers=headers).status_code==404
     assert client.get('/api/v2/nodes?include=rti',headers=headers).status_code==400
     browser=login('operator','operator-password-123')
     assert 'rti_version' not in browser.get('/api/nodes/01234567/details').json()['details']
+    assert 'rti_backup_mounted' not in browser.get('/api/nodes/01234567/details').json()['details']
+    assert 'RTI_status' not in monitor_api.snapshot()['nodes'][0]['details']
     assert 'rti' not in browser.get('/api/web/extended').json()['nodes']['01234567']
     assert 'rti_version' not in monitor_api.snapshot()['nodes'][0]['details']
 

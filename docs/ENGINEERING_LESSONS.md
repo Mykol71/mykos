@@ -288,7 +288,7 @@ Pane visibility dereferenced a missing link, interrupted startup and left an
 admin session with a partial dashboard. Complete the markup and keep optional
 link updates defensive. Mock DOM helpers that invent every requested element
 cannot detect this failure; check structural contracts and real browser startup
-for full administrators and restricted RTI users. Account privileges must not
+for full administrators and limited-access users. Account privileges must not
 be changed to work around a client initialization failure.
 
 ## Qualify base-image access for new guest families

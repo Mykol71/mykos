@@ -17,11 +17,6 @@ footer{display:flex;align-items:center;gap:7px}footer .mykos-brand-flower{displa
 </tr>
 </thead>
 <tbody><tr>
-<td>PXE desktop provisioning</td>
-<td>Keep provisioning in the separate RTI business package rather than public core. Continue Windows desktop provisioning and recovery work there.</td>
-<td>Validate media, target confirmation, interrupted installs, firmware boot and complete physical desktop installation.</td>
-</tr>
-<tr>
 <td>Shared guest VPN gateways</td>
 <td>Revisit one gateway serving multiple guests after complete traffic and recovery validation.</td>
 <td>Verify site access, internet and DNS behavior, multiple guests, failure isolation, reconnect and clean removal.</td>
@@ -47,9 +42,6 @@ footer{display:flex;align-items:center;gap:7px}footer .mykos-brand-flower{displa
 <h2 id="peer-connectivity-across-networks">Peer connectivity across networks</h2>
 <p>The current peer design requires directly reachable, distinct IPv4 host addresses. Different routed networks can meet that requirement. Automatic NAT traversal and public-to-private endpoint mapping are outside the initial validated topology.</p>
 <p>Future work will assess internet-facing peer connections, servers behind NAT, endpoint changes and overlapping private networks. Broader support requires repeatable pairing, identity and certificate checks, firewall guidance, reconnect and data-path tests across the intended topology.</p>
-<h2 id="provisioning-through-business-extensions">Provisioning through business extensions</h2>
-<p>The public core and optional business packages have separate scopes. PXE provisioning will remain in the RTI package while its deployment flow is validated. The roadmap includes DHCP-to-network-boot handoff, routed client access, Windows media handling and installation recovery.</p>
-<p>Provisioning remains opt-in. Physical disk erasure must require explicit target selection and confirmation.</p>
 <h2 id="reliability-and-platform-validation">Reliability and platform validation</h2>
 <p>The pilot will turn fresh-install findings into tested fixes and clearer installation instructions. Work includes complete host dependency resolution, representative native container and VM operations, scoped backup and restore checks, responsive status reporting and upgrade behavior that preserves customer resources.</p>
 <p>RHEL 10 fresh-install readiness includes validation of the native checkpoint dependency. Staged package checks alone do not establish full host or guest compatibility.</p>

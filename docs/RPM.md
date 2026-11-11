@@ -271,7 +271,7 @@ Repository links use the configured download server rather than the browser's in
 
 Administrators can open **RPM stats** in the Repos pane. JSON and HTML reports
 are `/mykos/api/web/mykos/rpm-downloads` and the same path plus `/view`.
-Viewer, RTI-restricted and peer-forwarded access is denied. Unconfigured hosts
+Viewer and peer-forwarded access is denied. Unconfigured hosts
 report that state explicitly. Server commands are:
 
 ```bash

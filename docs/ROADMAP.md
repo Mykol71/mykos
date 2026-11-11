@@ -14,7 +14,6 @@ These capabilities remain on the roadmap. Deferral does not mean that they have 
 
 | Capability | Planned direction | Required before broader availability |
 | --- | --- | --- |
-| PXE desktop provisioning | Keep provisioning in the separate RTI business package rather than public core. Continue Windows desktop provisioning and recovery work there. | Validate media, target confirmation, interrupted installs, firmware boot and complete physical desktop installation. |
 | Shared guest VPN gateways | Revisit one gateway serving multiple guests after complete traffic and recovery validation. | Verify site access, internet and DNS behavior, multiple guests, failure isolation, reconnect and clean removal. |
 | Host-shared VPN gateways | Revisit shared routing for the host and guests after management and recovery checks. | Preserve host management access and verify guest routing, DNS, fail-closed behavior and rollback. |
 | Shared site-only VPN for older routers | Develop compatible site access without forcing internet traffic through the remote site. | Validate router firmware, traffic selectors, multiple guests, reconnect and safe removal. |
@@ -29,12 +28,6 @@ Planned: add two-factor authentication (2FA) to MYKOS UI sign-in, including enro
 The current peer design requires directly reachable, distinct IPv4 host addresses. Different routed networks can meet that requirement. Automatic NAT traversal and public-to-private endpoint mapping are outside the initial validated topology.
 
 Future work will assess internet-facing peer connections, servers behind NAT, endpoint changes and overlapping private networks. Broader support requires repeatable pairing, identity and certificate checks, firewall guidance, reconnect and data-path tests across the intended topology.
-
-## Provisioning through business extensions
-
-The public core and optional business packages have separate scopes. PXE provisioning will remain in the RTI package while its deployment flow is validated. The roadmap includes DHCP-to-network-boot handoff, routed client access, Windows media handling and installation recovery.
-
-Provisioning remains opt-in. Physical disk erasure must require explicit target selection and confirmation.
 
 ## Reliability and platform validation
 

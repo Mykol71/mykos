@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        277%{?dist}
+Release:        278%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -125,6 +125,8 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Tue Nov 10 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-278
+- Verify public/private product boundaries and remove residual public documentation branding.
 * Tue Nov 10 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-277
 - Add source-preserving instance copies to authenticated connected peers
 - Verify image/data integrity and compatible VM RAM; isolate destination networking

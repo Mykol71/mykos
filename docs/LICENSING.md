@@ -16,7 +16,7 @@ MYKOS core source is publicly available in the [GitHub repository](https://githu
 
 Sections 3 and 4 of the full license already cover source access and the activities requiring separate permission. Publishing the repository does not replace those terms or require disclosure of your internal changes. Viewing and forking rights provided by GitHub’s platform terms remain separate; see [GitHub’s licensing guidance](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
 
-This clarification describes the existing license; it does not amend the license or relicense third-party material. RTI business integration remains a separately distributed package.
+This clarification describes the existing license; it does not amend the license or relicense third-party material. Optional private integrations remain separately distributed.
 
 ## When separate permission is needed
 
