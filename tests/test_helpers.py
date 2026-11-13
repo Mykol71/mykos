@@ -64,8 +64,10 @@ def test_host_actions_are_allowlisted_and_reboot_requires_hostname(monkeypatch):
         with pytest.raises(ValueError): module.dispatch([action, '01234567'])
     with pytest.raises(ValueError): module.dispatch(['host-reboot', 'wrong-host'])
     assert not any('systemd-run' in command[0] for command in calls)
-    assert module.dispatch(['host-reboot', 'host.example'])['state'] == 'reboot-scheduled'
-    assert calls[-1] == ['/usr/bin/systemd-run', '--unit=mykos-host-reboot', '--on-active=5s', '/usr/bin/systemctl', 'reboot']
+    import mykos_host_maintenance as maintenance
+    monkeypatch.setattr(maintenance, 'reboot', lambda hostname: {'state':'prepared-reboot-checked','host':hostname})
+    assert module.dispatch(['host-reboot', 'host.example']) == {'state':'prepared-reboot-checked','host':'host.example'}
+    assert not any('systemd-run' in command[0] for command in calls)
 
 
 def test_host_terminal_executes_host_su_without_podman(monkeypatch):

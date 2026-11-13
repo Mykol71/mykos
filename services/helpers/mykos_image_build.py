@@ -500,6 +500,8 @@ def boot_installed(os_name):
 
 
 def build(os_name, username=None, password=None, replace=False, ram_mib=None):
+    from mykos_host_maintenance import admission
+    admission()
     selection(os_name)
     from mykos_runtime import build_priority
     build_priority()
@@ -593,6 +595,8 @@ def embed_capture(value, source):
 
 
 def queue(os_name, username=None, password=None, replace=False):
+    from mykos_host_maintenance import admission
+    admission()
     import fcntl
     path=folder(os_name)
     with (path/'queue.lock').open('a') as lock:
@@ -607,6 +611,8 @@ def queue(os_name, username=None, password=None, replace=False):
 
 
 def worker(os_name):
+    from mykos_host_maintenance import admission
+    admission()
     request=folder(os_name)/'request.json'
     data=json.loads(request.read_text())
     try:return build(os_name,**data)

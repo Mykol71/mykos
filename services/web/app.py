@@ -691,3 +691,6 @@ async def mykos_peer_cleanup_stop():
         _peer_cleanup_task.cancel()
         await _mykos_asyncio.gather(_peer_cleanup_task, return_exceptions=True)
 
+
+from host_maintenance import router as host_maintenance_router
+app.include_router(host_maintenance_router)

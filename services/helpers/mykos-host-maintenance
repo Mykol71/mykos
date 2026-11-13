@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""Root maintenance worker; browser requests use the privileged helper socket."""
+import sys
+import mykos_host_maintenance as maintenance
+if len(sys.argv) != 2 or sys.argv[1] not in ('prepare', 'recover', 'reboot'):
+    raise SystemExit('Expected prepare, recover or reboot')
+if sys.argv[1] == 'prepare':
+    maintenance.prepare_worker()
+elif sys.argv[1] == 'recover':
+    maintenance.recover_worker()
+else:
+    maintenance.reboot_worker()

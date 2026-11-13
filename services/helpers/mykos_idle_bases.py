@@ -68,7 +68,11 @@ def available_registry():
         try: fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             yield False
-        else: yield True
+        else:
+            from mykos_host_maintenance import admission
+            try:admission()
+            except ValueError:yield False
+            else:yield True
     finally: os.close(fd)
 
 

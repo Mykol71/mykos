@@ -1,0 +1,17 @@
+[Unit]
+Description=MYKOS host maintenance recover
+After=network-online.target podman.service
+Before=mykos-web.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-host-maintenance recover
+TimeoutStartSec=infinity
+Nice=0
+CPUWeight=20
+IOWeight=20
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=MYKOS host maintenance reboot
+After=network-online.target podman.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=@PYTHON@ /usr/local/sbin/mykos-host-maintenance reboot
+TimeoutStartSec=infinity
+Nice=0
+CPUWeight=20
+IOWeight=20
+UMask=0077
+

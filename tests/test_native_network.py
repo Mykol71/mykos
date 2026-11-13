@@ -116,3 +116,15 @@ def test_native_launch_paths_use_ownership_guard():
     assert 'network.native_arguments(' in (helper/'mykos-stage-pos').read_text()
     assert 'native_arguments as arguments' in (helper/'mykos-native-image-start').read_text()
     assert 'network.arguments(' in (helper/'mykos_vm.py').read_text()
+
+
+@pytest.mark.parametrize('backup',['mykos-recovery-012345','mykos-restore-012345'])
+def test_stopped_matching_restore_backup_keeps_address(monkeypatch,backup):
+    settings={'native_network':'mykos-lan','native_network_subnet':'192.168.22.0/24'}
+    info={'Name':'/'+backup,'State':{'Running':False},'Config':{'Hostname':'12345678.dev','Labels':{'io.mykos.network.ip':'192.168.22.25'}},'NetworkSettings':{'Networks':{'mykos-lan':{'IPAddress':'192.168.22.25'}}}}
+    monkeypatch.setattr(network,'run',lambda args,**kw:json.dumps([info]) if 'inspect' in args else 'original-id')
+    assert network.allocate_ip(settings,'12345678.dev')=='192.168.22.25'
+    info['State']['Running']=True
+    assert network.allocate_ip(settings,'12345678.dev')!='192.168.22.25'
+    info['State']['Running']=False;info['Config']['Hostname']='another-instance.dev'
+    assert network.allocate_ip(settings,'12345678.dev')!='192.168.22.25'

@@ -450,3 +450,16 @@ check the proposed RAM or restart mode, and confirm. Existing destination data
 is protected. The source stays in place and the destination starts with isolated
 guest networking, including on later restarts. See [Peer hosts](PEERS.md#copy-an-instance-to-a-peer)
 for modes, source capture pauses, progress, identity preparation and limits.
+
+
+## Prepare a host for reboot
+
+The Host reboot action opens **Prepare host for reboot** for a full local administrator. Open a peer's own dashboard to maintain that host. Viewer, limited users, and peer forwarding cannot use maintenance controls.
+
+1. Select **Check readiness**. Review active updates, repository syncs, builds, terminals, transfers, temporary/base containers, and preservation disk headroom. Resolve blockers first; the workflow does not stop other work for you.
+2. Review each persistent instance. Supported instances use a RAM snapshot. If native RAM cannot be qualified, including an unverifiable or changed next-boot kernel, explicitly accept a restart without memory for that instance. Unmanaged or unsafe containers remain blocked. You may also explicitly select a restart for a supported instance when you prefer not to preserve its running memory.
+3. Select **Save instances and prepare**, then type the exact hostname. Preparation saves and verifies supported RAM snapshots before stopping each instance. The page shows durable per-instance progress. Closing the page does not cancel background work.
+4. When the host is ready, choose **Reboot prepared host** and type the hostname again. Preparation never reboots automatically. After reboot confirmation, final snapshot verification continues in the background; the host reboots only after it passes. New workload changes are blocked during maintenance; root shell commands remain the operator's responsibility.
+5. Alternatively choose **Resume without reboot / retry recovery**. After reboot, an enabled host recovery service attempts the saved recovery automatically. Reopen the Host action to review the last recovery report. A running container is checked, but this is not an application-level health test.
+
+Failed or interrupted operations remain visible. Retrying recovery uses the existing snapshots and never recaptures stopped instances. Unexpected replacements or already-running instances are left alone for operator review. Native memory is not restored automatically across a changed host kernel, and failed RAM restoration never silently becomes a cold start. If RAM recovery fails while the original instance remains stopped, select it under **Recover with selected restarts** and confirm the hostname to accept restarting without RAM. Its saved snapshot is retained. Recovery snapshots are retained as ordinary protected recovery material; delete them deliberately after checking the recovered applications. Do not bypass the workflow by issuing a normal reboot while preparation is incomplete.

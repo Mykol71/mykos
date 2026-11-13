@@ -257,7 +257,7 @@ def host_diagnostic(action: str, request: Request):
 from container_admin import HostReboot
 
 
-@router.post('/host/reboot', summary='Schedule host reboot after exact-hostname confirmation')
+@router.post('/host/reboot', summary='Reboot a verified prepared host after exact-hostname confirmation')
 def host_reboot(data: HostReboot, request: Request):
     administrator(request)
     return safe_helper('host-reboot', data.hostname)

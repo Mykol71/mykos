@@ -56,6 +56,8 @@ def locked():
     if path.is_symlink(): raise ValueError('Symlink lock rejected')
     with path.open('a') as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
+        from mykos_host_maintenance import admission
+        admission()
         from mykos_snapshots import recover_locked
         recover_locked()
         yield

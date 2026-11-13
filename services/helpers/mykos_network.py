@@ -122,7 +122,7 @@ def allocate_ip(settings, container_name):
             parsed = ipaddress.IPv4Address(address.split('/')[0])
             used.add(parsed)
             same = info.get('Name', '').lstrip('/') == container_name
-            recovery = (info.get('Name', '').lstrip('/').startswith('mykos-recovery-')
+            recovery = (info.get('Name', '').lstrip('/').startswith(('mykos-recovery-', 'mykos-restore-'))
                         and not info.get('State', {}).get('Running')
                         and info.get('Config', {}).get('Hostname') == container_name)
             if (same or recovery) and parsed in subnet:

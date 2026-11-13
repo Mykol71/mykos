@@ -735,3 +735,10 @@ different client occupies that path, no network test is run and no rates are inv
 ### Terminal authorization lifetime
 
 Browser sessions and admin API keys are reauthorized by the server before accepting a terminal, before forwarding each input chunk, and every five seconds while idle. Revocation, expiry or loss of the admin role closes the transport and its helper connection. Snapshot filesystem previews also require a valid live preview lease. Client polling is an additional usability check, not the authorization boundary.
+
+
+## Local host maintenance
+
+Full local administrators can inspect `GET /api/web/host/maintenance/plan` and `GET /api/web/host/maintenance/status`. `POST /api/web/host/maintenance/prepare` accepts `hostname`, the `plan_token` from the reviewed plan, and the exact `restart` array of eight-digit instance IDs accepting a cold restart. The array must include every unsupported RAM instance and may include supported instances explicitly selected for restart. `POST /api/web/host/maintenance/resume` resumes saved instances without reboot or retries a failed recovery. An optional exact `hostname` and `restart` array explicitly accept cold restarts for selected failed RAM recoveries; no fallback is automatic. All writes require the existing origin protections. These endpoints are excluded from peer forwarding. The existing host reboot endpoint now requires a ready maintenance journal and exact hostname confirmation; it queues final background verification, then rechecks active work, instance identities and snapshot checksums before scheduling reboot. Closing the HTTP connection does not cancel the confirmed request.
+
+Maintenance is serialized in a root-only durable journal under `/var/lib/mykos/host-maintenance`. Recovery at boot runs through `mykos-host-maintenance-recover.service`; no API accepts executable commands, snapshot paths, or recovery unit names. Preparation is asynchronous and does not itself reboot the host.

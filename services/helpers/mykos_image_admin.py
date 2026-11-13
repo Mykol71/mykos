@@ -58,6 +58,8 @@ def catalog():
     return result
 
 def queue(os_name,confirmation):
+    from mykos_host_maintenance import admission
+    admission()
     selection(os_name)
     if confirmation!=os_name:raise ValueError('Confirm the exact image OS')
     vm.safe_dir(STATE)
@@ -143,6 +145,8 @@ def remove(os_name,expected_id):
         return {'os':os_name,'state':'deleted','snapshots_retained':True,'instances_retained':True}
 
 def worker(os_name):
+    from mykos_host_maintenance import admission
+    admission()
     value=job(os_name)
     if value.get('state')!='queued':raise ValueError('Image removal is not queued')
     try:
@@ -217,6 +221,8 @@ def capture(os_name,confirmation):
 
 
 def queue_reset(os_name,confirmation,*,closing_session=False):
+    from mykos_host_maintenance import admission
+    admission()
     selection(os_name)
     if confirmation!=os_name:raise ValueError('Confirm the exact image OS')
     vm.safe_dir(STATE)
