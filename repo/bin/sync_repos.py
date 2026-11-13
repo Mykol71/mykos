@@ -25,6 +25,7 @@ LOCK = Path('/run/lock/mykos-repo-sync.lock')
 SLICE = 'mykosreposync.slice'
 LABEL = 'io.mykos.repo-sync'
 IMAGES = {
+    6: 'registry.access.redhat.com/ubi7/ubi:7.9-1445',
     7: 'registry.access.redhat.com/ubi7/ubi:7.9-1445',
     8: 'registry.access.redhat.com/ubi8/ubi:8.10-1786322297',
     9: 'registry.access.redhat.com/ubi9/ubi:9.8-1786631889',
@@ -38,9 +39,13 @@ def run(args, **kwargs):
     return subprocess.run([str(x) for x in args], check=True, **kwargs)
 
 
+def legacy_catalog():
+    return json.loads((Path(__file__).resolve().parents[2] / 'pos/legacy_el.json').read_text())
+
 def repositories(major):
-    if major == 7:
-        return ['rhel-7-server' + part + '-rpms' for part in ('', '-optional', '-extras')]
+    if isinstance(major,str):return [r['name'] for r in legacy_catalog()[major]['repositories']]
+    if major in (6,7):
+        return ['rhel-%s-server' % major + part + '-rpms' for part in ('', '-optional', '-extras')]
     return ['rhel-%s-for-x86_64-%s-rpms' % (major, part) for part in ('baseos', 'appstream')]
 
 
@@ -173,6 +178,14 @@ def exchange(staged, live):
 
 
 def worker_command(major, work, run_id):
+    if isinstance(major,str):
+        return ['podman','run','--rm','--name','mykos-repo-sync-rhel'+major,
+                '--cidfile',str(work/'worker.cid'),'--label',LABEL+'='+run_id,
+                '--cgroup-parent',SLICE,'--cpus=1','--memory=2g','--memory-swap=2g',
+                '--pids-limit=256','--oom-score-adj=500','--cpu-shares=128',
+                '--cgroup-conf=io.weight=default 10','--security-opt','label=disable',
+                '--volume',str(work/'input')+':/input:ro','--volume',str(work/'stage')+':/stage:rw',
+                IMAGES[7],'/usr/bin/python','/input/legacy_worker.py',major,'sync']
     credentials = []
     for source, target in [('/etc/pki/entitlement', '/run/mykos-entitlement'), ('/etc/rhsm/ca', '/run/mykos-rhsm-ca')]:
         if Path(source).is_dir():
@@ -194,7 +207,7 @@ def cleanup_worker(work, run_id):
     if fallback:
         owner = work / 'owner.json'
         name = json.loads(owner.read_text()).get('worker_name') if owner.is_file() else None
-        if name not in ['mykos-repo-sync-rhel%s' % major for major in IMAGES]:
+        if name not in ['mykos-repo-sync-rhel%s' % major for major in [*IMAGES,*legacy_catalog()]]:
             return
         candidate = name
     else:
@@ -227,6 +240,11 @@ def sync_major(major, root, runner=run, clone=clone_repository, publish=exchange
     (work / 'owner.json').write_text(json.dumps({'format': 1, 'run_id': run_id, 'worker_name': 'mykos-repo-sync-rhel%s' % major}))
     (work / 'stage').mkdir()
     try:
+        if isinstance(major,str):
+            source=Path(__file__).resolve().parents[2]/'pos';inputs=work/'input';inputs.mkdir()
+            for name in ('legacy_el.json','legacy_worker.py'):shutil.copy2(source/name,inputs/name)
+            shutil.copytree(source/'legacy-keys',inputs/'legacy-keys')
+            shutil.copy2('/etc/pki/tls/certs/ca-bundle.crt',inputs/'build-ca.crt')
         if shutil.disk_usage(root).free < MIN_FREE:
             raise RuntimeError('Repository sync needs at least 5 GiB of free headroom')
         for name in repositories(major):
@@ -271,7 +289,7 @@ def interrupted(signum, frame):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('release', type=int, choices=sorted(IMAGES), nargs='?', help='Default: synchronize RHEL 7 through 10')
+    parser.add_argument('release', choices=[*map(str,sorted(IMAGES)),*sorted(k for k in legacy_catalog() if not k.startswith('rh'))], nargs='?', help='Default: synchronize RHEL 7 through 10')
     args = parser.parse_args(argv)
     if os.geteuid() != 0 or sys.platform != 'linux':
         parser.error('Run as root on a compatible Linux repository host')
@@ -288,7 +306,7 @@ def main(argv=None):
             raise RuntimeError('A repository synchronization is already running')
         root = ROOT.resolve(strict=True)
         recover_stale(root)
-        for major in [args.release] if args.release else sorted(IMAGES):
+        for major in [int(args.release) if args.release.isdigit() else args.release] if args.release else [7,8,9,10]:
             sync_major(major, root)
     print('Repository synchronization complete.', flush=True)
 

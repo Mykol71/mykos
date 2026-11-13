@@ -42,12 +42,13 @@ def require_container_capacity(name=None):
     if name is not None and name.lstrip('/') in names: return
     if len(names) >= CONTAINER_LIMIT:
         raise ValueError('Container limit reached (50 running instances/previews). Stop an instance or close a preview before starting another.')
-NATIVE_OS_NAMES = ('rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','debian13','archlinux','sles15sp7','amazon2023','alpine')
-STAGE_OS_NAMES = ('mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','debian13','archlinux','sles15sp7','amazon2023','alpine','fedora43vm','fedora44vm','android9', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12')
+NATIVE_OS_NAMES = ('rh6','oracle6','oracle7','centos6','centos7','scientific6','scientific7','springdale6','springdale7','rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','debian13','archlinux','sles15sp7','amazon2023','alpine')
+STAGE_OS_NAMES = ('rh6','oracle6','oracle7','centos6','centos7','scientific6','scientific7','springdale6','springdale7','mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','debian13','archlinux','sles15sp7','amazon2023','alpine','fedora43vm','fedora44vm','android9', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12')
 
 def native_build_os(args):
     """Recognize legacy and private-job kickstarts for lifecycle protection."""
     for index,arg in enumerate(args[:-1]):
+        if Path(arg).name=='build_legacy_el.py' and args[index+1] in ('rh7','rh6', 'oracle6', 'oracle7', 'centos6', 'centos7', 'scientific6', 'scientific7', 'springdale6', 'springdale7'):return args[index+1]
         if Path(arg).name=='build_native_oci.py' and args[index+1] in ('debian13','archlinux','sles15sp7','amazon2023','alpine'):return args[index+1]
     for arg in args:
         path = arg.removeprefix('--ks=').removeprefix('--kickstart=')

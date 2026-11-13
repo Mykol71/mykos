@@ -2,11 +2,11 @@
 # Put direct CLI jobs in the same budget as dashboard/service jobs.
 set -euo pipefail
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
-if [ "$#" -gt 1 ]; then echo 'Usage: sync_repos [7|8|9|10]' >&2; exit 2; fi
+if [ "$#" -gt 1 ]; then echo 'Usage: sync_repos [6|7|8|9|10|DISTRO6|DISTRO7]' >&2; exit 2; fi
 case "${1:-}" in
-    ''|7|8|9|10) ;;
+    ''|6|7|8|9|10|centos6|centos7|oracle6|oracle7|scientific6|scientific7|springdale6|springdale7) ;;
     -h|--help) exec /usr/bin/python3 "$(dirname "$(readlink -f "$0")")/sync_repos.py" --help ;;
-    *) echo 'Usage: sync_repos [7|8|9|10]' >&2; exit 2 ;;
+    *) echo 'Usage: sync_repos [6|7|8|9|10|DISTRO6|DISTRO7]' >&2; exit 2 ;;
 esac
 helper="$(dirname "$(readlink -f "$0")")/sync_repos.py"
 if [ "${MYKOS_REPO_SYNC_MANAGED:-}" != 1 ]; then

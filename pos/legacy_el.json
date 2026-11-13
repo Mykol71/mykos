@@ -1,0 +1,265 @@
+{
+  "centos6": {
+    "major": 6,
+    "version": "6.10",
+    "distribution": "centos",
+    "release_package": "centos-release",
+    "repositories": [
+      {
+        "name": "centos-6-x86_64-os",
+        "url": "https://archive.kernel.org/centos-vault/6.10/os/x86_64"
+      },
+      {
+        "name": "centos-6-x86_64-updates",
+        "url": "https://archive.kernel.org/centos-vault/6.10/updates/x86_64"
+      },
+      {
+        "name": "centos-6-x86_64-extras",
+        "url": "https://archive.kernel.org/centos-vault/6.10/extras/x86_64"
+      }
+    ],
+    "keys": [
+      {
+        "url": "https://vault.centos.org/6.10/os/x86_64/RPM-GPG-KEY-CentOS-6",
+        "sha256": "917d9c58a79f9a68e71fad739dda2728edbd8a7cde235245c7852f330663613f",
+        "fingerprints": [
+          "C1DAC52D1664E8A4386DBA430946FCA2C105B9DE"
+        ]
+      }
+    ]
+  },
+  "oracle6": {
+    "major": 6,
+    "version": "6.10",
+    "distribution": "oracle",
+    "release_package": "oraclelinux-release",
+    "repositories": [
+      {
+        "name": "oracle-6-x86_64-os",
+        "url": "https://yum.oracle.com/repo/OracleLinux/OL6/latest/x86_64"
+      }
+    ],
+    "keys": [
+      {
+        "url": "https://yum.oracle.com/RPM-GPG-KEY-oracle-ol6",
+        "sha256": "e9280ce2eae9b06ae3d7aa3601b113d38f379c837221ee07908fe8dd20fedb86",
+        "fingerprints": [
+          "42144123FECFC55B9086313D72F97B74EC551F03"
+        ]
+      }
+    ]
+  },
+  "scientific6": {
+    "major": 6,
+    "version": "6.10",
+    "distribution": "scientific",
+    "release_package": "sl-release",
+    "repositories": [
+      {
+        "name": "scientific-6-x86_64-os",
+        "url": "https://ftp.gwdg.de/pub/linux/scientificlinux/scientific/obsolete/6.10/x86_64/os"
+      },
+      {
+        "name": "scientific-6-x86_64-updates",
+        "url": "https://ftp.gwdg.de/pub/linux/scientificlinux/scientific/obsolete/6.10/x86_64/updates/security"
+      }
+    ],
+    "keys": [
+      {
+        "url": "https://ftp.gwdg.de/pub/linux/scientificlinux/scientific/obsolete/6.10/x86_64/os/RPM-GPG-KEY-sl",
+        "sha256": "2c992d1b418040d8a7bb0684c54045d3d31adc2a2f5a36b228c6e7d1e8a8331b",
+        "fingerprints": [
+          "40D4223E36733C2E1B24E755B0B4183F192A7D7D",
+          "6BA4A10DD65353C6E37A87EAB1F326DB49444317"
+        ]
+      },
+      {
+        "url": "https://ftp.gwdg.de/pub/linux/scientificlinux/scientific/obsolete/6.10/x86_64/os/RPM-GPG-KEY-sl6",
+        "sha256": "169f19b0fb363c5f9d70e6902d811ae2d1a3480e0eab57f3edecefc22f1b1487",
+        "fingerprints": [
+          "E2E5CBB56E19960FF5096994915D75E09B1FD350",
+          "C4403DD507848175722673B8CD15EA57118A857A"
+        ]
+      }
+    ]
+  },
+  "springdale6": {
+    "major": 6,
+    "version": "6.10",
+    "distribution": "springdale",
+    "release_package": "springdale-core",
+    "repositories": [
+      {
+        "name": "springdale-6-x86_64-os",
+        "url": "https://springdale.math.ias.edu/data/puias/6.10/x86_64/os"
+      },
+      {
+        "name": "springdale-6-x86_64-updates",
+        "url": "https://springdale.math.ias.edu/data/puias/updates/6/en/os/x86_64"
+      }
+    ],
+    "keys": [
+      {
+        "url": "https://springdale.math.ias.edu/data/puias/6.10/x86_64/os/RPM-GPG-KEY-puias",
+        "sha256": "3abfb148a44f0c4722ba42b67ac4b94d2a9f63746bbef8afe5c3f090c1301a0e",
+        "fingerprints": [
+          "22666129E0CD00628D44C6CF16CFC33341A40948"
+        ]
+      }
+    ]
+  },
+  "centos7": {
+    "major": 7,
+    "version": "7.9",
+    "distribution": "centos",
+    "release_package": "centos-release",
+    "repositories": [
+      {
+        "name": "centos-7-x86_64-os",
+        "url": "https://archive.kernel.org/centos-vault/7.9.2009/os/x86_64"
+      },
+      {
+        "name": "centos-7-x86_64-updates",
+        "url": "https://archive.kernel.org/centos-vault/7.9.2009/updates/x86_64"
+      },
+      {
+        "name": "centos-7-x86_64-extras",
+        "url": "https://archive.kernel.org/centos-vault/7.9.2009/extras/x86_64"
+      }
+    ],
+    "keys": [
+      {
+        "url": "https://vault.centos.org/7.9.2009/os/x86_64/RPM-GPG-KEY-CentOS-7",
+        "sha256": "8b48b04b336bd725b9e611c441c65456a4168083c4febc28e88828d8ec14827f",
+        "fingerprints": [
+          "6341AB2753D78A78A7C27BB124C6A8A7F4A80EB5"
+        ]
+      }
+    ]
+  },
+  "oracle7": {
+    "major": 7,
+    "version": "7.9",
+    "distribution": "oracle",
+    "release_package": "oraclelinux-release",
+    "repositories": [
+      {
+        "name": "oracle-7-x86_64-os",
+        "url": "https://yum.oracle.com/repo/OracleLinux/OL7/latest/x86_64"
+      }
+    ],
+    "keys": [
+      {
+        "url": "https://yum.oracle.com/RPM-GPG-KEY-oracle-ol7",
+        "sha256": "e9280ce2eae9b06ae3d7aa3601b113d38f379c837221ee07908fe8dd20fedb86",
+        "fingerprints": [
+          "42144123FECFC55B9086313D72F97B74EC551F03"
+        ]
+      }
+    ]
+  },
+  "scientific7": {
+    "major": 7,
+    "version": "7.9",
+    "distribution": "scientific",
+    "release_package": "sl-release",
+    "repositories": [
+      {
+        "name": "scientific-7-x86_64-os",
+        "url": "https://ftp.gwdg.de/pub/linux/scientificlinux/scientific/obsolete/7.9/x86_64/os"
+      },
+      {
+        "name": "scientific-7-x86_64-updates",
+        "url": "https://ftp.gwdg.de/pub/linux/scientificlinux/scientific/obsolete/7.9/x86_64/updates/security"
+      }
+    ],
+    "keys": [
+      {
+        "url": "https://ftp.gwdg.de/pub/linux/scientificlinux/scientific/obsolete/7.9/x86_64/os/RPM-GPG-KEY-sl",
+        "sha256": "2c992d1b418040d8a7bb0684c54045d3d31adc2a2f5a36b228c6e7d1e8a8331b",
+        "fingerprints": [
+          "40D4223E36733C2E1B24E755B0B4183F192A7D7D",
+          "6BA4A10DD65353C6E37A87EAB1F326DB49444317"
+        ]
+      },
+      {
+        "url": "https://ftp.gwdg.de/pub/linux/scientificlinux/scientific/obsolete/7.9/x86_64/os/RPM-GPG-KEY-sl7",
+        "sha256": "847d28c5f0b9d14ddc37a944dd5bc58a54604b223971cf5ad0762ebd8b23828b",
+        "fingerprints": [
+          "ECD5C55BBD6D1B59D0804FD483330DED1AA2F65C",
+          "2F97F18D5DBC7D55B5615C7E29C559C540A1D3E7"
+        ]
+      }
+    ]
+  },
+  "springdale7": {
+    "major": 7,
+    "version": "7.9",
+    "distribution": "springdale",
+    "release_package": "springdale-core",
+    "repositories": [
+      {
+        "name": "springdale-7-x86_64-os",
+        "url": "https://springdale.math.ias.edu/data/puias/7.9/x86_64/os"
+      },
+      {
+        "name": "springdale-7-x86_64-updates",
+        "url": "https://springdale.math.ias.edu/data/puias/updates/7/en/os/x86_64"
+      }
+    ],
+    "keys": [
+      {
+        "url": "https://springdale.math.ias.edu/data/puias/7.9/x86_64/os/RPM-GPG-KEY-puias",
+        "sha256": "3abfb148a44f0c4722ba42b67ac4b94d2a9f63746bbef8afe5c3f090c1301a0e",
+        "fingerprints": [
+          "22666129E0CD00628D44C6CF16CFC33341A40948"
+        ]
+      },
+      {
+        "url": "https://springdale.math.ias.edu/data/puias/7.9/x86_64/os/RPM-GPG-KEY-springdale",
+        "sha256": "3abfb148a44f0c4722ba42b67ac4b94d2a9f63746bbef8afe5c3f090c1301a0e",
+        "fingerprints": [
+          "22666129E0CD00628D44C6CF16CFC33341A40948"
+        ]
+      }
+    ]
+  },
+  "rh6": {
+    "major": 6,
+    "version": "6.10",
+    "distribution": "rhel",
+    "release_package": "redhat-release-server",
+    "repositories": [
+      {
+        "name": "rhel-6-server-rpms",
+        "url": "https://cdn.redhat.com/content/dist/rhel/server/6/6Server/x86_64/os",
+        "guest_url": "https://repo.myk.sh/rhel-6-server-rpms"
+      }
+    ],
+    "keys": [
+      {
+        "sha256": "0db3dc1b6228f29d60f37c5ad91d9f4cd3547895e8ebedb242469b1c0a0cdf08",
+        "url": "host-installed Red Hat public release key"
+      }
+    ]
+  },
+  "rh7": {
+    "major": 7,
+    "version": "7.9",
+    "distribution": "rhel",
+    "release_package": "redhat-release-server",
+    "repositories": [
+      {
+        "name": "rhel-7-server-rpms",
+        "url": "https://cdn.redhat.com/content/dist/rhel/server/7/7Server/x86_64/os",
+        "guest_url": "https://repo.myk.sh/rhel-7-server-rpms"
+      }
+    ],
+    "keys": [
+      {
+        "sha256": "0db3dc1b6228f29d60f37c5ad91d9f4cd3547895e8ebedb242469b1c0a0cdf08",
+        "url": "host-installed Red Hat public release key"
+      }
+    ]
+  }
+}

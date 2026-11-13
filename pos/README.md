@@ -147,3 +147,7 @@ application/configuration/docs and installer recovery packages are retained.
 Run `sudo /usr/local/sbin/mykos-prune --dry-run` to preview without stopping or
 deleting anything. Run `sudo /usr/local/sbin/mykos-prune purge` to confirm and
 execute; inspect `sudo /usr/local/sbin/mykos-prune status` if interrupted.
+
+## Legacy EL6/EL7 native builds
+
+`build_legacy_el.py OS` installs the selected final userspace in a bounded RHEL7 worker from pinned vendor-signed RPMs. See [legacy guest details](../docs/IMAGE_BUILDS.md#legacy-enterprise-linux-guests) for identifiers, init behavior and repository sync commands. The worker digest is recorded in build output; host credentials remain read-only and outside the image.

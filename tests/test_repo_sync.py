@@ -49,7 +49,7 @@ def clone(live, staged):
     shutil.copytree(live, staged) if live.exists() else staged.mkdir()
 
 
-@pytest.mark.parametrize('major,count', [(7, 3), (8, 2), (9, 2), (10, 2)])
+@pytest.mark.parametrize('major,count', [(6, 3), (7, 3), (8, 2), (9, 2), (10, 2)])
 def test_release_selection_and_constrained_worker(major, count, tmp_path):
     assert len(sync.repositories(major)) == count
     cmd = sync.worker_command(major, tmp_path, 'a' * 32)
@@ -63,7 +63,7 @@ def test_release_selection_and_constrained_worker(major, count, tmp_path):
     assert '--rm' in cmd and '--replace' not in cmd
 
 
-@pytest.mark.parametrize('argument', ['6', '11', 'garbage'])
+@pytest.mark.parametrize('argument', ['5', '11', 'garbage'])
 def test_invalid_release_does_not_create_scratch(argument, tmp_path):
     result = subprocess.run([sys.executable, str(ROOT / 'repo/bin/sync_repos.py'), argument],
                             cwd=tmp_path, text=True, capture_output=True)
@@ -327,8 +327,8 @@ def test_direct_cli_uses_the_managed_background_budget(tmp_path):
     assert '--wait' in args and '--collect' in args
 
 
-def test_wrapper_rejects_rh6_without_starting_a_unit(tmp_path):
-    result = subprocess.run(['bash', str(ROOT / 'repo/bin/sync_repos'), '6'], cwd=tmp_path,
+def test_wrapper_rejects_rh5_without_starting_a_unit(tmp_path):
+    result = subprocess.run(['bash', str(ROOT / 'repo/bin/sync_repos'), '5'], cwd=tmp_path,
                             text=True, capture_output=True)
     assert result.returncode == 2 and 'Usage:' in result.stderr
     assert not list(tmp_path.iterdir())

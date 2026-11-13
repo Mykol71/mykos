@@ -526,3 +526,58 @@ or interruption. Installer diagnostics remain in the printed diagnostic location
 When building a VM image from the text menu, the image command prompts for runtime RAM in MiB:2048 (default),4096 or8192. Legacy Windows selections retain2048 for compatibility. Native Linux container builds do not use this VM prompt. The CLI equivalent is `sudo ./vm create mac12 --ram-mib 4096`; `build` accepts the same option. The chosen size is preserved through installed boot, checkpoint capture, packaged image metadata and new instances. Resuming an existing image preserves its original selection; changing it requires an explicit replacement build. Installer-only RAM allowances do not change the selected runtime size.
 
 Larger image allocations require available host RAM for the selected guest plus4 GiB of host headroom. A missing or mismatched RAM checkpoint is rejected rather than resumed at another size.
+
+
+## Legacy Enterprise Linux guests
+
+Final x86_64 EL6/EL7 native userspaces are available through explicit image
+selections: `rh6` (RHEL 6.10), `centos6` (6.10), `centos7` (7.9.2009),
+`oracle6`/`oracle7` (6.10/7.9), `scientific6`/`scientific7` (6.10/7.9), and
+`springdale6`/`springdale7` (6.10/7.9). `rh7` builds final RHEL7.9 through the same signed-package worker.
+AlmaLinux and Rocky Linux do not have EL6/EL7 releases.
+
+Use the normal Create image menu and select one OS explicitly. The newly added
+legacy selections are excluded from the bulk image build; the existing `rh7`
+selection remains in that batch. The bounded worker installs signed RPMs
+from the selected distribution with pinned public signing keys and verified
+HTTPS. RHEL builds require the builder host's valid existing entitlement; its
+certificates and private keys are mounted read-only into the disposable worker
+and are never copied into the guest. Guests use locked root passwords and
+create their own SSH host keys at startup.
+
+These are native userspaces sharing the MYKOS host kernel, not historical
+vendor-kernel virtual machines. EL6 uses its vendor Upstart with a container
+startup profile: SSH, unique host keys and optional `/etc/rc.d/rc.local`;
+hardware/network boot jobs are retained inactive under
+`/usr/share/mykos/legacy-init.disabled`. Podman owns devices and networking.
+Custom Upstart jobs can be added under `/etc/init`; traditional services can be
+managed with `service`. EL7 uses the existing isolated systemd/cgroup
+compatibility profile. Legacy selections are labeled in the dashboard.
+
+MYKOS host installation remains supported on EL9/EL10 only. These legacy guest
+selections do not extend vendor security maintenance. Guest VPN and application
+backup compatibility must be qualified separately; adding an archived
+userspace does not imply those integrations support it.
+
+## Legacy repository mirrors
+
+Run `repo/bin/sync_repos 6` for the entitled RHEL6 server, optional and extras
+repositories. Explicit clone selections are accepted, for example
+`repo/bin/sync_repos centos6`, `oracle7`, `scientific6` or `springdale7`.
+The no-argument default remains RHEL7 through RHEL10. Legacy syncs use the same
+shared sync/delete lock, bounded low-priority workers, signature and complete
+metadata/package checksum validation, immutable old package URLs and atomic
+per-repository publication. A failed component is not published.
+
+All legacy mirrors are LAN-only, including direct `/repos/` aliases. Only the
+MYKOS EL9/EL10 host-package trees are public; `updateos` remains LAN-only.
+Mirror publication on the maintained hosts goes to production's
+`/home/mykos-repositories` via its trusted `/var/www/html` alias.
+
+EL6 native userspace requires an x86_64 host kernel with legacy vsyscall emulation. An explicit `vsyscall=none` host is rejected without changing kernel settings; incompatible guest startup also fails the build before an image is accepted.
+
+EL7 memory captures require background programs to be managed by guest systemd.
+Use a service unit or `systemd-run` for long-lived programs, and close exec
+terminals before capture. A process outside the instance's private legacy
+cgroup is rejected before capture; MYKOS leaves the container running and does
+not move the process or change host cgroup settings.

@@ -2,7 +2,7 @@
 import mykos_prune
 from mykos_runtime import native_build_os
 
-OCI_OS_NAMES=frozenset(('debian13','archlinux','sles15sp7','amazon2023','alpine'))
+OCI_OS_NAMES=frozenset(('rh7','rh6','oracle6','oracle7','centos6','centos7','scientific6','scientific7','springdale6','springdale7','debian13','archlinux','sles15sp7','amazon2023','alpine'))
 
 def installing_images():
     # Lifecycle discovery already verifies the builder executable and its OS.

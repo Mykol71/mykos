@@ -116,19 +116,20 @@ sudo /usr/share/mykos/pos/vm build mac15
 
 MYKOS supports both native Linux containers and VM-backed instances. The native
 EL entries are listed here alongside the VM types; host OS support is separate.
-RHEL 7 and 8 remain guest choices even though MYKOS hosts require RHEL 9 or 10.
+EL6, EL7 and EL8 are guest choices; MYKOS hosts require RHEL9 or RHEL10.
 These are the current accepted image/instance selections, not a claim that every
 fresh guest installation has been retested on every host.
 
 #### Native EL and other Linux containers
 
 Run `sudo mykos`, choose **c. Build image**, then enter one OS identifier from
-this table. Native builds use Kickstart/rootfs creation or official OCI bases and Podman, rather than
+this table. Native builds use signed RPM rootfs workers, Kickstart/rootfs creation or official OCI bases and Podman, rather than
 `pos/vm build` or the VM-only `mykos-image-build` command.
 
 | Native guest/image type | OS identifier entered at the menu |
 | --- | --- |
-| Red Hat Enterprise Linux 7 | `rh7` |
+| Red Hat Enterprise Linux 6.10 (legacy) | `rh6` |
+| Red Hat Enterprise Linux 7.9 (legacy) | `rh7` |
 | Red Hat Enterprise Linux 8 | `rh8` |
 | Red Hat Enterprise Linux 9 | `rh9` |
 | Red Hat Enterprise Linux 10 | `rh10` |
@@ -138,9 +139,13 @@ this table. Native builds use Kickstart/rootfs creation or official OCI bases an
 | AlmaLinux 8 | `alma8` |
 | AlmaLinux 9 | `alma9` |
 | AlmaLinux 10 | `alma10` |
+| Oracle Linux 6.10 / 7.9 (legacy) | `oracle6`, `oracle7` |
 | Oracle Linux 8 | `oracle8` |
 | Oracle Linux 9 | `oracle9` |
 | Oracle Linux 10 | `oracle10` |
+| CentOS 6.10 / 7.9.2009 (legacy) | `centos6`, `centos7` |
+| Scientific Linux 6.10 / 7.9 (legacy) | `scientific6`, `scientific7` |
+| Springdale Linux 6.10 / 7.9 (legacy) | `springdale6`, `springdale7` |
 | CentOS Stream 8 | `centos8` |
 | CentOS Stream 9 | `centos9` |
 | CentOS Stream 10 | `centos10` |
@@ -154,7 +159,7 @@ this table. Native builds use Kickstart/rootfs creation or official OCI bases an
 | Amazon Linux 2023 | `amazon2023` |
 | Alpine Linux 3.24 (OpenRC) | `alpine` |
 
-The five additional native selections use official vendor OCI bases with a
+Debian, Arch, SUSE, Amazon Linux and Alpine use official vendor OCI bases with a
 recorded digest and vendor package verification. Existing locally cached upstream
 tags are preserved. They use managed NAT networking; distro-specific VPN creation
 is not yet qualified and is unavailable. These images default to UTC. Custom guest
@@ -172,7 +177,8 @@ available. Repository access, installation media and applicable vendor licenses
 are still required for the chosen guest.
 
 The menu's `all` selection covers the **16 EL images**: RHEL 7–10 plus Rocky,
-AlmaLinux, Oracle and CentOS Stream 8–10. Fedora, SQL Server and the five additional native families are individual
+AlmaLinux, Oracle and CentOS Stream 8–10. The new EL6/EL7 selections other than
+the existing `rh7`, Fedora, SQL Server and the five additional native families are individual
 selections. Each example is an alternative; do not start a full image batch just
 to check application or documentation changes.
 
@@ -266,3 +272,5 @@ downloads, RHEL mirrors and other private repository content remain LAN-only. Se
 for current storage, client settings and publication destinations.
 
 Administrators can track repository RPM transfers and separate GitHub release-asset counters through the Repos pane’s **RPM stats** report and the server CLI. Collection is opt-in on the repository host; see [private RPM download statistics](docs/RPM.md#private-rpm-download-statistics) for accounting semantics and setup.
+
+Legacy EL6/EL7 guest details, final upstream archives and explicit LAN mirror sync selections are documented in the [image build guide](docs/IMAGE_BUILDS.md#legacy-enterprise-linux-guests). MYKOS host packages remain EL9/EL10 only.

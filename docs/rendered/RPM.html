@@ -179,7 +179,11 @@ sudo systemctl show mykos-repo-sync.service -p ActiveState -p Result -p ExecMain
 <p>The direct command also enters the managed background slice and waits for its
 transient <code>mykos-repo-sync-cli.service</code>, collecting that unit after completion.
 Both entry points share the sync lock; the dashboard recognizes either one and
-blocks repository deletion while sync holds the lock. RH6 is rejected.</p>
+blocks repository deletion while sync holds the lock. Explicit <code>6</code> selects
+RHEL6.10; clone keys such as <code>centos6</code>, <code>oracle7</code>, <code>scientific6</code> and <code>springdale7</code>
+select their final archived releases. These optional selections do not change
+the RHEL7–10 default. See <a href="IMAGE_BUILDS.html#legacy-repository-mirrors">legacy guest and mirror instructions</a>.
+The source toolkit&#39;s <code>repo/README.md</code> describes server alias configuration.</p>
 <p>The entire job receives one CPU of quota, a 2 GiB soft memory threshold and 3 GiB hard limit, CPU/IO weights of 10, nice value 15
 and best-effort IO priority 7. Each worker is additionally limited to one CPU,
 2 GiB RAM with no additional swap and 256 processes. Background processes have an increased OOM score so they are preferred

@@ -303,12 +303,13 @@ def image_os(info, image):
     labels = image.get('Labels') or image.get('Config', {}).get('Labels') or {}
     selected = (info.get('Config', {}).get('Labels') or {}).get('io.mykos.vm.os', '')
     ref = selected or labels.get('io.mykos.os') or image_name(info, image).split('/')[-1].split(':')[0]
-    families = [('mssql', 'Microsoft SQL Server'), ('rh', 'Red Hat Enterprise Linux'), ('rocky', 'Rocky Linux'), ('alma', 'AlmaLinux'), ('oracle','Oracle Linux'), ('centos','CentOS Stream'), ('fedora','Fedora'), ('debian','Debian'), ('sles','SUSE Linux Enterprise'), ('amazon','Amazon Linux'), ('ubuntu', 'Ubuntu'),('android','Android-x86'),
+    families = [('mssql', 'Microsoft SQL Server'), ('rh', 'Red Hat Enterprise Linux'), ('rocky', 'Rocky Linux'), ('alma', 'AlmaLinux'), ('oracle','Oracle Linux'), ('centos','CentOS Stream'), ('scientific','Scientific Linux'), ('springdale','Springdale Linux'), ('fedora','Fedora'), ('debian','Debian'), ('sles','SUSE Linux Enterprise'), ('amazon','Amazon Linux'), ('ubuntu', 'Ubuntu'),('android','Android-x86'),
                 ('wns', 'Windows Server'), ('win', 'Windows'), ('macos', 'macOS'), ('mac', 'macOS')]
     if ref in ('archlinux','alpine'):
         return {'os_type':{'archlinux':'Arch Linux','alpine':'Alpine Linux'}[ref],'os_version':labels.get('io.mykos.os.version') or ('rolling' if ref=='archlinux' else '3.24'),'os_codename':'','os_source':'image','image_id':info.get('Image')}
     for prefix, title in families:
         if ref.startswith(prefix) and re.fullmatch(r'[0-9][0-9.a-z]*', ref[len(prefix):]):
+            if prefix=='centos' and ref in ('centos6','centos7'):title='CentOS'
             version = ref[len(prefix):] if prefix == 'mssql' else labels.get('io.mykos.os.version') or labels.get('version') or ref[len(prefix):]
             if prefix=='fedora' and re.fullmatch(r'fedora(?:43|44)vm',ref):version=ref[len(prefix):-2]
             if prefix in ('rh','rocky','alma','oracle') and not re.fullmatch(r'[0-9]+(?:\.[0-9]+)+', str(version)):

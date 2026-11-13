@@ -10,18 +10,25 @@ from mykos_runtime import PODMAN, run, NATIVE_OS_NAMES
 ROOT = Path('/run/mykos-legacy-cgroups')
 UNIFIED = Path('/sys/fs/cgroup/cgroup.controllers')
 UNIT = 'mykos-legacy-cgroups.service'
+EL7_NAMES = ('rh7','oracle7','centos7','scientific7','springdale7')
 
 
 def legacy_image(image):
     if not UNIFIED.is_file():return False
-    if image in ('rh7','rh7:latest','localhost/rh7:latest'):
+    if image in tuple(x for name in EL7_NAMES for x in (name,name+':latest','localhost/'+name+':latest')):
         legacy=True
     elif image in NATIVE_OS_NAMES:
         legacy=False
     else:
         value=json.loads(run([PODMAN,'image','inspect',image],timeout=20))[0]
-        legacy=(value.get('Config',{}).get('Labels') or {}).get('io.mykos.os')=='rh7'
+        legacy=(value.get('Config',{}).get('Labels') or {}).get('io.mykos.os') in EL7_NAMES
     return legacy
+
+
+def host_mount_arguments(image):
+    # An external root bind would replace the saved private EL7 hierarchy
+    # with the host cgroup2 root when CRIU reopens its external mounts.
+    return [] if legacy_image(image) else ['--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro']
 
 
 def init_command(image):
@@ -41,8 +48,10 @@ def arguments(image):
     run(['/usr/bin/systemctl','enable','--now',UNIT],timeout=40)
     wrapper=Path(__file__).with_name('mykos-rh7-init')
     if wrapper.is_symlink() or not wrapper.is_file():raise ValueError('Missing RH7 cgroup initialization helper')
+    # Bind the named hierarchy explicitly: newer crun no longer materializes
+    # it from force_cgroup_v1. PID 1 isolates its own branch before systemd.
     return ['--runtime=/usr/bin/crun','--systemd=always',
-            '--annotation=run.oci.systemd.force_cgroup_v1=/sys/fs/cgroup',
+            '--mount','type=bind,source='+str(ROOT/'systemd')+',destination=/run/mykos-legacy-systemd,ro=true',
             '--mount','type=bind,source='+str(wrapper)+',destination=/usr/local/libexec/mykos-rh7-init,ro=true']
 
 

@@ -67,6 +67,27 @@ def delegation_state(value):
     return result
 
 
+
+def check_legacy_processes(state,expected):
+    """Reject exec sessions outside this EL7 instance's private v1 hierarchy.
+
+    Only read procfs. Never move a user's processes or alter host cgroups to
+    make an otherwise inconsistent memory snapshot appear successful.
+    """
+    initial=PROC/str(int(state['State']['Pid']))/'ns/pid'
+    namespace=initial.stat().st_ino
+    for process in PROC.iterdir():
+        if not process.name.isdigit():continue
+        try:
+            if (process/'ns/pid').stat().st_ino!=namespace:continue
+            rows=(process/'cgroup').read_text().splitlines()
+        except (FileNotFoundError,ProcessLookupError):continue
+        paths=[line.split(':',2)[2] for line in rows if line.split(':',2)[1]=='name=systemd']
+        if len(paths)!=1 or not (paths[0]==expected or paths[0].startswith(expected+'/')):
+            raise ValueError('EL7 RAM snapshot requires services managed by guest systemd. Close exec terminals and start background programs with systemd before retrying; the container was left running.')
+    if initial.stat().st_ino!=namespace:raise ValueError('Container changed during EL7 snapshot preflight')
+
+
 def capture_context(state):
     if not (CGROUP/'cgroup.controllers').is_file():return None
     value={'path':state.get('State',{}).get('CgroupPath','')}
@@ -87,12 +108,13 @@ def capture_context(state):
     value['controllers']=controllers(root)
     value['namespace_controllers']=controllers(namespace_root(value))
     value['delegation']=delegation_state(value)
-    if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.os')=='rh7':
+    if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.os') in ('rh7','oracle7','centos7','scientific7','springdale7'):
         expected='/mykos/'+state['Id']
         outside=[line.split(':',2)[2] for line in membership if line.split(':',2)[1]=='name=systemd']
         inside=[line.split(':',2)[2] for line in result.stdout.splitlines() if line.split(':',2)[1]=='name=systemd']
         if len(outside)!=1 or len(inside)!=1 or namespace_boundary(outside[0],inside[0],expected)!=expected:
             raise ValueError('RH7 requires a private legacy cgroup; recreate this instance with the current runtime')
+        check_legacy_processes(state,expected)
         value['legacy_systemd_path']=expected
     return value
 
@@ -103,7 +125,7 @@ def restore_context(state,metadata):
     if not value:raise ValueError('Take a fresh snapshot: this capture predates complete cgroup-v2 state')
     checked_root(value,state['Id'])
     namespace_root(value)
-    if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.os')=='rh7' and not legacy_systemd_path(value):
+    if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.os') in ('rh7','oracle7','centos7','scientific7','springdale7') and not legacy_systemd_path(value):
         raise ValueError('Take a fresh snapshot: this RH7 capture predates isolated legacy cgroups')
     if state.get('OCIRuntime')=='crun' and 'namespace_path' not in value:
         raise ValueError('Take a fresh snapshot: this capture predates the crun namespace boundary fix')

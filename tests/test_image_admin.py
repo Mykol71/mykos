@@ -5,7 +5,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'services/helpers'))
 import mykos_image_admin as images
 import mykos_vm as vm
 
-@pytest.mark.parametrize('selection',['../rh9','rocky7','alma11','centos7','fedora45','other'])
+@pytest.mark.parametrize('selection',['../rh9','rocky7','alma11','centos5','fedora45','other'])
 def test_invalid_image_selections_cannot_start_workers(selection):
     with pytest.raises(ValueError):images.selection(selection)
 

@@ -59,7 +59,7 @@ def web_image_build_delete(os_name:str,data:DeleteBuildRequest,request:Request):
 
 
 def prepared_os(os_name):
-    NATIVE_OS_NAMES=('rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','debian13','archlinux','sles15sp7','amazon2023','alpine')
+    NATIVE_OS_NAMES=('rh6','oracle6','oracle7','centos6','centos7','scientific6','scientific7','springdale6','springdale7','rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','debian13','archlinux','sles15sp7','amazon2023','alpine')
     if not OS.fullmatch(os_name) and os_name not in NATIVE_OS_NAMES and os_name not in ('win7u','winxp','winme','win2k','win98','mac12','mac13','mac14','mac15','android9'):
         raise HTTPException(400,'Unsupported image OS')
 

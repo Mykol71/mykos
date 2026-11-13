@@ -89,9 +89,11 @@ on the repository server. Public download links use `public_base_url`.
 ## Repository synchronization scope
 
 Run `./bin/sync_repos` from this directory to synchronize RHEL 7, 8, 9 and 10,
-or pass one major, for example `./bin/sync_repos 9`. RH6 synchronization is
-removed, including its entitlement fallback and credential mounts; passing `6`
-returns a usage error. Existing repository files are not deleted by this change.
+or pass one major, for example `./bin/sync_repos 9`. Explicit `6` selects final
+RHEL6.10 with valid host entitlements. Clone keys such as `centos6`, `oracle7`,
+`scientific6` and `springdale7` select the corresponding final vendor archive.
+Legacy selections are opt-in; the default stays RHEL7–10. Existing repository
+files are preserved.
 
 ## Verified publication and background budget
 
@@ -107,3 +109,14 @@ The [Apache access policy example](apache-repository-access.conf.example) keeps
 Only the EL9 and EL10 MYKOS trees are public.
 
 DNF workers for RHEL 8, 9 and 10 keep general plugins disabled in their private configuration, then enable only `reposync` for the actual download command using `--setopt=plugins=1 --disableplugin=\* --enableplugin=reposync`. Leaving all plugins disabled makes DNF report that the `reposync` command is unavailable. The allowlist does not activate subscription-manager or change the host DNF configuration.
+
+## Serving optional legacy mirrors
+
+Generate the reviewed Apache fragment with `python3 bin/legacy_aliases.py`.
+The example `legacy-repositories.conf.example` defines explicit direct and
+`/repos/` aliases for the legacy trees and restricts them to the two trusted
+LAN networks. Include it inside each repository virtual host, before any
+generic `/repos/` catch-all alias. Review the network ranges for your site,
+run `httpd -t`, reload gracefully and check both allowed and denied clients
+before publishing mirrors. The generator does not modify Apache automatically.
+Do not add public grants for legacy mirrors or `updateos`.

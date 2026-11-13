@@ -162,7 +162,7 @@ def test_native_pipeline_blocks_interleaving_and_cleans_each_context(tmp_path):
  functions=functions.replace('/var/tmp/containers',str(tmp_path/'containers')).replace('/usr/local/sbin/mykos-native-image-start','native_start')
  (tmp_path/'prepare_ks.py').write_text('import sys;from pathlib import Path;Path(sys.argv[2]).write_text("generated copy")\n')
  (tmp_path/'image_version.py').write_text('print("review-version")\n')
- (tmp_path/'build_rootfs.py').write_text('import os,sys,time;from pathlib import Path\nroot=Path(os.environ["REVIEW_ROOT"])\nif sys.argv[1]=="rh7":\n (root/"ready").touch()\n for _ in range(1000):\n  if (root/"release").exists():break\n  time.sleep(.01)\n else:raise RuntimeError("review timeout")\nout=Path(sys.argv[sys.argv.index("--output-directory")+1]);(out/(sys.argv[1]+"-docker.tar.xz")).write_bytes(b"rootfs")\n')
+ (tmp_path/'build_rootfs.py').write_text('import os,sys,time;from pathlib import Path\nroot=Path(os.environ["REVIEW_ROOT"])\nif sys.argv[1]=="rh9":\n (root/"ready").touch()\n for _ in range(1000):\n  if (root/"release").exists():break\n  time.sleep(.01)\n else:raise RuntimeError("review timeout")\nout=Path(sys.argv[sys.argv.index("--output-directory")+1]);(out/(sys.argv[1]+"-docker.tar.xz")).write_bytes(b"rootfs")\n')
  script=r"""set -eu
 cd "$REVIEW_ROOT"
 ROOTDIR="$REVIEW_ROOT"
@@ -183,7 +183,7 @@ podman() {
  script=script.replace('\\nbuild-image','\nbuild-image').replace('"$1"\\n','"$1"\n')
  path=tmp_path/'run';path.write_text(script)
  env={**os.environ,'REVIEW_ROOT':str(tmp_path),'REVIEW_PYTHON':sys.executable}
- first=subprocess.Popen(['/bin/bash',str(path),'rh7'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
+ first=subprocess.Popen(['/bin/bash',str(path),'rh9'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,start_new_session=True)
  try:
   deadline=time.monotonic()+10
   while not (tmp_path/'ready').exists() and time.monotonic()<deadline:
@@ -194,9 +194,9 @@ podman() {
   assert second.returncode!=0 and 'Another native image build' in second.stderr
   (tmp_path/'release').touch();stdout,stderr=first.communicate(timeout=15);assert first.returncode==0,stdout+stderr
   second=subprocess.run(['/bin/bash',str(path),'rh8'],env=env,capture_output=True,text=True,timeout=15);assert second.returncode==0,second.stdout+second.stderr
-  assert 'ADD rh7-docker.tar.xz /' in (tmp_path/'result-rh7').read_text()
+  assert 'ADD rh9-docker.tar.xz /' in (tmp_path/'result-rh9').read_text()
   assert 'ADD rh8-docker.tar.xz /' in (tmp_path/'result-rh8').read_text()
-  assert (tmp_path/'context-rh7').read_text()!=(tmp_path/'context-rh8').read_text()
+  assert (tmp_path/'context-rh9').read_text()!=(tmp_path/'context-rh8').read_text()
   assert list((tmp_path/'containers').iterdir())==[]
  finally:
   if first.poll() is None:

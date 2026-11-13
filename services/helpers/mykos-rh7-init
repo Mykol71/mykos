@@ -15,23 +15,34 @@ def container_id(text):
     return matches[0]
 
 
+def hierarchy_mount(lines):
+    # Existing containers bind this same helper but retain the original OCI
+    # annotation profile. Keep their working startup path across upgrades.
+    lines=list(lines)
+    for source in ('/run/mykos-legacy-systemd','/sys/fs/cgroup/systemd'):
+        mounts=[line for line in lines if len(line.split())>5 and line.split()[4]==source]
+        if not mounts:continue
+        if len(mounts)!=1 or ' - cgroup ' not in mounts[0] or 'name=systemd' not in mounts[0]:
+            raise ValueError('The private RH7 runtime requires the named systemd hierarchy')
+        return source
+    raise ValueError('The private RH7 runtime requires the named systemd hierarchy')
+
+
 def main():
     if os.geteuid()!=0 or os.getpid()!=1:raise ValueError('RH7 initialization requires container PID 1')
     with open('/run/.containerenv') as handle:identity=container_id(handle.read(8192))
     target='/sys/fs/cgroup/systemd'
-    with open('/proc/self/mountinfo') as handle:
-        mounts=[line for line in handle if len(line.split())>5 and line.split()[4]==target]
-    if len(mounts)!=1 or ' - cgroup ' not in mounts[0] or 'name=systemd' not in mounts[0]:
-        raise ValueError('The private RH7 runtime requires the named systemd hierarchy')
+    with open('/proc/self/mountinfo') as handle:source=hierarchy_mount(handle)
+    bootstrap=source!=target
     libc=ctypes.CDLL(None,use_errno=True)
     libc.mount.argtypes=[ctypes.c_char_p,ctypes.c_char_p,ctypes.c_char_p,ctypes.c_ulong,ctypes.c_void_p]
-    def mount(source,destination,flags):
-        result=libc.mount(source.encode('ascii') if source else None,destination.encode('ascii'),None,flags,None)
+    def mount(source,destination,flags,kind=None,data=None):
+        result=libc.mount(source.encode('ascii') if source else None,destination.encode('ascii'),kind.encode('ascii') if kind else None,flags,data.encode('ascii') if data else None)
         if result:raise OSError(ctypes.get_errno(),'Cannot isolate the legacy cgroup mount')
-    mount(None,target,(1<<18)|(1<<14))  # private recursive propagation
-    mount(None,target,4096|32)         # writable only in this private mount namespace
-    private=target+'/mykos/'+identity
-    for directory in (target+'/mykos',private):
+    mount(None,source,(1<<18)|(1<<14))  # private recursive propagation
+    mount(None,source,4096|32)         # writable only in this private mount namespace
+    private=source+'/mykos/'+identity
+    for directory in (source+'/mykos',private):
         try:os.mkdir(directory,0o755)
         except OSError as error:
             if error.errno!=errno.EEXIST:raise
@@ -39,7 +50,19 @@ def main():
         if not stat.S_ISDIR(info.st_mode) or info.st_uid!=0 or info.st_mode&0o022:
             raise ValueError('Unsafe private legacy cgroup')
     with open(private+'/cgroup.procs','w') as handle:handle.write('0\n')
+    # Keep runtime external input mounts separate from the cgroup filesystem
+    # CRIU saves. A bind at the final path would reopen the host root on restore.
+    if bootstrap:
+        mount(None,'/sys/fs/cgroup',(1<<18)|(1<<14))
+        mount('tmpfs','/sys/fs/cgroup',0,'tmpfs','mode=0755,size=1m')
+        os.mkdir(target,0o755)
     mount(private,target,4096)         # bind only this container's branch
+    if bootstrap:
+        # CRIU must see only the private branch, never an external alias of the
+        # same hierarchy root. The bootstrap input is no longer needed.
+        libc.umount2.argtypes=[ctypes.c_char_p,ctypes.c_int]
+        if libc.umount2(source.encode('ascii'),0):
+            raise OSError(ctypes.get_errno(),'Cannot detach the legacy cgroup bootstrap input')
     if libc.unshare(0x02000000):raise OSError(ctypes.get_errno(),'Cannot isolate the legacy cgroup namespace')
     os.execv('/usr/lib/systemd/systemd',['/sbin/init'])
 

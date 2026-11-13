@@ -446,3 +446,16 @@ def test_privileged_copy_dispatch_rejects_failed_child(monkeypatch,stdout,return
     spec=importlib.util.spec_from_loader(loader.name,loader);helper=importlib.util.module_from_spec(spec);loader.exec_module(helper)
     monkeypatch.setattr(helper.subprocess,'run',lambda *a,**kw:SimpleNamespace(returncode=returncode,stdout=stdout))
     with pytest.raises(ValueError):helper.dispatch(['instance-copy-capabilities','97827741'])
+
+
+@pytest.mark.parametrize('destination,source',[
+    ('/run/mykos-legacy-systemd','/run/mykos-legacy-cgroups/systemd'),
+    ('/usr/local/libexec/mykos-rh7-init','/usr/local/sbin/mykos-rh7-init'),
+])
+def test_only_readonly_exact_legacy_runtime_mounts_are_recreated(destination,source):
+    state={'Config':{'Labels':{'io.mykos.os':'centos7'}}}
+    mount={'Type':'bind','RW':False,'Source':source,'Destination':destination}
+    assert transfer.legacy_runtime_mount(mount,state)
+    for changed in ({'RW':True},{'Source':'/other'},{'Destination':'/other'},{'Type':'volume'}):
+        assert not transfer.legacy_runtime_mount({**mount,**changed},state)
+    assert not transfer.legacy_runtime_mount(mount,{'Config':{'Labels':{'io.mykos.os':'rocky9'}}})

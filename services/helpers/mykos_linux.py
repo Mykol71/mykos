@@ -66,7 +66,7 @@ def vpn_preflight(shop):
     if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.network.isolated') == 'true':
         raise ValueError('Copied instance networking is isolated; VPN activation is disabled')
     if not state.get('State',{}).get('Running'):raise ValueError('Start this container first')
-    if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.os') in ('debian13','archlinux','sles15sp7','amazon2023','alpine'):
+    if (state.get('Config',{}).get('Labels') or {}).get('io.mykos.os') in ('rh6','oracle6','centos6','scientific6','springdale6','debian13','archlinux','sles15sp7','amazon2023','alpine'):
         raise ValueError('VPN creation on this native image is not yet qualified; managed NAT networking is available')
     expected=(vm.POS/('.'+shop)).resolve()
     mounts=[m for m in state.get('Mounts',[]) if m.get('Destination')=='/etc/ipsec.d']

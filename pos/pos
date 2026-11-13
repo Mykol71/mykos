@@ -127,11 +127,13 @@ create-image() {
   printf '%s\n' \
     'OS choices:' \
     '  All EL images   all' \
-    '  RedHat          rh7 rh8 rh9 rh10' \
+    '  RedHat          rh6 (6.10 legacy) rh7 rh8 rh9 rh10' \
     '  Rocky Linux     rocky8 rocky9 rocky10' \
     '  AlmaLinux       alma8 alma9 alma10' \
-    '  Oracle Linux    oracle8 oracle9 oracle10' \
-    '  CentOS Stream   centos8 centos9 centos10' \
+    '  Oracle Linux    oracle6 oracle7 (legacy) oracle8 oracle9 oracle10' \
+    '  CentOS          centos6 centos7 (legacy); Stream: centos8 centos9 centos10' \
+    '  Scientific      scientific6 scientific7 (legacy)' \
+    '  Springdale      springdale6 springdale7 (legacy)' \
     '  Fedora native   fedora43 fedora44' \
     '  Debian native   debian13' \
     '  Arch native     archlinux' \
@@ -161,13 +163,14 @@ build-image() (
     win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm)
       "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;;
   esac
-  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
+  case "$OS" in rh6|oracle6|oracle7|centos6|centos7|scientific6|scientific7|springdale6|springdale7|rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
   if podman image exists "$OS"; then echo "Image already built: $OS"; return 0; fi
   local BUILDROOT BUILD_KICKSTART native_lock
   mkdir -p -m 0700 /var/tmp/containers || return 1
   "$MYKOS_PYTHON" -c 'import os,stat; p="/var/tmp/containers"; s=os.lstat(p); assert stat.S_ISDIR(s.st_mode) and s.st_uid==os.geteuid() and not s.st_mode & 0o022, "Unsafe native build directory"' || return 1
   exec {native_lock}</var/tmp/containers || return 1
   flock -n "$native_lock" || { echo 'Another native image build is running; wait for its capture/commit to finish.' >&2; return 1; }
+  case "$OS" in rh6|rh7|oracle6|oracle7|centos6|centos7|scientific6|scientific7|springdale6|springdale7) "$MYKOS_PYTHON" ./build_legacy_el.py "$OS"; return $? ;; esac
   case "$OS" in debian13|archlinux|sles15sp7|amazon2023|alpine) "$MYKOS_PYTHON" ./build_native_oci.py "$OS"; return $? ;; esac
   BUILDROOT=$(mktemp -d "/var/tmp/containers/mykos-native-$OS.XXXXXXXX") || return 1
   trap 'rm -rf -- "$BUILDROOT"' EXIT
@@ -216,11 +219,13 @@ set_working_shopcode() {
   [[ "$SHOPCODE" =~ ^[0-9]{8}$ ]] || { echo "ID must be eight digits"; return 1; }
   printf '%s\n' \
     'OS choices:' \
-    '  RedHat          rh7 rh8 rh9 rh10' \
+    '  RedHat          rh6 (6.10 legacy) rh7 rh8 rh9 rh10' \
     '  Rocky Linux     rocky8 rocky9 rocky10' \
     '  AlmaLinux       alma8 alma9 alma10' \
-    '  Oracle Linux    oracle8 oracle9 oracle10' \
-    '  CentOS Stream   centos8 centos9 centos10' \
+    '  Oracle Linux    oracle6 oracle7 (legacy) oracle8 oracle9 oracle10' \
+    '  CentOS          centos6 centos7 (legacy); Stream: centos8 centos9 centos10' \
+    '  Scientific      scientific6 scientific7 (legacy)' \
+    '  Springdale      springdale6 springdale7 (legacy)' \
     '  Fedora native   fedora43 fedora44' \
     '  Debian native   debian13' \
     '  Arch native     archlinux' \
@@ -234,7 +239,7 @@ set_working_shopcode() {
     '  Ubuntu          ubuntu20.04 ubuntu22.04 ubuntu24.04' \
     '  Android-x86 VM  android9 (legacy/manual installation)' \
     '  SQL Server      mssql2025 mssql2022' && printf 'OS: ' && read -r OS || return 1
-  case "$OS" in rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|android9|fedora43vm|fedora44vm|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
+  case "$OS" in rh6|oracle6|oracle7|centos6|centos7|scientific6|scientific7|springdale6|springdale7|rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|android9|fedora43vm|fedora44vm|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
   printf '%s\n' "$OS" >".$SHOPCODE.imagetype"
   POSTYPE="$OS"; printf '%s\n' "$POSTYPE" >".$SHOPCODE.postype"
 }

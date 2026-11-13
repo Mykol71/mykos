@@ -61,7 +61,13 @@ printf '\u2517''\u2501''\n'
 		read
 		;;
 	5)
-		./bin/sync_repos
+		printf '%s\n' 'Repository sync: all = RHEL7-10; 6 = RHEL6; or choose centos6/7, oracle6/7, scientific6/7, springdale6/7.'
+		printf 'Selection [all]: '
+		read -r repo_selection
+		case "${repo_selection:-all}" in
+		  all) ./bin/sync_repos ;;
+		  *) ./bin/sync_repos "$repo_selection" ;;
+		esac
 		echo -ne "${CYAN}Press enter to continue..${NC}"
 		read
 		;;

@@ -336,7 +336,7 @@ def capture_native(shop):
                 tags=json.loads(vm.run([vm.PODMAN,'image','inspect',image]))[0].get('RepoTags') or []
                 image_name=next((tag for tag in tags if re.fullmatch(r'localhost/(?:mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|ubuntu[0-9.]*):[^/]+',tag)),image_name)
             os_match=re.search(r'(?:^|/)(mssql(?:2022|2025)|rh[0-9]+|(?:rocky|alma|oracle)(?:8|9|10)|centos(?:8|9|10)|fedora(?:43|44)|ubuntu[0-9.]*)(?=:|$)',image_name)
-            metadata={'format':1,'id':identifier,'code':shop,'name':name,'os':os_match.group(1) if os_match else '', 'created_at':int(time.time()),
+            metadata={'format':1,'id':identifier,'code':shop,'name':name,'os':(state.get('Config',{}).get('Labels') or {}).get('io.mykos.os') or (os_match.group(1) if os_match else ''), 'created_at':int(time.time()),
                       'capture_mode':'criu-memory','image':image,'image_ref':reference,'path':str(final),
                       'source_running':True,'configuration':state,'mounts':mounts,
                       'filesystem_source':'rootfs-upper','external_writers_frozen':False}

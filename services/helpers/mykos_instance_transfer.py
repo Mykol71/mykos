@@ -447,6 +447,20 @@ def source_plan(code, destination, peer):
     return current
 
 
+def legacy_runtime_mount(mount, state):
+    """Only host-managed read-only EL7 runtime inputs are recreated on a peer."""
+    from mykos_cgroups import EL7_NAMES
+    labels=state.get('Config',{}).get('Labels') or {}
+    if labels.get('io.mykos.os') not in EL7_NAMES:return False
+    inputs={
+        '/run/mykos-legacy-systemd':'/run/mykos-legacy-cgroups/systemd',
+        '/usr/local/libexec/mykos-rh7-init':'/usr/local/sbin/mykos-rh7-init',
+    }
+    return (mount.get('Type')=='bind' and mount.get('RW') is False
+            and mount.get('Source')==inputs.get(mount.get('Destination'))
+            and mount.get('Destination') in inputs)
+
+
 def native_mounts(code, state):
     from mykos_containers import unshared, all_containers
     result = []
@@ -457,7 +471,7 @@ def native_mounts(code, state):
     for mount in state.get('Mounts', []):
         source = Path(mount.get('Source', '/invalid'))
         destination = mount.get('Destination', '')
-        if destination == '/sys/fs/cgroup' or (not mount.get('RW') and destination == '/etc/NetworkManager/conf.d/90-mykos-podman.conf' and source == Path('/usr/local/sbin/mykos-podman-nm.conf')):
+        if legacy_runtime_mount(mount,state) or destination == '/sys/fs/cgroup' or (not mount.get('RW') and destination == '/etc/NetworkManager/conf.d/90-mykos-podman.conf' and source == Path('/usr/local/sbin/mykos-podman-nm.conf')):
             continue
         if mount.get('Type') not in ('bind', 'volume') or not source.is_absolute() or source.is_symlink():
             raise ValueError('Unsupported instance mount; source was left unchanged')
@@ -815,14 +829,15 @@ def materialize(data, content, manifest, image):
                     '--privileged', '--memory=' + str(manifest.get('memory_limit',2*1024**3)), '--restart=unless-stopped', '--pull=never', '--image-volume=ignore',
                     '--label', 'io.mykos.persistent=true', '--label', 'io.mykos.os=' + manifest['os'],
                     '--label', 'io.mykos.peer-copy=' + data['token'], '--label', 'io.mykos.network.isolated=true',
-                    '--label', 'io.mykos.network.interface=none', '--label', 'io.mykos.network.ip=', '--label', 'io.mykos.network.name=',
-                    '-v', '/sys/fs/cgroup:/sys/fs/cgroup:ro']
+                    '--label', 'io.mykos.network.interface=none', '--label', 'io.mykos.network.ip=', '--label', 'io.mykos.network.name=']
             args += ['--mount', 'type=bind,source=/usr/local/sbin/mykos-podman-nm.conf,destination=/etc/NetworkManager/conf.d/90-mykos-podman.conf,ro=true']
-            from mykos_cgroups import arguments
+            from mykos_cgroups import arguments, host_mount_arguments
+            args += host_mount_arguments(manifest['os'])
             args += arguments(manifest['os'])
             for index, mount in enumerate(manifest['mounts']):
                 args += ['--mount', 'type=bind,source=' + str(private / 'mounts' / str(index)) + ',destination=' + mount['destination'] + (',ro=true' if not mount['rw'] else '')]
-            vm.run(args + [image], timeout=120)
+            from mykos_cgroups import init_command
+            vm.run(args + [image,*init_command(manifest['os'])], timeout=120)
             state = vm.inspect(name)
             if not state.get('State', {}).get('Running'):
                 raise ValueError('Copied native instance exited during startup')

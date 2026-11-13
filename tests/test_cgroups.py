@@ -25,8 +25,10 @@ def test_rh7_enables_persistent_compatibility_before_launch(monkeypatch,tmp_path
     monkeypatch.setattr(cg,'run',run)
     args=cg.arguments(image)
     assert '--runtime=/usr/bin/crun' in args and '--systemd=always' in args
-    assert '--annotation=run.oci.systemd.force_cgroup_v1=/sys/fs/cgroup' in args
-    assert args[args.index('--mount')+1].endswith('destination=/usr/local/libexec/mykos-rh7-init,ro=true')
+    mounts=[args[i+1] for i,arg in enumerate(args[:-1]) if arg=='--mount']
+    assert 'type=bind,source=/run/mykos-legacy-cgroups/systemd,destination=/run/mykos-legacy-systemd,ro=true' in mounts
+    assert any(m.endswith('destination=/usr/local/libexec/mykos-rh7-init,ro=true') for m in mounts)
+    assert not any('force_cgroup_v1' in arg for arg in args)
     assert cg.init_command(image)==['/usr/bin/python','/usr/local/libexec/mykos-rh7-init']
     assert ['/usr/bin/systemctl','enable','--now','mykos-legacy-cgroups.service'] in calls
     assert next(call for call in calls if call[0]=='/usr/bin/systemctl')==['/usr/bin/systemctl','enable','--now','mykos-legacy-cgroups.service']
@@ -51,6 +53,25 @@ def test_legacy_init_identity_parser_never_accepts_shell_text():
     path=Path(__file__).resolve().parents[1]/'services/helpers/mykos-rh7-init'
     loader=importlib.machinery.SourceFileLoader('legacy_init_test',str(path));spec=importlib.util.spec_from_loader(loader.name,loader);module=importlib.util.module_from_spec(spec);loader.exec_module(module)
     assert module.container_id('engine="podman"\nid="'+'a'*64+'"\n')=='a'*64
+    old='36 25 0:42 / /sys/fs/cgroup/systemd rw - cgroup cgroup rw,name=systemd'
+    new='37 25 0:42 / /run/mykos-legacy-systemd ro - cgroup cgroup rw,name=systemd'
+    assert module.hierarchy_mount(iter([old]))=='/sys/fs/cgroup/systemd'
+    assert module.hierarchy_mount([old,new])=='/run/mykos-legacy-systemd'
+    for lines in ([],[old,old],[new.replace(' - cgroup ',' - cgroup2 '),old]):
+        with pytest.raises(ValueError,match='named systemd hierarchy'):module.hierarchy_mount(lines)
     for text in ('id="../../other"','id="'+'a'*64+'"; id','id="'+'a'*64+'"\nid="'+'b'*64+'"'):
         with pytest.raises(ValueError):module.container_id(text)
     with pytest.raises(ValueError,match='PID 1'):module.main()
+
+
+@pytest.mark.parametrize('os_name',cg.EL7_NAMES)
+def test_el7_private_mount_is_never_an_external_host_root(monkeypatch,tmp_path,os_name):
+    marker=tmp_path/'cgroup.controllers';marker.touch()
+    monkeypatch.setattr(cg,'UNIFIED',marker)
+    assert cg.host_mount_arguments(os_name)==[]
+
+
+def test_modern_and_v1_guests_keep_host_mount(monkeypatch,tmp_path):
+    monkeypatch.setattr(cg,'UNIFIED',tmp_path/'absent')
+    for os_name in ('rh7','rh9','centos6'):
+        assert cg.host_mount_arguments(os_name)==['--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro']

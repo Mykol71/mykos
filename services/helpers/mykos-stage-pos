@@ -11,7 +11,7 @@ import re
 import socket
 import sys
 from mykos_runtime import PODMAN, config, containers, run, shopcode, network_device
-from mykos_cgroups import arguments as cgroup_arguments, init_command
+from mykos_cgroups import arguments as cgroup_arguments, init_command, host_mount_arguments
 
 def stage(shop, restore, image=None):
     with vm.locked():
@@ -36,7 +36,6 @@ def _stage(shop, restore, image=None):
     vpn.mkdir(mode=0o700,parents=True,exist_ok=True)
     name=shop+'.'+socket.gethostname()
     args=[PODMAN,'run','-d','--name',name,'--hostname',name,'--privileged','--memory=2g','--pull=never','--restart=unless-stopped',
-          '--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro',
           '--label','io.mykos.persistent=true',
           '-v',str(vpn)+':/etc/ipsec.d:rw']
     private=None
@@ -46,6 +45,7 @@ def _stage(shop, restore, image=None):
         args.extend(profile.mounts(shop,cfg))
         private,private_args=backup.private_mounts(vpn)
         args.extend(private_args)
+    args.extend(host_mount_arguments(image))
     args.extend(cgroup_arguments(image))
     args.extend(network_args)
     args.extend([image,*init_command(image)])

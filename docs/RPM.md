@@ -220,7 +220,11 @@ sudo /usr/local/share/mykos/repo/bin/sync_repos 9
 The direct command also enters the managed background slice and waits for its
 transient `mykos-repo-sync-cli.service`, collecting that unit after completion.
 Both entry points share the sync lock; the dashboard recognizes either one and
-blocks repository deletion while sync holds the lock. RH6 is rejected.
+blocks repository deletion while sync holds the lock. Explicit `6` selects
+RHEL6.10; clone keys such as `centos6`, `oracle7`, `scientific6` and `springdale7`
+select their final archived releases. These optional selections do not change
+the RHEL7–10 default. See [legacy guest and mirror instructions](IMAGE_BUILDS.md#legacy-repository-mirrors).
+The source toolkit's `repo/README.md` describes server alias configuration.
 
 The entire job receives one CPU of quota, a 2 GiB soft memory threshold and 3 GiB hard limit, CPU/IO weights of 10, nice value 15
 and best-effort IO priority 7. Each worker is additionally limited to one CPU,

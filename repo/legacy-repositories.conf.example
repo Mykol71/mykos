@@ -1,0 +1,115 @@
+# Generated legacy mirror aliases; every tree is explicitly LAN-only.
+Alias /centos-6-x86_64-extras/ /home/mykos-repositories/centos-6-x86_64-extras/
+Alias /repos/centos-6-x86_64-extras/ /home/mykos-repositories/centos-6-x86_64-extras/
+<Directory "/home/mykos-repositories/centos-6-x86_64-extras">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /centos-6-x86_64-os/ /home/mykos-repositories/centos-6-x86_64-os/
+Alias /repos/centos-6-x86_64-os/ /home/mykos-repositories/centos-6-x86_64-os/
+<Directory "/home/mykos-repositories/centos-6-x86_64-os">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /centos-6-x86_64-updates/ /home/mykos-repositories/centos-6-x86_64-updates/
+Alias /repos/centos-6-x86_64-updates/ /home/mykos-repositories/centos-6-x86_64-updates/
+<Directory "/home/mykos-repositories/centos-6-x86_64-updates">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /centos-7-x86_64-extras/ /home/mykos-repositories/centos-7-x86_64-extras/
+Alias /repos/centos-7-x86_64-extras/ /home/mykos-repositories/centos-7-x86_64-extras/
+<Directory "/home/mykos-repositories/centos-7-x86_64-extras">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /centos-7-x86_64-os/ /home/mykos-repositories/centos-7-x86_64-os/
+Alias /repos/centos-7-x86_64-os/ /home/mykos-repositories/centos-7-x86_64-os/
+<Directory "/home/mykos-repositories/centos-7-x86_64-os">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /centos-7-x86_64-updates/ /home/mykos-repositories/centos-7-x86_64-updates/
+Alias /repos/centos-7-x86_64-updates/ /home/mykos-repositories/centos-7-x86_64-updates/
+<Directory "/home/mykos-repositories/centos-7-x86_64-updates">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /oracle-6-x86_64-os/ /home/mykos-repositories/oracle-6-x86_64-os/
+Alias /repos/oracle-6-x86_64-os/ /home/mykos-repositories/oracle-6-x86_64-os/
+<Directory "/home/mykos-repositories/oracle-6-x86_64-os">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /oracle-7-x86_64-os/ /home/mykos-repositories/oracle-7-x86_64-os/
+Alias /repos/oracle-7-x86_64-os/ /home/mykos-repositories/oracle-7-x86_64-os/
+<Directory "/home/mykos-repositories/oracle-7-x86_64-os">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /rhel-6-server-extras-rpms/ /home/mykos-repositories/rhel-6-server-extras-rpms/
+Alias /repos/rhel-6-server-extras-rpms/ /home/mykos-repositories/rhel-6-server-extras-rpms/
+<Directory "/home/mykos-repositories/rhel-6-server-extras-rpms">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /rhel-6-server-optional-rpms/ /home/mykos-repositories/rhel-6-server-optional-rpms/
+Alias /repos/rhel-6-server-optional-rpms/ /home/mykos-repositories/rhel-6-server-optional-rpms/
+<Directory "/home/mykos-repositories/rhel-6-server-optional-rpms">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /rhel-6-server-rpms/ /home/mykos-repositories/rhel-6-server-rpms/
+Alias /repos/rhel-6-server-rpms/ /home/mykos-repositories/rhel-6-server-rpms/
+<Directory "/home/mykos-repositories/rhel-6-server-rpms">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /scientific-6-x86_64-os/ /home/mykos-repositories/scientific-6-x86_64-os/
+Alias /repos/scientific-6-x86_64-os/ /home/mykos-repositories/scientific-6-x86_64-os/
+<Directory "/home/mykos-repositories/scientific-6-x86_64-os">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /scientific-6-x86_64-updates/ /home/mykos-repositories/scientific-6-x86_64-updates/
+Alias /repos/scientific-6-x86_64-updates/ /home/mykos-repositories/scientific-6-x86_64-updates/
+<Directory "/home/mykos-repositories/scientific-6-x86_64-updates">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /scientific-7-x86_64-os/ /home/mykos-repositories/scientific-7-x86_64-os/
+Alias /repos/scientific-7-x86_64-os/ /home/mykos-repositories/scientific-7-x86_64-os/
+<Directory "/home/mykos-repositories/scientific-7-x86_64-os">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /scientific-7-x86_64-updates/ /home/mykos-repositories/scientific-7-x86_64-updates/
+Alias /repos/scientific-7-x86_64-updates/ /home/mykos-repositories/scientific-7-x86_64-updates/
+<Directory "/home/mykos-repositories/scientific-7-x86_64-updates">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /springdale-6-x86_64-os/ /home/mykos-repositories/springdale-6-x86_64-os/
+Alias /repos/springdale-6-x86_64-os/ /home/mykos-repositories/springdale-6-x86_64-os/
+<Directory "/home/mykos-repositories/springdale-6-x86_64-os">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /springdale-6-x86_64-updates/ /home/mykos-repositories/springdale-6-x86_64-updates/
+Alias /repos/springdale-6-x86_64-updates/ /home/mykos-repositories/springdale-6-x86_64-updates/
+<Directory "/home/mykos-repositories/springdale-6-x86_64-updates">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /springdale-7-x86_64-os/ /home/mykos-repositories/springdale-7-x86_64-os/
+Alias /repos/springdale-7-x86_64-os/ /home/mykos-repositories/springdale-7-x86_64-os/
+<Directory "/home/mykos-repositories/springdale-7-x86_64-os">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>
+Alias /springdale-7-x86_64-updates/ /home/mykos-repositories/springdale-7-x86_64-updates/
+Alias /repos/springdale-7-x86_64-updates/ /home/mykos-repositories/springdale-7-x86_64-updates/
+<Directory "/home/mykos-repositories/springdale-7-x86_64-updates">
+    AuthMerging Off
+    Require ip 127.0.0.1 ::1 192.168.222.0/24 192.168.22.0/24
+</Directory>

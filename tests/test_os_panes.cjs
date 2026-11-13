@@ -32,11 +32,11 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
 ` + source, context);
 (async () => {
     await vm.runInContext(`(async () => {
-        for (const [family,versions] of Object.entries({rocky:[8,9,10],alma:[8,9,10],oracle:[8,9,10],centos:[8,9,10],fedora:[43,44]})) {
+        for (const [family,versions] of Object.entries({rocky:[8,9,10],alma:[8,9,10],oracle:[6,7,8,9,10],centos:[6,7,8,9,10],scientific:[6,7],springdale:[6,7],fedora:[43,44]})) {
             for (const version of versions) assert.equal(mykosImageFamily(family+version), family);
             assert.equal(mykosNodeFamily({id:'test',os_type:family,image:'localhost/'+family+versions[0]+':latest'}),family);
         }
-        assert.equal(mykosImageFamily('centos7'),null);
+        assert.equal(mykosImageFamily('centos7'),'centos');
         assert.equal(mykosImageFamily('fedora45'),null);
         for (const os of ['fedora43vm','fedora44vm']) {
             assert.equal(mykosImageFamily(os),'fedora');
@@ -211,7 +211,8 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(el('mykos-stage-os').options.find(option => option.value === 'rh9').disabled, false);
         for (const family of mykosOsFamilies) {
             for (const option of el(mykosOsId(family, 'mykos-stage-os')).options.slice(1)) {
-                assert.equal(option.text, option.value.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, ''));
+                if (/^(?:rh|oracle|centos|scientific|springdale)[67]$/.test(option.value)) assert.match(option.text,/legacy/);
+                else assert.equal(option.text, option.value.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, ''));
             }
         }
         assert.equal(el('mykos-stage-os').options.find(option => option.value === 'rh10').disabled, true);

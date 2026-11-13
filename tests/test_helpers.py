@@ -234,6 +234,7 @@ def test_selected_os_is_saved_and_passed_to_worker(tmp_path, monkeypatch):
 def test_stage_uses_selected_image_instead_of_default(tmp_path, monkeypatch, device):
     module = load('mykos-stage-pos')
     monkeypatch.setattr(module,'cgroup_arguments',lambda image:[])
+    monkeypatch.setattr(module,'host_mount_arguments',lambda image:['--volume','/sys/fs/cgroup:/sys/fs/cgroup:ro'])
     monkeypatch.setattr(module,'init_command',lambda image:['/sbin/init'])
     from contextlib import nullcontext
     monkeypatch.setattr(module.vm, 'locked', nullcontext)

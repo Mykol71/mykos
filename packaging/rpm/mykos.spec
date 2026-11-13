@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        279%{?dist}
+Release:        282%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -125,6 +125,10 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Thu Nov 12 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-282
+- Add final EL6/EL7 native guest profiles and protected legacy repository sync choices.
+- Package consistent popup themes and Central-time RPM download reporting.
+
 * Tue Nov 10 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-278
 - Verify public/private product boundaries and remove residual public documentation branding.
 * Tue Nov 10 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-277
