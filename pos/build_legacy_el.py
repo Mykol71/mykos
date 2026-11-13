@@ -9,6 +9,12 @@ def run(args,timeout=1800):
  result=subprocess.run(args,text=True,capture_output=True,timeout=timeout)
  if result.returncode:raise RuntimeError((result.stdout+result.stderr)[-5000:])
  return result.stdout.strip()
+def sha256_file(path):
+ value=hashlib.sha256()
+ with Path(path).open('rb') as stream:
+  for block in iter(lambda:stream.read(1024*1024),b''):value.update(block)
+ return value.hexdigest()
+
 def build(os_name,tag=None):
  if os.geteuid()!=0:raise ValueError('Root is required')
  catalog=json.loads((HERE/'legacy_el.json').read_text())
@@ -55,7 +61,7 @@ def build(os_name,tag=None):
    imported=json.loads(run(['podman','image','inspect',tag],timeout=30))[0]
    labels=imported.get('Labels') or imported.get('Config',{}).get('Labels') or {}
    if any(labels.get(k)!=v for k,v in {'io.mykos.os':os_name,'io.mykos.init':init,'io.mykos.os.version':catalog[os_name]['version']}.items()):raise RuntimeError('Imported guest identity mismatch')
-   receipt={'os':os_name,'version':catalog[os_name]['version'],'image':tag,'image_id':image_id,'rootfs_sha256':hashlib.file_digest(archive.open('rb'),'sha256').hexdigest(),'worker':BASE.rsplit(':',1)[0]+'@'+digest,'packages':len((stage/'packages.txt').read_text().splitlines()),'rpm_signatures':'required; pinned vendor keys','legacy':True,'kernel':'host shared','init':init}
+   receipt={'os':os_name,'version':catalog[os_name]['version'],'image':tag,'image_id':image_id,'rootfs_sha256':sha256_file(archive),'worker':BASE.rsplit(':',1)[0]+'@'+digest,'packages':len((stage/'packages.txt').read_text().splitlines()),'rpm_signatures':'required; pinned vendor keys','legacy':True,'kernel':'host shared','init':init}
    success=True;return receipt
  finally:
   for sig,old in signals.items():signal.signal(sig,old)

@@ -101,3 +101,12 @@ def test_legacy_aliases_are_explicit_and_lan_only():
 def test_legacy_alias_render_rejects_injected_paths(root):
  aliases=load('legacy_alias_injection_validation',ROOT/'repo/bin/legacy_aliases.py')
  with pytest.raises(ValueError):aliases.render(root)
+
+
+@pytest.mark.parametrize('data',[b'',b'centos6',bytes(range(256))*9000])
+def test_rootfs_receipt_hash_works_without_python311_file_digest(data,tmp_path,monkeypatch):
+ builder=load('legacy_builder_python39_receipt',ROOT/'pos/build_legacy_el.py')
+ monkeypatch.delattr(hashlib,'file_digest',raising=False)
+ archive=tmp_path/'rootfs.tar';archive.write_bytes(data)
+ assert builder.sha256_file(archive)==hashlib.sha256(data).hexdigest()
+ archive.unlink()
