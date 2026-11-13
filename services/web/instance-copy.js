@@ -18,7 +18,8 @@
     }
     window.mykosCopyInstance = async function(code) {
         const dialog = document.createElement('dialog');
-        dialog.style.cssText = 'max-width:32rem;width:90%;background:#172033;color:#e2e8f0;border:1px solid #64748b;border-radius:8px;padding:20px';
+        dialog.className='mykos-dialog';
+        dialog.style.cssText = 'max-width:32rem;width:90%';
         const heading = document.createElement('h2'); heading.textContent = 'Copy instance ' + code + ' to a peer';
         const description = document.createElement('p'); description.textContent = 'The source stays in place. The new copy starts with guest networking isolated to protect both instances from duplicate IP addresses and VPN identities.';
         const peerLabel = document.createElement('label'); peerLabel.textContent = 'Destination peer ';

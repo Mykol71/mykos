@@ -19,7 +19,8 @@
     region.append(status);
     const frames = new Map();
     const dialog = document.createElement('dialog');
-    dialog.style.cssText = 'max-width:650px;width:calc(100% - 48px);color:inherit;background:#121d30;border:1px solid #64748b;border-radius:10px';
+    dialog.className='mykos-dialog';
+    dialog.style.cssText = 'max-width:650px;width:calc(100% - 48px)';
     dialog.innerHTML = `<form method="dialog"><h2>Connect a MYKOS host</h2><p>Create a 15-minute invitation here, then paste it into the other host while logged in as its administrator.</p>
 <label>This host’s reachable IPv4 <input name="local" required inputmode="decimal" autocomplete="off"></label>
 <label>Other host’s reachable IPv4 <input name="remote" required inputmode="decimal" autocomplete="off"></label>

@@ -97,8 +97,8 @@
   window.mykosOpenHostMaintenance = async () => {
     if (window.MYKOS_PEER_CONTEXT) { alert('Open the host’s own dashboard to prepare it for reboot.'); return; }
     if(!dialog) {
-      dialog=node('dialog',undefined,document.body);
-      Object.assign(dialog.style,{maxWidth:'760px',width:'90vw',maxHeight:'85vh',overflow:'auto',color:'#20334a',background:'#f4f7fb',borderRadius:'12px',padding:'24px'});
+      dialog=node('dialog',undefined,document.body);dialog.className='mykos-dialog';
+      Object.assign(dialog.style,{maxWidth:'760px',width:'90vw',maxHeight:'85vh',overflow:'auto'});
       dialog.setAttribute('aria-label','Host maintenance');node('div',undefined,dialog).dataset.maintenanceBody='';
       button('Close',dialog,async()=>dialog.close());
       dialog.addEventListener('close',()=>clearTimeout(timer));

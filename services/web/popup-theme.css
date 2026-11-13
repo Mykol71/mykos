@@ -1,0 +1,22 @@
+/* Shared MYKOS popup chrome; palette follows the owning dashboard theme. */
+:root{--mykos-popup-surface:#121d30;--mykos-popup-text:#e2e8f0;--mykos-popup-muted:#94a3b8;--mykos-popup-border:#334155;--mykos-popup-input:#0b1120;--mykos-popup-button:#1e293b;--mykos-popup-accent:#38bdf8;--mykos-popup-radius:10px;--mykos-popup-shadow:0 12px 40px #0006;--mykos-popup-font:monospace;--mykos-popup-control-text:var(--mykos-popup-text);--mykos-popup-control-border:var(--mykos-popup-border);--mykos-popup-control-radius:6px;--mykos-popup-control-shadow:none;--mykos-popup-input-shadow:none}
+:root[data-theme="light"]{--mykos-popup-surface:#fff;--mykos-popup-text:#172033;--mykos-popup-muted:#52647a;--mykos-popup-border:#cbd5e1;--mykos-popup-input:#f8fafc;--mykos-popup-button:#e8f0fa;--mykos-popup-accent:#075d9d;--mykos-popup-shadow:0 12px 40px #17203333}
+:root[data-theme="receiver"]{--mykos-popup-surface:var(--receiver-metal,repeating-linear-gradient(0deg,#ffffff0a 0px,#ffffff0a 1px,#22222208 1px,#22222208 2px),linear-gradient(103deg,#b4b8b4 0%,#e5e6df 17%,#bdc1bc 41%,#e4e5de 69%,#b9bdb7 100%));--mykos-popup-text:#252b28;--mykos-popup-muted:#50584e;--mykos-popup-border:#888e85;--mykos-popup-input:#e8eadf;--mykos-popup-button:radial-gradient(ellipse at 32% 20%,#f7f8eb,#cbd2bc 60%,#a1aa96);--mykos-popup-accent:#253b33;--mykos-popup-radius:4px;--mykos-popup-shadow:inset 0 1px #fff9,0 4px 9px #0007;--mykos-popup-font:Arial,Helvetica,sans-serif;--mykos-popup-control-text:#303d32;--mykos-popup-control-border:#8c9482;--mykos-popup-control-radius:3px;--mykos-popup-control-shadow:inset 0 1px 2px #fff,inset 0 -2px 2px #7d887e,1px 2px 3px #0005;--mykos-popup-input-shadow:inset 1px 2px 3px #0003}
+:root dialog{background:var(--mykos-popup-surface)!important;color:var(--mykos-popup-text)!important;border:1px solid var(--mykos-popup-border)!important;border-radius:var(--mykos-popup-radius)!important;box-shadow:var(--mykos-popup-shadow)!important;font-family:var(--mykos-popup-font);max-width:94vw;max-height:90vh}
+:root dialog::backdrop{background:#0009}
+:root dialog :is(p,small,th,[role="status"]){color:var(--mykos-popup-muted)!important}
+:root dialog :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){background:var(--mykos-popup-input)!important;color:var(--mykos-popup-text)!important;border-color:var(--mykos-popup-border)!important;border-radius:var(--mykos-popup-control-radius)!important;box-shadow:var(--mykos-popup-input-shadow)!important;font:inherit;accent-color:var(--mykos-popup-accent)}
+:root dialog :is(button,a){font-family:inherit}
+:root dialog button{background:var(--mykos-popup-button)!important;color:var(--mykos-popup-control-text)!important;border:1px solid var(--mykos-popup-control-border)!important;border-radius:var(--mykos-popup-control-radius);box-shadow:var(--mykos-popup-control-shadow)!important;padding:10px 14px}
+:root dialog a{color:var(--mykos-popup-accent)}
+:root dialog :is(td,th,pre){border-color:var(--mykos-popup-border)}
+:root dialog :is(button,input,select,textarea,a):focus-visible{outline:2px solid var(--mykos-popup-accent);outline-offset:3px}
+:root[data-mykos-popup-window]{color-scheme:dark;background:#050a12;color:var(--mykos-popup-text);font-family:var(--mykos-popup-font)}
+:root[data-mykos-popup-window][data-theme="light"],:root[data-mykos-popup-window][data-theme="receiver"]{color-scheme:light;background:var(--mykos-popup-input)}
+:root[data-mykos-popup-window] body{background:transparent;color:var(--mykos-popup-text);font-family:inherit}
+:root[data-mykos-popup-window] :is(header,.panel){background:var(--mykos-popup-surface);color:var(--mykos-popup-text);border-color:var(--mykos-popup-border)}
+:root[data-mykos-popup-window] :is(header strong,h1,a){color:var(--mykos-popup-accent)}
+:root[data-mykos-popup-window] :is(small,th,#status,#notice,#notes-status){color:var(--mykos-popup-muted)}
+:root[data-mykos-popup-window] :is(button,header a){background:var(--mykos-popup-button);color:var(--mykos-popup-control-text);border-color:var(--mykos-popup-control-border);border-radius:var(--mykos-popup-control-radius);box-shadow:var(--mykos-popup-control-shadow);font-family:inherit}
+:root[data-mykos-popup-window] :is(td,th,pre){border-color:var(--mykos-popup-border)}
+:root[data-mykos-popup-window] #notice{background:var(--mykos-popup-input)}

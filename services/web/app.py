@@ -15,6 +15,8 @@ ENVTYPE_FILE = (_SOURCE_ROOT / '.envtype' if (_SOURCE_ROOT / 'MENU').is_file()
                 else Path('/usr/local/share/mykos/.envtype'))
 app = FastAPI(root_path="/mykos", docs_url=None, redoc_url=None, openapi_url=None)
 app.include_router(monitor_router)
+from popup_theme import router as popup_theme_router
+app.include_router(popup_theme_router)
 from image_build_api import router as image_build_router
 app.include_router(image_build_router)
 from mykos_users import connect as db, is_admin,role_supported
