@@ -52,7 +52,7 @@ const countLines = chartItems().filter(e => e.tag === 'rect' && ['containers','v
 assert.equal(countLines.length,2);
 assert.equal(chartItems().filter(e=>e.tag==='rect').length,2);
 assert.equal(countLines[0].attrs.fill,'#fef08a');
-assert.equal(countLines[0].attrs['fill-opacity'],'0.09');
+assert.equal(countLines[0].attrs['fill-opacity'],'0.16');
 assert.ok(Number(countLines[0].attrs.x)+Number(countLines[0].attrs.width) <= Number(countLines[1].attrs.x), 'Container and VPN columns never overlap');
 const chartChildren = chartItems();
 assert.ok(chartChildren.indexOf(countLines[1]) < chartChildren.findIndex(item => item.attrs['data-series'] === 'cpu'), 'Counts stay behind resource lines');
@@ -102,8 +102,8 @@ assert.ok(countBars.every(item => item.tag === 'rect' && Number(item.attrs.width
 assert.equal(countBars.filter(item=>item.attrs['data-changed']==='true').length,1, 'Only a known adjacent count change is emphasized');
 const emphasized=countBars.find(item=>item.attrs['data-changed']==='true');
 assert.equal(emphasized.attrs['stroke-width'],'1.5');
-assert.equal(emphasized.attrs['fill-opacity'],'0.36');
-assert.equal(countBars[0].attrs['fill-opacity'],'0.09');
+assert.equal(emphasized.attrs['fill-opacity'],'0.48');
+assert.equal(countBars[0].attrs['fill-opacity'],'0.16');
 
 mykosResetHostChart();
 mykosSetHostMetric('cpu', 10, '10%', '8 CPUs'); mykosDrawHostChart();

@@ -3252,7 +3252,7 @@ function mykosDrawHostChart() {
                 const gap = Math.min(.5, half * .1);
                 traces.push(mykosChartSvg('rect', {x:begin + slot * half + gap,
                     y:y(point.percent), width:Math.max(0, half - gap * 2), height:bottom - y(point.percent),
-                    fill:metric.color, 'fill-opacity':changed ? .36 : .09, stroke:changed ? metric.color : 'none',
+                    fill:metric.color, 'fill-opacity':metric.key === 'containers' ? (changed ? .48 : .16) : (changed ? .36 : .09), stroke:changed ? metric.color : 'none',
                     'stroke-width':changed ? 1.5 : 0, 'data-changed':String(changed), 'data-series':metric.key}));
                 if (changed && point.percent === 0) traces.push(mykosChartSvg('line', {
                     x1:begin + slot * half + gap, x2:begin + (slot + 1) * half - gap,
