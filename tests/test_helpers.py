@@ -37,7 +37,7 @@ create-image
 '''
     import os
     result=subprocess.run(['bash','-c',script],cwd=tmp_path,input='rh10\n',text=True,capture_output=True,
-                          env={**os.environ,'TEST_BUILD_MAJOR':build_major})
+                          env={**os.environ,'TEST_BUILD_MAJOR':build_major,'MYKOS_JOB_NATIVE_MANAGED':'rh10'})
     assert result.returncode!=0
     assert 'Image creation failed' in result.stderr
     assert 'unexpected-' not in result.stdout+result.stderr
@@ -759,7 +759,7 @@ status=$?
 exit "$status"
 '''
     log=tmp_path/'nice'
-    result=subprocess.run(['bash','-c',script],cwd=tmp_path,text=True,capture_output=True,env={**os.environ,'NICE_CALL':str(log)})
+    result=subprocess.run(['bash','-c',script],cwd=tmp_path,text=True,capture_output=True,env={**os.environ,'NICE_CALL':str(log),'MYKOS_JOB_NATIVE_MANAGED':'rh9'})
     assert result.returncode==0,result.stderr
     assert 'Image already built: rh9' in result.stdout
     args=log.read_text().split()

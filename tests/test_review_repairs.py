@@ -167,6 +167,7 @@ def test_native_pipeline_blocks_interleaving_and_cleans_each_context(tmp_path):
 cd "$REVIEW_ROOT"
 ROOTDIR="$REVIEW_ROOT"
 MYKOS_PYTHON="$REVIEW_PYTHON"
+MYKOS_JOB_NATIVE_MANAGED="$1"
 REPOSERVER=review.invalid
 renice() { :; }; ionice() { :; }
 curl() { while [ "$#" -gt 0 ]; do if [ "$1" = -o ]; then shift; printf '#!/bin/sh\nexit 0\n' > "$1"; return; fi; shift; done; }

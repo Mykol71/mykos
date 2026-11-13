@@ -1062,3 +1062,28 @@ def test_public_core_has_no_private_backup_management(api_dashboard):
         assert client.get(path, headers=admin).status_code == 404
         assert client.post(path, headers=admin, json={'action': 'create', 'code': '01234567'}).status_code == 404
     assert not calls
+
+
+def test_jobs_local_full_admin_origin_and_fixed_actions(environment,monkeypatch):
+    import jobs_api,mykos_peers
+    calls=[]
+    monkeypatch.setattr(jobs_api,'invoke',lambda *args:calls.append(args) or {'jobs':[]})
+    client=TestClient(app.app,base_url='https://testserver')
+    assert client.get('/api/web/jobs').status_code==401
+    reader=login('reader','reader-password-123')
+    assert reader.get('/api/web/jobs').status_code==403
+    admin=login('operator','operator-password-123')
+    response=admin.get('/api/web/jobs');assert response.status_code==200 and response.headers['cache-control']=='no-store'
+    key='a'*32;url='/api/web/jobs/'+key+'/retry'
+    assert admin.post(url,json={'revision':'1'}).status_code==403
+    assert admin.post(url,headers={'Origin':'https://evil.invalid'},json={'revision':'1'}).status_code==403
+    assert admin.post(url,headers={'Origin':'https://testserver'},json={'revision':'1','command':'reboot'}).status_code==422
+    assert admin.post(url,headers={'Origin':'https://testserver'},json={'revision':'1'}).status_code==200
+    assert calls[-1]==('jobs-retry',key,'1')
+    discard='/api/web/jobs/'+key+'/saved-downloads/discard'
+    assert admin.post(discard,headers={'Origin':'https://testserver'},json={'revision':'1','confirmation':'wrong'}).status_code==400
+    assert admin.post(discard,headers={'Origin':'https://testserver'},json={'revision':'1','confirmation':'DISCARD'}).status_code==200
+    assert calls[-1]==('jobs-cache-discard',key,'1')
+    for path in ('/api/web/jobs',url,discard):assert not mykos_peers.allowed_path(path)
+    api_key=mykos_api_keys.create('jobs-key','admin')
+    assert client.get('/api/web/jobs',headers={'X-MYKOS-API-Key':api_key}).status_code in (401,403)

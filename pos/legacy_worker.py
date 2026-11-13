@@ -117,6 +117,8 @@ def mirror(name):
  import xml.etree.ElementTree as ET
  for selected in spec['repositories']:
   repo_name=selected['name']
+  print('MYKOS_JOB_COMPONENT '+repo_name)
+  if os.path.isdir('/stage/'+repo_name):run([sys.executable,'/input/verify_cached.py','/stage/'+repo_name])
   run(['reposync','--config=/tmp/legacy-yum.conf','--gpgcheck','--download-metadata','--repoid='+repo_name,'--download_path=/stage'])
   base=yum.YumBase();base.doConfigSetup(fn='/tmp/legacy-yum.conf',init_plugins=False);base.repos.disableRepo('*');base.repos.enableRepo(repo_name);base.doRepoSetup()
   repo=base.repos.getRepo(repo_name);manifest=repo.repoXML;source=os.path.join(repo.cachedir,'repomd.xml');target='/stage/'+repo_name

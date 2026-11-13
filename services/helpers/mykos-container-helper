@@ -42,6 +42,9 @@ def _dispatch(args):
     if not isinstance(args, list) or not args or not all(isinstance(x,str) for x in args):
         raise ValueError('args must be a nonempty array of strings')
     action = args[0]
+    if action in ('jobs-list','jobs-retry','jobs-cache-discard'):
+        from mykos_jobs import dispatch as jobs_dispatch
+        return jobs_dispatch(args)
     if action.startswith('maintenance-'):
         from mykos_host_maintenance import dispatch
         return dispatch(args)

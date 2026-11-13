@@ -1,0 +1,23 @@
+#mykos-jobs-pane { padding:12px; }
+#mykos-jobs-count { font-size:.85em; }
+.mykos-job { border:1px solid currentColor; border-color:color-mix(in srgb,currentColor 20%,transparent); border-radius:7px; padding:10px 12px; margin:8px 0; }
+.mykos-job-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.mykos-job-state { text-transform:capitalize; white-space:nowrap; }
+.mykos-job[data-state="failed"] .mykos-job-state,.mykos-job[data-state="interrupted"] .mykos-job-state { color:#fbbf24; }
+:root[data-theme="light"] .mykos-job[data-state="failed"] .mykos-job-state,:root[data-theme="light"] .mykos-job[data-state="interrupted"] .mykos-job-state { color:#8c4b00; }
+.mykos-job[data-state="succeeded"] .mykos-job-state { color:#4ade80; }
+:root[data-theme="light"] .mykos-job[data-state="succeeded"] .mykos-job-state { color:#16743c; }
+.mykos-job-body { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px 14px; align-items:center; }
+.mykos-job-body p { margin:5px 0; overflow-wrap:anywhere; }
+.mykos-job-body progress { width:100%; height:10px; accent-color:#38bdf8; grid-column:1/-1; }
+.mykos-job-body details { grid-column:1/-1; font-size:.92em; }
+.mykos-job-body small { opacity:.8; }
+.mykos-job-body button { justify-self:end; }
+.mykos-jobs-controls { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.mykos-jobs-dialog { width:min(520px,calc(100vw - 32px)); box-sizing:border-box; }
+@media(max-width:600px) {
+ .mykos-job-heading { flex-wrap:wrap; gap:4px; }
+ .mykos-job-body { grid-template-columns:minmax(0,1fr); }
+ .mykos-job-body button { justify-self:start; min-height:36px; }
+ .mykos-jobs-controls button { min-height:40px; }
+}

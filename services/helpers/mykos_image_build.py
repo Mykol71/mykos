@@ -594,13 +594,16 @@ def embed_capture(value, source):
     finally:vm.run([vm.PODMAN,'unmount',value['name']],timeout=30)
 
 
-def queue(os_name, username=None, password=None, replace=False):
+def queue(os_name, username=None, password=None, replace=False, expected_job_revision=None):
     from mykos_host_maintenance import admission
     admission()
     import fcntl
     path=folder(os_name)
     with (path/'queue.lock').open('a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
+        if expected_job_revision is not None:
+            from mykos_jobs import vm_revision
+            if vm_revision(status(os_name))!=expected_job_revision:raise ValueError('Image build changed; refresh before resuming')
         unit='mykos-image-build@'+selection(os_name)+'.service'
         active=subprocess.run(['systemctl','is-active',unit],capture_output=True,text=True,timeout=10).stdout.strip()
         if active in ('active','activating','deactivating'):raise ValueError('Image build is already active')

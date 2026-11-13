@@ -37,7 +37,7 @@ def make_repo(root, packages):
 
 
 def snapshot(root):
-    return {str(p.relative_to(root)): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+    return {str(p.relative_to(root)): p.read_bytes() for p in root.rglob('*') if p.is_file() and sync.CACHE.NAMESPACE not in p.relative_to(root).parts}
 
 
 def seed(root, major=9):
@@ -279,7 +279,7 @@ class YumBase:
  def doConfigSetup(self,**k):pass
  def doRepoSetup(self):pass
 ''')
-    worker = (ROOT / 'repo/bin/sync_worker.sh').read_text().replace('/etc/yum.repos.d', str(repos)).replace('/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release', str(key)).replace('/stage', str(stage)).replace('/tmp/mykos-repo-config', str(tmp_path / 'config')).replace('/run/mykos-entitlement', str(tmp_path / 'missing-entitlement')).replace('/run/mykos-rhsm-ca', str(tmp_path / 'missing-ca')).replace('/etc/rhsm/ca', str(tmp_path / 'missing-image-ca'))
+    worker = (ROOT / 'repo/bin/sync_worker.sh').read_text().replace('/run/mykos-verify-cached', str(ROOT / 'repo/bin/verify_cached.py')).replace('/etc/yum.repos.d', str(repos)).replace('/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release', str(key)).replace('/stage', str(stage)).replace('/tmp/mykos-repo-config', str(tmp_path / 'config')).replace('/run/mykos-entitlement', str(tmp_path / 'missing-entitlement')).replace('/run/mykos-rhsm-ca', str(tmp_path / 'missing-ca')).replace('/etc/rhsm/ca', str(tmp_path / 'missing-image-ca'))
     result = subprocess.run(['bash', '-s', '--', str(major)], input=worker, text=True, capture_output=True,
                             env={**os.environ, 'PATH': str(tools) + ':' + os.environ['PATH'], 'PYTHONPATH': str(modules), 'EVENTS': str(events), 'KEY': str(key), 'UPSTREAM': str(upstream), 'BAD_SIGNATURE': '1' if bad_signature else '0'})
     assert result.returncode == (1 if missing_repo else 37 if bad_signature else 0), result.stdout + result.stderr
@@ -409,7 +409,7 @@ printf '%s' "$HTTP_STATUS"
 ''')
     curl.chmod(0o755)
     code = (ROOT / 'repo/bin/sync_worker.sh').read_text().split("<<'CONFIG'\n", 1)[1].split('\nCONFIG', 1)[0]
-    code = code.replace('/etc/yum.repos.d', str(repos)).replace('/run/mykos-entitlement', str(credentials)).replace('/run/mykos-rhsm-ca', str(ca)).replace('/etc/rhsm/ca', str(tmp_path / 'no-image-ca'))
+    code = code.replace('/run/mykos-verify-cached', str(ROOT / 'repo/bin/verify_cached.py')).replace('/etc/yum.repos.d', str(repos)).replace('/run/mykos-entitlement', str(credentials)).replace('/run/mykos-rhsm-ca', str(ca)).replace('/etc/rhsm/ca', str(tmp_path / 'no-image-ca'))
     result = subprocess.run([sys.executable, '-', str(major), str(work)], input=code,
                             text=True, capture_output=True,
                             env={**os.environ, 'PATH': str(tools) + ':' + os.environ['PATH'], 'URLS': str(urls), 'HTTP_STATUS': status})

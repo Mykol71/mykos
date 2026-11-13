@@ -34,9 +34,28 @@ IMAGES = {
 NS = {'r': 'http://linux.duke.edu/metadata/repo', 'p': 'http://linux.duke.edu/metadata/common'}
 MIN_FREE = 5 * 1024 ** 3
 
+import importlib.util
+_cache_spec=importlib.util.spec_from_file_location('mykos_retry_cache',Path(__file__).with_name('retry_cache.py'))
+CACHE=importlib.util.module_from_spec(_cache_spec);_cache_spec.loader.exec_module(CACHE)
+
 
 def run(args, **kwargs):
-    return subprocess.run([str(x) for x in args], check=True, **kwargs)
+    command=[str(x) for x in args]
+    if command[:2]!=['podman','run'] or '--cidfile' not in command:return subprocess.run(command,check=True,**kwargs)
+    import time
+    root=Path(command[command.index('--cidfile')+1]).parent.parent
+    process=subprocess.Popen(command,**kwargs)
+    try:
+        while process.poll() is None:
+            if shutil.disk_usage(root).free<MIN_FREE:raise RuntimeError('Sync stopped to preserve5 GiB of application disk headroom; recoverable candidates remain private')
+            time.sleep(2)
+        if process.returncode:raise subprocess.CalledProcessError(process.returncode,command)
+        return subprocess.CompletedProcess(command,0)
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            try:process.wait(timeout=15)
+            except subprocess.TimeoutExpired:process.kill();process.wait(timeout=10)
 
 
 def legacy_catalog():
@@ -196,6 +215,7 @@ def worker_command(major, work, run_id):
             '--pids-limit=256', '--oom-score-adj=500', '--cpu-shares=128', '--cgroup-conf=io.weight=default 10',
             '--security-opt', 'label=disable', '--volume', str(work / 'stage') + ':/stage:rw',
             '--volume', str(Path(__file__).with_name('sync_worker.sh')) + ':/run/mykos-sync-worker:ro',
+            '--volume',str(Path(__file__).with_name('verify_cached.py'))+':/run/mykos-verify-cached:ro',
             *credentials, IMAGES[major], '/bin/bash', '/run/mykos-sync-worker', str(major)]
 
 
@@ -234,38 +254,50 @@ def cleanup_worker(work, run_id):
 
 
 def sync_major(major, root, runner=run, clone=clone_repository, publish=exchange, cleanup=cleanup_worker):
-    run_id = uuid.uuid4().hex
-    work = Path(tempfile.mkdtemp(prefix='.mykos-sync-', dir=root))
-    work.chmod(0o700)
-    (work / 'owner.json').write_text(json.dumps({'format': 1, 'run_id': run_id, 'worker_name': 'mykos-repo-sync-rhel%s' % major}))
-    (work / 'stage').mkdir()
+    run_id=uuid.uuid4().hex
+    work=Path(tempfile.mkdtemp(prefix='.mykos-sync-',dir=root));work.chmod(0o700)
+    success=False;publishing=False
     try:
+        restored=CACHE.take(root,major,work,cleanup)
+        if restored:
+            inputs=work/'input'
+            if inputs.exists():shutil.rmtree(inputs)
+        else:(work/'stage').mkdir()
+        CACHE.write_owner(work,{'format':1,'run_id':run_id,'worker_name':'mykos-repo-sync-rhel%s' % major,'selection':str(major),'job_id':os.environ.get('MYKOS_JOB_ID')})
         if isinstance(major,str):
             source=Path(__file__).resolve().parents[2]/'pos';inputs=work/'input';inputs.mkdir()
             for name in ('legacy_el.json','legacy_worker.py'):shutil.copy2(source/name,inputs/name)
+            shutil.copy2(Path(__file__).with_name('verify_cached.py'),inputs/'verify_cached.py')
             shutil.copytree(source/'legacy-keys',inputs/'legacy-keys')
             shutil.copy2('/etc/pki/tls/certs/ca-bundle.crt',inputs/'build-ca.crt')
-        if shutil.disk_usage(root).free < MIN_FREE:
-            raise RuntimeError('Repository sync needs at least 5 GiB of free headroom')
+        if shutil.disk_usage(root).free<MIN_FREE:raise RuntimeError('Repository sync needs at least5 GiB free headroom')
         for name in repositories(major):
-            clone(root / name, work / 'stage' / name)
-        runner(worker_command(major, work, run_id))
-        validated = []
-        # A failed download/signature/manifest in any component publishes none of this major.
+            if not (work/'stage'/name).exists():clone(root/name,work/'stage'/name)
+        print('MYKOS_JOB_PHASE downloading',flush=True)
+        runner(worker_command(major,work,run_id))
+        print('MYKOS_JOB_PHASE validating',flush=True)
+        validated=[]
         for name in repositories(major):
-            live, staged = root / name, work / 'stage' / name
-            preserve_previous(live, staged)
-            count = validate_repository(staged)
-            validated.append((name, count))
-        for name, count in validated:
-            staged, live = work / 'stage' / name, root / name
-            runner(['restorecon', '-RF', staged])
-            publish(staged, live)
-            print('Published %s: %s referenced signed packages verified' % (name, count), flush=True)
+            live,staged=root/name,work/'stage'/name
+            preserve_previous(live,staged)
+            count=validate_repository(staged);validated.append((name,count))
+        # A failed cache can only contain private pre-publication candidates.
+        # Once exchanges start, stages contain old live directories; do not
+        # adopt those as failed-download cache after a publication interruption.
+        publishing=True
+        value=CACHE.owner(work);value['phase']='publishing';CACHE.write_owner(work,value)
+        print('MYKOS_JOB_PHASE publishing',flush=True)
+        for name,count in validated:
+            staged,live=work/'stage'/name,root/name
+            runner(['restorecon','-RF',staged]);publish(staged,live)
+            print('Published %s: %s referenced signed packages verified' % (name,count),flush=True)
+        success=True
     finally:
-        # If cleanup cannot establish ownership/stop the worker, leave its private work record.
-        cleanup(work, run_id)
-        shutil.rmtree(work)
+        # Ownership/stop failure retains the original private work for review.
+        cleanup(work,run_id)
+        if not success and not publishing and (work/'owner.json').is_file():
+            CACHE.keep(root,major,work,os.environ.get('MYKOS_JOB_ID'))
+        if work.exists():shutil.rmtree(work)
 
 
 def recover_stale(root):
@@ -280,14 +312,16 @@ def recover_stale(root):
         if value.get('format') != 1 or len(run_id) != 32 or any(c not in '0123456789abcdef' for c in run_id):
             raise ValueError('Invalid stale sync ownership record')
         cleanup_worker(work, run_id)
-        shutil.rmtree(work)
+        selected=value.get('selection') or value.get('worker_name','').removeprefix('mykos-repo-sync-rhel')
+        if selected in CACHE.ALLOWED and value.get('phase')!='publishing':CACHE.keep(root,selected,work,value.get('job_id'))
+        if work.exists():shutil.rmtree(work)
 
 
 def interrupted(signum, frame):
     raise InterruptedError('Sync interrupted')
 
 
-def main(argv=None):
+def main(argv=None, track=False):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('release', choices=[*map(str,sorted(IMAGES)),*sorted(k for k in legacy_catalog() if not k.startswith('rh'))], nargs='?', help='Default: synchronize RHEL 7 through 10')
     args = parser.parse_args(argv)
@@ -295,6 +329,11 @@ def main(argv=None):
         parser.error('Run as root on a compatible Linux repository host')
     if not Path('/sys/fs/cgroup/cgroup.controllers').exists():
         parser.error('Repository sync requires cgroup v2 resource controls')
+    if track and os.environ.get('MYKOS_JOB_SYNC_MANAGED')!='1':
+        helpers=Path(__file__).resolve().parents[2]/'services/helpers'
+        sys.path.insert(0,str(helpers) if (helpers/'mykos_jobs.py').is_file() else '/usr/local/sbin')
+        import mykos_jobs
+        return mykos_jobs.worker('repository-sync',args.release or 'all')
     os.setpriority(os.PRIO_PROCESS, 0, 15)
     run(['ionice', '-c', '2', '-n', '7', '-p', str(os.getpid())])
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -313,7 +352,7 @@ def main(argv=None):
 
 if __name__ == '__main__':
     try:
-        main()
+        sys.exit(main(track=True) or 0)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
         print('Repository synchronization failed: ' + str(error), file=sys.stderr)
         sys.exit(1)

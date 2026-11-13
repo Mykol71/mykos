@@ -80,7 +80,7 @@ def blockers():
     reasons = []
     units = run(['systemctl', 'list-units', '--state=active,activating,deactivating', '--no-legend', '--plain', '--type=service',
                  'mykos-stage@*', 'mykos-image-build@*', 'mykos-terminal@*', 'mykos-peer-copy-*',
-                 'mykos-repo-sync.service', 'mykos-image-reset-*', 'mykos-image-remove-*',
+                 'mykos-repo-sync.service', 'mykos-repo-sync-cli.service', 'mykos-jobs-*', 'mykos-image-reset-*', 'mykos-image-remove-*',
                  'mykos-snapshot-preview-[0-9a-f]*.service', 'mykos-purge.service'])
     if units:
         reasons.append('Active MYKOS work: ' + ', '.join(x.split()[0] for x in units.splitlines()))
@@ -92,6 +92,11 @@ def blockers():
                 reasons.append('Package manager is active (PID ' + path.name + ')')
         except OSError:
             pass
+    # CLI workers can run outside transient systemd services.
+    import mykos_jobs
+    if mykos_jobs.ROOT.exists():
+        with mykos_jobs.locked():
+            if any(v['state'] not in mykos_jobs.TERMINAL or not mykos_jobs.settled(v) for v in mykos_jobs.records()):reasons.append('Build or repository job has unfinished work')
     # Transfers may be waiting between transient worker invocations.
     for path in Path('/var/lib/mykos/instance-transfers').glob('*/status.json'):
         value = json.loads(path.read_text())

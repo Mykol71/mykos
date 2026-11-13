@@ -696,3 +696,5 @@ async def mykos_peer_cleanup_stop():
 
 from host_maintenance import router as host_maintenance_router
 app.include_router(host_maintenance_router)
+from jobs_api import router as jobs_router
+app.include_router(jobs_router)

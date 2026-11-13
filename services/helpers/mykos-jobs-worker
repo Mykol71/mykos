@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""Fixed build/repository entry point; no shell or arbitrary command parameters."""
+import argparse
+import mykos_jobs as jobs
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('kind',nargs='?',choices=('repository-sync','native-build'))
+parser.add_argument('target',nargs='?')
+parser.add_argument('--job')
+args=parser.parse_args()
+if args.job:
+    if args.kind or args.target:parser.error('Use a job ID or one fixed operation, not both')
+else:
+    if not args.kind:parser.error('Select one operation')
+    args.target=args.target or ('all' if args.kind=='repository-sync' else '')
+try:raise SystemExit(jobs.worker(args.kind,args.target,args.job))
+except (ValueError,OSError,RuntimeError) as error:parser.exit(1,str(error)+'\n')

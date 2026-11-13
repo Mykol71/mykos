@@ -83,6 +83,10 @@ if [ "$mode" = check ]; then
     exit 0
 fi
 while IFS= read -r repo; do
+  printf 'MYKOS_JOB_COMPONENT %s\n' "$repo"
+  if [ -d "/stage/$repo" ]; then
+    "$repo_python" /run/mykos-verify-cached "/stage/$repo"
+  fi
   if [ "$release" = 6 ] || [ "$release" = 7 ]; then
     reposync --config="$config_work/sync.conf" --gpgcheck --download-metadata --repo="$repo" -p /stage
     # Legacy yum-utils omits core metadata from --download-metadata. Copy the

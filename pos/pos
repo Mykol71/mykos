@@ -157,6 +157,14 @@ create-image() {
 
 build-image() (
   local OS="$1"
+  case "$OS" in
+    rh6|rh7|rh8|rh9|rh10|oracle6|oracle7|centos6|centos7|scientific6|scientific7|springdale6|springdale7|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|mssql2022|mssql2025)
+      if [ "${MYKOS_JOB_NATIVE_MANAGED:-}" != "$OS" ]; then
+        /usr/local/sbin/mykos-jobs-worker native-build "$OS"
+        return $?
+      fi ;;
+  esac
+  printf '%s\n' 'MYKOS_JOB_PHASE building'
   renice -n 15 -p "$BASHPID" >/dev/null || return 1
   ionice -c 2 -n 7 -p "$BASHPID" || return 1
   case "$OS" in
@@ -192,6 +200,7 @@ build-image() (
   CONTAINER=$(/usr/local/sbin/mykos-native-image-start "$OS") || return 1
   podman exec "$CONTAINER" /bin/sh -c 'if [ -f /etc/yum/pluginconf.d/subscription-manager.conf ]; then sed -i "s/enabled=1/enabled=0/g" /etc/yum/pluginconf.d/subscription-manager.conf; fi' || return 1
   podman exec "$CONTAINER" systemctl restart sshd || return 1
+  printf '%s\n' 'MYKOS_JOB_PHASE capturing'
   podman commit "$CONTAINER" "$OS:latest"
 )
 
@@ -711,6 +720,13 @@ if [ "${1:-}" = "--add-vpn" ] || [ "${1:-}" = "--remove-vpn" ]; then
   CONTAINER="$3"
   if [ "$1" = --remove-vpn ]; then rm_vpn; exit $?; fi
   add_vpn
+  exit $?
+fi
+
+# Fixed noninteractive entry for the same native build function used by the menu.
+if [ "${1:-}" = "--build-image" ]; then
+  [ "$#" -eq 2 ] || { echo 'Select exactly one image OS' >&2; exit 2; }
+  build-image "$2"
   exit $?
 fi
 
