@@ -21,3 +21,17 @@
  .mykos-job-body button { justify-self:start; min-height:36px; }
  .mykos-jobs-controls button { min-height:40px; }
 }
+
+.mykos-jobs-window { width:min(1100px,94vw); overflow:auto; padding:16px; }
+.mykos-jobs-window-controls { display:flex; justify-content:flex-end; }
+.mykos-jobs-window #mykos-jobs-pane { margin:8px 0 0; }
+.mykos-jobs-window #mykos-jobs-title { margin:8px 0; }
+.mykos-jobs-window [aria-busy="true"] { opacity:.75; }
+.mykos-user-actions > #mykos-jobs-link { color:inherit; text-decoration:none; font-size:12px; padding:4px; }
+@media(max-width:600px) { .mykos-jobs-window { padding:10px; } }
+
+.mykos-jobs-window #mykos-jobs-title { flex-wrap:wrap; min-width:0; }
+.mykos-jobs-window #mykos-jobs-status { white-space:normal; overflow-wrap:anywhere; }
+
+.mykos-jobs-mobile-nav { display:flex; justify-content:flex-end; margin:0 0 6px; }
+.mykos-jobs-mobile-nav a { display:inline-flex; align-items:center; min-height:36px; color:inherit; padding:4px 8px; }

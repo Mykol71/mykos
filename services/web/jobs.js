@@ -1,7 +1,7 @@
 /* Host-local job history and recovery. All server data is rendered as text. */
 (() => {
   const $ = id => document.getElementById(id);
-  let timer, busy = false, pending = false, opened = false, allowed = false, lastGood = null, expanded = false, epoch = 0;
+  let timer, busy = false, pending = false, opened = false, allowed = false, lastGood = null, expanded = false, epoch = 0, staleData = false, dialog = null, closeButton = null, positionNavigation = () => {};
   const root = '/mykos/api/web/jobs';
   function node(tag, text, parent) {
     const el = document.createElement(tag);
@@ -10,9 +10,11 @@
   }
   function clear() {
     epoch++;
-    allowed = false; lastGood = null;
+    allowed = false; lastGood = null; opened = false; staleData = false; positionNavigation();
+    document.querySelectorAll('.mykos-jobs-dialog').forEach(item => { item.close(); item.remove(); });
+    if(dialog?.open) dialog.close();
     $('mykos-jobs-link').hidden = true; $('mykos-jobs-title').hidden = true; $('mykos-jobs-pane').hidden = true;
-    $('mykos-jobs-rows').replaceChildren(); $('mykos-jobs-count').textContent = '';
+    $('mykos-jobs-rows').replaceChildren(); $('mykos-jobs-count').textContent = ''; $('mykos-jobs-status').textContent = 'Jobs status unavailable';
   }
   function button(label, parent, action) {
     const el = node('button', label, parent); el.type = 'button';
@@ -49,13 +51,13 @@
     dialog.addEventListener('close', () => { dialog.remove(); if(trigger?.isConnected) trigger.focus(); }, {once:true});
     document.body.append(dialog); dialog.showModal(); cancel.focus();
   }
-  function render(data, stale = false) {
+  function render(data, stale = staleData) {
     const jobs = Array.isArray(data.jobs) ? data.jobs : [];
     const active = jobs.filter(job => ['running','queued'].includes(job.state));
     const attention = jobs.filter(job => ['failed','interrupted','unknown'].includes(job.state) && !job.retry_child);
-    $('mykos-jobs-link').hidden = !allowed;
+    $('mykos-jobs-link').hidden = !allowed; positionNavigation();
     $('mykos-jobs-count').textContent = active.length || attention.length ? ' ('+active.length+' running'+(attention.length?', '+attention.length+' need attention':'')+')' : '';
-    const visible = allowed && (opened || active.length > 0 || attention.length > 0);
+    const visible = allowed && opened;
     $('mykos-jobs-title').hidden = !visible; $('mykos-jobs-pane').hidden = !visible;
     $('mykos-jobs-status').textContent = stale ? 'Status unavailable · showing the last successful update; actions disabled' : jobs.length+' recent jobs · '+active.length+' running · '+attention.length+' need attention';
     const rows = $('mykos-jobs-rows');
@@ -119,25 +121,63 @@
     if (busy) return;
     if (window.MYKOS_PEER_CONTEXT?.compact || document.hidden || $('dashboard')?.hidden) { schedule(); return; }
     busy = true; const requestEpoch = epoch;
+    $('mykos-jobs-refresh').disabled = true;
+    $('mykos-jobs-rows').setAttribute('aria-busy','true');
+    if(opened) $('mykos-jobs-status').textContent = lastGood ? 'Refreshing jobs… showing the last update' : 'Loading job status…';
     const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), 10000);
     try {
       const response = await fetch(root, {cache:'no-store',signal:controller.signal});
       if (requestEpoch !== epoch || $('dashboard')?.hidden) return;
       if ([401,403].includes(response.status)) { clear(); return; }
       if (!response.ok) throw new Error('Jobs status unavailable');
-      const data = await response.json(); if(requestEpoch !== epoch || $('dashboard')?.hidden) return; allowed = true; lastGood = data; render(data);
+      const data = await response.json(); if(requestEpoch !== epoch || $('dashboard')?.hidden) return; allowed = true; staleData = false; lastGood = data; render(data);
     } catch (_) {
       if (requestEpoch !== epoch) return;
+      staleData = true;
       if (lastGood) render(lastGood, true);
       else if (allowed) $('mykos-jobs-status').textContent = 'Jobs status unavailable. Retry refresh.';
-    } finally { clearTimeout(timeout); busy = false; schedule(); }
+    } finally { clearTimeout(timeout); busy = false; $('mykos-jobs-refresh').disabled = false; $('mykos-jobs-rows').removeAttribute('aria-busy'); schedule(); }
   }
   function init() {
     if (!$('mykos-jobs-link')) return;
-    $('mykos-jobs-link').addEventListener('click', event => { event.preventDefault(); opened = true; if (lastGood) render(lastGood); refresh(); $('mykos-jobs-title').scrollIntoView({behavior:'smooth',block:'start'}); });
+    // A modal stays anchored while inventory panes above it grow during startup.
+    const link = $('mykos-jobs-link');
+    const home = document.createComment('Jobs navigation home'); link.before(home);
+    dialog = node('dialog'); dialog.className = 'mykos-dialog mykos-jobs-window';
+    dialog.id = 'mykos-jobs-window'; dialog.setAttribute('aria-labelledby','mykos-jobs-title');
+    const toolbar = node('div', undefined, dialog); toolbar.className = 'mykos-jobs-window-controls';
+    closeButton = button('Close jobs', toolbar, () => dialog.close());
+    dialog.append($('mykos-jobs-title'), $('mykos-jobs-pane')); document.body.append(dialog);
+    dialog.addEventListener('close', () => { opened = false; if(lastGood) render(lastGood); if(allowed && !$('dashboard')?.hidden) link.focus({preventScroll:true}); });
+    const mobileQuery = window.matchMedia('(max-width:767px), (hover:none) and (pointer:coarse)');
+    const mobileNav = node('nav'); mobileNav.className = 'mykos-jobs-mobile-nav'; mobileNav.hidden = true; mobileNav.setAttribute('aria-label','Jobs status');
+    document.querySelector('#dashboard main').prepend(mobileNav);
+    function navigationTheme() {
+      const compactNavigation = mobileQuery.matches || document.documentElement.dataset.theme === 'receiver';
+      mobileNav.hidden = !allowed || !compactNavigation;
+      if(compactNavigation) mobileNav.append(link);
+      else home.after(link);
+    }
+    positionNavigation = navigationTheme; mobileQuery.addEventListener('change',navigationTheme);
+    new MutationObserver(navigationTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']}); navigationTheme();
+    link.addEventListener('click', event => {
+      event.preventDefault(); if(!allowed) return;
+      opened = true;
+      if(lastGood) render(lastGood, staleData);
+      else {
+        $('mykos-jobs-title').hidden = false; $('mykos-jobs-pane').hidden = false;
+        $('mykos-jobs-status').textContent = 'Loading job status…';
+      }
+      if(!dialog.open) dialog.showModal(); closeButton.focus();
+      if(busy) $('mykos-jobs-status').textContent = lastGood ? 'Refreshing jobs… showing the last update' : 'Loading job status…';
+      refresh();
+    });
     $('mykos-jobs-refresh').addEventListener('click', refresh);
     $('mykos-jobs-more').addEventListener('click', () => { expanded = !expanded; if(lastGood) render(lastGood); });
     $('logout').addEventListener('click', () => { opened = false; clear(); document.querySelectorAll('.mykos-jobs-dialog').forEach(dialog => dialog.close()); });
+    const dashboard = $('dashboard');
+    if(dashboard) new MutationObserver(() => { if(dashboard.hidden) clear(); else refresh(); }).observe(dashboard,{attributes:true,attributeFilter:['hidden']});
+    window.addEventListener('pagehide',clear);
     document.addEventListener('visibilitychange', () => { if(!document.hidden) refresh(); });
     refresh();
   }
