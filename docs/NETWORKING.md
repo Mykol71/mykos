@@ -11,7 +11,7 @@ Both dev and production use the rootful Podman bridge `mykos-lan` with private N
 
 Set `native_network_driver` to `bridge`, `native_network` to `mykos-lan`, and `native_network_subnet` to `192.168.22.0/24` in `/etc/mykos/config.json`. Initialize with `sudo /usr/local/sbin/mykos-network-setup` or `mykos-setup --native-network`. A new network is refused if the subnet overlaps an existing host route. Existing mismatched networks are left unchanged and must be replaced explicitly while unused.
 
-New native Linux instances, native image build containers, and Windows/macOS/Ubuntu VM wrappers use this network. Each gets a fixed `--ip` address and deterministic MAC, recorded in its Podman configuration and MYKOS labels. A shared lifecycle lock serializes assignment; stopped containers retain their address claims. Addresses exclude the gateway/network/broadcast, and a full pool fails before creation. Stop/start preserves the assigned address. Deleting the container releases its claim. VM-internal guest NICs retain their QEMU-managed networking; the displayed Podman NIC belongs to the VM wrapper.
+New native Linux instances, native image build containers, and Windows/macOS/Ubuntu/Fedora/Android VM wrappers use this network. Each gets a fixed `--ip` address and deterministic MAC, recorded in its Podman configuration and MYKOS labels. A shared lifecycle lock serializes assignment; stopped containers retain their address claims. Addresses exclude the gateway/network/broadcast, and a full pool fails before creation. Stop/start preserves the assigned address. Deleting the container releases its claim. VM-internal guest NICs retain their QEMU-managed networking; the displayed Podman NIC belongs to the VM wrapper.
 
 There is no pipework or guest dhclient dependency. NAT guests do not have individual `192.168.222.x` LAN addresses. Direct inbound LAN services need explicit publishing or routing; MYKOS terminals, guest-agent commands and HTTP desktops remain server-proxied. IPsec tunnel configuration and NAT-T need validation for the chosen peer/subnets; existing LAN-specific VPN selectors are not automatically rewritten.
 
@@ -22,6 +22,7 @@ Existing running containers are not silently rewired. Recreate legacy pipework o
 <!-- contents:start -->
 **Contents**
 
+- [Initial public release scope](#initial-public-release-scope)
 - [Linux root terminals](#linux-root-terminals)
 - [Windows PowerShell action](#windows-powershell-action)
 - [macOS shell action](#macos-shell-action)
@@ -42,6 +43,7 @@ Existing running containers are not silently rewired. Recreate legacy pipework o
   - [Failure and recovery procedure](#failure-and-recovery-procedure)
   - [Deliberate removal](#deliberate-removal)
   - [Implementation evidence and validation limits](#implementation-evidence-and-validation-limits)
+  - [Network map state and addresses](#network-map-state-and-addresses)
 
 <!-- contents:end -->
 

@@ -15,6 +15,7 @@ command arguments. The root wrappers switch to the `mykosweb` account internally
 - [API v2 keys](#api-v2-keys)
 - [Backup SSH keys](#backup-ssh-keys)
 - [Released permission boundary](#released-permission-boundary)
+- [Login throttling and active terminal revocation](#login-throttling-and-active-terminal-revocation)
 
 <!-- contents:end -->
 

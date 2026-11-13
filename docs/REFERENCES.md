@@ -9,7 +9,7 @@ source from technical documentation that explains the behavior behind a repair.
 
 ## Operating system vendors and projects
 
-MYKOS hosts run **RHEL 9 or RHEL 10 on x86_64**. Guest recipes have their own
+MYKOS targets **RHEL 9 x86_64 as stable and RHEL 10 as preview-only**. Guest recipes have their own
 version list; see [image builds](IMAGE_BUILDS.md) and [desktop guests](DESKTOPS.md).
 
 | OS family | Vendor or project main site | Related product or documentation |
@@ -19,14 +19,22 @@ version list; see [image builds](IMAGE_BUILDS.md) and [desktop guests](DESKTOPS.
 | AlmaLinux | [AlmaLinux OS Foundation](https://almalinux.org/) | [AlmaLinux wiki](https://wiki.almalinux.org/) |
 | Oracle Linux | [Oracle](https://www.oracle.com/) | [Oracle Linux](https://www.oracle.com/linux/) |
 | CentOS Stream | [CentOS Project](https://www.centos.org/) | [CentOS Stream](https://www.centos.org/centos-stream/) |
+| Scientific Linux (legacy EL6/EL7) | [Scientific Linux](https://scientificlinux.org/) | Archived releases; see the legacy image prerequisites |
+| Springdale Linux (legacy EL6/EL7) | [Springdale](https://springdale.math.ias.edu/) | Final EL6/EL7 archives in the image catalog |
+| Debian | [Debian](https://www.debian.org/) | Selectable native Debian13 guest |
+| Arch Linux | [Arch Linux](https://archlinux.org/) | Selectable native rolling guest |
+| SUSE BCI | [SUSE](https://www.suse.com/products/base-container-images/) | SLE BCI Init15 SP7 native guest; not a full SLES subscription |
+| Amazon Linux | [Amazon Linux2023](https://aws.amazon.com/linux/amazon-linux-2023/) | Selectable native guest |
+| Alpine Linux | [Alpine Linux](https://www.alpinelinux.org/) | Selectable native OpenRC guest |
+| Android-x86 | [Android-x86](https://www.android-x86.org/) | Legacy9.0-r2 manual VM installer |
 | Fedora Linux | [Fedora Project](https://fedoraproject.org/) | [Fedora documentation](https://docs.fedoraproject.org/) |
 | Ubuntu | [Canonical](https://canonical.com/) | [Ubuntu](https://ubuntu.com/) |
 | Windows and Windows Server | [Microsoft](https://www.microsoft.com/) | [Windows](https://www.microsoft.com/windows/) · [Windows Server documentation](https://learn.microsoft.com/windows-server/) |
 | macOS | [Apple](https://www.apple.com/) | [macOS support](https://support.apple.com/macos) |
 
 The SQL Server image family also uses [Microsoft SQL Server](https://www.microsoft.com/sql-server/).
-[Debian](https://www.debian.org/) is an upstream distribution used by desktop
-wrapper images; it is distinct from MYKOS's selectable guest recipes.
+Debian is both an upstream used by some VM wrappers and a separately selectable
+native guest; wrapper internals do not determine the selected guest OS.
 
 ## Containers, VMs and snapshots
 

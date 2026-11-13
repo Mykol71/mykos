@@ -17,7 +17,12 @@ They often perform mutations immediately and have no dry-run mode.</p>
 <li><a href="#pos-containers-cd-usrlocalsharemykospos">POS containers (<code>cd /usr/local/share/mykos/pos</code>)</a></li>
 <li><a href="#repository-mirrors-cd-usrlocalsharemykosrepo">Repository mirrors (<code>cd /usr/local/share/mykos/repo</code>)</a></li>
 <li><a href="#reports-billing-and-legacy-scheduled-jobs">Reports, billing, and legacy scheduled jobs</a></li>
-<li><a href="#host-utilities">Host utilities</a></li>
+<li><a href="#host-utilities">Host utilities</a><ul>
+<li><a href="#updateos">updateos</a></li>
+</ul>
+</li>
+<li><a href="#physical-memory-inventory">Physical memory inventory</a></li>
+<li><a href="#build-and-sync-job-history">Build and sync job history</a></li>
 </ul>
 <!-- contents:end -->
 
@@ -116,26 +121,30 @@ gaps, not hidden features supplied by the installer.</p>
 <p><code>./pos</code> is interactive: choose shopcode/image, build images, start/stop containers,
 connect as container root, and add/remove VPNs. It uses hidden files <code>.shopcode</code>,
 <code>.SHOP.postype</code>, <code>.SHOP.imagetype</code>, <code>.SHOP.container</code>, and <code>.SHOP/</code> VPN data. Preserve
-those files during upgrades. Image creation uses <code>livemedia-creator</code>, kickstarts in
-<code>ks/rh7.ks</code> through <code>ks/rh10.ks</code>, Podman build/commit, and site repositories.</p>
-<p>The legacy menu&#39;s default guest/image selection is RH8; this does not restore
-RHEL 8 host support. Its staging logic uses that global value;
-selecting another image does not comprehensively update all launch logic. Use the
-new configured API launcher for controlled, noninteractive staging, and validate
-legacy image workflows before relying on them across OS versions.</p>
+those files during upgrades. Current native choices and engines are listed in
+<a href="IMAGE_BUILDS.html#all-supported-instance-types">image builds</a>. EL6/EL7 use signed
+vendor-RPM assembly; the five additional Linux families use official OCI bases;
+other EL/Fedora/SQL recipes use Kickstart rootfs creation. These are rootful
+managed containers sharing the host kernel.</p>
+<p><code>sudo mykos</code> opens the top-level menu: choose <strong>2. Containers</strong>, then <strong>c. Build
+image</strong>. The selected OS is saved per ID and passed to the configured staging
+helper. Native starts use the managed network and persistent lifecycle; the old
+global-RH8/pipework description does not describe the current path. Reopen an old
+terminal menu after upgrades before using new tracking or image choices.</p>
 <p><code>./get_peers</code> reads Meraki configuration from <code>/etc/mykos/pos.env</code> and prints the
 organization&#39;s third-party VPN peers through <code>jq</code>. Configure credentials first.
-The legacy VPN update performs a PUT of a single constructed peers list; it can
-replace other configured organization peers. Review the intended full peer list
-and Meraki API behavior before using that menu option. Secrets are no longer embedded
+The Meraki peer update fetches and validates the complete peer list before
+appending a new peer; matching entries are not overwritten and conflicts fail.
+See <a href="NETWORKING.html#meraki-peer-updates">Meraki peer updates</a>. Avoid concurrent
+external updates because the upstream endpoint replaces a complete peer list.
+Secrets are no longer embedded
 in maintained code, but legacy per-shop generated files may still contain them.</p>
-<p><code>./pipework HOST_INTERFACE -i eth1 CONTAINER dhclient</code> adds the container interface
-and obtains DHCP. It changes host/container networking and requires root and Linux
-network tooling. The new staging helper calls this exact form. Check interface,
-DHCP client availability, routes, and VPN policies in your staging environment.</p>
-<p>The legacy Purge action stops <strong>all</strong> rootful Podman containers, prunes images, and
-removes hidden state. It is broad and destructive; it is not part of installation,
-update, removal, or the API&#39;s single-shop stop operation.</p>
+<p><code>./pipework</code> is retained for historical network compatibility; current native
+staging uses Podman-managed networking, not a post-start pipework/dhclient call.
+Read the <a href="NETWORKING.html">network guide</a> before changing an older instance.</p>
+<p>The <strong>p. Purge</strong> menu enters the explicit MYKOS purge workflow. It is broad and
+destructive, with its own confirmation and preservation checks; it is not a
+single-instance delete and must never be run as a documentation or release test.</p>
 <table>
 <thead>
 <tr>
@@ -152,7 +161,7 @@ update, removal, or the API&#39;s single-shop stop operation.</p>
 <td>Invoked by <code>mykos-stage@SHOP.service</code>; consumes queued job and writes result</td>
 </tr>
 <tr>
-<td><code>mykos-stage-pos SHOP yes|no</code></td>
+<td><code>mykos-stage-pos SHOP yes|no [IMAGE]</code></td>
 <td>Root-only noninteractive configured staging; normally invoked only by worker</td>
 </tr>
 <tr>
@@ -187,8 +196,8 @@ protocols; integrations should use authenticated HTTP API v2.</p>
 <td>Toggles the entire host Apache service, affecting more than mirrors if the host also proxies the dashboard</td>
 </tr>
 <tr>
-<td><code>./bin/sync_repos [7|8|9|10]</code></td>
-<td>Synchronizes RHEL 7–10 by default, or one selected major, using constrained UBI workers, explicit RPM signature checks and private COW staging. Publishes complete validated trees atomically. CLI and dashboard jobs share a background resource budget. RH6 is rejected.</td>
+<td><code>./bin/sync_repos [SELECTION]</code></td>
+<td>Defaults to RHEL7–10. Explicit majors6–10 or legacy clone identifiers select the corresponding final-release mirrors. Uses bounded workers, vendor signatures, checksum validation and private COW staging with atomic publication. Legacy/RHEL/updateos remain LAN-only.</td>
 </tr>
 </tbody></table>
 <p>Synchronization needs working registry/network/subscription access and enough disk.
@@ -196,67 +205,10 @@ Pinned historical UBI tags may need review. The script is not invoked or schedul
 by the global installer. Review its failure handling and target repositories before
 running it against production mirrors.</p>
 <h2 id="reports-billing-and-legacy-scheduled-jobs">Reports, billing, and legacy scheduled jobs</h2>
-<table>
-<thead>
-<tr>
-<th>Script</th>
-<th>Inputs / outputs / effects</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>data/bin/tfcloudaccountstats.sh</code></td>
-<td>Parses per-shop <code>tfrsync-summary.log</code>, writes <code>/tmp/TU_STATS_LINUX_Cloud_Backups.txt</code>; status, counts, size, subscriber flag</td>
-</tr>
-<tr>
-<td><code>data/bin/tfcloudaccountdetail.sh</code></td>
-<td>Writes <code>/tmp/TU_STATS_LINUX_Cloud_Backup_Detail.txt</code>; yearly monthly success/failure counts; needs installed <code>monthname.sh</code></td>
-</tr>
-<tr>
-<td><code>data/bin/tfcloudauthkeys.sh</code></td>
-<td>Collects backed-up client public keys and certificate dates into <code>/tmp/TU_STATS_LINUX_Cloud_Auth_Keys.txt</code>; treat report as restricted</td>
-</tr>
-<tr>
-<td><code>back/bin/tfcloud*.sh</code></td>
-<td>Older duplicates; prefer the <code>data/bin</code> copies for report work; they are not identical</td>
-</tr>
-<tr>
-<td><code>back/bin/cloud_pricing</code></td>
-<td>Computes subscriber storage pricing tiers, updates <code>/usr/local/bin/cloud_pricing_previous</code>, writes change report, sends mail to hard-coded recipients</td>
-</tr>
-<tr>
-<td><code>back/bin/cloud_pricing_previous</code>, <code>cloud_pricing_changed</code></td>
-<td>Historical output/state files; intentionally excluded from installation</td>
-</tr>
-<tr>
-<td><code>back/bin/backup_perf.sh</code></td>
-<td>Samples load, connections, free space into <code>/tmp/backup_perf.txt</code>; eventually emails hard-coded recipients</td>
-</tr>
-<tr>
-<td><code>back/bin/recon.sh</code></td>
-<td>Writes <code>/tmp/recon.txt</code> and emails account/space totals to hard-coded recipients</td>
-</tr>
-<tr>
-<td><code>back/bin/monthname.sh NN</code></td>
-<td>Prints English month name for 01–12</td>
-</tr>
-<tr>
-<td><code>back/bin/strip.sh</code></td>
-<td><code>strip.sh FILENAME</code> prints a cleaned <code>/var/log/session/FILENAME</code> stream with terminal control sequences removed; does not edit the original</td>
-</tr>
-<tr>
-<td><code>back/bin/tsrs_batch</code></td>
-<td>Publishes backed-up Dell TSR files into Apache docroot, replacing shop folders, with permissive modes</td>
-</tr>
-<tr>
-<td><code>back/bin/tsrs</code></td>
-<td>CGI HTML index linking published TSR reports; hostname is hard-coded</td>
-</tr>
-<tr>
-<td><code>back/bin/crontab</code></td>
-<td>Historical schedule reference; first two entries lack the user field required by <code>/etc/cron.d</code>; not installed or enabled</td>
-</tr>
-</tbody></table>
-<p>Business-specific integration is provided by a separately installed local extension.</p>
+<p>Business-specific backup, billing and report implementations are supplied by a
+separate private extension. Their commands are not public-core features and are
+not enabled as scheduled jobs by installing the core. Use the installed edition&#39;s
+own documentation rather than historical paths from another deployment.</p>
 <h2 id="host-utilities">Host utilities</h2>
 <h3 id="updateos">updateos</h3>
 <p><code>bin/updateos [groupname|scriptname|help] [dry]</code> is a legacy root script downloader
@@ -272,5 +224,12 @@ These are third-party/legacy tools, not enabled services. They can block legitim
 administrators and conflict with firewalld policy; inspect them before enabling.</p>
 <h2 id="physical-memory-inventory">Physical memory inventory</h2>
 <p>The gray hardware line at the bottom of the Host pane groups the installed memory type, configured speed, and total DIMM capacity reported by SMBIOS under one <strong>Memory</strong> label, for example <code>Memory: DDR4 · 3200 MT/s · 32 GiB</code>. Empty slots are excluded; mixed types or speeds are listed separately. Configured speed is preferred, falling back to module speed when firmware omits it. Installed capacity can exceed Linux usable memory because firmware reserves some RAM. Unavailable fields are omitted. The root collector caches inventory for 24 hours; the dashboard reads only the filtered collector output.</p>
+<h2 id="build-and-sync-job-history">Build and sync job history</h2>
+<p>Full local administrators use <a href="UI_GUIDE.html#jobs--recovery">Jobs &amp; Recovery</a>.
+Native builds launched through the current POS entry point and repository syncs
+record attempts; VM rows can also be observations of existing saved builder state.
+History cannot reconstruct earlier native builds. Retry/Resume is explicit and
+revision-checked; closing the pane does not stop work. API keys and peer forwarding
+cannot access these browser-only recovery controls.</p>
 <footer><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
 <span>MYKOS documentation · <a href="mailto:mgreen@myk.sh">mgreen@myk.sh</a></span></footer></main></html>

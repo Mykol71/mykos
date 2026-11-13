@@ -2,7 +2,7 @@
 
 [Documentation index](README.md)
 
-Native RedHat containers share the host kernel and do not use VM ballooning.
+Native Linux containers share the host kernel and do not use VM ballooning.
 The default VM allocation is **2048 MiB**. New modern VM images can select 2048,4096 or8192 MiB during the text-menu build; legacy Windows image choices retain2048 MiB. The selected runtime size is saved with the image and its RAM checkpoint, and new instances inherit it. Existing images keep their recorded size. Removing a
 Podman memory limit alone does not reclaim guest RAM. A RAM checkpoint must resume at its recorded memory size; changing a future build selection never rewrites an existing checkpoint.
 
@@ -67,3 +67,37 @@ before capture instead of stopping services automatically. An operator must
 review active sessions and approve stopping/masking that service if appropriate.
 
 To allocate4 GiB to one existing macOS instance: `sudo ./vm memory-configure INSTANCE_ID --target-mib 4096 --confirm INSTANCE_ID`. This restarts only that instance; other running VMs are unchanged.
+
+## Native guest journal memory
+
+The Host memory graph uses total RAM minus Linux `MemAvailable`; it is not the
+sum of container memory ceilings. File cache can be reclaimable, while tmpfs
+journal files still occupy RAM. Compare `free -h`, `vmstat 1 3` and
+`sudo podman stats --no-stream` before changing VM allocation or stopping guests.
+Some systemd container profiles mount `/var/log/journal` on tmpfs, so nominally
+persistent journals can consume hundreds of MiB of host RAM per guest.
+
+For a guest using systemd235 or newer, an operator policy can set the following
+in that guest's `/etc/systemd/journald.conf.d/90-mykos-memory.conf`:
+
+```ini
+[Journal]
+ReadKMsg=no
+ForwardToKMsg=no
+SystemMaxUse=32M
+SystemMaxFileSize=8M
+RuntimeMaxUse=32M
+RuntimeMaxFileSize=8M
+```
+
+Preserve and verify existing journal files in private disk storage **before**
+activating a smaller retention budget: rotation/vacuum can remove archived logs.
+Apply this to the selected guest journal service, then verify application logging,
+kernel-reading state, journal footprint and unchanged container identity. The
+active file means on-disk usage can exceed the configured retention budget.
+Do not apply this version-specific profile to EL6/EL7 or OpenRC by assumption.
+
+This is a scoped operator policy, not a new automatic default for every MYKOS
+image. Existing stopped guests, base images and older snapshots can retain their
+previous journal settings. RAM used by a VM, a guest application and guest
+journals are different contributors and need separate checks.

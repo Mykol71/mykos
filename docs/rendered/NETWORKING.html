@@ -7,13 +7,14 @@ footer{display:flex;align-items:center;gap:7px}footer .mykos-brand-flower{displa
 <p>New public configurations are limited to the private NAT bridge, direct native guest site VPNs, and MYKOS peer connections between directly reachable IPv4 hosts. Shared guest gateways, host-shared gateways, manual host VPN creation and VM-agent VPN creation are deferred until their complete scenarios pass validation. Direct site VPNs leave ordinary internet routing unchanged. Existing saved configurations retain their status, lifecycle and removal paths. See the <a href="ROADMAP.html">public roadmap</a> for deferred capabilities and return criteria.</p>
 <p>Both dev and production use the rootful Podman bridge <code>mykos-lan</code> with private NAT, subnet <code>192.168.22.0/24</code>, gateway <code>192.168.22.1</code>, and container addresses <code>.2</code> through <code>.254</code>. The same subnet on two separate hosts does not connect those networks together. The host LAN addresses remain unchanged. This works through Ethernet or Wi-Fi.</p>
 <p>Set <code>native_network_driver</code> to <code>bridge</code>, <code>native_network</code> to <code>mykos-lan</code>, and <code>native_network_subnet</code> to <code>192.168.22.0/24</code> in <code>/etc/mykos/config.json</code>. Initialize with <code>sudo /usr/local/sbin/mykos-network-setup</code> or <code>mykos-setup --native-network</code>. A new network is refused if the subnet overlaps an existing host route. Existing mismatched networks are left unchanged and must be replaced explicitly while unused.</p>
-<p>New native Linux instances, native image build containers, and Windows/macOS/Ubuntu VM wrappers use this network. Each gets a fixed <code>--ip</code> address and deterministic MAC, recorded in its Podman configuration and MYKOS labels. A shared lifecycle lock serializes assignment; stopped containers retain their address claims. Addresses exclude the gateway/network/broadcast, and a full pool fails before creation. Stop/start preserves the assigned address. Deleting the container releases its claim. VM-internal guest NICs retain their QEMU-managed networking; the displayed Podman NIC belongs to the VM wrapper.</p>
+<p>New native Linux instances, native image build containers, and Windows/macOS/Ubuntu/Fedora/Android VM wrappers use this network. Each gets a fixed <code>--ip</code> address and deterministic MAC, recorded in its Podman configuration and MYKOS labels. A shared lifecycle lock serializes assignment; stopped containers retain their address claims. Addresses exclude the gateway/network/broadcast, and a full pool fails before creation. Stop/start preserves the assigned address. Deleting the container releases its claim. VM-internal guest NICs retain their QEMU-managed networking; the displayed Podman NIC belongs to the VM wrapper.</p>
 <p>There is no pipework or guest dhclient dependency. NAT guests do not have individual <code>192.168.222.x</code> LAN addresses. Direct inbound LAN services need explicit publishing or routing; MYKOS terminals, guest-agent commands and HTTP desktops remain server-proxied. IPsec tunnel configuration and NAT-T need validation for the chosen peer/subnets; existing LAN-specific VPN selectors are not automatically rewritten.</p>
 <p>New macvlan/LAN-DHCP network setup is deferred from the initial public release. Existing networks are retained for compatibility; upgrades do not rewire running containers. The default private bridge uses no host DHCP proxy.</p>
 <p>Existing running containers are not silently rewired. Recreate legacy pipework or older-network containers after preserving any needed data. New instances use the configured bridge.</p>
 <!-- contents:start -->
 <p><strong>Contents</strong></p>
 <ul>
+<li><a href="#initial-public-release-scope">Initial public release scope</a></li>
 <li><a href="#linux-root-terminals">Linux root terminals</a></li>
 <li><a href="#windows-powershell-action">Windows PowerShell action</a></li>
 <li><a href="#macos-shell-action">macOS shell action</a></li>
@@ -38,6 +39,7 @@ footer{display:flex;align-items:center;gap:7px}footer .mykos-brand-flower{displa
 <li><a href="#failure-and-recovery-procedure">Failure and recovery procedure</a></li>
 <li><a href="#deliberate-removal">Deliberate removal</a></li>
 <li><a href="#implementation-evidence-and-validation-limits">Implementation evidence and validation limits</a></li>
+<li><a href="#network-map-state-and-addresses">Network map state and addresses</a></li>
 </ul>
 </li>
 </ul>

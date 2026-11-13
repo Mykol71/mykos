@@ -1,5 +1,10 @@
 # MYKOS Linux VPN tools
 
+This is an auxiliary operator toolkit, not an additional selectable guest image
+in the main MYKOS catalog. The compatibility observations below are recorded
+tests, not certification of every current WSL or nested-virtualization setup.
+See the [image catalog](../../docs/IMAGE_BUILDS.md) for actual guest selections.
+
 A small Ubuntu 24.04 Linux image with Libreswan, ISC dhclient, iproute2, iptables,
 and basic network diagnostics. The base image is pinned by digest. The tested
 amd64 image is about 158 MB uncompressed. No desktop or systemd is included.

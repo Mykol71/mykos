@@ -10,6 +10,7 @@
 - [Bootstrap from a source bundle](#bootstrap-from-a-source-bundle)
 - [Create the first administrator](#create-the-first-administrator)
 - [Repeated runs and removal](#repeated-runs-and-removal)
+  - [Reinstall after intentional package removal](#reinstall-after-intentional-package-removal)
 - [Native container image fixes](#native-container-image-fixes)
 
 <!-- contents:end -->

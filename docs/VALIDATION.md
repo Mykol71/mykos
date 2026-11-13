@@ -1,5 +1,25 @@
 # Validation record and remaining integration work
 
+## Release287 — Documentation catalog and workflow review
+
+This is a documentation correction over release286. The maintained catalog now
+matches 34 native selections and22 VM choices in this edition. The review fixes
+missing EL6/EL7 table rows, stale totals and pane lists, omitted manual Android
+instructions, menu navigation, native builder engines, Jobs history expectations,
+repository sync selections, historical-reference labels and navigation.
+
+Publication checks cover both documentation editions, exact catalog/command
+coverage, rebuilt HTML/TOCs, local links and anchors, viewer allowlists/CSP,
+package inclusion and live served bytes on dev then production. Runtime sources
+are unchanged; prior runtime evidence remains associated with its original release.
+No guest image build, snapshot restore, purge, VPN change or user workload restart
+is required or claimed for this documentation batch. RHEL10 remains a preview;
+archived guests do not gain vendor maintenance or new workload certification.
+
+The separate November13 guest journal tuning was an operator configuration change
+for existing guests, not a packaged default for every image. Exact-image timezone
+and repeated-native-restore limitations remain separate from this doc review.
+
 ## Release277 — Peer instance copies
 
 Peer copies require full local administrator access, authenticated connected

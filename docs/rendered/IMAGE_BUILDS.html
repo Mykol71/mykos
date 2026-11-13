@@ -1,9 +1,14 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unattended image builds</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="color-scheme" content="only light"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OS image builds and recovery</title><style>:root{color-scheme:only light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#203046;background:#f5f7fa;font-size:16px;line-height:1.65}body{margin:0;background:#f5f7fa;color:#203046}header{background:#edf3f8;color:#17324d;border-bottom:1px solid #dce3eb;padding:15px max(24px,calc((100vw - 1000px)/2));font-size:14px;letter-spacing:.04em}main{box-sizing:border-box;max-width:1080px;margin:28px auto;padding:36px 44px;background:#fff;border:1px solid #e0e5eb;border-radius:8px}h1,h2,h3{line-height:1.25;color:#162c43}h1{font-size:32px;margin:0 0 22px}h2{font-size:23px;margin:38px 0 16px;border-bottom:1px solid #e1e7ee;padding-bottom:10px}h3{font-size:19px;margin-top:28px}p{margin:15px 0}a{color:#075dab;text-decoration:none}a:hover{text-decoration:underline}table{border-collapse:collapse;width:100%;font-size:14px;margin:22px 0;display:block;overflow:auto}th{background:#edf3f8;text-align:left}th,td{border:1px solid #dce3eb;padding:10px 12px;vertical-align:top;min-width:130px}tr:nth-child(even){background:#fafbfd}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.86em;background:#f0f3f6;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{background:#f2f5f8;border:1px solid #dce4ec;padding:18px;overflow:auto;border-radius:5px;line-height:1.5}pre code{background:none;padding:0;white-space:pre;overflow-wrap:normal}blockquote{border-left:4px solid #789ab9;margin:22px 0;padding:1px 20px;background:#f4f8fc;color:#42566b}img{display:block;max-width:100%;height:auto;margin:24px auto}li{margin:5px 0}footer{font-size:13px;color:#576b80;padding-top:24px;margin-top:32px;border-top:1px solid #e1e7ee}@media(max-width:700px){main{margin:0;padding:24px 18px;border-radius:0}h1{font-size:27px}h2{font-size:21px}table{font-size:13px}header{padding:12px 18px}}
 header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px}.docs-brand{display:inline-flex;align-items:center;gap:9px}.docs-brand .mykos-brand-flower{display:block;width:22px;height:31px;flex:0 0 22px}
 footer{display:flex;align-items:center;gap:7px}footer .mykos-brand-flower{display:block;width:14px;height:20px;flex:0 0 14px}</style><header><span class="docs-brand"><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
-<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="unattended-image-builds">Unattended image builds</h1>
+<span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="os-image-builds-and-recovery">OS image builds and recovery</h1>
 <p><a href="README.html">Documentation index</a></p>
-<p>Installed Windows and a reusable MYKOS image are separate milestones. After
+<p>The image catalog contains 34 native selections and 22 VM-backed selections.
+Native images use one of three build engines; modern desktop VMs use unattended
+installation, while six legacy VM selections require interactive setup.
+The tables below describe accepted choices, not blanket certification of every
+new installation, host, application or snapshot combination.</p>
+<p>For Windows VMs, installation and a reusable MYKOS image are separate milestones. After
 installation completes, MYKOS captures startup RAM and commits the installed disk
 and memory together. If that capture fails, the installed disk stays available:
 rerun Build to finish it without reinstalling. The image builder briefly pauses
@@ -14,12 +19,24 @@ compressed streams are removed and never published as valid checkpoints.</p>
 <!-- contents:start -->
 <p><strong>Contents</strong></p>
 <ul>
-<li><a href="#start-or-resume-a-build">Start or resume a build</a></li>
+<li><a href="#start-or-resume-a-build">Start or resume a build</a><ul>
+<li><a href="#all-supported-instance-types">All supported instance types</a><ul>
+<li><a href="#native-el-and-other-linux-containers">Native EL and other Linux containers</a></li>
+<li><a href="#all-supported-vm-types">All supported VM types</a></li>
+</ul>
+</li>
 <li><a href="#android-x86-legacy-installer">Android-x86 legacy installer</a></li>
+</ul>
+</li>
 <li><a href="#instance-startup-hooks">Instance startup hooks</a></li>
 <li><a href="#build-output-and-instance-storage">Build output and instance storage</a></li>
-<li><a href="#memory-and-host-dependencies">Memory and host dependencies</a></li>
+<li><a href="#memory-and-host-dependencies">Memory and host dependencies</a><ul>
+<li><a href="#running-container-limit">Running-container limit</a></li>
+<li><a href="#release-memory-from-idle-image-bases">Release memory from idle image bases</a></li>
+</ul>
+</li>
 <li><a href="#build-credentials">Build credentials</a></li>
+<li><a href="#fedora-gnome-desktop-vms">Fedora GNOME desktop VMs</a></li>
 <li><a href="#ubuntu-provisioning">Ubuntu provisioning</a></li>
 <li><a href="#windows-provisioning">Windows provisioning</a></li>
 <li><a href="#macos-provisioning">macOS provisioning</a></li>
@@ -32,26 +49,51 @@ compressed streams are removed and never published as valid checkpoints.</p>
 <li><a href="#base-console-sessions">Base console sessions</a></li>
 </ul>
 </li>
-<li><a href="#lifecycle-checks-and-recovery">Lifecycle checks and recovery</a></li>
+<li><a href="#lifecycle-checks-and-recovery">Lifecycle checks and recovery</a><ul>
+<li><a href="#native-build-workspace-ownership">Native build workspace ownership</a></li>
+</ul>
+</li>
+<li><a href="#select-image-and-instance-ram">Select image and instance RAM</a></li>
+<li><a href="#legacy-enterprise-linux-guests">Legacy Enterprise Linux guests</a></li>
+<li><a href="#legacy-repository-mirrors">Legacy repository mirrors</a></li>
+<li><a href="#native-build-troubleshooting">Native build troubleshooting</a></li>
 </ul>
 <!-- contents:end -->
 
 <h2 id="start-or-resume-a-build">Start or resume a build</h2>
-<p>Run one command as root, with no account/password or Finish prompts:</p>
+<p>From the main menu, use <strong>2. Containers → c. Build image</strong>. An already-open
+terminal menu keeps its loaded shell functions: exit and reopen it after an
+upgrade before starting another build. The pane&#39;s <strong>+</strong> creates an instance from
+an available image; it does not build a missing image.</p>
+<p>For one native build without menu prompts, use the installed entry point:</p>
+<pre><code class="language-bash">sudo bash /usr/local/share/mykos/pos/pos --build-image centos6
+</code></pre>
+<p>Substitute one native identifier from the table. An existing image is reused;
+this command does not replace it. Inspect and explicitly manage an old image
+through the image controls before rebuilding it. Select only the needed image;
+never use the bulk <code>all</code> build as application or documentation validation.</p>
+<p>Full local administrators can open <strong>Jobs</strong> for tracked native builds and syncs,
+plus observed VM builder state. History begins when tracking was installed;
+older native builds are not reconstructed. A saved VM status can be older than
+the recorded native history. A successful command may have reused an existing
+image. See <a href="UI_GUIDE.html#jobs--recovery">Jobs &amp; Recovery</a>.</p>
+<p>For an unattended VM build, run one command as root, with no account/password
+or Finish prompts:</p>
 <pre><code class="language-bash">sudo /usr/local/sbin/mykos-image-build ubuntu22.04
 sudo /usr/local/sbin/mykos-image-build win10
 sudo /usr/local/sbin/mykos-image-build wns2022
 sudo /usr/local/sbin/mykos-image-build mac15
 </code></pre>
 <h3 id="all-supported-instance-types">All supported instance types</h3>
-<p>MYKOS supports both native Linux containers and VM-backed instances. The native
-EL entries are listed here alongside the VM types; host OS support is separate.
-RHEL 7 and 8 remain guest choices even though MYKOS hosts require RHEL 9 or 10.
+<p>MYKOS supports both native Linux containers and VM-backed instances. Legacy
+EL6/EL7 entries and current native choices appear beside the VM types. Host
+support is separate: RHEL 9 is the stable target, RHEL 10 is preview-only, and
+EL6/EL7/EL8 guest availability does not add those releases as host platforms.
 These are the current accepted image/instance selections, not a claim that every
 fresh guest installation has been retested on every host.</p>
 <h4 id="native-el-and-other-linux-containers">Native EL and other Linux containers</h4>
-<p>Run <code>sudo mykos</code>, choose <strong>c. Build image</strong>, then enter one OS identifier from
-this table. Native builds use Kickstart/rootfs creation or official OCI bases and Podman, rather than
+<p>Run <code>sudo mykos</code>, choose <strong>2. Containers</strong>, then <strong>c. Build image</strong> and enter one OS identifier from
+this table. Native builds use vendor RPM assembly, Kickstart/rootfs creation, or official OCI bases and Podman, rather than
 <code>pos/vm build</code> or the VM-only <code>mykos-image-build</code> command.</p>
 <table>
 <thead>
@@ -61,7 +103,11 @@ this table. Native builds use Kickstart/rootfs creation or official OCI bases an
 </tr>
 </thead>
 <tbody><tr>
-<td>Red Hat Enterprise Linux 7</td>
+<td>Red Hat Enterprise Linux 6.10 (legacy)</td>
+<td><code>rh6</code></td>
+</tr>
+<tr>
+<td>Red Hat Enterprise Linux 7.9 (legacy)</td>
 <td><code>rh7</code></td>
 </tr>
 <tr>
@@ -101,6 +147,10 @@ this table. Native builds use Kickstart/rootfs creation or official OCI bases an
 <td><code>alma10</code></td>
 </tr>
 <tr>
+<td>Oracle Linux 6.10 / 7.9 (legacy)</td>
+<td><code>oracle6</code>, <code>oracle7</code></td>
+</tr>
+<tr>
 <td>Oracle Linux 8</td>
 <td><code>oracle8</code></td>
 </tr>
@@ -111,6 +161,18 @@ this table. Native builds use Kickstart/rootfs creation or official OCI bases an
 <tr>
 <td>Oracle Linux 10</td>
 <td><code>oracle10</code></td>
+</tr>
+<tr>
+<td>CentOS 6.10 / 7.9.2009 (legacy)</td>
+<td><code>centos6</code>, <code>centos7</code></td>
+</tr>
+<tr>
+<td>Scientific Linux 6.10 / 7.9 (legacy)</td>
+<td><code>scientific6</code>, <code>scientific7</code></td>
+</tr>
+<tr>
+<td>Springdale Linux 6.10 / 7.9 (legacy)</td>
+<td><code>springdale6</code>, <code>springdale7</code></td>
 </tr>
 <tr>
 <td>CentOS Stream 8</td>
@@ -161,6 +223,9 @@ this table. Native builds use Kickstart/rootfs creation or official OCI bases an
 <td><code>alpine</code></td>
 </tr>
 </tbody></table>
+<p>For final archived EL6/EL7 releases, see <a href="#legacy-enterprise-linux-guests">legacy native guests</a>
+and <a href="#legacy-repository-mirrors">LAN-only legacy mirrors</a>. These include archived
+userspaces; the selection list does not imply current vendor security maintenance.</p>
 <p>The five additional native selections use official vendor OCI bases with a
 recorded digest and vendor package verification. Existing locally cached upstream
 tags are preserved. They use managed NAT networking; distro-specific VPN creation
@@ -291,6 +356,11 @@ These selections use <code>create</code> and <code>prepare</code>, rather than t
 <td><code>sudo /usr/share/mykos/pos/vm create win98</code></td>
 <td><code>sudo /usr/share/mykos/pos/vm prepare win98</code></td>
 </tr>
+<tr>
+<td>Android-x86 9.0-r2</td>
+<td><code>sudo /usr/share/mykos/pos/vm create android9</code></td>
+<td><code>sudo /usr/share/mykos/pos/vm prepare android9</code> (two Finish steps; see below)</td>
+</tr>
 </tbody></table>
 <p>From the text administration directory, <code>./vm build OS</code> and the existing
 Create Image menu use the same pipeline. Repeating the command resumes an
@@ -308,7 +378,7 @@ The installer is fetched from the upstream project over HTTPS, checked against
 its published SHA-1 and a pinned SHA-256, and kept in private build storage.
 See the <a href="https://www.android-x86.org/releases/releasenote-9-0-r2.html">publisher release notes</a>
 and <a href="https://www.android-x86.org/installhowto.html">installation guide</a>.</p>
-<p>Run <code>sudo mykos</code>, choose <strong>c. Build image</strong>, then <code>android9</code> and the required RAM.
+<p>Run <code>sudo mykos</code>, choose <strong>2. Containers</strong>, then <strong>c. Build image</strong>, <code>android9</code> and the required RAM.
 For the direct CLI, run:</p>
 <pre><code class="language-bash">sudo /usr/share/mykos/pos/vm create android9 --ram-mib 2048
 </code></pre>
@@ -331,16 +401,17 @@ group/world write access. Arguments are SHOPCODE and SHOPCODE.hostname;
 MYKOS_SHOPCODE, MYKOS_CONTAINER_NAME and MYKOS_OS are also set in the environment.
 The running generic base is never passed to these hooks.</p>
 <h2 id="build-output-and-instance-storage">Build output and instance storage</h2>
-<p>A successful build installs and provisions the OS, verifies the installed
+<p>A successful <strong>unattended VM build</strong> installs and provisions the OS, verifies the installed
 system, detaches installation-only devices, captures matching RAM/device/disk
 state, commits the installed disk payload under the readable local OS image
-name, and leaves one generic base container running. The image payload is
+name. A completed generic base is eligible for the idle-base timer described
+below; it is not a permanently required running VM. The image payload is
 in <code>/opt/mykos-image/golden.tar.gz</code> as a compressed sparse archive, with an
 <code>image.json</code> manifest; it is not just the small VM wrapper. Commit temporary
 files use the VM storage filesystem instead of filling <code>/var/tmp</code>. Fast
 ID-specific startup clones the immutable prepared state into private storage
 and restores RAM. Container names remain <code>SHOPCODE.hostname</code>, for example
-<code>12345678.prod.mykol.com</code>. Changes made by an instance do not modify the base.</p>
+<code>12345678.prod.myk.sh</code>. Changes made by an instance do not modify the base.</p>
 <h2 id="memory-and-host-dependencies">Memory and host dependencies</h2>
 <h3 id="running-container-limit">Running-container limit</h3>
 <p>MYKOS currently allows at most <strong>50 running customer instances and snapshot
@@ -384,6 +455,9 @@ existing containers retain their creation-time limits. The QEMU image already su
 macOS package generator uses Python&#39;s standard library. No additional helper
 containers or host package dependencies are needed for unattended installation.</p>
 <h2 id="build-credentials">Build credentials</h2>
+<p>The following account automation applies to unattended VM builds. Native guest
+root accounts are locked in the prepared images and use the native console or
+explicit operator provisioning; manual legacy VM installers have their own setup.</p>
 <p>Accounts default to <code>mykos</code> with a generated complex password. Credentials are
 stored, root-only, in <code>/var/lib/mykos/image-builds/OS/credentials.json</code> and reused
 for that OS on subsequent builds. They are not printed in progress messages.
@@ -452,13 +526,15 @@ uses it for certificate and hostname verification; TLS verification stays enable
 <p><a href="diagrams/image-lifecycle.svg" title="Open full-size diagram"><img src="diagrams/image-lifecycle.svg" alt="A generic base becomes a prepared image, which starts a private container. An intentional snapshot captures the container while it remains running."></a><a href="diagrams/image-lifecycle.svg">Open full-size diagram</a></p>
 <p><a href="diagrams/image-lifecycle.mmd">Editable Mermaid source</a></p>
 <h2 id="api">API</h2>
-<p>Use an admin API key for <code>PUT /mykos/api/v2/images/OS/build</code> with optional
+<p>For supported unattended VM selections, use an admin API key for <code>PUT /mykos/api/v2/images/OS/build</code> with optional
 <code>username</code>, <code>password</code> and <code>replace</code> JSON fields. The request starts the build
 in <code>mykos-image-build@OS.service</code>. Read progress with an API key at
 <code>GET /mykos/api/v2/images/OS/build</code> or from the command:</p>
 <pre><code class="language-bash">sudo /usr/local/sbin/mykos-image-build OS --status
 sudo journalctl -u mykos-image-build@OS.service --no-pager
 </code></pre>
+<p>This VM build endpoint is not the native EL/OCI image builder and is not the
+interactive Android/older-Windows installation workflow.</p>
 <p>Image build workers are included in maintenance checks and explicit Purge.
 RPM upgrades do not start builds, remove stored images, or restart guests.</p>
 <h2 id="sql-server-on-native-linux">SQL Server on native Linux</h2>
@@ -636,5 +712,42 @@ Use a service unit or <code>systemd-run</code> for long-lived programs, and clos
 terminals before capture. A process outside the instance&#39;s private legacy
 cgroup is rejected before capture; MYKOS leaves the container running and does
 not move the process or change host cgroup settings.</p>
+<h2 id="native-build-troubleshooting">Native build troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Check or next step</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A newly added image is absent from a selector</td>
+<td>Build that exact native identifier first; refresh inventory after it finishes. Pane + starts an instance, not an installer.</td>
+</tr>
+<tr>
+<td>An old CentOS6 build is missing from Jobs</td>
+<td>Tracking does not backfill pre-update native attempts. Reopen an old POS terminal after upgrade and distinguish observed VM status from recorded native attempts.</td>
+</tr>
+<tr>
+<td>An older builder reports <code>hashlib.file_digest</code> missing</td>
+<td>The current legacy builder uses bounded streaming SHA256 compatible with console Python3.9. Verify/update the installed MYKOS builder rather than editing vendor RPM/signature checks or guessing that the image completed.</td>
+</tr>
+<tr>
+<td>Vendor RPM, HTTPS or repository metadata fails</td>
+<td>Keep signature and TLS verification enabled. Check the selected final-release archive or RHEL entitlement, inspect the reported failure, and retry explicitly after repair.</td>
+</tr>
+<tr>
+<td>EL6 fails a legacy ABI check</td>
+<td>Review the x86_64 host kernel&#39;s vsyscall capability. MYKOS does not change host kernel settings to force an old userspace to run.</td>
+</tr>
+<tr>
+<td>EL7 capture rejects a background process</td>
+<td>Use guest systemd ownership for long-lived services and close exec terminals; do not move host processes/cgroups as a shortcut.</td>
+</tr>
+</tbody></table>
+<p>An Installing row or imported image tag alone is not proof of a usable prepared
+instance. Verify the actual image result and guest workflow on dev, and clean only
+the disposable resources created by that check. The <a href="VALIDATION.html">validation record</a>
+distinguishes earlier live qualifications from this documentation-only review.</p>
 <footer><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
 <span>MYKOS documentation · <a href="mailto:mgreen@myk.sh">mgreen@myk.sh</a></span></footer></main></html>

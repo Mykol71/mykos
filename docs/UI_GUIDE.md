@@ -25,7 +25,21 @@ can move between controls with Tab and activate buttons with Enter or Space.
 - [Notes](#notes)
 - [Appearance and footer controls](#appearance-and-footer-controls)
 - [Common workflows](#common-workflows)
+  - [Inspect an instance](#inspect-an-instance)
+  - [Start a new instance or restart an existing one](#start-a-new-instance-or-restart-an-existing-one)
+  - [Save and inspect a point in time](#save-and-inspect-a-point-in-time)
+  - [Operate another MYKOS host](#operate-another-mykos-host)
 - [Messages and troubleshooting](#messages-and-troubleshooting)
+- [Receiver appearance](#receiver-appearance)
+  - [Receiver control bank](#receiver-control-bank)
+  - [Receiver instruments and display power](#receiver-instruments-and-display-power)
+  - [Receiver radio controls](#receiver-radio-controls)
+  - [Receiver component stack](#receiver-component-stack)
+  - [Terminal pane width](#terminal-pane-width)
+- [Refresh and startup responsiveness](#refresh-and-startup-responsiveness)
+  - [Copy an instance to another peer](#copy-an-instance-to-another-peer)
+- [Prepare a host for reboot](#prepare-a-host-for-reboot)
+- [Jobs & Recovery](#jobs--recovery)
 
 ## Start here
 
@@ -49,12 +63,12 @@ on a container operates that instance. A peer's terminal operates that peer.
 
 | Area | What it shows or does |
 | --- | --- |
-| Header | MYKOS branding, signed-in username, Logout, section links, API, Docs, and server time. Section links scroll to visible panes. |
+| Header | MYKOS branding, signed-in username, Logout, section links, API, Docs, and server time. Section links scroll to visible panes; Jobs opens its own themed window. |
 | Local Host pane | Resource graph, history, host status row, actions, notes, and hardware details. |
 | Peer Host panes | Connected MYKOS hosts below the local pane, each with its own graph and actions. Compact panes are slightly narrower and right aligned. |
-| OS panes | Red Hat, Rocky Linux, AlmaLinux, Oracle Linux, CentOS Stream, Fedora, Ubuntu, Windows, Windows Server, and macOS; SQL Server has its own pane. |
+| OS panes | Red Hat; Rocky, Alma, Oracle, CentOS, Scientific and Springdale Linux; Fedora; Debian; Arch; SUSE; Amazon Linux; Alpine; SQL Server; Ubuntu; Windows; Windows Server; macOS; Android. Availability follows image and instance inventory. |
 | Snapshots | Saved states grouped by original container ID. |
-| rsync | Backup accounts, storage use, and account/key actions. |
+| rsync | Backup accounts, storage use, and account/key actions when the separate business extension is installed. |
 | Repos | Repository storage, dates, latest RPMs, links, and available management actions. |
 | Footer | Appearance toggles, project/contact links, and host OS identification. |
 
@@ -120,7 +134,7 @@ control again, or its **Close** button, closes it.
 | Red trash can — Stop and remove host VPN | Opens the host VPN removal terminal workflow. Read its prompts to identify the selected site VPN. Peer unlink is a separate control. |
 | Green document — Host Console Log | Opens host log output. |
 | Blue terminal — Host root terminal | Opens an interactive root shell on the selected server; administrator access is required. |
-| Red circular arrow — Reboot host | Confirms the named host, then schedules its reboot. This interrupts all containers and connected users on that host. |
+| Red circular arrow — Reboot host | Opens guided readiness and RAM-preservation preparation for the named host. Reboot is a separate explicit confirmation after preparation; see Prepare a host for reboot below. |
 
 ## Peer hosts
 
@@ -154,6 +168,12 @@ Personal, pane, and shared customer notes are not forwarded through peers.
 Browser/API-key administration and further peer management also remain local.
 
 ## OS panes and container rows
+
+Use the [complete selectable image catalog](IMAGE_BUILDS.md#all-supported-instance-types)
+for all 56 choices and their exact identifiers. A family pane is not a separate
+image type: Fedora includes native and desktop VM choices; CentOS includes
+legacy CentOS and Stream; Scientific and Springdale each include EL6/EL7.
+
 
 An **image** is a prepared OS and any startup state required to launch it.
 A **container** is a particular ID-specific instance with its own writable state,

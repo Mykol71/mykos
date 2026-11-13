@@ -2,6 +2,11 @@
 
 [Documentation index](README.md)
 
+**Historical review baseline.** Counts, timings, network arrangements and the
+2048MiB policy below describe the earlier review, not current live inventory.
+Use [current image choices](IMAGE_BUILDS.md), [memory policy](BALLOONING.md) and
+[networking](NETWORKING.md) for current operational instructions.
+
 Reviewed collectors, web/API handlers, native/VM lifecycle, snapshots, POS menu,
 pipework, scheduled commands, backup helpers, repository synchronization, and WSL
 VPN scripts. Existing container state was inspected through host Podman metadata;
@@ -80,7 +85,7 @@ restart; old memory captures cannot be restored at a different RAM size. Guest
 pagefiles/swap can help at smaller allocations but do not themselves lower the
 QEMU allocation. The operator-selected policy is 2048 MiB for all VMs and a 12 GiB pagefile/swap target where configurable. Windows 11 is below its published supported minimum; macOS keeps kernel-managed swap.
 
-Production currently has both a Podman bridge address and a pipework LAN address.
+At that review, production had both a Podman bridge address and a pipework LAN address.
 Replacing pipework requires a Podman macvlan/ipvlan LAN network, appropriate IPAM,
 and host-to-container connectivity. Removing eth1 alone would remove LAN/VPN
 reachability. No live networking migration is included in this release.

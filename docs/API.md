@@ -10,10 +10,10 @@
 - [Endpoint inventory](#endpoint-inventory)
   - [Read examples and response shapes](#read-examples-and-response-shapes)
   - [Administrative examples](#administrative-examples)
-- [Host metrics, Backup, Repos and terminal integrations](#host-metrics-repositories-and-terminal-integrations)
+- [Host metrics, repositories and terminal integrations](#host-metrics-repositories-and-terminal-integrations)
 - [Legacy routes](#legacy-routes)
 - [Common errors](#common-errors)
-- [Dashboard Backup and Repos panes](#dashboard-repositories-pane)
+- [Dashboard repositories pane](#dashboard-repositories-pane)
   - [Add a VPN from the container pane](#add-a-vpn-from-the-container-pane)
 - [Persistent containers and live snapshots](#persistent-containers-and-live-snapshots)
 - [Scheduled commands (admin API keys only)](#scheduled-commands-admin-api-keys-only)
@@ -29,6 +29,9 @@
   - [Saved geographic metadata](#saved-geographic-metadata)
   - [Shared customer notes and pane previews](#shared-customer-notes-and-pane-previews)
 - [Monitoring interpretation and released scope](#monitoring-interpretation-and-released-scope)
+  - [Host internet speed measurements](#host-internet-speed-measurements)
+  - [Terminal authorization lifetime](#terminal-authorization-lifetime)
+- [Local host maintenance](#local-host-maintenance)
 
 <!-- contents:end -->
 
@@ -56,9 +59,12 @@ key returns 401 even if a browser session is otherwise valid. API keys are not
 accepted by legacy browser endpoints or the browser-session terminal WebSocket.
 An admin key can use the separate API terminal at `/api/v2/terminal/{shop}`.
 
-API v2 operations require an `X-MYKOS-API-Key` header with a valid `read` or `admin`
-key. Browser cookies do not authorize API v2 requests. No login, cookie jar, or
-Origin header is required for API clients. Dashboard session routes retain their
+Monitoring and management API v2 operations require an `X-MYKOS-API-Key` header
+with a valid `read` or `admin` key; a browser cookie does not authorize those
+operations. The explicit private-note exception is `/personal-notes` and
+`/notes/{pane}`: those require the named owner browser session, not an API key,
+and writes require the configured Origin. No login, cookie jar or Origin header
+is required for ordinary API-key clients. Dashboard session routes retain their
 browser authentication and Origin checks.
 
 ## Interactive reference
@@ -559,7 +565,7 @@ stock guest. Its RAM allocation is still 2048 MiB.
 65 minutes of real host samples, supporting one hour of five-minute recall windows. Browser sessions use
 `GET /mykos/api/web/host-history`. An optional `since` query parameter is a
 nonnegative Unix timestamp in seconds; timestamps remain UTC Unix time.
-Responses include `retention_seconds: 3900`, `sample_interval_seconds: 3`,
+Responses include `retention_seconds: 3900`, `sample_interval_seconds: 1`,
 `collected_at`, and `samples`, ordered oldest first. Each sample contains
 `collected_at`, CPU percentage/count, load averages, memory/disk measurements,
 and cached `graph_counts`/`graph_totals` for containers and VPNs.

@@ -20,9 +20,12 @@ It does not read the historical archive during installation.
 - [Removal](#removal)
 - [Rename an existing installation](#rename-an-existing-installation)
 - [Scheduled-command collector](#scheduled-command-collector)
+  - [Idle image memory cleanup](#idle-image-memory-cleanup)
   - [Completed action refreshes and saved-image retries](#completed-action-refreshes-and-saved-image-retries)
 - [Native image builder prerequisite](#native-image-builder-prerequisite)
 - [Complete customer backup mounts](#complete-customer-backup-mounts)
+  - [Optional installed Ookla internet speed collector](#optional-installed-ookla-internet-speed-collector)
+- [Browser login visibility](#browser-login-visibility)
 
 <!-- contents:end -->
 
@@ -62,7 +65,7 @@ the application origin; a `--public-origin https://...` argument alone does not
 provision an Apache domain or request a certificate. Domain/Certbot setup needs
 `mykos-setup --configure-https` (optionally `--domain` and `--email`).
 
-Windows, Windows Server, macOS and Ubuntu desktop lifecycle helpers are included
+Windows, Windows Server, macOS, Ubuntu, Fedora GNOME and Android VM lifecycle helpers are included
 in every installation. See [DESKTOPS.md](DESKTOPS.md) for image creation and
 capture. To initialize KVM/storage checks and allow desktop ports from an
 explicit trusted LAN, add `--desktop-network 192.168.222.0/24` to `install`
@@ -416,8 +419,12 @@ provides `ksvalidator`. `python3-kickstart` alone supplies only its Python
 library on some RHEL releases and does not provide that command. Existing installations
 missing the CLI can install it with `sudo dnf install -y pykickstart`.
 
-Native Linux images are built on the supported RHEL 9 or RHEL 10 host using
-the local Anaconda/Lorax workflow. The guest version can differ from the host.
+Native image creation has three engines. EL6/EL7 final userspaces use the bounded
+`build_legacy_el.py` signed-RPM worker. Debian, Arch, SLE BCI, Amazon and Alpine use
+`build_native_oci.py` and pinned official OCI digests. Other native EL/Fedora/SQL
+recipes use `build_rootfs.py` with the local Anaconda/Lorax workflow. RHEL9 is
+the stable host target; RHEL10 remains preview-only.
+For the Kickstart engine, The guest version can differ from the host.
 The menu validates the prepared
 kickstart against the installed parser without imposing a matching host release.
 Temporary copies adapt timesource and weak-dependency option spellings to that
@@ -426,6 +433,10 @@ still has to succeed during the actual build. Changing repository URLs does not
 upgrade the local installer. Using an already built image is a separate path.
 
 ## Complete customer backup mounts
+
+This section applies only with the separate licensed business extension.
+The public core does not supply application-backup restore or backup-account
+management; installing the core alone does not enable the workflow below.
 
 When native staging explicitly selects backup restore, available directories under
 `/backups/tfrsync-ID` (or configured `backup_root`) bind directly read/write at

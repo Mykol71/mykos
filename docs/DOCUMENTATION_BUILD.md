@@ -48,8 +48,9 @@ Before editing, packaging, or promotion, compare hashes and relative paths in
 reviewed local baseline. Fetch and privately preserve new files/edits from either
 copy, reconcile them, then build again. Recheck immediately before promotion;
 abort if the baseline changed. A previously clean comparison does not authorize
-overwriting a later operator edit. `README.md` and the original Word guide
-remain verbatim. The Markdown administrator edition is historical reference;
+overwriting a later operator edit. The original Word administrator guide, its historical Markdown edition and
+operator notes remain verbatim. Maintained README indexes must be kept current.
+The Markdown administrator edition is historical reference;
 correct maintained task guides and label historical material clearly.
 
 Use the existing approved packaging/promotion process after review. Keep source
@@ -66,3 +67,17 @@ lead to the interactive API reference. Keep protected historical source document
 unchanged when correcting generated navigation. Verify local links and anchors,
 all allowlisted downloads/assets, and live URL status separately. A vendor bot
 challenge or a TLS failure in one checker is unverified, not proof of a dead page.
+
+## Catalog and navigation drift checks
+
+When image types change, update the root README, documentation index, image
+build tables, UI pane list, desktop commands and vendor references together.
+The native identifiers come from `mykos_runtime.NATIVE_OS_NAMES`; VM identifiers
+come from `mykos_vm.VERSIONS`; the bulk native subset comes from `build-all-images`
+in `pos/pos`. An available menu choice is not proof of a successful fresh build.
+Keep native RPM, native OCI, Kickstart, unattended VM and manual VM routes distinct.
+Public-core documentation must exclude private application profile details.
+
+Regenerate each maintained guide's contents links after adding headings. The
+catalog documentation regression checks identifiers and counts against source
+without invoking builds or executing administrative menu commands.

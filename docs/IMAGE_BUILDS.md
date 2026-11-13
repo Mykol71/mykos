@@ -1,8 +1,14 @@
-# Unattended image builds
+# OS image builds and recovery
 
 [Documentation index](README.md)
 
-Installed Windows and a reusable MYKOS image are separate milestones. After
+The image catalog contains 34 native selections and 22 VM-backed selections.
+Native images use one of three build engines; modern desktop VMs use unattended
+installation, while six legacy VM selections require interactive setup.
+The tables below describe accepted choices, not blanket certification of every
+new installation, host, application or snapshot combination.
+
+For Windows VMs, installation and a reusable MYKOS image are separate milestones. After
 installation completes, MYKOS captures startup RAM and commits the installed disk
 and memory together. If that capture fails, the installed disk stays available:
 rerun Build to finish it without reinstalling. The image builder briefly pauses
@@ -15,11 +21,17 @@ compressed streams are removed and never published as valid checkpoints.
 **Contents**
 
 - [Start or resume a build](#start-or-resume-a-build)
-- [Android-x86 legacy installer](#android-x86-legacy-installer)
+  - [All supported instance types](#all-supported-instance-types)
+    - [Native EL and other Linux containers](#native-el-and-other-linux-containers)
+    - [All supported VM types](#all-supported-vm-types)
+  - [Android-x86 legacy installer](#android-x86-legacy-installer)
 - [Instance startup hooks](#instance-startup-hooks)
 - [Build output and instance storage](#build-output-and-instance-storage)
 - [Memory and host dependencies](#memory-and-host-dependencies)
+  - [Running-container limit](#running-container-limit)
+  - [Release memory from idle image bases](#release-memory-from-idle-image-bases)
 - [Build credentials](#build-credentials)
+- [Fedora GNOME desktop VMs](#fedora-gnome-desktop-vms)
 - [Ubuntu provisioning](#ubuntu-provisioning)
 - [Windows provisioning](#windows-provisioning)
 - [macOS provisioning](#macos-provisioning)
@@ -31,12 +43,40 @@ compressed streams are removed and never published as valid checkpoints.
   - [Update an existing image](#update-an-existing-image)
   - [Base console sessions](#base-console-sessions)
 - [Lifecycle checks and recovery](#lifecycle-checks-and-recovery)
+  - [Native build workspace ownership](#native-build-workspace-ownership)
+- [Select image and instance RAM](#select-image-and-instance-ram)
+- [Legacy Enterprise Linux guests](#legacy-enterprise-linux-guests)
+- [Legacy repository mirrors](#legacy-repository-mirrors)
+- [Native build troubleshooting](#native-build-troubleshooting)
 
 <!-- contents:end -->
 
 ## Start or resume a build
 
-Run one command as root, with no account/password or Finish prompts:
+From the main menu, use **2. Containers → c. Build image**. An already-open
+terminal menu keeps its loaded shell functions: exit and reopen it after an
+upgrade before starting another build. The pane's **+** creates an instance from
+an available image; it does not build a missing image.
+
+For one native build without menu prompts, use the installed entry point:
+
+```bash
+sudo bash /usr/local/share/mykos/pos/pos --build-image centos6
+```
+
+Substitute one native identifier from the table. An existing image is reused;
+this command does not replace it. Inspect and explicitly manage an old image
+through the image controls before rebuilding it. Select only the needed image;
+never use the bulk `all` build as application or documentation validation.
+
+Full local administrators can open **Jobs** for tracked native builds and syncs,
+plus observed VM builder state. History begins when tracking was installed;
+older native builds are not reconstructed. A saved VM status can be older than
+the recorded native history. A successful command may have reused an existing
+image. See [Jobs & Recovery](UI_GUIDE.md#jobs--recovery).
+
+For an unattended VM build, run one command as root, with no account/password
+or Finish prompts:
 
 ```bash
 sudo /usr/local/sbin/mykos-image-build ubuntu22.04
@@ -47,21 +87,23 @@ sudo /usr/local/sbin/mykos-image-build mac15
 
 ### All supported instance types
 
-MYKOS supports both native Linux containers and VM-backed instances. The native
-EL entries are listed here alongside the VM types; host OS support is separate.
-RHEL 7 and 8 remain guest choices even though MYKOS hosts require RHEL 9 or 10.
+MYKOS supports both native Linux containers and VM-backed instances. Legacy
+EL6/EL7 entries and current native choices appear beside the VM types. Host
+support is separate: RHEL 9 is the stable target, RHEL 10 is preview-only, and
+EL6/EL7/EL8 guest availability does not add those releases as host platforms.
 These are the current accepted image/instance selections, not a claim that every
 fresh guest installation has been retested on every host.
 
 #### Native EL and other Linux containers
 
-Run `sudo mykos`, choose **c. Build image**, then enter one OS identifier from
-this table. Native builds use Kickstart/rootfs creation or official OCI bases and Podman, rather than
+Run `sudo mykos`, choose **2. Containers**, then **c. Build image** and enter one OS identifier from
+this table. Native builds use vendor RPM assembly, Kickstart/rootfs creation, or official OCI bases and Podman, rather than
 `pos/vm build` or the VM-only `mykos-image-build` command.
 
 | Native guest/image type | OS identifier entered at the menu |
 | --- | --- |
-| Red Hat Enterprise Linux 7 | `rh7` |
+| Red Hat Enterprise Linux 6.10 (legacy) | `rh6` |
+| Red Hat Enterprise Linux 7.9 (legacy) | `rh7` |
 | Red Hat Enterprise Linux 8 | `rh8` |
 | Red Hat Enterprise Linux 9 | `rh9` |
 | Red Hat Enterprise Linux 10 | `rh10` |
@@ -71,9 +113,13 @@ this table. Native builds use Kickstart/rootfs creation or official OCI bases an
 | AlmaLinux 8 | `alma8` |
 | AlmaLinux 9 | `alma9` |
 | AlmaLinux 10 | `alma10` |
+| Oracle Linux 6.10 / 7.9 (legacy) | `oracle6`, `oracle7` |
 | Oracle Linux 8 | `oracle8` |
 | Oracle Linux 9 | `oracle9` |
 | Oracle Linux 10 | `oracle10` |
+| CentOS 6.10 / 7.9.2009 (legacy) | `centos6`, `centos7` |
+| Scientific Linux 6.10 / 7.9 (legacy) | `scientific6`, `scientific7` |
+| Springdale Linux 6.10 / 7.9 (legacy) | `springdale6`, `springdale7` |
 | CentOS Stream 8 | `centos8` |
 | CentOS Stream 9 | `centos9` |
 | CentOS Stream 10 | `centos10` |
@@ -86,6 +132,10 @@ this table. Native builds use Kickstart/rootfs creation or official OCI bases an
 | SUSE Linux Enterprise BCI Init 15 SP7 | `sles15sp7` |
 | Amazon Linux 2023 | `amazon2023` |
 | Alpine Linux 3.24 (OpenRC) | `alpine` |
+
+For final archived EL6/EL7 releases, see [legacy native guests](#legacy-enterprise-linux-guests)
+and [LAN-only legacy mirrors](#legacy-repository-mirrors). These include archived
+userspaces; the selection list does not imply current vendor security maintenance.
 
 The five additional native selections use official vendor OCI bases with a
 recorded digest and vendor package verification. Existing locally cached upstream
@@ -144,6 +194,7 @@ These selections use `create` and `prepare`, rather than the unattended builder.
 | Windows Me | `sudo /usr/share/mykos/pos/vm create winme` | `sudo /usr/share/mykos/pos/vm prepare winme` |
 | Windows 2000 | `sudo /usr/share/mykos/pos/vm create win2k` | `sudo /usr/share/mykos/pos/vm prepare win2k` |
 | Windows 98 | `sudo /usr/share/mykos/pos/vm create win98` | `sudo /usr/share/mykos/pos/vm prepare win98` |
+| Android-x86 9.0-r2 | `sudo /usr/share/mykos/pos/vm create android9` | `sudo /usr/share/mykos/pos/vm prepare android9` (two Finish steps; see below) |
 
 From the text administration directory, `./vm build OS` and the existing
 Create Image menu use the same pipeline. Repeating the command resumes an
@@ -165,7 +216,7 @@ its published SHA-1 and a pinned SHA-256, and kept in private build storage.
 See the [publisher release notes](https://www.android-x86.org/releases/releasenote-9-0-r2.html)
 and [installation guide](https://www.android-x86.org/installhowto.html).
 
-Run `sudo mykos`, choose **c. Build image**, then `android9` and the required RAM.
+Run `sudo mykos`, choose **2. Containers**, then **c. Build image**, `android9` and the required RAM.
 For the direct CLI, run:
 
 ```bash
@@ -198,16 +249,17 @@ The running generic base is never passed to these hooks.
 
 ## Build output and instance storage
 
-A successful build installs and provisions the OS, verifies the installed
+A successful **unattended VM build** installs and provisions the OS, verifies the installed
 system, detaches installation-only devices, captures matching RAM/device/disk
 state, commits the installed disk payload under the readable local OS image
-name, and leaves one generic base container running. The image payload is
+name. A completed generic base is eligible for the idle-base timer described
+below; it is not a permanently required running VM. The image payload is
 in `/opt/mykos-image/golden.tar.gz` as a compressed sparse archive, with an
 `image.json` manifest; it is not just the small VM wrapper. Commit temporary
 files use the VM storage filesystem instead of filling `/var/tmp`. Fast
 ID-specific startup clones the immutable prepared state into private storage
 and restores RAM. Container names remain `SHOPCODE.hostname`, for example
-`12345678.prod.mykol.com`. Changes made by an instance do not modify the base.
+`12345678.prod.myk.sh`. Changes made by an instance do not modify the base.
 
 ## Memory and host dependencies
 
@@ -265,6 +317,10 @@ macOS package generator uses Python's standard library. No additional helper
 containers or host package dependencies are needed for unattended installation.
 
 ## Build credentials
+
+The following account automation applies to unattended VM builds. Native guest
+root accounts are locked in the prepared images and use the native console or
+explicit operator provisioning; manual legacy VM installers have their own setup.
 
 Accounts default to `mykos` with a generated complex password. Credentials are
 stored, root-only, in `/var/lib/mykos/image-builds/OS/credentials.json` and reused
@@ -352,7 +408,7 @@ uses it for certificate and hostname verification; TLS verification stays enable
 
 ## API
 
-Use an admin API key for `PUT /mykos/api/v2/images/OS/build` with optional
+For supported unattended VM selections, use an admin API key for `PUT /mykos/api/v2/images/OS/build` with optional
 `username`, `password` and `replace` JSON fields. The request starts the build
 in `mykos-image-build@OS.service`. Read progress with an API key at
 `GET /mykos/api/v2/images/OS/build` or from the command:
@@ -361,6 +417,9 @@ in `mykos-image-build@OS.service`. Read progress with an API key at
 sudo /usr/local/sbin/mykos-image-build OS --status
 sudo journalctl -u mykos-image-build@OS.service --no-pager
 ```
+
+This VM build endpoint is not the native EL/OCI image builder and is not the
+interactive Android/older-Windows installation workflow.
 
 Image build workers are included in maintenance checks and explicit Purge.
 RPM upgrades do not start builds, remove stored images, or restart guests.
@@ -581,3 +640,19 @@ Use a service unit or `systemd-run` for long-lived programs, and close exec
 terminals before capture. A process outside the instance's private legacy
 cgroup is rejected before capture; MYKOS leaves the container running and does
 not move the process or change host cgroup settings.
+
+## Native build troubleshooting
+
+| Symptom | Check or next step |
+| --- | --- |
+| A newly added image is absent from a selector | Build that exact native identifier first; refresh inventory after it finishes. Pane + starts an instance, not an installer. |
+| An old CentOS6 build is missing from Jobs | Tracking does not backfill pre-update native attempts. Reopen an old POS terminal after upgrade and distinguish observed VM status from recorded native attempts. |
+| An older builder reports `hashlib.file_digest` missing | The current legacy builder uses bounded streaming SHA256 compatible with console Python3.9. Verify/update the installed MYKOS builder rather than editing vendor RPM/signature checks or guessing that the image completed. |
+| Vendor RPM, HTTPS or repository metadata fails | Keep signature and TLS verification enabled. Check the selected final-release archive or RHEL entitlement, inspect the reported failure, and retry explicitly after repair. |
+| EL6 fails a legacy ABI check | Review the x86_64 host kernel's vsyscall capability. MYKOS does not change host kernel settings to force an old userspace to run. |
+| EL7 capture rejects a background process | Use guest systemd ownership for long-lived services and close exec terminals; do not move host processes/cgroups as a shortcut. |
+
+An Installing row or imported image tag alone is not proof of a usable prepared
+instance. Verify the actual image result and guest workflow on dev, and clean only
+the disposable resources created by that check. The [validation record](VALIDATION.md)
+distinguishes earlier live qualifications from this documentation-only review.

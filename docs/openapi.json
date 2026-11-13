@@ -1,50 +1,418 @@
 {
-  "openapi": "3.1.0",
+  "components": {
+    "schemas": {
+      "BuildRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "replace": {
+            "default": false,
+            "title": "Replace",
+            "type": "boolean"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "title": "BuildRequest",
+        "type": "object"
+      },
+      "ContainerDelete": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation": {
+            "description": "Repeat the path ID to confirm permanent deletion of the container and its private saved data.",
+            "pattern": "^[0-9]{8}$",
+            "title": "Confirmation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmation"
+        ],
+        "title": "ContainerDelete",
+        "type": "object"
+      },
+      "DeleteBuildRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation": {
+            "title": "Confirmation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmation"
+        ],
+        "title": "DeleteBuildRequest",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HostPurge": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation": {
+            "description": "Exact PURGE hostname phrase returned by the purge plan",
+            "maxLength": 270,
+            "minLength": 7,
+            "title": "Confirmation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmation"
+        ],
+        "title": "HostPurge",
+        "type": "object"
+      },
+      "HostReboot": {
+        "properties": {
+          "hostname": {
+            "title": "Hostname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hostname"
+        ],
+        "title": "HostReboot",
+        "type": "object"
+      },
+      "MemoryAllocation": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation": {
+            "title": "Confirmation",
+            "type": "string"
+          },
+          "target_mib": {
+            "title": "Target Mib",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_mib",
+          "confirmation"
+        ],
+        "title": "MemoryAllocation",
+        "type": "object"
+      },
+      "MemoryTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "target_mib": {
+            "title": "Target Mib",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_mib"
+        ],
+        "title": "MemoryTarget",
+        "type": "object"
+      },
+      "NoteUpdate": {
+        "properties": {
+          "revision": {
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 20000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "revision"
+        ],
+        "title": "NoteUpdate",
+        "type": "object"
+      },
+      "RepoAction": {
+        "properties": {
+          "action": {
+            "enum": [
+              "enable",
+              "disable",
+              "sync",
+              "delete"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "name": {
+            "default": "all",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "RepoAction",
+        "type": "object"
+      },
+      "ScheduledCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "title": "Command",
+            "type": "string"
+          },
+          "run_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run At"
+          },
+          "target": {
+            "default": "host",
+            "title": "Target",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 300,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "ScheduledCommand",
+        "type": "object"
+      },
+      "StageRequest": {
+        "properties": {
+          "os": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Os"
+          },
+          "restore": {
+            "default": false,
+            "title": "Restore",
+            "type": "boolean"
+          },
+          "shop": {
+            "title": "Shop",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop"
+        ],
+        "title": "StageRequest",
+        "type": "object"
+      },
+      "UbuntuVPNRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "local": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "peer": {
+            "title": "Peer",
+            "type": "string"
+          },
+          "remote": {
+            "title": "Remote",
+            "type": "string"
+          },
+          "secret": {
+            "format": "password",
+            "title": "Secret",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "name",
+          "peer",
+          "remote",
+          "secret"
+        ],
+        "title": "UbuntuVPNRequest",
+        "type": "object"
+      },
+      "VPNGatewayRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmation": {
+            "title": "Confirmation",
+            "type": "string"
+          },
+          "connection": {
+            "title": "Connection",
+            "type": "string"
+          },
+          "remote": {
+            "title": "Remote",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection",
+          "remote",
+          "confirmation"
+        ],
+        "title": "VPNGatewayRequest",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "MYKOSApiKey": {
+        "description": "Create keys on the server using mykos-api-keys.",
+        "in": "header",
+        "name": "X-MYKOS-API-Key",
+        "type": "apiKey"
+      },
+      "MYKOSNotesSession": {
+        "description": "Authenticated mgreen session required; API keys do not identify the note owner.",
+        "in": "cookie",
+        "name": "mykos_session",
+        "type": "apiKey"
+      }
+    }
+  },
   "info": {
-    "title": "MYKOS Infrastructure API v2",
     "description": "Authenticated monitoring, lifecycle operations, and admin-only scheduled commands",
+    "title": "MYKOS Infrastructure API v2",
     "version": "2.0.0"
   },
-  "servers": [
-    {
-      "url": "/mykos"
-    }
-  ],
+  "openapi": "3.1.0",
   "paths": {
-    "/api/v2/personal-notes": {
+    "/api/v2/actions": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Read personal notes (mgreen only)",
-        "operationId": "personal_note_api_v2_personal_notes_get",
+        "operationId": "actions_api_v2_actions_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           }
         },
         "security": [
           {
-            "MYKOSNotesSession": []
+            "MYKOSApiKey": []
           }
-        ]
-      },
-      "put": {
+        ],
+        "summary": "Discover actions and their permissions",
         "tags": [
           "MYKOS API v2"
-        ],
-        "summary": "Save personal notes (preserved through updates)",
-        "operationId": "update_personal_note_api_v2_personal_notes_put",
+        ]
+      }
+    },
+    "/api/v2/actions/stage": {
+      "post": {
+        "operationId": "start_stage_api_v2_actions_stage_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NoteUpdate"
+                "$ref": "#/components/schemas/StageRequest"
               }
             }
           },
@@ -52,496 +420,563 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSNotesSession": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/desktop": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Desktop browser console and native login endpoints",
-        "operationId": "desktop_connection_api_v2_nodes__shop__desktop_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Start a container staging job (admin only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
-    "/api/v2/nodes/{shop}/desktop/rdp": {
+    "/api/v2/actions/stage/{shop}/check": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Download the Windows RDP connection file",
-        "operationId": "desktop_rdp_api_v2_nodes__shop__desktop_rdp_get",
+        "operationId": "stage_check_api_v2_actions_stage__shop__check_get",
         "parameters": [
           {
-            "name": "shop",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Shop"
+              "title": "Shop",
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Check eligibility and available backup",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
-    "/api/v2/notes/{pane}": {
+    "/api/v2/commands": {
       "get": {
+        "operationId": "list_commands_api_v2_commands_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "List recent scheduled commands (admin only; excludes command text/output)",
         "tags": [
           "MYKOS API v2"
-        ],
-        "summary": "Read private pane notes (mgreen session only)",
-        "operationId": "pane_note_api_v2_notes__pane__get",
+        ]
+      }
+    },
+    "/api/v2/commands/{command_id}": {
+      "get": {
+        "operationId": "scheduled_command_api_v2_commands__command_id__get",
         "parameters": [
           {
-            "name": "pane",
             "in": "path",
+            "name": "command_id",
             "required": true,
             "schema": {
-              "enum": [
-                "terminal",
-                "host",
-                "linux",
-                "rocky",
-                "alma",
-                "oracle",
-                "centos",
-                "fedora",
-                "ubuntu",
-                "windows",
-                "windows-server",
-                "macos",
-                "mssql",
-                "backups",
-                "repos",
-                "snapshots"
-              ],
-              "type": "string",
-              "title": "Pane"
+              "title": "Command Id",
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
-            "MYKOSNotesSession": []
+            "MYKOSApiKey": []
           }
+        ],
+        "summary": "Read a scheduled command and private output (admin only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       },
       "put": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Save private pane notes (mgreen session only)",
-        "operationId": "update_pane_note_api_v2_notes__pane__put",
+        "operationId": "queue_command_api_v2_commands__command_id__put",
         "parameters": [
           {
-            "name": "pane",
             "in": "path",
+            "name": "command_id",
             "required": true,
             "schema": {
-              "enum": [
-                "terminal",
-                "host",
-                "linux",
-                "rocky",
-                "alma",
-                "oracle",
-                "centos",
-                "fedora",
-                "ubuntu",
-                "windows",
-                "windows-server",
-                "macos",
-                "mssql",
-                "backups",
-                "repos",
-                "snapshots"
-              ],
-              "type": "string",
-              "title": "Pane"
+              "title": "Command Id",
+              "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NoteUpdate"
+                "$ref": "#/components/schemas/ScheduledCommand"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSNotesSession": []
-          }
-        ]
-      }
-    },
-    "/api/v2/overview": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Complete monitoring snapshot",
-        "operationId": "overview_api_v2_overview_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Queue a scheduled host/Linux shell or Windows PowerShell command (admin only)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/commands/{command_id}/cancel": {
+      "post": {
+        "operationId": "cancel_command_api_v2_commands__command_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "command_id",
+            "required": true,
+            "schema": {
+              "title": "Command Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Cancel a pending scheduled command (admin only)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/console/{selection}/{path}": {
+      "get": {
+        "operationId": "console_http_api_v2_console__selection___path__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "selection",
+            "required": true,
+            "schema": {
+              "title": "Selection",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Authenticated browser console and assets",
+        "tags": [
+          "MYKOS API v2",
+          "Desktop consoles"
+        ]
+      }
+    },
+    "/api/v2/containers": {
+      "get": {
+        "operationId": "containers_api_v2_containers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Managed container inventory from helper",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/geography": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Saved ID and host locations with available system metadata",
         "operationId": "geography_api_v2_geography_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Saved ID and host locations with available system metadata",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/host": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Host OS, kernel, uptime and backup storage",
         "operationId": "host_api_v2_host_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
-        ]
-      }
-    },
-    "/api/v2/host/metrics": {
-      "get": {
+        ],
+        "summary": "Host OS, kernel, uptime and backup storage",
         "tags": [
           "MYKOS API v2"
-        ],
-        "summary": "Live host CPU, memory, load, disk and uptime",
-        "operationId": "host_metrics_api_v2_host_metrics_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/host/history": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Retained host performance history, up to 30 minutes",
-        "operationId": "host_history_api_v2_host_history_get",
-        "parameters": [
-          {
-            "name": "since",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "number",
-              "default": 0,
-              "title": "Since"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/host/network-speed": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Cached Ookla download/upload Mbps; never starts a network test",
-        "operationId": "host_network_speed_api_v2_host_network_speed_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/host/status": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Host status row including OS version and VPN state",
-        "operationId": "host_status_api_v2_host_status_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
         ]
       }
     },
     "/api/v2/host/diagnostics/{action}": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Host logs, processes or IPsec status",
         "operationId": "host_diagnostic_api_v2_host_diagnostics__action__get",
         "parameters": [
           {
-            "name": "action",
             "in": "path",
+            "name": "action",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Action"
+              "title": "Action",
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Host logs, processes or IPsec status",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/host/history": {
+      "get": {
+        "operationId": "host_history_api_v2_host_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Since",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Retained host performance history, up to 30 minutes",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/host/kernel": {
+      "get": {
+        "operationId": "host_kernel_api_v2_host_kernel_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Host Kernel",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/host/metrics": {
+      "get": {
+        "operationId": "host_metrics_api_v2_host_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Live host CPU, memory, load, disk and uptime",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/host/network-speed": {
+      "get": {
+        "operationId": "host_network_speed_api_v2_host_network_speed_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Cached Ookla download/upload Mbps; never starts a network test",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/host/os": {
+      "get": {
+        "operationId": "host_os_api_v2_host_os_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Host Os",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/host/reboot": {
       "post": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Schedule host reboot after exact-hostname confirmation",
         "operationId": "host_reboot_api_v2_host_reboot_post",
         "requestBody": {
           "content": {
@@ -555,257 +990,560 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Reboot a verified prepared host after exact-hostname confirmation",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
-    "/api/v2/repos": {
+    "/api/v2/host/status": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Repository inventory, storage, Apache and sync state",
-        "operationId": "repos_api_v2_repos_get",
-        "parameters": [
-          {
-            "name": "refresh",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Refresh"
-            }
-          }
-        ],
+        "operationId": "host_status_api_v2_host_status_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            },
+            "description": "Successful Response"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
-        ]
-      },
-      "post": {
+        ],
+        "summary": "Host status row including OS version and VPN state",
         "tags": [
           "MYKOS API v2"
-        ],
-        "summary": "Delete, enable, disable or sync repositories (admin only)",
-        "operationId": "repo_action_api_v2_repos_post",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RepoAction"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/repos/{name}": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Inspect one repository",
-        "operationId": "repository_api_v2_repos__name__get",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Name"
-            }
-          },
-          {
-            "name": "refresh",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Refresh"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/host/os": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Host Os",
-        "operationId": "host_os_api_v2_host_os_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/host/kernel": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Host Kernel",
-        "operationId": "host_kernel_api_v2_host_kernel_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
         ]
       }
     },
     "/api/v2/host/storage": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Host Storage",
         "operationId": "host_storage_api_v2_host_storage_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Host Storage",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/host/vpn/gateway": {
+      "put": {
+        "operationId": "host_vpn_gateway_configure_api_v2_host_vpn_gateway_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VPNGatewayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Use an existing host VPN as shared guest and host internet gateway",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/host/vpn/gateway/{connection}": {
+      "delete": {
+        "operationId": "host_vpn_gateway_remove_api_v2_host_vpn_gateway__connection__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "connection",
+            "required": true,
+            "schema": {
+              "title": "Connection",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Remove the shared host VPN routing profile; retain its VPN configuration",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/images": {
+      "get": {
+        "operationId": "staging_images_api_v2_images_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Startable OS images and active installation consoles",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/images/{os_name}": {
+      "delete": {
+        "operationId": "image_remove_api_v2_images__os_name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "os_name",
+            "required": true,
+            "schema": {
+              "title": "Os Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBuildRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Remove a prepared OS image and generic base if unreferenced",
+        "tags": [
+          "MYKOS API v2",
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/images/{os_name}/build": {
+      "delete": {
+        "operationId": "image_build_delete_api_v2_images__os_name__build_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "os_name",
+            "required": true,
+            "schema": {
+              "title": "Os Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBuildRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Remove a failed image builder and its private disks",
+        "tags": [
+          "MYKOS API v2",
+          "MYKOS API v2"
+        ]
+      },
+      "get": {
+        "operationId": "image_build_status_api_v2_images__os_name__build_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "os_name",
+            "required": true,
+            "schema": {
+              "title": "Os Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Read unattended image build progress",
+        "tags": [
+          "MYKOS API v2",
+          "MYKOS API v2"
+        ]
+      },
+      "put": {
+        "operationId": "image_build_api_v2_images__os_name__build_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "os_name",
+            "required": true,
+            "schema": {
+              "title": "Os Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Install, capture and commit an OS image unattended",
+        "tags": [
+          "MYKOS API v2",
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/images/{os_name}/delete": {
+      "get": {
+        "operationId": "image_remove_status_api_v2_images__os_name__delete_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "os_name",
+            "required": true,
+            "schema": {
+              "title": "Os Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Read prepared-image removal progress",
+        "tags": [
+          "MYKOS API v2",
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/images/{os_name}/reset": {
+      "post": {
+        "operationId": "image_reset_api_v2_images__os_name__reset_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "os_name",
+            "required": true,
+            "schema": {
+              "title": "Os Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBuildRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Reset only the generic base to its last captured image",
+        "tags": [
+          "MYKOS API v2",
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/jobs/{shop}": {
+      "get": {
+        "operationId": "stage_job_api_v2_jobs__shop__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Read staging job state",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/nodes": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "List all inventory nodes with optional filters",
         "operationId": "nodes_api_v2_nodes_get",
         "parameters": [
           {
-            "name": "status",
             "in": "query",
+            "name": "status",
             "required": false,
             "schema": {
               "anyOf": [
@@ -820,8 +1558,8 @@
             }
           },
           {
-            "name": "vpn",
             "in": "query",
+            "name": "vpn",
             "required": false,
             "schema": {
               "anyOf": [
@@ -836,8 +1574,8 @@
             }
           },
           {
-            "name": "running",
             "in": "query",
+            "name": "running",
             "required": false,
             "schema": {
               "anyOf": [
@@ -852,773 +1590,66 @@
             }
           },
           {
-            "name": "include",
             "in": "query",
+            "name": "include",
             "required": false,
             "schema": {
-              "type": "string",
               "default": "all",
-              "title": "Include"
+              "title": "Include",
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "List all inventory nodes with optional filters",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/nodes/{shop}": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "All collected data for one node",
-        "operationId": "node_api_v2_nodes__shop__get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      },
       "delete": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Delete a container and its private saved data (admin only)",
         "operationId": "delete_node_api_v2_nodes__shop__delete",
         "parameters": [
           {
-            "name": "shop",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Shop"
+              "title": "Shop",
+              "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ContainerDelete"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/status": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Node Status",
-        "operationId": "node_status_api_v2_nodes__shop__status_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/network": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Node Network",
-        "operationId": "node_network_api_v2_nodes__shop__network_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/resources": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Node Resources",
-        "operationId": "node_resources_api_v2_nodes__shop__resources_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/vpn": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Node Vpn",
-        "operationId": "node_vpn_api_v2_nodes__shop__vpn_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      },
-      "put": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Configure an Ubuntu VM IPsec connection through its private guest agent",
-        "operationId": "configure_ubuntu_vpn_api_v2_nodes__shop__vpn_put",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UbuntuVPNRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/details": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Node Details",
-        "operationId": "node_details_api_v2_nodes__shop__details_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/ipsec": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Live IPsec status from the existing helper",
-        "operationId": "node_ipsec_api_v2_nodes__shop__ipsec_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/logs": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Live console logs",
-        "operationId": "node_logs_api_v2_nodes__shop__logs_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/processes": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Live container processes and CPU/memory",
-        "operationId": "node_processes_api_v2_nodes__shop__processes_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/checkit": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Execute the existing checkit diagnostic (admin only)",
-        "operationId": "node_checkit_api_v2_nodes__shop__checkit_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/containers": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Managed container inventory from helper",
-        "operationId": "containers_api_v2_containers_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/actions": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Discover actions and their permissions",
-        "operationId": "actions_api_v2_actions_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/images": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Startable OS images and active installation consoles",
-        "operationId": "staging_images_api_v2_images_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/actions/stage/{shop}/check": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Check eligibility and available backup",
-        "operationId": "stage_check_api_v2_actions_stage__shop__check_get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/jobs/{shop}": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Read staging job state",
-        "operationId": "stage_job_api_v2_jobs__shop__get",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/actions/stage": {
-      "post": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Start a container staging job (admin only)",
-        "operationId": "start_stage_api_v2_actions_stage_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StageRequest"
               }
             }
           },
@@ -1626,691 +1657,1603 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/start": {
-      "post": {
+        ],
+        "summary": "Delete a container and its private saved data (admin only)",
         "tags": [
           "MYKOS API v2"
-        ],
-        "summary": "Start an existing persistent container (admin only)",
-        "operationId": "start_node_api_v2_nodes__shop__start_post",
+        ]
+      },
+      "get": {
+        "operationId": "node_api_v2_nodes__shop__get",
         "parameters": [
           {
-            "name": "shop",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Shop"
+              "title": "Shop",
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "All collected data for one node",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/checkit": {
+      "get": {
+        "operationId": "node_checkit_api_v2_nodes__shop__checkit_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Execute the existing checkit diagnostic (admin only)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/desktop": {
+      "get": {
+        "operationId": "desktop_connection_api_v2_nodes__shop__desktop_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Desktop browser console and native login endpoints",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/desktop/rdp": {
+      "get": {
+        "operationId": "desktop_rdp_api_v2_nodes__shop__desktop_rdp_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Download the Windows RDP connection file",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/details": {
+      "get": {
+        "operationId": "node_details_api_v2_nodes__shop__details_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Node Details",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/ipsec": {
+      "get": {
+        "operationId": "node_ipsec_api_v2_nodes__shop__ipsec_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Live IPsec status from the existing helper",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/logs": {
+      "get": {
+        "operationId": "node_logs_api_v2_nodes__shop__logs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Live console logs",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/nodes/{shop}/memory": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Inspect VM balloon driver support (admin only)",
         "operationId": "guest_memory_api_v2_nodes__shop__memory_get",
         "parameters": [
           {
-            "name": "shop",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Shop"
+              "title": "Shop",
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Inspect VM balloon driver support (admin only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       },
       "put": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Request a guarded VM balloon target (admin only)",
         "operationId": "set_guest_memory_api_v2_nodes__shop__memory_put",
         "parameters": [
           {
-            "name": "shop",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Shop"
+              "title": "Shop",
+              "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/MemoryTarget"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Request a guarded VM balloon target (admin only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/nodes/{shop}/memory/allocation": {
       "put": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Cold-restart a VM with a new RAM allocation (admin only)",
         "operationId": "configure_guest_memory_api_v2_nodes__shop__memory_allocation_put",
         "parameters": [
           {
-            "name": "shop",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Shop"
+              "title": "Shop",
+              "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/MemoryAllocation"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Cold-restart a VM with a new RAM allocation (admin only)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/network": {
+      "get": {
+        "operationId": "node_network_api_v2_nodes__shop__network_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Node Network",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/processes": {
+      "get": {
+        "operationId": "node_processes_api_v2_nodes__shop__processes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Live container processes and CPU/memory",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/resources": {
+      "get": {
+        "operationId": "node_resources_api_v2_nodes__shop__resources_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Node Resources",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/nodes/{shop}/snapshot": {
       "post": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Snapshot live container state and leave it running (admin only)",
         "operationId": "snapshot_node_api_v2_nodes__shop__snapshot_post",
         "parameters": [
           {
-            "name": "shop",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Shop"
+              "title": "Shop",
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Snapshot live container state and leave it running (admin only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/nodes/{shop}/snapshots": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "List saved snapshots for a container",
         "operationId": "list_node_snapshots_api_v2_nodes__shop__snapshots_get",
         "parameters": [
           {
-            "name": "shop",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Shop"
+              "title": "Shop",
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/stop": {
-      "post": {
+        ],
+        "summary": "List saved snapshots for a container",
         "tags": [
           "MYKOS API v2"
-        ],
-        "summary": "Stop selected managed POS (admin only)",
-        "operationId": "stop_node_api_v2_nodes__shop__stop_post",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/snapshots": {
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "List available container snapshots",
-        "operationId": "all_snapshots_api_v2_snapshots_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/snapshots/{identifier}/restore": {
-      "post": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Restore original container state from a snapshot (admin only)",
-        "operationId": "restore_node_snapshot_api_v2_nodes__shop__snapshots__identifier__restore_post",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          },
-          {
-            "name": "identifier",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Identifier"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
         ]
       }
     },
     "/api/v2/nodes/{shop}/snapshots/{identifier}": {
       "delete": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Permanently delete one saved snapshot (admin only)",
         "operationId": "delete_node_snapshot_api_v2_nodes__shop__snapshots__identifier__delete",
         "parameters": [
           {
-            "name": "shop",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Shop"
+              "title": "Shop",
+              "type": "string"
             }
           },
           {
-            "name": "identifier",
             "in": "path",
+            "name": "identifier",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Identifier"
+              "title": "Identifier",
+              "type": "string"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Permanently delete one saved snapshot (admin only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
-    "/api/v2/commands/{command_id}": {
-      "put": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Queue a scheduled host/Linux shell or Windows PowerShell command (admin only)",
-        "operationId": "queue_command_api_v2_commands__command_id__put",
+    "/api/v2/nodes/{shop}/snapshots/{identifier}/restore": {
+      "post": {
+        "operationId": "restore_node_snapshot_api_v2_nodes__shop__snapshots__identifier__restore_post",
         "parameters": [
           {
-            "name": "command_id",
             "in": "path",
+            "name": "shop",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Command Id"
+              "title": "Shop",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "identifier",
+            "required": true,
+            "schema": {
+              "title": "Identifier",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Restore original container state from a snapshot (admin only)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/start": {
+      "post": {
+        "operationId": "start_node_api_v2_nodes__shop__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Start an existing persistent container (admin only)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/status": {
+      "get": {
+        "operationId": "node_status_api_v2_nodes__shop__status_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Node Status",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/stop": {
+      "post": {
+        "operationId": "stop_node_api_v2_nodes__shop__stop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Stop selected managed POS (admin only)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/vpn": {
+      "get": {
+        "operationId": "node_vpn_api_v2_nodes__shop__vpn_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Node Vpn",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      },
+      "put": {
+        "operationId": "configure_ubuntu_vpn_api_v2_nodes__shop__vpn_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
             }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ScheduledCommand"
+                "$ref": "#/components/schemas/UbuntuVPNRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Configure an Ubuntu VM IPsec connection through its private guest agent",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/vpn/gateway": {
+      "put": {
+        "operationId": "vpn_gateway_configure_api_v2_nodes__shop__vpn_gateway_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VPNGatewayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Route the MYKOS guest network through a native Linux VPN gateway",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/nodes/{shop}/vpn/gateway/{connection}": {
+      "delete": {
+        "operationId": "vpn_gateway_remove_api_v2_nodes__shop__vpn_gateway__connection__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "shop",
+            "required": true,
+            "schema": {
+              "title": "Shop",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "connection",
+            "required": true,
+            "schema": {
+              "title": "Connection",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Remove only the selected shared gateway routing profile",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/notes/{pane}": {
+      "get": {
+        "operationId": "pane_note_api_v2_notes__pane__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pane",
+            "required": true,
+            "schema": {
+              "enum": [
+                "debian",
+                "arch",
+                "sles",
+                "amazon",
+                "alpine",
+                "android",
+                "terminal",
+                "host",
+                "linux",
+                "rocky",
+                "alma",
+                "oracle",
+                "centos",
+                "fedora",
+                "ubuntu",
+                "windows",
+                "windows-server",
+                "macos",
+                "mssql",
+                "backups",
+                "repos",
+                "snapshots"
+              ],
+              "title": "Pane",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSNotesSession": []
+          }
+        ],
+        "summary": "Read private pane notes (mgreen session only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       },
-      "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Read a scheduled command and private output (admin only)",
-        "operationId": "scheduled_command_api_v2_commands__command_id__get",
+      "put": {
+        "operationId": "update_pane_note_api_v2_notes__pane__put",
         "parameters": [
           {
-            "name": "command_id",
             "in": "path",
+            "name": "pane",
             "required": true,
             "schema": {
-              "type": "string",
-              "title": "Command Id"
+              "enum": [
+                "debian",
+                "arch",
+                "sles",
+                "amazon",
+                "alpine",
+                "android",
+                "terminal",
+                "host",
+                "linux",
+                "rocky",
+                "alma",
+                "oracle",
+                "centos",
+                "fedora",
+                "ubuntu",
+                "windows",
+                "windows-server",
+                "macos",
+                "mssql",
+                "backups",
+                "repos",
+                "snapshots"
+              ],
+              "title": "Pane",
+              "type": "string"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteUpdate"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
-            "MYKOSApiKey": []
+            "MYKOSNotesSession": []
           }
+        ],
+        "summary": "Save private pane notes (mgreen session only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
-    "/api/v2/commands": {
+    "/api/v2/overview": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "List recent scheduled commands (admin only; excludes command text/output)",
-        "operationId": "list_commands_api_v2_commands_get",
+        "operationId": "overview_api_v2_overview_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Complete monitoring snapshot",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
-    "/api/v2/commands/{command_id}/cancel": {
+    "/api/v2/personal-notes": {
+      "get": {
+        "operationId": "personal_note_api_v2_personal_notes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "MYKOSNotesSession": []
+          }
+        ],
+        "summary": "Read personal notes (mgreen only)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      },
+      "put": {
+        "operationId": "update_personal_note_api_v2_personal_notes_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSNotesSession": []
+          }
+        ],
+        "summary": "Save personal notes (preserved through updates)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/repos": {
+      "get": {
+        "operationId": "repos_api_v2_repos_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "refresh",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Refresh",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Repository inventory, storage, Apache and sync state",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      },
       "post": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Cancel a pending scheduled command (admin only)",
-        "operationId": "cancel_command_api_v2_commands__command_id__cancel_post",
-        "parameters": [
-          {
-            "name": "command_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Command Id"
+        "operationId": "repo_action_api_v2_repos_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepoAction"
+              }
             }
-          }
-        ],
+          },
+          "required": true
+        },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Delete or sync RPM repositories (admin only)",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/repos/{name}": {
+      "get": {
+        "operationId": "repository_api_v2_repos__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "refresh",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Refresh",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "Inspect one repository",
+        "tags": [
+          "MYKOS API v2"
+        ]
+      }
+    },
+    "/api/v2/snapshots": {
+      "get": {
+        "operationId": "all_snapshots_api_v2_snapshots_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "MYKOSApiKey": []
+          }
+        ],
+        "summary": "List available container snapshots",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/system/purge": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Preview irreversible container-state purge (admin only)",
         "operationId": "purge_plan_api_v2_system_purge_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Preview irreversible container-state purge (admin only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       },
       "post": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Queue confirmed deletion of all rootful container state (admin only)",
         "operationId": "purge_start_api_v2_system_purge_post",
         "requestBody": {
           "content": {
@@ -2324,1018 +3267,87 @@
         },
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
-            }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
+        ],
+        "summary": "Queue confirmed deletion of all rootful container state (admin only)",
+        "tags": [
+          "MYKOS API v2"
         ]
       }
     },
     "/api/v2/system/purge/status": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Read the last container-state purge result (admin only)",
         "operationId": "purge_status_api_v2_system_purge_status_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
-        ]
-      }
-    },
-    "/api/v2/console/{selection}/{path}": {
-      "get": {
-        "tags": [
-          "MYKOS API v2",
-          "Desktop consoles"
         ],
-        "summary": "Authenticated browser console and assets",
-        "operationId": "console_http_api_v2_console__selection___path__get",
-        "parameters": [
-          {
-            "name": "selection",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Selection"
-            }
-          },
-          {
-            "name": "path",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Path"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/images/{os_name}/build": {
-      "put": {
+        "summary": "Read the last container-state purge result (admin only)",
         "tags": [
-          "MYKOS API v2",
           "MYKOS API v2"
-        ],
-        "summary": "Install, capture and commit an OS image unattended",
-        "operationId": "image_build_api_v2_images__os_name__build_put",
-        "parameters": [
-          {
-            "name": "os_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Os Name"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BuildRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      },
-      "get": {
-        "tags": [
-          "MYKOS API v2",
-          "MYKOS API v2"
-        ],
-        "summary": "Read unattended image build progress",
-        "operationId": "image_build_status_api_v2_images__os_name__build_get",
-        "parameters": [
-          {
-            "name": "os_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Os Name"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "MYKOS API v2",
-          "MYKOS API v2"
-        ],
-        "summary": "Remove a failed image builder and its private disks",
-        "operationId": "image_build_delete_api_v2_images__os_name__build_delete",
-        "parameters": [
-          {
-            "name": "os_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Os Name"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteBuildRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/images/{os_name}": {
-      "delete": {
-        "tags": [
-          "MYKOS API v2",
-          "MYKOS API v2"
-        ],
-        "summary": "Remove a prepared OS image and generic base if unreferenced",
-        "operationId": "image_remove_api_v2_images__os_name__delete",
-        "parameters": [
-          {
-            "name": "os_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Os Name"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteBuildRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/images/{os_name}/delete": {
-      "get": {
-        "tags": [
-          "MYKOS API v2",
-          "MYKOS API v2"
-        ],
-        "summary": "Read prepared-image removal progress",
-        "operationId": "image_remove_status_api_v2_images__os_name__delete_get",
-        "parameters": [
-          {
-            "name": "os_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Os Name"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/images/{os_name}/reset": {
-      "post": {
-        "tags": [
-          "MYKOS API v2",
-          "MYKOS API v2"
-        ],
-        "summary": "Reset only the generic base to its last captured image",
-        "operationId": "image_reset_api_v2_images__os_name__reset_post",
-        "parameters": [
-          {
-            "name": "os_name",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Os Name"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeleteBuildRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
         ]
       }
     },
     "/api/v2/vpn/gateways": {
       "get": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "List configured shared native Linux VPN gateways",
         "operationId": "vpn_gateways_api_v2_vpn_gateways_get",
         "responses": {
           "200": {
-            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
-            }
+            },
+            "description": "Successful Response"
           }
         },
         "security": [
           {
             "MYKOSApiKey": []
           }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/vpn/gateway": {
-      "put": {
+        ],
+        "summary": "List configured shared native Linux VPN gateways",
         "tags": [
           "MYKOS API v2"
-        ],
-        "summary": "Route the MYKOS guest network through a native Linux VPN gateway",
-        "operationId": "vpn_gateway_configure_api_v2_nodes__shop__vpn_gateway_put",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VPNGatewayRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/nodes/{shop}/vpn/gateway/{connection}": {
-      "delete": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Remove only the selected shared gateway routing profile",
-        "operationId": "vpn_gateway_remove_api_v2_nodes__shop__vpn_gateway__connection__delete",
-        "parameters": [
-          {
-            "name": "shop",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Shop"
-            }
-          },
-          {
-            "name": "connection",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Connection"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/host/vpn/gateway": {
-      "put": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Use an existing host VPN as shared guest and host internet gateway",
-        "operationId": "host_vpn_gateway_configure_api_v2_host_vpn_gateway_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VPNGatewayRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
-        ]
-      }
-    },
-    "/api/v2/host/vpn/gateway/{connection}": {
-      "delete": {
-        "tags": [
-          "MYKOS API v2"
-        ],
-        "summary": "Remove the shared host VPN routing profile; retain its VPN configuration",
-        "operationId": "host_vpn_gateway_remove_api_v2_host_vpn_gateway__connection__delete",
-        "parameters": [
-          {
-            "name": "connection",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Connection"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "MYKOSApiKey": []
-          }
         ]
       }
     }
   },
-  "components": {
-    "schemas": {
-      "BuildRequest": {
-        "properties": {
-          "username": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Username"
-          },
-          "password": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "password",
-                "writeOnly": true
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Password"
-          },
-          "replace": {
-            "type": "boolean",
-            "title": "Replace",
-            "default": false
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "BuildRequest"
-      },
-      "ContainerDelete": {
-        "properties": {
-          "confirmation": {
-            "type": "string",
-            "pattern": "^[0-9]{8}$",
-            "title": "Confirmation",
-            "description": "Repeat the path ID to confirm permanent deletion of the container and its private saved data."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "confirmation"
-        ],
-        "title": "ContainerDelete"
-      },
-      "DeleteBuildRequest": {
-        "properties": {
-          "confirmation": {
-            "type": "string",
-            "title": "Confirmation"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "confirmation"
-        ],
-        "title": "DeleteBuildRequest"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
-      "HostPurge": {
-        "properties": {
-          "confirmation": {
-            "type": "string",
-            "maxLength": 270,
-            "minLength": 7,
-            "title": "Confirmation",
-            "description": "Exact PURGE hostname phrase returned by the purge plan"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "confirmation"
-        ],
-        "title": "HostPurge"
-      },
-      "HostReboot": {
-        "properties": {
-          "hostname": {
-            "type": "string",
-            "title": "Hostname"
-          }
-        },
-        "type": "object",
-        "required": [
-          "hostname"
-        ],
-        "title": "HostReboot"
-      },
-      "MemoryAllocation": {
-        "properties": {
-          "target_mib": {
-            "type": "integer",
-            "title": "Target Mib"
-          },
-          "confirmation": {
-            "type": "string",
-            "title": "Confirmation"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "target_mib",
-          "confirmation"
-        ],
-        "title": "MemoryAllocation"
-      },
-      "MemoryTarget": {
-        "properties": {
-          "target_mib": {
-            "type": "integer",
-            "title": "Target Mib"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "target_mib"
-        ],
-        "title": "MemoryTarget"
-      },
-      "NoteUpdate": {
-        "properties": {
-          "text": {
-            "type": "string",
-            "maxLength": 20000,
-            "title": "Text"
-          },
-          "revision": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Revision"
-          }
-        },
-        "type": "object",
-        "required": [
-          "text",
-          "revision"
-        ],
-        "title": "NoteUpdate"
-      },
-      "RepoAction": {
-        "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "enable",
-              "disable",
-              "sync",
-              "delete"
-            ],
-            "title": "Action"
-          },
-          "name": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
-            "title": "Name",
-            "default": "all"
-          }
-        },
-        "type": "object",
-        "required": [
-          "action"
-        ],
-        "title": "RepoAction"
-      },
-      "ScheduledCommand": {
-        "properties": {
-          "target": {
-            "type": "string",
-            "title": "Target",
-            "default": "host"
-          },
-          "command": {
-            "type": "string",
-            "title": "Command"
-          },
-          "run_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Run At"
-          },
-          "timeout_seconds": {
-            "type": "integer",
-            "title": "Timeout Seconds",
-            "default": 300
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "command"
-        ],
-        "title": "ScheduledCommand"
-      },
-      "StageRequest": {
-        "properties": {
-          "shop": {
-            "type": "string",
-            "title": "Shop"
-          },
-          "restore": {
-            "type": "boolean",
-            "title": "Restore",
-            "default": false
-          },
-          "os": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Os"
-          }
-        },
-        "type": "object",
-        "required": [
-          "shop"
-        ],
-        "title": "StageRequest"
-      },
-      "UbuntuVPNRequest": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "peer": {
-            "type": "string",
-            "title": "Peer"
-          },
-          "remote": {
-            "type": "string",
-            "title": "Remote"
-          },
-          "secret": {
-            "type": "string",
-            "format": "password",
-            "title": "Secret",
-            "writeOnly": true
-          },
-          "local": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Local"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "name",
-          "peer",
-          "remote",
-          "secret"
-        ],
-        "title": "UbuntuVPNRequest"
-      },
-      "VPNGatewayRequest": {
-        "properties": {
-          "connection": {
-            "type": "string",
-            "title": "Connection"
-          },
-          "remote": {
-            "type": "string",
-            "title": "Remote"
-          },
-          "confirmation": {
-            "type": "string",
-            "title": "Confirmation"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "connection",
-          "remote",
-          "confirmation"
-        ],
-        "title": "VPNGatewayRequest"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
-      }
-    },
-    "securitySchemes": {
-      "MYKOSApiKey": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-MYKOS-API-Key",
-        "description": "Create keys on the server using mykos-api-keys."
-      },
-      "MYKOSNotesSession": {
-        "type": "apiKey",
-        "in": "cookie",
-        "name": "mykos_session",
-        "description": "Authenticated mgreen session required; API keys do not identify the note owner."
-      }
+  "servers": [
+    {
+      "url": "/mykos"
     }
-  }
+  ]
 }

@@ -24,7 +24,7 @@ This design is useful when a team needs to recreate a customer environment, inve
 
 ## A shared model across different OS engines
 
-MYKOS gives native Linux containers and QEMU-backed Windows, Windows Server, macOS, and Ubuntu environments the same high-level lifecycle vocabulary. An image is a prepared OS and its required startup state. A container is an ID-specific running instance with its own operational identity. An intentional snapshot preserves instance state for a later restore.
+MYKOS gives native Linux containers and QEMU-backed Windows, Windows Server, macOS, Ubuntu, Fedora GNOME and Android environments the same high-level lifecycle vocabulary. An image is a prepared OS and its required startup state. A container is an ID-specific running instance with its own operational identity. An intentional snapshot preserves instance state for a later restore.
 
 The implementation retains OS-specific mechanisms beneath that model. Native Linux uses Podman processes and filesystems; VM-backed environments use QEMU and persistent guest storage. Console access follows the appropriate path: native PTYs, Ubuntu serial consoles, Windows guest-agent commands, or macOS SSH and graphical access.
 

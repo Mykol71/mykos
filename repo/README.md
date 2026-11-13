@@ -3,6 +3,13 @@ repo
 ------
 - Solution for serving multiple major OS versions of mirrored repos on one RedHat server (Apache) instance.
 
+## Historical terminal example (2 October 2026)
+
+The following old hostname, menu and URLs are a preserved example, not current
+publishing destinations or a statement that mirrors are publicly accessible.
+Use the current storage and synchronization sections below.
+
+```text
 10/02/2026  3:03 PM
 ┏━━━━━━━━
 ┃ @ Mike's Store
@@ -36,6 +43,7 @@ https://prod.mykol.com/rhel-9-for-x86_64-baseos-rpms/
 https://prod.mykol.com/support/
 https://prod.mykol.com/updateos/
 Press enter to continue..
+```
 
 
 

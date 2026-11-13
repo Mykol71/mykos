@@ -1,153 +1,68 @@
----
-pos
----
-RHEL 7 container image builds
------------------------------
-`ks/rh7.ks` uses an explicit package list with `--nocore` because the site's three
-RHEL 7 mirrors do not publish package-group metadata. The explicit package
-names were checked against those mirrors on 23 October 2026. Dependencies and a
-complete image build still need validation in a matching RHEL 7 build environment.
-The existing Optional and Extras URL aliases are retained. The RHEL 7 OpenSCAP
-PCI-DSS profile is retained using its full profile ID; syntax/package checks do
-not certify compliance or validate remediation inside a container.
+# MYKOS images and instances
 
-The post-install script uses `/etc/yum/vars`, tolerates an absent subscription
-manager plugin, and leaves account provisioning explicit. It stops on failures
-and records output in `/anaconda-post.log`. Downloaded `updateos` content must be
-nonempty and pass `bash -n` before it replaces the installed script. The subsequent
-Podman build checks its download too. Check syntax on the builder with:
+Run `sudo mykos`, choose **2. Containers**, then **c. Build image**. To enter the
+POS menu directly on an installed host, use:
 
-```sh
-ksvalidator -v RHEL7 ks/rh7.ks
+```bash
+cd /usr/local/share/mykos/pos
+sudo ./pos
 ```
 
-RHEL 10 container image builds
------------------------------
-`ks/rh10.ks` targets RHEL 10 Kickstart syntax and a container root filesystem.
-Use RHEL 10 Anaconda/Lorax tooling for this build. The `create-image` function uses
-`livemedia-creator --no-virt`, which runs the builder's installer rather than a
-RHEL 10 installer booted inside a VM. An existing RHEL 8 builder does not become
-a RHEL 10 builder by changing only the repository URLs.
-The image workflow now checks the RHEL major version and validates the rh10
-kickstart before starting this build. If image creation fails, it stops before
-moving the output or building/starting a Podman template.
+Choose a single explicit OS identifier from the [complete image catalog](../docs/IMAGE_BUILDS.md#all-supported-instance-types).
+This edition has 34 native image selections and22 VM-backed choices.
+An eight-digit instance ID is separate from an OS image; **s. ID** selects the
+ID/OS and **2. Start/Stop** operates that instance. Dashboard **+** starts from
+an available image and does not install a missing one.
 
-Validate on the build machine before starting the image build:
+## Build engines and prerequisites
 
-```sh
-cat /etc/redhat-release
-rpm -q lorax anaconda-core pykickstart
-ksvalidator -v RHEL10 ks/rh10.ks
-```
+- EL6/EL7 final x86_64 userspaces use `build_legacy_el.py` and a bounded UBI7
+  worker with pinned vendor keys, verified RPMs and HTTPS. RHEL requires the
+  builder host's existing entitlement. EL6 uses Upstart; EL7 uses isolated
+  systemd/cgroup compatibility. These guests share the host kernel.
+- Debian13, Arch, SLE BCI Init15 SP7, Amazon Linux2023 and Alpine3.24 use official
+  OCI bases through `build_native_oci.py`; selected digests and vendor package
+  policy are recorded. Alpine uses OpenRC; the other profiles use systemd.
+- Other native EL/Fedora/SQL recipes use `build_rootfs.py`, Anaconda/Lorax and
+  temporary parser-adapted Kickstarts. The host OS metadata is not rewritten.
+- Windows, Windows Server, macOS, Ubuntu and Fedora GNOME use the VM workflow.
+  Modern choices build unattended; Windows7/XP/Me/2000/98 and Android-x86 use
+  manual installation. Android needs two Finish steps after reaching its desktop.
 
-If `RHEL10` is not a supported validator version, use an appropriate RHEL 10
-build environment. The root account remains locked; provision access explicitly.
-The old RHEL 8 OpenSCAP installer profile is not carried into this image. Apply
-any required RHEL 10 profile after building; this file does not certify compliance.
-The post-install script stops on errors and logs to `/root/mykos-image-post.log`
-inside the target image. The image creator log is
-`/tmp/build-rh10-container.error.log`. Successful syntax validation does not check
-the site's repository metadata, available packages, or the resulting image boot.
+RHEL9 is the stable MYKOS host target. RHEL10 host packages are preview-only;
+EL6/EL7/EL8 guest choices do not enable those versions as MYKOS hosts. Vendor
+licenses, entitlements, upstream availability, KVM and legacy ABI prerequisites
+still apply. A menu choice does not certify an arbitrary guest workload.
 
-~ A container orchestration utility to improve the process of providing new off-site instances to customers.
-Leveraging podman's use of overlay and cgroups to manage rootless containers (chroot envs) that are whole instance containers.
-This creates a very fast stage time from vanilla to running instance specific to a customer.
-Whole instance rootless containers are also very secure. Existing hardening methods can be freely executed on a per-container basis. each container has root access. each container is locked down to a single, non-admin user on the host system.
-VPN connections use crypto that use kernel drivers. Leaving the kernel installed for each container, keeps that encryption segregated to the chroot envs usersspace.
-Built in VPN, rootless container production, .....???
+The `all` build is the fixed16-image EL batch: `rh7`, `rh8`, `rh9`, `rh10`,
+Rocky/Alma/Oracle/CentOS8–10. Newly added legacy clones, other Linux families,
+Fedora and SQL are explicit individual builds. Never run `all` to validate app
+or documentation changes. The retained `ks/rh7.ks` is historical recipe material;
+the current `rh7` menu path uses the signed-package legacy worker.
 
-Business-specific integration is provided by a separately installed local extension.
+## Images, instances and history
 
-Whole system RH container images are built with the POS software and a site-to-site vpn connection created to the stores router.
-All network traffic is routed from the container through the customers router on site.
-Printing and samba shares work the same.
-VPN connections from other remote store locations can work the same way as well so long as the main store router can handle the traffic for all stores.
-Support processes and tools should not be different than a standard on-premise.
-Staging times in the secs. (With or without data from localhost.)
-Each POS system is independant from the other. (If one becomes corrupt, the others dont suffer.)
+A prepared native image can be used without a generic base running. Base
+consoles open on demand and idle completed bases are reclaimed by the idle-base
+timer. OCI and legacy workers can finish without leaving a generic base container.
+VM images retain matching prepared disks and startup RAM. Updating an image is
+separate from changing an already-created instance.
 
-Business-specific integration is provided by a separately installed local extension.
+Reopen terminal menus after upgrades to load current shell functions. New native
+build and sync attempts appear in Jobs; older native attempts are not backfilled.
+Existing VM observations can predate tracked native history. An existing image
+can be reused without being rebuilt. See the [UI guide](../docs/UI_GUIDE.md#jobs--recovery).
 
--> Startup time (staged with data and vpn): 1min 13secs.
+Keep per-ID hidden state and private VPN data during upgrades. Use the managed
+native/VM lifecycle and explicit snapshot/deletion controls. Purge is a separate,
+broad destructive workflow, not routine cleanup. Guest root shells are privileged
+operator actions; these are rootful containers, not an automatic rootless or
+compliance-certification environment.
 
+## Related guides
 
-Features
---------
-  o complete rhel system rootless container images.
-  o manages ikev2/ESP site-to-site vpns from the running container to a cisco/meraki endpoint.
-  o can be ran on a physical server, cloud server, or both.
-  o handles multiple instances on one host.
-  o Registers instances with Redhat Insights for malware scanning, compliance reporting, CVE information, etc.
-  o Administration access to host is public key SSH. Must use an account in the wheel group to install.
-  o does not use epel or any other "extra" repos.
-  - 
-
-Business-specific integration is provided by a separately installed local extension.
-
-
-TODO
-----
- -> VPNs
-    * Prompt to ask if want to upload to meraki. (startup is faster if no)
-    * Auto upload config to meraki org.
-    * Keep VPN data even if container stopped. So it will auto start if started with same shopcode.
-    - Narrow network scheme comming from so meraki autovpn works.
-    + multi-vpns from one pos instance.
-    ? route through static ip instead of dhcp one?
-    - auto upload to meraki switched to append? (depends on how site-to-site vpns are handled now)
-    - prompt for api key instead of store.
-    -
-
- -> Images
-    - rh9.
-    - nopos trimming.
-    - move initial image creation to outer menu. (root needed)
-      - shopcode, startup/shutdown, vpns can be used by any user.
-      - test running rootless containers.
-      -
-
- -> Menu
-    * Clear shopcode and postype after stopping container.
-    * Verify existing VPNs come up after a restart. (stop and start with same shopcode.)
-    - Add conn name to vpn status line.
-    -
-
- -> Host-side
-    - public key auth for host account.
-    * remote repo setup.
-    - performance test.
-    - status page.
-    -
-
-Business-specific integration is provided by a separately installed local extension.
-
- -> Documentation/Reporting
-    - billing.
-    - customer lists.
-    - health check.
-    - flow chart(s).
-    - admin guide.
-    -
-
-
-
----
-mgreen@myk.sh
-
-## Purge all container state
-
-The POS menu's **Purge** action now performs a full reset rather than just
-cleaning unused base-image tags. It previews the affected host and requires
-`PURGE hostname` to be typed exactly. It deletes all rootful Podman resources,
-VM disks, memory captures, snapshots/recovery disks, per-ID VPN files, build
-artifacts, scheduled command jobs, inventory and notes. This cannot be undone.
-MYKOS users and API keys, rsync backups/accounts, synced repositories, installed
-application/configuration/docs and installer recovery packages are retained.
-
-Run `sudo /usr/local/sbin/mykos-prune --dry-run` to preview without stopping or
-deleting anything. Run `sudo /usr/local/sbin/mykos-prune purge` to confirm and
-execute; inspect `sudo /usr/local/sbin/mykos-prune status` if interrupted.
-
-## Legacy EL6/EL7 native builds
-
-`build_legacy_el.py OS` installs the selected final userspace in a bounded RHEL7 worker from pinned vendor-signed RPMs. See [legacy guest details](../docs/IMAGE_BUILDS.md#legacy-enterprise-linux-guests) for identifiers, init behavior and repository sync commands. The worker digest is recorded in build output; host credentials remain read-only and outside the image.
+- [Build commands, versions and recovery](../docs/IMAGE_BUILDS.md)
+- [VM consoles and snapshots](../docs/DESKTOPS.md)
+- [Networking and VPN scope](../docs/NETWORKING.md)
+- [Memory and native checkpoint limits](../docs/BALLOONING.md)
+- [Testing and resource cleanup](../docs/TESTING_README.md)

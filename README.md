@@ -24,13 +24,14 @@ See the [screen examples gallery](docs/SCREENSHOTS.md) for illustrated workflows
 
 ## Supported images at a glance
 
-**47 image selections: 25 native Linux containers and 22 VM-backed guests.**
+**56 image selections: 34 native Linux containers and 22 VM-backed guests.**
 Guest image support is separate from host support: **RHEL 9 is the stable host
 platform; RHEL 10 remains a preview.** RHEL 8 host support is not offered.
 
 | Environment | Supported guest images |
 | --- | --- |
-| Native enterprise Linux | RHEL 7, 8, 9, 10; Rocky Linux 8, 9, 10; AlmaLinux 8, 9, 10; Oracle Linux 8, 9, 10; CentOS Stream 8, 9, 10 |
+| Native enterprise Linux | RHEL 8, 9, 10; Rocky Linux 8, 9, 10; AlmaLinux 8, 9, 10; Oracle Linux 8, 9, 10; CentOS Stream 8, 9, 10 |
+| Legacy native EL6/EL7 | RHEL 6.10 / 7.9; CentOS 6.10 / 7.9.2009; Oracle, Scientific and Springdale Linux 6.10 / 7.9 |
 | Other native Linux | Fedora 43, 44; Debian 13; Arch Linux (rolling); SUSE Linux Enterprise BCI Init 15 SP7; Amazon Linux 2023; Alpine Linux 3.24 (OpenRC) |
 | Native SQL Server environments | SQL Server 2022 and 2025 on Linux |
 | Windows desktop VMs | Windows 11, 10, 8.1 Enterprise, 7 Ultimate, XP, Me, 2000, 98 |
@@ -122,7 +123,7 @@ fresh guest installation has been retested on every host.
 
 #### Native EL and other Linux containers
 
-Run `sudo mykos`, choose **c. Build image**, then enter one OS identifier from
+Run `sudo mykos`, choose **2. Containers**, then **c. Build image** and enter one OS identifier from
 this table. Native builds use signed RPM rootfs workers, Kickstart/rootfs creation or official OCI bases and Podman, rather than
 `pos/vm build` or the VM-only `mykos-image-build` command.
 

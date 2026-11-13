@@ -8,7 +8,7 @@ VMs, snapshots, networking, and its browser interface. Each entry explains the
 connection to MYKOS. The compatibility section distinguishes a credited patch
 source from technical documentation that explains the behavior behind a repair.</p>
 <h2 id="operating-system-vendors-and-projects">Operating system vendors and projects</h2>
-<p>MYKOS hosts run <strong>RHEL 9 or RHEL 10 on x86_64</strong>. Guest recipes have their own
+<p>MYKOS targets <strong>RHEL 9 x86_64 as stable and RHEL 10 as preview-only</strong>. Guest recipes have their own
 version list; see <a href="IMAGE_BUILDS.html">image builds</a> and <a href="DESKTOPS.html">desktop guests</a>.</p>
 <table>
 <thead>
@@ -44,6 +44,46 @@ version list; see <a href="IMAGE_BUILDS.html">image builds</a> and <a href="DESK
 <td><a href="https://www.centos.org/centos-stream/">CentOS Stream</a></td>
 </tr>
 <tr>
+<td>Scientific Linux (legacy EL6/EL7)</td>
+<td><a href="https://scientificlinux.org/">Scientific Linux</a></td>
+<td>Archived releases; see the legacy image prerequisites</td>
+</tr>
+<tr>
+<td>Springdale Linux (legacy EL6/EL7)</td>
+<td><a href="https://springdale.math.ias.edu/">Springdale</a></td>
+<td>Final EL6/EL7 archives in the image catalog</td>
+</tr>
+<tr>
+<td>Debian</td>
+<td><a href="https://www.debian.org/">Debian</a></td>
+<td>Selectable native Debian13 guest</td>
+</tr>
+<tr>
+<td>Arch Linux</td>
+<td><a href="https://archlinux.org/">Arch Linux</a></td>
+<td>Selectable native rolling guest</td>
+</tr>
+<tr>
+<td>SUSE BCI</td>
+<td><a href="https://www.suse.com/products/base-container-images/">SUSE</a></td>
+<td>SLE BCI Init15 SP7 native guest; not a full SLES subscription</td>
+</tr>
+<tr>
+<td>Amazon Linux</td>
+<td><a href="https://aws.amazon.com/linux/amazon-linux-2023/">Amazon Linux2023</a></td>
+<td>Selectable native guest</td>
+</tr>
+<tr>
+<td>Alpine Linux</td>
+<td><a href="https://www.alpinelinux.org/">Alpine Linux</a></td>
+<td>Selectable native OpenRC guest</td>
+</tr>
+<tr>
+<td>Android-x86</td>
+<td><a href="https://www.android-x86.org/">Android-x86</a></td>
+<td>Legacy9.0-r2 manual VM installer</td>
+</tr>
+<tr>
 <td>Fedora Linux</td>
 <td><a href="https://fedoraproject.org/">Fedora Project</a></td>
 <td><a href="https://docs.fedoraproject.org/">Fedora documentation</a></td>
@@ -65,8 +105,8 @@ version list; see <a href="IMAGE_BUILDS.html">image builds</a> and <a href="DESK
 </tr>
 </tbody></table>
 <p>The SQL Server image family also uses <a href="https://www.microsoft.com/sql-server/">Microsoft SQL Server</a>.
-<a href="https://www.debian.org/">Debian</a> is an upstream distribution used by desktop
-wrapper images; it is distinct from MYKOS&#39;s selectable guest recipes.</p>
+Debian is both an upstream used by some VM wrappers and a separately selectable
+native guest; wrapper internals do not determine the selected guest OS.</p>
 <h2 id="containers-vms-and-snapshots">Containers, VMs and snapshots</h2>
 <table>
 <thead>

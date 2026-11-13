@@ -18,6 +18,9 @@ They often perform mutations immediately and have no dry-run mode.
 - [Repository mirrors (`cd /usr/local/share/mykos/repo`)](#repository-mirrors-cd-usrlocalsharemykosrepo)
 - [Reports, billing, and legacy scheduled jobs](#reports-billing-and-legacy-scheduled-jobs)
 - [Host utilities](#host-utilities)
+  - [updateos](#updateos)
+- [Physical memory inventory](#physical-memory-inventory)
+- [Build and sync job history](#build-and-sync-job-history)
 
 <!-- contents:end -->
 
@@ -68,36 +71,40 @@ Backup account management is delivered by a separately installed private busines
 `./pos` is interactive: choose shopcode/image, build images, start/stop containers,
 connect as container root, and add/remove VPNs. It uses hidden files `.shopcode`,
 `.SHOP.postype`, `.SHOP.imagetype`, `.SHOP.container`, and `.SHOP/` VPN data. Preserve
-those files during upgrades. Image creation uses `livemedia-creator`, kickstarts in
-`ks/rh7.ks` through `ks/rh10.ks`, Podman build/commit, and site repositories.
+those files during upgrades. Current native choices and engines are listed in
+[image builds](IMAGE_BUILDS.md#all-supported-instance-types). EL6/EL7 use signed
+vendor-RPM assembly; the five additional Linux families use official OCI bases;
+other EL/Fedora/SQL recipes use Kickstart rootfs creation. These are rootful
+managed containers sharing the host kernel.
 
-The legacy menu's default guest/image selection is RH8; this does not restore
-RHEL 8 host support. Its staging logic uses that global value;
-selecting another image does not comprehensively update all launch logic. Use the
-new configured API launcher for controlled, noninteractive staging, and validate
-legacy image workflows before relying on them across OS versions.
+`sudo mykos` opens the top-level menu: choose **2. Containers**, then **c. Build
+image**. The selected OS is saved per ID and passed to the configured staging
+helper. Native starts use the managed network and persistent lifecycle; the old
+global-RH8/pipework description does not describe the current path. Reopen an old
+terminal menu after upgrades before using new tracking or image choices.
 
 `./get_peers` reads Meraki configuration from `/etc/mykos/pos.env` and prints the
 organization's third-party VPN peers through `jq`. Configure credentials first.
-The legacy VPN update performs a PUT of a single constructed peers list; it can
-replace other configured organization peers. Review the intended full peer list
-and Meraki API behavior before using that menu option. Secrets are no longer embedded
+The Meraki peer update fetches and validates the complete peer list before
+appending a new peer; matching entries are not overwritten and conflicts fail.
+See [Meraki peer updates](NETWORKING.md#meraki-peer-updates). Avoid concurrent
+external updates because the upstream endpoint replaces a complete peer list.
+Secrets are no longer embedded
 in maintained code, but legacy per-shop generated files may still contain them.
 
-`./pipework HOST_INTERFACE -i eth1 CONTAINER dhclient` adds the container interface
-and obtains DHCP. It changes host/container networking and requires root and Linux
-network tooling. The new staging helper calls this exact form. Check interface,
-DHCP client availability, routes, and VPN policies in your staging environment.
+`./pipework` is retained for historical network compatibility; current native
+staging uses Podman-managed networking, not a post-start pipework/dhclient call.
+Read the [network guide](NETWORKING.md) before changing an older instance.
 
-The legacy Purge action stops **all** rootful Podman containers, prunes images, and
-removes hidden state. It is broad and destructive; it is not part of installation,
-update, removal, or the API's single-shop stop operation.
+The **p. Purge** menu enters the explicit MYKOS purge workflow. It is broad and
+destructive, with its own confirmation and preservation checks; it is not a
+single-instance delete and must never be run as a documentation or release test.
 
 | Installed privileged helper | Invocation / role |
 |---|---|
 | `mykos-container-helper` | systemd socket request `{ "args": ["ACTION", ...] }`; actions `list`, `diskfree`, `logs`, `top`, `ipsec`, `checkit`, `stage-check`, `stage-status`, `stage-start`, `stop-pos` |
 | `mykos-container-helper --stage-worker SHOP` | Invoked by `mykos-stage@SHOP.service`; consumes queued job and writes result |
-| `mykos-stage-pos SHOP yes\|no` | Root-only noninteractive configured staging; normally invoked only by worker |
+| `mykos-stage-pos SHOP yes\|no [IMAGE]` | Root-only noninteractive configured staging; normally invoked only by worker |
 | `mykos-terminal-helper` | systemd socket: `{ "shop":"01234567" }`, readiness line, then PTY bytes |
 | `mykos_runtime.py` | Shared validation, root config checks, Podman targeting, bounded command output, job storage |
 
@@ -111,7 +118,7 @@ protocols; integrations should use authenticated HTTP API v2.
 | `./bin/list_repos` | Lists Apache-hosted repository URLs |
 | `./bin/repos_status` | Prints Apache active status |
 | `./bin/disable_repos` | Toggles the entire host Apache service, affecting more than mirrors if the host also proxies the dashboard |
-| `./bin/sync_repos [7\|8\|9\|10]` | Synchronizes RHEL 7–10 by default, or one selected major, using constrained UBI workers, explicit RPM signature checks and private COW staging. Publishes complete validated trees atomically. CLI and dashboard jobs share a background resource budget. RH6 is rejected. |
+| `./bin/sync_repos [SELECTION]` | Defaults to RHEL7–10. Explicit majors6–10 or legacy clone identifiers select the corresponding final-release mirrors. Uses bounded workers, vendor signatures, checksum validation and private COW staging with atomic publication. Legacy/RHEL/updateos remain LAN-only. |
 
 Synchronization needs working registry/network/subscription access and enough disk.
 Pinned historical UBI tags may need review. The script is not invoked or scheduled
@@ -120,23 +127,10 @@ running it against production mirrors.
 
 ## Reports, billing, and legacy scheduled jobs
 
-| Script | Inputs / outputs / effects |
-|---|---|
-| `data/bin/tfcloudaccountstats.sh` | Parses per-shop `tfrsync-summary.log`, writes `/tmp/TU_STATS_LINUX_Cloud_Backups.txt`; status, counts, size, subscriber flag |
-| `data/bin/tfcloudaccountdetail.sh` | Writes `/tmp/TU_STATS_LINUX_Cloud_Backup_Detail.txt`; yearly monthly success/failure counts; needs installed `monthname.sh` |
-| `data/bin/tfcloudauthkeys.sh` | Collects backed-up client public keys and certificate dates into `/tmp/TU_STATS_LINUX_Cloud_Auth_Keys.txt`; treat report as restricted |
-| `back/bin/tfcloud*.sh` | Older duplicates; prefer the `data/bin` copies for report work; they are not identical |
-| `back/bin/cloud_pricing` | Computes subscriber storage pricing tiers, updates `/usr/local/bin/cloud_pricing_previous`, writes change report, sends mail to hard-coded recipients |
-| `back/bin/cloud_pricing_previous`, `cloud_pricing_changed` | Historical output/state files; intentionally excluded from installation |
-| `back/bin/backup_perf.sh` | Samples load, connections, free space into `/tmp/backup_perf.txt`; eventually emails hard-coded recipients |
-| `back/bin/recon.sh` | Writes `/tmp/recon.txt` and emails account/space totals to hard-coded recipients |
-| `back/bin/monthname.sh NN` | Prints English month name for 01–12 |
-| `back/bin/strip.sh` | `strip.sh FILENAME` prints a cleaned `/var/log/session/FILENAME` stream with terminal control sequences removed; does not edit the original |
-| `back/bin/tsrs_batch` | Publishes backed-up Dell TSR files into Apache docroot, replacing shop folders, with permissive modes |
-| `back/bin/tsrs` | CGI HTML index linking published TSR reports; hostname is hard-coded |
-| `back/bin/crontab` | Historical schedule reference; first two entries lack the user field required by `/etc/cron.d`; not installed or enabled |
-
-Business-specific integration is provided by a separately installed local extension.
+Business-specific backup, billing and report implementations are supplied by a
+separate private extension. Their commands are not public-core features and are
+not enabled as scheduled jobs by installing the core. Use the installed edition's
+own documentation rather than historical paths from another deployment.
 
 ## Host utilities
 
@@ -160,3 +154,12 @@ administrators and conflict with firewalld policy; inspect them before enabling.
 ## Physical memory inventory
 
 The gray hardware line at the bottom of the Host pane groups the installed memory type, configured speed, and total DIMM capacity reported by SMBIOS under one **Memory** label, for example `Memory: DDR4 · 3200 MT/s · 32 GiB`. Empty slots are excluded; mixed types or speeds are listed separately. Configured speed is preferred, falling back to module speed when firmware omits it. Installed capacity can exceed Linux usable memory because firmware reserves some RAM. Unavailable fields are omitted. The root collector caches inventory for 24 hours; the dashboard reads only the filtered collector output.
+
+## Build and sync job history
+
+Full local administrators use [Jobs & Recovery](UI_GUIDE.md#jobs--recovery).
+Native builds launched through the current POS entry point and repository syncs
+record attempts; VM rows can also be observations of existing saved builder state.
+History cannot reconstruct earlier native builds. Retry/Resume is explicit and
+revision-checked; closing the pane does not stop work. API keys and peer forwarding
+cannot access these browser-only recovery controls.

@@ -13,7 +13,7 @@ The main gains came from changing when work happens. Prepare and boot an OS once
 
 This account follows those milestones and the difficult problems behind them. The project owner's experience is that the system is exceptionally responsive, including customer-backup workflows that become usable in seconds. Those are observed outcomes; comparable cold/warm and concurrent-load benchmarks remain future measurement work.
 
-“Whole-instance” is the managed unit. Native Linux system containers run a complete userspace sharing the host kernel; Windows, macOS, and Ubuntu desktop environments use QEMU-backed VMs inside Podman wrappers. Their execution and isolation models remain distinct.
+“Whole-instance” is the managed unit. Native Linux system containers run a complete userspace sharing the host kernel; Windows, macOS, Ubuntu, Fedora GNOME and Android environments use QEMU-backed VMs inside Podman wrappers. Their execution and isolation models remain distinct.
 
 ## The performance milestones
 

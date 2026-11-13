@@ -18,10 +18,13 @@
 ## OS inventory panes
 
 The dashboard groups available images and ID-specific containers by OS family,
-including native RedHat, Rocky Linux, AlmaLinux, Oracle Linux, CentOS Stream,
-Fedora and SQL Server, plus Windows, Windows Server, Ubuntu and macOS VMs.
-The stage-images helper accepts running supported native generic bases and ready
-captured VM images; stopped unknown native bases are not treated as available.
+including native Red Hat, Rocky, Alma, Oracle, CentOS, Scientific, Springdale,
+Fedora, Debian, Arch, SUSE BCI, Amazon, Alpine and SQL Server, plus Windows,
+Windows Server, Ubuntu, macOS, Fedora GNOME and Android VMs.
+The stage-images helper discovers prepared native images directly from the local
+image store, including images with no running generic base, and ready captured VM
+images. An unfinished installer is not an available prepared image. See the
+[complete catalog](IMAGE_BUILDS.md#all-supported-instance-types).
 Existing containers remain associated with their collected OS metadata. Footer
 leaf previews can display disabled sample choices without creating an image or
 container. Preview visibility grants no operational permission.
@@ -52,8 +55,9 @@ The dashboard plots six colored series (CPU, Memory, Load, Disk, Containers, and
 VPNs) across a five-minute window. The first
 reading starts in the middle, and readings advance to the right as time elapses.
 After two and a half minutes the graph scrolls to retain the most recent five minutes.
-Host resource readings refresh every three seconds, independently of the heavier
-inventory polling. The timeline uses animation frames capped at 20 redraws per
+The host-history collector records one sample per second, independently of heavier
+inventory polling. The live metrics stream shares that cached collector output;
+fallback browser polling does not create a separate guest-monitoring path. The timeline uses animation frames capped at 20 redraws per
 second while visible. New line readings ease into place over one second; recorded
 samples, tooltips, count bars and alerts retain their actual values. Reduced-motion
 preferences disable easing and limit timeline redraws to once per second.
@@ -173,7 +177,7 @@ container and its mounts; enable it only when that access is intended.
 Application files are not writable by the web user. Only its data directory is
 writable in `mykos-web.service`. Collectors and privileged helpers run as host root
 and inspect **rootful** Podman storage. Rootless containers belonging to other
-accounts are outside their inventory. The old POS README's rootless claims do not
+accounts are outside their inventory. Historical rootless descriptions do not
 describe the current privileged launch commands.
 
 ## systemd inventory

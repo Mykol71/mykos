@@ -1,4 +1,4 @@
-# Windows, macOS, Ubuntu and Fedora desktops
+# Windows, macOS, Ubuntu, Fedora and Android VMs
 
 [Documentation index](README.md)
 
@@ -52,6 +52,9 @@ changed disks. `podman commit` alone does not save this QEMU execution state.
   - [Native snapshot compatibility](#native-snapshot-compatibility)
   - [Host Add VPN](#host-add-vpn)
 - [Current memory policy](#current-memory-policy)
+- [Snapshot Preview](#snapshot-preview)
+- [Interrupted snapshot restores and deletion retries](#interrupted-snapshot-restores-and-deletion-retries)
+- [Native guest compatibility limits](#native-guest-compatibility-limits)
 
 <!-- contents:end -->
 
@@ -95,18 +98,18 @@ to the public Internet without a separately configured access gateway.
 
 ## Text admin workflow
 
-In the POS menu:
+Run `sudo mykos` and choose **2. Containers** to open the POS menu:
 
 - `c`: create an OS image (RHEL keeps its existing build workflow).
 - `v`: list desktop image/instance metadata and assigned console/login URLs.
-- `f`: finish/capture an installed desktop image, then stopping and committing it.
+- `f`: finish/capture a prepared image; the image-admin worker selects its native or VM path.
 - `t`: resume or stop a desktop image.
 - `s`: select the eight-digit ID and OS.
 - `2`: start/stop that code's instance, retaining its disk and ports.
-- `3`: show desktop connection URLs; native RHEL still opens its root shell.
+- `3`: show desktop connection URLs; native Linux opens its supported shell.
 
 The [complete VM command examples](IMAGE_BUILDS.md#all-supported-vm-types) cover
-every supported Windows, Windows Server, Ubuntu and macOS selection.
+all 22 VM selections: Windows, Windows Server, Ubuntu, macOS, Fedora GNOME and Android-x86.
 
 Equivalent commands from either production toolkit's `pos` directory:
 
@@ -145,7 +148,12 @@ sudo python3 ./vm start 01234567 win11
 
 Supported names: `win11`, `win10`, `win8e`, `win7u`, `winxp`, `winme`, `win2k`,
 `win98`, `wns2025`, `wns2022`, `wns2019`, `wns2016`, `mac15`, `mac14`, `mac13`,
-`mac12`, `ubuntu20.04`, `ubuntu22.04`, `ubuntu24.04`.
+`mac12`, `ubuntu20.04`, `ubuntu22.04`, `ubuntu24.04`, `fedora43vm`,
+`fedora44vm`, `android9`.
+
+Fedora GNOME uses unattended builds. Android-x86 and Windows7/XP/Me/2000/98
+use interactive legacy installation; Android needs two Finish steps. Follow
+the [image guide](IMAGE_BUILDS.md#all-supported-vm-types) for those different routes.
 
 Do not mark an installer or recovery screen as a completed guest. Images
 become available to web staging after capture, including while stopped. Capture
@@ -165,15 +173,19 @@ Use `resume` to start a retained image after an intentional shutdown.
 
 ## Web and API
 
-The green console-log icon opens that instance's saved `console_url`. The blue
-login icon downloads a Windows `.rdp` connection file, or opens the macOS/Ubuntu
-`vnc://` endpoint. Guest services must be enabled and reachable. Windows 98, ME,
-and 2000 have no built-in RDP server; use their browser console. No guest
-credentials are embedded in URLs or RDP files. Desktop access requires an
-administrator account; Linux shell/VPN operations are not applied to VM wrappers.
+The graphical console action opens the authenticated browser console. Terminal
+behavior depends on the selected guest: supported Windows/Server choices use
+QEMU Guest Agent PowerShell; macOS uses explicitly requested guest SSH; Ubuntu
+uses its direct serial root console; Fedora GNOME uses a normal serial login;
+Android-x86 is graphical-only. Older Windows systems without the required agent
+use their graphical console. See the [UI button reference](UI_GUIDE.md#container-button-reference)
+and [network/terminal guide](NETWORKING.md) for prerequisites.
 
-The pane ID/Ver plus action starts or resumes an instance. The red trash icon
-stops it with a two-minute graceful timeout; it does not delete its disk.
+The pane's **+** starts an instance from an available image; row Start/Stop
+retains its storage. **Delete container and saved data** is a separate action
+requiring the exact ID; do not confuse that deletion with Stop. API desktop
+endpoint/RDP downloads remain available where supported; they do not define
+what the current dashboard terminal button does.
 
 API-key clients with admin scope can retrieve endpoints using
 `GET /mykos/api/v2/nodes/{code}/desktop` and download the RDP file from
@@ -227,13 +239,14 @@ its response was lost, check the job status and snapshot list before retrying.
 
 Start and Stop retain each container's current writable disks, identity and desktop
 ports. New native RedHat/Linux containers no longer use `--rm`; the Podman writable
-layer persists, and Pipework reattaches the saved eth1 MAC on restart. Mounted VPN
+layer persists, and managed Podman networking retains its recorded interface
+address and MAC on restart. Older network configurations are not silently migrated. Mounted VPN
 and backup data remain in place. Existing legacy `--rm` containers are protected:
 MYKOS refuses to stop them through these controls until they have been deliberately
 converted, because stopping them would destroy their writable layer.
 
 Snapshot uses QEMU RAM/device migration plus matching disk copies for Windows,
-Windows Server, macOS and VM-based Ubuntu. Native Linux uses CRIU with
+Windows Server, macOS, Ubuntu, Fedora GNOME and Android VM guests. Native Linux uses CRIU with
 `--leave-running`, captures its writable layer and mounted data at post-dump while
 source processes are frozen, and then resumes them. CRIU, the OCI runtime, kernel
 and workload must support checkpointing. Unsupported workloads fail explicitly;
@@ -302,7 +315,8 @@ the same setup, validates that it is running inside Ubuntu, and checks availabil
 Copy it into the guest and run it with `sudo bash ubuntu-deps` if using the script.
 The text admin image creation/Finish steps also display the direct APT command.
 
-MYKOS's RHEL host installs its own `dhcp-client` for pipework. Ubuntu runs as a VM
+Current managed NAT does not require a post-start pipework or host DHCP-client
+operation. An older installation can retain historical networking packages. Ubuntu runs as a VM
 inside a QEMU container: `podman exec` operates on that wrapper, not Ubuntu.
 These guest packages do not configure or replace the VM's networking.
 
@@ -443,3 +457,19 @@ cleanup; this does not stop or remove the live instance. A tombstone is removed
 only when both cleanup steps succeed. Older hidden deletion directories from
 before this release may need operator inspection; never remove unrelated images
 or storage to resolve them.
+
+## Native guest compatibility limits
+
+Native EL6/EL7 userspaces share the host kernel. EL6 needs the legacy vsyscall ABI;
+EL7 uses an isolated systemd/cgroup compatibility profile and requires long-lived
+workloads to be owned by guest systemd. See [legacy guest prerequisites](IMAGE_BUILDS.md#legacy-enterprise-linux-guests).
+Debian, Arch, SUSE BCI, Amazon and Alpine native profiles retain their documented
+networking/VPN scope and UTC configuration requirements.
+
+A successful capture alone does not certify recovery. Older systemd image
+profiles with timezone file watches can encounter stale overlay/inotify handles
+on restore, and repeated native restores can expose cgroup-layout limitations.
+Qualify the exact image, guest settings and repeated restore sequence on dev
+before relying on it for recovery. Do not delete a guest's timezone settings or
+change host cgroups as an unreviewed workaround. These are separate limitations;
+this documentation update does not claim a runtime repair or retest every image.

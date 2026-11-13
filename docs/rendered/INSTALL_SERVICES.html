@@ -22,11 +22,16 @@ It does not read the historical archive during installation.</p>
 <li><a href="#removal">Removal</a></li>
 <li><a href="#rename-an-existing-installation">Rename an existing installation</a></li>
 <li><a href="#scheduled-command-collector">Scheduled-command collector</a><ul>
+<li><a href="#idle-image-memory-cleanup">Idle image memory cleanup</a></li>
 <li><a href="#completed-action-refreshes-and-saved-image-retries">Completed action refreshes and saved-image retries</a></li>
 </ul>
 </li>
 <li><a href="#native-image-builder-prerequisite">Native image builder prerequisite</a></li>
-<li><a href="#complete-customer-backup-mounts">Complete customer backup mounts</a></li>
+<li><a href="#complete-customer-backup-mounts">Complete customer backup mounts</a><ul>
+<li><a href="#optional-installed-ookla-internet-speed-collector">Optional installed Ookla internet speed collector</a></li>
+</ul>
+</li>
+<li><a href="#browser-login-visibility">Browser login visibility</a></li>
 </ul>
 <!-- contents:end -->
 
@@ -56,7 +61,7 @@ sudo /opt/mykos-web/.venv/bin/pip install --no-index --find-links /srv/wheels -r
 the application origin; a <code>--public-origin https://...</code> argument alone does not
 provision an Apache domain or request a certificate. Domain/Certbot setup needs
 <code>mykos-setup --configure-https</code> (optionally <code>--domain</code> and <code>--email</code>).</p>
-<p>Windows, Windows Server, macOS and Ubuntu desktop lifecycle helpers are included
+<p>Windows, Windows Server, macOS, Ubuntu, Fedora GNOME and Android VM lifecycle helpers are included
 in every installation. See <a href="DESKTOPS.html">DESKTOPS.md</a> for image creation and
 capture. To initialize KVM/storage checks and allow desktop ports from an
 explicit trusted LAN, add <code>--desktop-network 192.168.222.0/24</code> to <code>install</code>
@@ -340,8 +345,12 @@ manual cleanup is reported explicitly, without deleting its disks or image.</p>
 provides <code>ksvalidator</code>. <code>python3-kickstart</code> alone supplies only its Python
 library on some RHEL releases and does not provide that command. Existing installations
 missing the CLI can install it with <code>sudo dnf install -y pykickstart</code>.</p>
-<p>Native Linux images are built on the supported RHEL 9 or RHEL 10 host using
-the local Anaconda/Lorax workflow. The guest version can differ from the host.
+<p>Native image creation has three engines. EL6/EL7 final userspaces use the bounded
+<code>build_legacy_el.py</code> signed-RPM worker. Debian, Arch, SLE BCI, Amazon and Alpine use
+<code>build_native_oci.py</code> and pinned official OCI digests. Other native EL/Fedora/SQL
+recipes use <code>build_rootfs.py</code> with the local Anaconda/Lorax workflow. RHEL9 is
+the stable host target; RHEL10 remains preview-only.
+For the Kickstart engine, The guest version can differ from the host.
 The menu validates the prepared
 kickstart against the installed parser without imposing a matching host release.
 Temporary copies adapt timesource and weak-dependency option spellings to that
@@ -349,6 +358,9 @@ parser; saved kickstarts remain unchanged. Repository/package compatibility
 still has to succeed during the actual build. Changing repository URLs does not
 upgrade the local installer. Using an already built image is a separate path.</p>
 <h2 id="complete-customer-backup-mounts">Complete customer backup mounts</h2>
+<p>This section applies only with the separate licensed business extension.
+The public core does not supply application-backup restore or backup-account
+management; installing the core alone does not enable the workflow below.</p>
 <p>When native staging explicitly selects backup restore, available directories under
 <code>/backups/tfrsync-ID</code> (or configured <code>backup_root</code>) bind directly read/write at
 configured application directories plus <code>/etc</code> and <code>/home</code>. This is live access to the backup

@@ -1,5 +1,8 @@
 # MYKOS documentation
 
+Reviewed 13 November 2026. Start with the [current image catalog](#image-catalog-at-a-glance),
+[build methods](IMAGE_BUILDS.md) or [dashboard guide](UI_GUIDE.md).
+
 **MYKOS is a Bring Your Own License (BYOL) virtualization solution. All vendor licensing rules apply.** You are responsible for obtaining and maintaining the licenses, subscriptions and permissions required for the operating systems, applications and other software you run with MYKOS. MYKOS does not grant vendor software licenses or override vendor terms, including virtualization and hardware restrictions.
 
 **Public source:** MYKOS core source is [available on GitHub](https://github.com/Mykol71/mykos). It is source-available under the [MYKOS Free-Use License](LICENSING.md), not open source. The existing rules for permitted use, redistribution and paid management access continue to apply.
@@ -45,6 +48,27 @@ See the [screen examples gallery](SCREENSHOTS.md) for the dashboard, snapshot ac
 
 [Peer hosts](PEERS.md): pair MYKOS nodes and operate complete, separately labeled Host panes over a private VPN.
 
+## Image catalog at a glance
+
+**56 image selections: 34 native Linux containers and 22 VM-backed guests.**
+
+RHEL 9 is the stable host platform; RHEL 10 packages are preview-only.
+These are selectable guest/image types, not additional supported host systems.
+
+| Build family | Exact image identifiers |
+| --- | --- |
+| Legacy native EL6/EL7 | `rh6`, `oracle6`, `oracle7`, `centos6`, `centos7`, `scientific6`, `scientific7`, `springdale6`, `springdale7`, `rh7` |
+| Native EL8–10 | `rh8`, `rh9`, `rh10`, `rocky8`, `rocky9`, `rocky10`, `alma8`, `alma9`, `alma10`, `oracle8`, `oracle9`, `oracle10`, `centos8`, `centos9`, `centos10` |
+| Native Fedora / SQL Server | `mssql2022`, `mssql2025`, `fedora43`, `fedora44` |
+| Other native Linux | `debian13`, `archlinux`, `sles15sp7`, `amazon2023`, `alpine` |
+| Unattended VM choices | `win11`, `win10`, `win8e`, `wns2025`, `wns2022`, `wns2019`, `wns2016`, `mac15`, `mac14`, `mac13`, `mac12`, `ubuntu20.04`, `ubuntu22.04`, `ubuntu24.04`, `fedora43vm`, `fedora44vm` |
+| Interactive legacy VMs | `win7u`, `winxp`, `winme`, `win2k`, `win98`, `android9` |
+
+Start with the [complete image build guide](IMAGE_BUILDS.md#all-supported-instance-types)
+for versions, prerequisites and the right native, unattended VM or manual route.
+In `sudo mykos`, select **2. Containers → c. Build image**. In the dashboard,
+**+** starts an instance from an already available image.
+
 ## Project design and business value
 
 Read the [two-paragraph business pitch](DEPLOYMENT_EFFICIENCY.md#the-business-case-in-two-paragraphs).
@@ -58,7 +82,7 @@ Read the [two-paragraph business pitch](DEPLOYMENT_EFFICIENCY.md#the-business-ca
 | [Performance by design](ENGINEERING_LESSONS.md) | Engineering milestones, difficult problems, and the whole-instance design rationale |
 | [Deployment efficiency and business value](DEPLOYMENT_EFFICIENCY.md) | Business scenarios, customer self-service, cost-saving mechanisms, and an illustrative savings model |
 
-The key innovations, performance by design, and deployment efficiency guides include downloadable PDFs retaining their reviewed release146 baseline. Current task guides describe later operational additions; planned compliance scanning and alerts remain clearly marked as future work.
+The key innovations, performance by design, and deployment efficiency HTML guides are maintained here. Historical PDF editions are not public-core downloads. Planned compliance scanning and alerts remain future work.
 
 ## Free use and services
 
@@ -79,8 +103,8 @@ for permissions and the preserved third-party terms.
 
 | Guide | Use it for |
 | --- | --- |
-| [Unattended image builds](IMAGE_BUILDS.md) | Build and capture reusable OS images and manage base console sessions |
-| [Windows macOS and Ubuntu desktops](DESKTOPS.md) | VM requirements, private storage, consoles, and snapshots |
+| [OS image builds and recovery](IMAGE_BUILDS.md) | Build and capture reusable OS images and manage base console sessions |
+| [Windows, macOS, Ubuntu, Fedora and Android VMs](DESKTOPS.md) | VM requirements, private storage, consoles, and snapshots |
 | [Managed networking](NETWORKING.md) | Container interfaces, VPN modes, persistence, and topology |
 | [Guest ballooning](BALLOONING.md) | Memory behavior and native snapshot compatibility |
 
@@ -96,18 +120,17 @@ for permissions and the preserved third-party terms.
 | [Architecture and deployed paths](ARCHITECTURE.md) | Components, trust boundaries, ownership, and systemd units |
 | [Operator script catalog](SCRIPTS.md) | Commands, menus, helper protocols, and legacy limitations |
 | [Validation record](VALIDATION.md) | Recorded checks and remaining integration work |
-| [Host monitoring review](HOST_SIDE_REVIEW.md) | Observations, findings, and implemented optimizations |
+| [Historical host monitoring review](HOST_SIDE_REVIEW.md) | Earlier measured observations and implemented optimizations; not current inventory |
 | [Third-party icon credits](THIRD_PARTY_ICONS.txt) | Bundled icon attribution |
 
-## Administrator guide and operator notes
+<a id="administrator-guide-and-operator-notes"></a>
 
-The [Markdown administrator guide](README.md) is a reference
-edition of the guide dated 21 October 2026. Its historical commands and caveats
-are retained. Use the maintained task guides above for current source procedures.
-The [original Word guide](README.md) is preserved.
+## Historical reference material
 
-[Operator notes](README.md) retain the author's original text verbatim.
-They record context and proposals; they do not establish verified deployment behavior.
+The maintained task guides above describe the current public distribution.
+Original business administrator documents, operator notes and historical PDF
+editions are not public-core downloads. They are not substitutes for the current
+image catalog, build commands, access policy or validation record.
 
 ## Packaging and testing
 

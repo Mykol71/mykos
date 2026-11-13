@@ -24,8 +24,28 @@ can move between controls with Tab and activate buttons with Enter or Space.</p>
 <li><a href="#repositories">Repositories</a></li>
 <li><a href="#notes">Notes</a></li>
 <li><a href="#appearance-and-footer-controls">Appearance and footer controls</a></li>
-<li><a href="#common-workflows">Common workflows</a></li>
+<li><a href="#common-workflows">Common workflows</a><ul>
+<li><a href="#inspect-an-instance">Inspect an instance</a></li>
+<li><a href="#start-a-new-instance-or-restart-an-existing-one">Start a new instance or restart an existing one</a></li>
+<li><a href="#save-and-inspect-a-point-in-time">Save and inspect a point in time</a></li>
+<li><a href="#operate-another-mykos-host">Operate another MYKOS host</a></li>
+</ul>
+</li>
 <li><a href="#messages-and-troubleshooting">Messages and troubleshooting</a></li>
+<li><a href="#receiver-appearance">Receiver appearance</a><ul>
+<li><a href="#receiver-control-bank">Receiver control bank</a></li>
+<li><a href="#receiver-instruments-and-display-power">Receiver instruments and display power</a></li>
+<li><a href="#receiver-radio-controls">Receiver radio controls</a></li>
+<li><a href="#receiver-component-stack">Receiver component stack</a></li>
+<li><a href="#terminal-pane-width">Terminal pane width</a></li>
+</ul>
+</li>
+<li><a href="#refresh-and-startup-responsiveness">Refresh and startup responsiveness</a><ul>
+<li><a href="#copy-an-instance-to-another-peer">Copy an instance to another peer</a></li>
+</ul>
+</li>
+<li><a href="#prepare-a-host-for-reboot">Prepare a host for reboot</a></li>
+<li><a href="#jobs--recovery">Jobs &amp; Recovery</a></li>
 </ul>
 <h2 id="start-here">Start here</h2>
 <p>Open <code>/mykos/</code> on your MYKOS host and sign in with your <strong>browser account</strong>.
@@ -51,7 +71,7 @@ on a container operates that instance. A peer&#39;s terminal operates that peer.
 </thead>
 <tbody><tr>
 <td>Header</td>
-<td>MYKOS branding, signed-in username, Logout, section links, API, Docs, and server time. Section links scroll to visible panes.</td>
+<td>MYKOS branding, signed-in username, Logout, section links, API, Docs, and server time. Section links scroll to visible panes; Jobs opens its own themed window.</td>
 </tr>
 <tr>
 <td>Local Host pane</td>
@@ -63,7 +83,7 @@ on a container operates that instance. A peer&#39;s terminal operates that peer.
 </tr>
 <tr>
 <td>OS panes</td>
-<td>Red Hat, Rocky Linux, AlmaLinux, Oracle Linux, CentOS Stream, Fedora, Ubuntu, Windows, Windows Server, and macOS; SQL Server has its own pane.</td>
+<td>Red Hat; Rocky, Alma, Oracle, CentOS, Scientific and Springdale Linux; Fedora; Debian; Arch; SUSE; Amazon Linux; Alpine; SQL Server; Ubuntu; Windows; Windows Server; macOS; Android. Availability follows image and instance inventory.</td>
 </tr>
 <tr>
 <td>Snapshots</td>
@@ -71,7 +91,7 @@ on a container operates that instance. A peer&#39;s terminal operates that peer.
 </tr>
 <tr>
 <td>rsync</td>
-<td>Backup accounts, storage use, and account/key actions.</td>
+<td>Backup accounts, storage use, and account/key actions when the separate business extension is installed.</td>
 </tr>
 <tr>
 <td>Repos</td>
@@ -196,7 +216,7 @@ control again, or its <strong>Close</strong> button, closes it.</p>
 </tr>
 <tr>
 <td>Red circular arrow — Reboot host</td>
-<td>Confirms the named host, then schedules its reboot. This interrupts all containers and connected users on that host.</td>
+<td>Opens guided readiness and RAM-preservation preparation for the named host. Reboot is a separate explicit confirmation after preparation; see Prepare a host for reboot below.</td>
 </tr>
 </tbody></table>
 <h2 id="peer-hosts">Peer hosts</h2>
@@ -243,6 +263,10 @@ removal behavior are in <a href="PEERS.html">Peer hosts</a>.</p>
 <p>Personal, pane, and shared customer notes are not forwarded through peers.
 Browser/API-key administration and further peer management also remain local.</p>
 <h2 id="os-panes-and-container-rows">OS panes and container rows</h2>
+<p>Use the <a href="IMAGE_BUILDS.html#all-supported-instance-types">complete selectable image catalog</a>
+for all 56 choices and their exact identifiers. A family pane is not a separate
+image type: Fedora includes native and desktop VM choices; CentOS includes
+legacy CentOS and Stream; Scientific and Springdale each include EL6/EL7.</p>
 <p>An <strong>image</strong> is a prepared OS and any startup state required to launch it.
 A <strong>container</strong> is a particular ID-specific instance with its own writable state,
 IP, and hostname. VM-backed guests also run within MYKOS-managed containers.
@@ -680,7 +704,7 @@ for modes, source capture pauses, progress, identity preparation and limits.</p>
 <li>Alternatively choose <strong>Resume without reboot / retry recovery</strong>. After reboot, an enabled host recovery service attempts the saved recovery automatically. Reopen the Host action to review the last recovery report. A running container is checked, but this is not an application-level health test.</li>
 </ol>
 <p>Failed or interrupted operations remain visible. Retrying recovery uses the existing snapshots and never recaptures stopped instances. Unexpected replacements or already-running instances are left alone for operator review. Native memory is not restored automatically across a changed host kernel, and failed RAM restoration never silently becomes a cold start. If RAM recovery fails while the original instance remains stopped, select it under <strong>Recover with selected restarts</strong> and confirm the hostname to accept restarting without RAM. Its saved snapshot is retained. Recovery snapshots are retained as ordinary protected recovery material; delete them deliberately after checking the recovered applications. Do not bypass the workflow by issuing a normal reboot while preparation is incomplete.</p>
-<h2 id="jobs-amp-recovery">Jobs &amp; Recovery</h2>
+<a id="jobs-amp-recovery"></a><h2 id="jobs--recovery">Jobs &amp; Recovery</h2>
 <p>Full administrators can select <strong>Jobs</strong> in the dashboard header to open the local status pane in a themed window. It stays in view while other inventory panes load; <strong>Close jobs</strong> or Escape returns to the dashboard. On phones and in Receiver theme, Jobs appears above the Host pane without restoring the hidden header. Refreshing status is indicated in the window. Active and recent repository syncs, native image builds and unattended VM builds appear here. The pane refreshes every five seconds while the dashboard is visible. Details show the current phase, actual component package counts when available, last worker activity and recorded outcomes. A moving indicator means the worker has not reported a measurable total. Existing workers started before tracking are observation only.</p>
 <p>Use <strong>Retry</strong> for a settled failed or interrupted native build or repository sync. The confirmation creates one new attempt; duplicate requests do not launch duplicate workers. Native retries do not replace an existing image. <strong>Resume</strong> on a failed unattended VM build uses its saved disks and existing credentials. Active, stopping or uncertain workers cannot be retried. Refresh an outdated pane before acting. No jobs are retried automatically, and this pane does not cancel jobs or stop user containers.</p>
 <p>Failed sync downloads may be retained in a root-only private cache, up to 256 GiB total for seven days, subject to five GiB free disk headroom. Retention is best effort. A retry checks saved RPM signatures with pinned vendor keys and obtains fresh metadata; complete signature, size and checksum validation remains mandatory before repository publication. Saved candidates are not counted as completed downloads. <strong>Discard saved downloads</strong> removes only the selected job&#39;s owned private cache when synchronization is inactive; live repositories and user resources are preserved. Interrupted jobs remain attention items until retried or reviewed. History retains the most recent 100 tracked terminal attempts; existing VM status is shown separately. Job history excludes credentials and raw console logs.</p>

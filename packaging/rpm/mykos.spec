@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        286%{?dist}
+Release:        287%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -125,6 +125,11 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Fri Nov 13 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-287
+- Reconcile every native and VM image identifier, count and build workflow
+- Review current guides, menu navigation, memory and repository scope
+- Repair heading anchors with retained bookmarks; refresh offline API schemas
+
 * Fri Nov 13 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-286
 - Keep Jobs navigation responsive and stable while inventory panes load.
 

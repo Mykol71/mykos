@@ -31,6 +31,14 @@ and hardware help make MYKOS possible. Special thanks to Dell and Teleflora.
 <tr><td><img class="credit-logo" src="brands/apple.svg" alt="Apple logo" width="56"></td><td><a href="https://www.apple.com/">Apple</a></td><td>macOS guest platform.</td></tr>
 </tbody></table>
 
+Additional guest projects include [Scientific Linux](https://scientificlinux.org/),
+[Springdale](https://springdale.math.ias.edu/), [Debian](https://www.debian.org/),
+[Arch Linux](https://archlinux.org/), [SUSE BCI](https://www.suse.com/products/base-container-images/),
+[Amazon Linux](https://aws.amazon.com/linux/amazon-linux-2023/),
+[Alpine Linux](https://www.alpinelinux.org/) and [Android-x86](https://www.android-x86.org/).
+These credits do not imply endorsement or continuing maintenance of archived
+releases. See the [current catalog and prerequisites](IMAGE_BUILDS.md).
+
 ## Development and infrastructure
 
 <table class="credits-table"><thead><tr><th>Icon</th><th>Company or project</th><th>Credit</th></tr></thead><tbody>

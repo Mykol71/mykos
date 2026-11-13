@@ -35,13 +35,19 @@ for(const model of models){
  await output('diagrams/'+model.name+'.mmd',mmd);
 }
 const esc=s=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-const slug=s=>s.replace(/<[^>]+>/g,'').toLowerCase().replaceAll('`','').replace(/[^\p{L}\p{N}_\- ]/gu,'').replaceAll(' ','-');
+const legacySlug=s=>s.replace(/<[^>]+>/g,'').toLowerCase().replaceAll('`','').replace(/[^\p{L}\p{N}_\- ]/gu,'').replaceAll(' ','-');
+// Renderer text contains entities: &amp; must not become a literal 'amp' in IDs.
+const decodeHeading=s=>s.replace(/&(amp|lt|gt|quot|apos|nbsp);/g,(_,name)=>({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '})[name]).replace(/&#(x[0-9a-f]+|[0-9]+);/gi,(_,n)=>{const value=n[0].toLowerCase()==='x'?parseInt(n.slice(1),16):parseInt(n,10);return value<=0x10ffff?String.fromCodePoint(value):'';});
+const slug=s=>legacySlug(decodeHeading(s));
 const guides=JSON.parse(await fs.readFile(path.join(here,'guides.json'),'utf8'));
 for(const file of guides){
  const seen=new Map();
  const md=new Marked({gfm:true,renderer:{heading({tokens,depth}){
   const text=this.parser.parseInline(tokens),base=slug(text),count=seen.get(base)||0;seen.set(base,count+1);
-  return `<h${depth} id="${base}${count?'-'+count:''}">${text}</h${depth}>\n`;
+  const id=base+(count?'-'+count:''),legacy=legacySlug(text)+(count?'-'+count:'');
+  // Preserve the old viewer bookmark while using the source/GitHub-compatible ID.
+  const alias=legacy!==id?`<a id="${esc(legacy)}"></a>`:'';
+  return `${alias}<h${depth} id="${id}">${text}</h${depth}>\n`;
  },image({href,title,text}){
   const image=`<img src="${esc(href)}" alt="${esc(text||'')}"${title?' title="'+esc(title)+'"':''}>`;
   return href.startsWith('diagrams/')?`<a href="${esc(href)}" title="Open full-size diagram">${image}</a><a href="${esc(href)}">Open full-size diagram</a>`:image;

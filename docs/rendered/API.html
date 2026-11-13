@@ -13,10 +13,10 @@ footer{display:flex;align-items:center;gap:7px}footer .mykos-brand-flower{displa
 <li><a href="#administrative-examples">Administrative examples</a></li>
 </ul>
 </li>
-<li><a href="#host-metrics-repositories-and-terminal-integrations">Host metrics, Backup, Repos and terminal integrations</a></li>
+<li><a href="#host-metrics-repositories-and-terminal-integrations">Host metrics, repositories and terminal integrations</a></li>
 <li><a href="#legacy-routes">Legacy routes</a></li>
 <li><a href="#common-errors">Common errors</a></li>
-<li><a href="#dashboard-repositories-pane">Dashboard Backup and Repos panes</a><ul>
+<li><a href="#dashboard-repositories-pane">Dashboard repositories pane</a><ul>
 <li><a href="#add-a-vpn-from-the-container-pane">Add a VPN from the container pane</a></li>
 </ul>
 </li>
@@ -39,7 +39,12 @@ footer{display:flex;align-items:center;gap:7px}footer .mykos-brand-flower{displa
 <li><a href="#shared-customer-notes-and-pane-previews">Shared customer notes and pane previews</a></li>
 </ul>
 </li>
-<li><a href="#monitoring-interpretation-and-released-scope">Monitoring interpretation and released scope</a></li>
+<li><a href="#monitoring-interpretation-and-released-scope">Monitoring interpretation and released scope</a><ul>
+<li><a href="#host-internet-speed-measurements">Host internet speed measurements</a></li>
+<li><a href="#terminal-authorization-lifetime">Terminal authorization lifetime</a></li>
+</ul>
+</li>
+<li><a href="#local-host-maintenance">Local host maintenance</a></li>
 </ul>
 <!-- contents:end -->
 
@@ -61,9 +66,12 @@ visibility on shared systems. TLS is required for credentials. An invalid suppli
 key returns 401 even if a browser session is otherwise valid. API keys are not
 accepted by legacy browser endpoints or the browser-session terminal WebSocket.
 An admin key can use the separate API terminal at <code>/api/v2/terminal/{shop}</code>.</p>
-<p>API v2 operations require an <code>X-MYKOS-API-Key</code> header with a valid <code>read</code> or <code>admin</code>
-key. Browser cookies do not authorize API v2 requests. No login, cookie jar, or
-Origin header is required for API clients. Dashboard session routes retain their
+<p>Monitoring and management API v2 operations require an <code>X-MYKOS-API-Key</code> header
+with a valid <code>read</code> or <code>admin</code> key; a browser cookie does not authorize those
+operations. The explicit private-note exception is <code>/personal-notes</code> and
+<code>/notes/{pane}</code>: those require the named owner browser session, not an API key,
+and writes require the configured Origin. No login, cookie jar or Origin header
+is required for ordinary API-key clients. Dashboard session routes retain their
 browser authentication and Origin checks.</p>
 <h2 id="interactive-reference">Interactive reference</h2>
 <p>Open <code>/mykos/api/v2/docs</code> and enter your key in Swagger&#39;s <strong>Authorize</strong> control.
@@ -540,7 +548,7 @@ stock guest. Its RAM allocation is still 2048 MiB.</p>
 65 minutes of real host samples, supporting one hour of five-minute recall windows. Browser sessions use
 <code>GET /mykos/api/web/host-history</code>. An optional <code>since</code> query parameter is a
 nonnegative Unix timestamp in seconds; timestamps remain UTC Unix time.
-Responses include <code>retention_seconds: 3900</code>, <code>sample_interval_seconds: 3</code>,
+Responses include <code>retention_seconds: 3900</code>, <code>sample_interval_seconds: 1</code>,
 <code>collected_at</code>, and <code>samples</code>, ordered oldest first. Each sample contains
 <code>collected_at</code>, CPU percentage/count, load averages, memory/disk measurements,
 and cached <code>graph_counts</code>/<code>graph_totals</code> for containers and VPNs.</p>
