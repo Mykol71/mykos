@@ -347,10 +347,10 @@ def vm_jobs():
         except ValueError:continue
         try:value=vm_status(folder.name)
         except FileNotFoundError:continue
-        state=value.get('state','unknown');phase=state if state in PHASES else 'starting'
+        state=value.get('state','unknown');phase='complete' if state=='ready' else state if state in PHASES else 'starting'
         active=(units or {}).get(folder.name,'inactive') if units is not None else 'unknown'
-        observed='succeeded' if state=='ready' else state if state in ('failed','queued') else 'running' if active in ('active','activating') else 'unknown'
-        out.append({'id':'vm-'+folder.name,'kind':'vm-build','target':folder.name,'state':observed,'phase':phase,'message':('Worker status unavailable; refresh before taking action' if observed=='unknown' else PHASES.get(state,'VM image build needs attention' if state=='failed' else 'Image build queued')),'activity_at':value.get('updated_at'),'revision':vm_revision(value),'retry_allowed':state=='failed' and active in ('inactive','failed'),'observed':True})
+        observed='succeeded' if state=='ready' else 'failed' if state=='failed' else ('queued' if state=='queued' else 'running') if active in ('active','activating') else 'queued' if state=='queued' and type(value.get('updated_at')) in (int,float) and 0<=time.time()-value['updated_at']<30 else 'unknown'
+        out.append({'id':'vm-'+folder.name,'kind':'vm-build','target':folder.name,'state':observed,'phase':phase,'message':('Worker status unavailable; refresh before taking action' if observed=='unknown' else 'Image ready' if state=='ready' else PHASES.get(state,'VM image build needs attention' if state=='failed' else 'Image build queued' if observed=='queued' else 'VM image build is active')),'activity_at':value.get('updated_at'),'revision':vm_revision(value),'retry_allowed':state=='failed' and active in ('inactive','failed'),'observed':True})
     return out
 
 def retry_vm(os_name,revision):

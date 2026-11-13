@@ -38,3 +38,14 @@ def test_unproven_vm_worker_is_unknown_not_running(vm):
 def test_vm_status_symlink_rejected(vm,tmp_path):
  target=tmp_path/'other';target.write_text('{}');vm.unlink();vm.symlink_to(target)
  with pytest.raises(OSError):jobs.vm_status('win11')
+
+
+def test_ready_vm_is_complete_and_never_labeled_queued(vm):
+ vm.write_text(json.dumps({'os':'win11','state':'ready','updated_at':1}))
+ result=jobs.vm_jobs()[0]
+ assert result['state']=='succeeded' and result['phase']=='complete' and result['message']=='Image ready'
+ assert not result['retry_allowed']
+
+def test_stale_vm_queue_without_worker_is_unknown(vm):
+ vm.write_text(json.dumps({'os':'win11','state':'queued','updated_at':1}))
+ result=jobs.vm_jobs()[0];assert result['state']=='unknown' and not result['retry_allowed']
