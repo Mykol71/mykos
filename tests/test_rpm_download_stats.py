@@ -80,3 +80,18 @@ def test_private_rti_boundary_if_installed():
     rti=module('stats_rti_access',p)
     with pytest.raises(Exception) as error:rti.authorize_path({'type':'http','method':'GET','path':'/api/web/mykos/rpm-downloads'})
     assert error.value.status_code==403
+
+
+# Central-time midnight/DST and compatible historical migration.
+import datetime as dt
+def _central_log(uid,epoch):return f'{uid}|{epoch}|GET|/mykos-1.5-for-x86_64-el9/mykos-test.el9.rpm|200|100|+|100|-|-|v1\n'
+def _central_timestamp(text):return int(dt.datetime.fromisoformat(text).timestamp())
+@pytest.mark.parametrize('utc,day,stamp',[('2026-11-13T01:00:00+00:00','2026-11-12','2026-11-12 19:00 CST'),('2026-07-01T01:00:00+00:00','2026-06-30','2026-06-30 20:00 CDT'),('2026-11-01T06:30:00+00:00','2026-11-01','2026-11-01 01:30 CDT'),('2026-11-01T07:30:00+00:00','2026-11-01','2026-11-01 01:30 CST'),('2026-03-08T07:30:00+00:00','2026-03-08','2026-03-08 01:30 CST'),('2026-03-08T08:30:00+00:00','2026-03-08','2026-03-08 03:30 CDT')])
+def test_central_day_and_display(tmp_path,utc,day,stamp):
+ epoch=_central_timestamp(utc);(tmp_path/'mykos-rpm-downloads.log').write_text(_central_log('central281id',epoch));c=stats.database(tmp_path/'stats.db');stats.ingest(c,tmp_path,0);r=stats.repository_report(c);assert r['daily'][0]['day']==day and r['daily_timezone']=='America/Chicago' and r['untimed_requests']==0
+ html=view.render({'configured':True,'updated_at':epoch,'tracking_since':epoch,'notice':'counter rules','repository':r,'github':{'state':'ok','assets':[]}});assert stamp in html;assert 'http-equiv="refresh" content="60"' in html;assert html.index('class="cards"')<html.index('Repository activity by day');c.close()
+def test_existing_events_backfill_without_recounting(tmp_path):
+ text=_central_log('historical281',_central_timestamp('2026-11-13T01:00:00+00:00'));p=tmp_path/'mykos-rpm-downloads.log';p.write_text(text);c=stats.database(tmp_path/'stats.db');c.execute('INSERT INTO events VALUES(?,?,?,?,?,?,?)',stats.parse(text));st=p.stat();c.execute('INSERT INTO cursors VALUES(?,?,?,?)',(st.st_dev,st.st_ino,len(text),text.encode()[:64]));before=stats.repository_report(c)['totals'];assert stats.ingest(c,tmp_path,0)['new_requests']==0;r=stats.repository_report(c);assert r['totals']==before and r['untimed_requests']==0 and r['daily'][0]['day']=='2026-11-12';assert stats.ingest(c,tmp_path,0)['new_requests']==0;assert c.execute('SELECT count(*) FROM events').fetchone()[0]==1;c.close()
+def test_unrecoverable_history_retains_honest_utc_rows(tmp_path):
+ c=stats.database(tmp_path/'stats.db');c.execute('INSERT INTO events VALUES(?,?,?,?,?,?,?)',stats.parse(_central_log('missingtime281',_central_timestamp('2026-11-13T01:00:00+00:00'))));stats.ingest(c,tmp_path,0);r=stats.repository_report(c);assert r['daily']==[] and r['daily_legacy_utc'][0]['day']=='2026-11-13' and r['untimed_requests']==1 and r['totals'][0]['requests']==1
+ html=view.render({'configured':True,'updated_at':1,'tracking_since':1,'notice':'rules','repository':r,'github':{'state':'ok','assets':[]}});assert 'original UTC daily rows' in html;c.close()

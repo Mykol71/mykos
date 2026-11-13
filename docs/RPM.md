@@ -287,6 +287,11 @@ mode0600 `/etc/mykos/rpm-download-stats.json`, with `format: 1`, public
 The global Apache include requires mod_unique_id; use `apachectl configtest`
 before graceful reload. Initialize collection before enabling the logging
 include, then enable `mykos-rpm-download-stats.timer` (fifteen-minute refresh).
+The report page reloads every minute. Displayed timestamps and daily activity use
+America/Chicago (CST in winter, CDT in summer). Existing request timestamps are
+recovered from retained dedicated RPM logs without changing cumulative totals;
+any historical request whose timestamp cannot be recovered stays in a clearly
+labeled UTC section instead of being assigned an invented Central date.
 Create root-owned mode0700 `/var/log/httpd/rpm-downloads` before enabling the
 Apache include; its nested location avoids the existing top-level Apache
 logrotate wildcard. Logs use rename/create rotation with fourteen-day retention. The root-only

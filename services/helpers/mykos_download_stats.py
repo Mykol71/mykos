@@ -12,6 +12,9 @@ import sqlite3
 import tempfile
 import time
 import urllib.request
+from zoneinfo import ZoneInfo
+
+REPORT_ZONE = ZoneInfo("America/Chicago")
 
 CONFIG = Path('/etc/mykos/rpm-download-stats.json')
 STATE = Path('/var/lib/mykos/rpm-download-stats')
@@ -28,7 +31,8 @@ def database(path):
     c.execute('PRAGMA busy_timeout=10000')
     c.executescript('''CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY, day TEXT, package TEXT, repo TEXT, audience TEXT, category TEXT, bytes INTEGER);
 CREATE TABLE IF NOT EXISTS cursors(device INTEGER, inode INTEGER, offset INTEGER, head BLOB, PRIMARY KEY(device,inode));
-CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT);''')
+CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT);
+CREATE TABLE IF NOT EXISTS event_times(id TEXT PRIMARY KEY,epoch INTEGER NOT NULL);''')
     return c
 
 
@@ -54,6 +58,9 @@ def parse(line):
 
 def ingest(c, folder, since):
     accepted = invalid = 0
+    missing = c.execute('SELECT count(*) FROM events e LEFT JOIN event_times t ON e.id=t.id WHERE t.id IS NULL').fetchone()[0]
+    prior = c.execute("SELECT value FROM metadata WHERE key='central_missing_count'").fetchone()
+    rescan = bool(missing and (not prior or prior[0] != str(missing)))
     # Apache uses normal rename/create rotation. Inode checkpoints plus opaque request IDs
     # also make compressed files and a repeated collection idempotent.
     for path in sorted(folder.glob('mykos-rpm-downloads.log*')):
@@ -62,7 +69,7 @@ def ingest(c, folder, since):
         st = path.stat()
         cursor = c.execute('SELECT offset,head FROM cursors WHERE device=? AND inode=?', (st.st_dev, st.st_ino)).fetchone()
         zipped = path.suffix == '.gz'
-        offset = cursor[0] if cursor else 0
+        offset = cursor[0] if cursor and not rescan else 0
         if not zipped and offset > st.st_size:
             offset = 0
         opener = gzip.open if zipped else open
@@ -85,9 +92,12 @@ def ingest(c, folder, since):
                     line = raw.decode('ascii'); value = parse(line)
                     if value and int(line.split('|', 2)[1]) >= since:
                         accepted += c.execute('INSERT OR IGNORE INTO events VALUES(?,?,?,?,?,?,?)', value).rowcount
+                        c.execute('INSERT OR IGNORE INTO event_times VALUES(?,?)', (value[0],int(line.split('|',2)[1])))
                 except (ValueError, UnicodeError, OverflowError):
                     invalid += 1
             c.execute('INSERT OR REPLACE INTO cursors VALUES(?,?,?,?)', (st.st_dev, st.st_ino, handle.tell(), head))
+    remaining = c.execute('SELECT count(*) FROM events e LEFT JOIN event_times t ON e.id=t.id WHERE t.id IS NULL').fetchone()[0]
+    c.execute("INSERT OR REPLACE INTO metadata VALUES('central_missing_count',?)", (str(remaining),))
     return {'new_requests': accepted, 'invalid_records': invalid}
 
 
@@ -98,8 +108,11 @@ def repository_report(c):
     packages = [dict(zip(('package','repo','audience','full','partial','aborted','failed','other','bytes'), row)) for row in c.execute('''SELECT package,repo,audience,
 sum(category='full'),sum(category='partial'),sum(category='aborted'),sum(category='failed'),sum(category='other'),sum(bytes)
 FROM events GROUP BY package,repo,audience ORDER BY sum(category='full') DESC,package LIMIT 5000''')]
-    daily = [dict(zip(('day','audience','full','partial','bytes'), row)) for row in c.execute("SELECT day,audience,sum(category='full'),sum(category='partial'),sum(bytes) FROM events GROUP BY day,audience ORDER BY day DESC LIMIT 730")]
-    return {'totals': totals, 'packages': packages, 'daily': daily, 'package_rows_truncated': len(packages) == 5000}
+    c.create_function('central_day',1,lambda epoch:dt.datetime.fromtimestamp(epoch,REPORT_ZONE).strftime('%Y-%m-%d'),deterministic=True)
+    daily = [dict(zip(('day','audience','full','partial','bytes'), row)) for row in c.execute("SELECT central_day(t.epoch) AS local_day,e.audience,sum(e.category='full'),sum(e.category='partial'),sum(e.bytes) FROM events e JOIN event_times t ON e.id=t.id GROUP BY local_day,e.audience ORDER BY local_day DESC LIMIT 730")]
+    legacy = [dict(zip(('day','audience','full','partial','bytes'), row)) for row in c.execute("SELECT e.day,e.audience,sum(e.category='full'),sum(e.category='partial'),sum(e.bytes) FROM events e LEFT JOIN event_times t ON e.id=t.id WHERE t.id IS NULL GROUP BY e.day,e.audience ORDER BY e.day DESC LIMIT 730")]
+    missing = c.execute('SELECT count(*) FROM events e LEFT JOIN event_times t ON e.id=t.id WHERE t.id IS NULL').fetchone()[0]
+    return {'totals': totals, 'packages': packages, 'daily': daily, 'daily_timezone':'America/Chicago', 'daily_legacy_utc':legacy, 'untimed_requests':missing, 'package_rows_truncated': len(packages) == 5000}
 
 
 def github_report(repo, now, previous, opener=urllib.request.urlopen):
@@ -189,7 +202,7 @@ def collect(config_path=CONFIG, state=STATE, output=SUMMARY, now=None):
 
 
 def text_report(value):
-    lines = ['MYKOS RPM download statistics', 'Repository tracking since: ' + dt.datetime.fromtimestamp(value['tracking_since'],dt.timezone.utc).isoformat(), NOTICE, '', 'REPOSITORY: audience/category requests bytes']
+    lines = ['MYKOS RPM download statistics', 'Repository tracking since: ' + dt.datetime.fromtimestamp(value['tracking_since'],REPORT_ZONE).strftime('%Y-%m-%d %H:%M %Z'), NOTICE, '', 'REPOSITORY: audience/category requests bytes']
     lines += ['{audience}/{category} {requests} {bytes}'.format(**r) for r in value['repository']['totals']]
     lines += ['', 'PACKAGES: full partial aborted failed bytes audience package']
     lines += ['{full} {partial} {aborted} {failed} {bytes} {audience} {package}'.format(**r) for r in value['repository']['packages']]
