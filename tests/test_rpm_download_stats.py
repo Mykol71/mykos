@@ -61,7 +61,7 @@ def test_view_escapes_and_unconfigured(tmp_path):
 
 def test_admin_authentication_boundary(monkeypatch):
  sys.path.insert(0,str(ROOT/'services/web'));api=module('stats_api',ROOT/'services/web/mykos_admin_api.py')
- for allowed,name,expected in [(True,'admin',True),(False,'viewer',False),(True,'peer:abc',False)]:
+ for allowed,name,expected in [(True,'mgreen',True),(True,'admin',False),(False,'mgreen',False),(False,'viewer',False),(True,'peer:mgreen',False)]:
   monkeypatch.setitem(sys.modules,'app',SimpleNamespace(mykos_terminal_permission=lambda *a,**k:{'allowed':allowed,'username':name}))
   if expected:api.statistics_authorize(object())
   else:

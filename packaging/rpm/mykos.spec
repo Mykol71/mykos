@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        288%{?dist}
+Release:        289%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -125,6 +125,9 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Fri Nov 13 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-289
+- Add private owner-only RPM report with GitHub traffic insights.
+
 * Fri Nov 13 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-288
 - Maintenance packaging; public runtime behavior unchanged.
 

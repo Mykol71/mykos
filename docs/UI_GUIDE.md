@@ -494,3 +494,11 @@ Use **Retry** for a settled failed or interrupted native build or repository syn
 Failed sync downloads may be retained in a root-only private cache, up to 256 GiB total for seven days, subject to five GiB free disk headroom. Retention is best effort. A retry checks saved RPM signatures with pinned vendor keys and obtains fresh metadata; complete signature, size and checksum validation remains mandatory before repository publication. Saved candidates are not counted as completed downloads. **Discard saved downloads** removes only the selected job's owned private cache when synchronization is inactive; live repositories and user resources are preserved. Interrupted jobs remain attention items until retried or reviewed. History retains the most recent 100 tracked terminal attempts; existing VM status is shown separately. Job history excludes credentials and raw console logs.
 
 Jobs & Recovery is local full-administrator functionality. Viewers, API keys and connected peers cannot use these controls. Open a peer's own signed-in full dashboard to manage its jobs.
+
+## Private RPM and GitHub traffic report
+
+The **RPM stats** link in **Repos** is visible only to the local `mgreen` administrator login. Both the HTML report and JSON endpoint enforce that identity on the server; other administrators, API keys and peer identities cannot read it. The report keeps overall RPM totals above daily repository activity.
+
+GitHub traffic insights show provider-reported views, unique visitors, clones, unique cloners, top referrers and popular pages over the last 14 days. Unique totals come directly from GitHub; daily unique counts are not added together. Views/clones are separate from release RPM downloads and do not identify installations. GitHub's daily buckets are UTC dates and cannot be rebucketed accurately into Central time; collection/refresh timestamps remain America/Chicago (CST/CDT).
+
+Traffic aggregates refresh from the owner's Mac about every 15 minutes while its GitHub login and existing production SSH connection are available. No GitHub token is sent to the server. The page refreshes every minute; the host collector runs every 15 minutes. When collection is unavailable, last-good values remain visible with their timestamp and become stale after 36 hours; missing data is never shown as zero.

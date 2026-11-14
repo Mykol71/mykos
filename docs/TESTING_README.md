@@ -229,3 +229,5 @@ required destinations; see the [release closeout steps](PACKAGING_README.md#7-pu
 ### Restore and inventory regression checks
 
 `tests/test_review256.py` covers shared writable mount rejection and independent repository inventory reads. Business provisioning is tested separately in its extension package.
+
+GitHub traffic/report changes: run `python3 -m pytest -q tests/test_rpm_download_stats.py tests/test_github_traffic.py`. Check owner-only HTML and JSON access before loading data, stale/malformed snapshots, provider unique semantics, UTC daily labels, Central refresh timestamps, escaped labels, total ordering and the minute page refresh. Use synthetic aggregates and temporary SQLite files; do not create accounts or read production authentication data for these tests.

@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import stat
 import tempfile
 import time
 import urllib.request
@@ -156,6 +157,68 @@ def github_report(repo, now, previous, opener=urllib.request.urlopen):
         return result
 
 
+
+def validate_traffic(value, repository):
+    """Accept bounded provider aggregates only; never credentials or request identities."""
+    if not isinstance(value, dict) or value.get('repository') != repository:
+        raise ValueError('Traffic repository mismatch')
+    def count(v):
+        if type(v) is not int or not 0 <= v <= 10**12:
+            raise ValueError('Invalid traffic count')
+        return v
+    def metric(v):
+        if not isinstance(v, dict): raise ValueError('Invalid traffic metric')
+        out={'count':count(v.get('count')), 'uniques':count(v.get('uniques'))}
+        if out['uniques'] > out['count']: raise ValueError('Invalid unique count')
+        return out
+    result={'repository':repository,'updated_at':count(value.get('updated_at'))}
+    for key in ('views','clones'):
+        v=value.get(key);out=metric(v);days=v.get(key)
+        if not isinstance(days,list) or len(days)>31: raise ValueError('Invalid daily traffic')
+        seen=set();out[key]=[]
+        for row in days:
+            stamp=row.get('timestamp')
+            if not isinstance(stamp,str) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}T00:00:00Z',stamp): raise ValueError('Invalid traffic day')
+            dt.datetime.strptime(stamp,'%Y-%m-%dT%H:%M:%SZ')
+            if stamp in seen: raise ValueError('Duplicate traffic day')
+            seen.add(stamp);out[key].append(dict(timestamp=stamp,**metric(row)))
+        out[key].sort(key=lambda x:x['timestamp'],reverse=True);result[key]=out
+    for key,label,limit in (('referrers','referrer',300),('paths','path',2000)):
+        rows=value.get(key)
+        if not isinstance(rows,list) or len(rows)>10: raise ValueError('Invalid popular traffic')
+        result[key]=[]
+        for row in rows:
+            name=row.get(label)
+            if not isinstance(name,str) or not name or len(name)>limit or any(ord(c)<32 for c in name): raise ValueError('Invalid traffic label')
+            result[key].append(dict(metric(row),**{label:name}))
+    return result
+
+
+def traffic_report(repository, now, incoming, previous=None):
+    previous=previous or {}
+    try:
+        if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repository or ''): raise ValueError('Invalid repository')
+        path=Path(incoming)
+        if path.is_symlink(): raise ValueError('Unsafe traffic snapshot')
+        with os.fdopen(os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK),'rb') as stream:
+            st=os.fstat(stream.fileno())
+            if not stat.S_ISREG(st.st_mode) or st.st_mode & 0o077: raise ValueError('Traffic snapshot must be a private regular file')
+            raw=stream.read(256*1024+1)
+        if len(raw)>256*1024: raise ValueError('Traffic snapshot too large')
+        result=validate_traffic(json.loads(raw),repository)
+        if result['updated_at']>now+300: raise ValueError('Traffic timestamp is in the future')
+        if previous.get('repository')==repository and previous.get('updated_at',0)>result['updated_at']:
+            result=validate_traffic(previous,repository)
+        result['state']='stale' if now-result['updated_at']>36*3600 else 'ok'
+        if result['state']=='stale':result['error']='Mac traffic refresh is overdue; showing last successful data.'
+        return result
+    except Exception:
+        try:result=validate_traffic(previous,repository)
+        except (ValueError,TypeError,KeyError,AttributeError):result={'repository':repository}
+        result.update(state='stale' if result.get('updated_at') else 'unavailable',error='Mac traffic snapshot unavailable; last successful data retained when available.')
+        return result
+
+
 def atomic_json(path, value, group=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix='.rpm-stats-', dir=path.parent)
@@ -190,9 +253,11 @@ def collect(config_path=CONFIG, state=STATE, output=SUMMARY, now=None):
             ingestion = ingest(c, Path(cfg.get('log_directory','/var/log/httpd/rpm-downloads')), since)
             repo = repository_report(c); c.commit()
         finally:c.close()
-        previous = json.loads(Path(output).read_text()).get('github', {}) if Path(output).exists() else {}
+        prior = json.loads(Path(output).read_text()) if Path(output).exists() else {}
+        previous = prior.get('github', {})
         github = github_report(cfg.get('github_repository'), now, previous)
-        result = {'format':1,'updated_at':now,'tracking_since':since,'notice':NOTICE,'repository':repo,'ingestion':ingestion,'github':github}
+        traffic = traffic_report(cfg.get('github_repository'),now,cfg.get('github_traffic_file','/var/lib/mykos-github-traffic-inbox/traffic.json'),prior.get('github_traffic'))
+        result = {'format':1,'updated_at':now,'tracking_since':since,'notice':NOTICE,'repository':repo,'ingestion':ingestion,'github':github,'github_traffic':traffic}
         group = None
         if os.geteuid() == 0 and Path(output) == SUMMARY:
             import grp

@@ -25,7 +25,7 @@ def render(data):
         return dt.datetime.fromtimestamp(value,REPORT_ZONE).strftime('%Y-%m-%d %H:%M %Z') if value else 'Never'
     def table(head, rows):
         return '<div class="table-wrap"><table><thead><tr>'+''.join('<th>'+esc(v)+'</th>' for v in head)+'</tr></thead><tbody>'+(''.join('<tr>'+''.join('<td>'+esc(v)+'</td>' for v in row)+'</tr>' for row in rows) or '<tr><td colspan="'+str(len(head))+'">No observations yet</td></tr>')+'</tbody></table></div>'
-    body='<p class="eyebrow">MYKOS · Administrator report</p><h1>RPM download statistics</h1><nav><a href="/mykos/#mykos-repos-title">Back to repositories</a><a href="/mykos/api/web/mykos/rpm-downloads/view">Refresh report</a><a href="/mykos/api/web/mykos/rpm-downloads">View JSON</a></nav>'
+    body='<p class="eyebrow">MYKOS · Private report</p><h1>RPM download statistics</h1><nav><a href="/mykos/#mykos-repos-title">Back to repositories</a><a href="/mykos/api/web/mykos/rpm-downloads/view">Refresh report</a><a href="/mykos/api/web/mykos/rpm-downloads">View JSON</a></nav>'
     if not data.get('configured'):
         body+='<section><h2>Tracking is not configured on this host</h2><p>The repository host needs the optional RPM statistics collector and logging configuration. This report does not imply zero downloads.</p></section>'
     else:
@@ -36,6 +36,21 @@ def render(data):
         for n,label in [(external,'External full-file responses'),(internal,'Internal full-file responses'),(partial,'Partial/range responses'),(g.get('total','—'),'GitHub-reported RPM downloads')]:
             body+='<section><strong class="count">'+esc(n)+'</strong><span>'+esc(label)+'</span></section>'
         body+='</div><p class="note">'+esc(data['notice'])+'</p>'
+        traffic=data.get('github_traffic',{})
+        body+='<section><h2>GitHub traffic insights</h2><p class="muted">Last 14 days · '+esc(traffic.get('repository','GitHub'))+' · Last successful Mac refresh '+esc(stamp(traffic.get('updated_at')))+'. Aggregates refresh from your Mac about every 15 minutes while it is online and SSH is connected.</p>'
+        if traffic.get('state')!='ok':body+='<p class="warning">'+esc(traffic.get('state','unavailable'))+': '+esc(traffic.get('error','No traffic snapshot received yet.'))+'</p>'
+        if traffic.get('updated_at'):
+            body+='<div class="cards">'
+            for key,field,label in [('views','count','Repository views'),('views','uniques','Unique visitors'),('clones','count','Repository clones'),('clones','uniques','Unique cloners')]:
+                body+='<section><strong class="count">'+esc(traffic[key][field])+'</strong><span>'+esc(label)+' · 14 days</span></section>'
+            body+='</div><p class="muted">Provider-reported rolling totals; unique counts are not sums of daily uniques. Views and clones are separate from RPM downloads and do not identify installations. GitHub supplies UTC calendar-day buckets, which cannot be accurately rebucketed into CST/CDT.</p>'
+            days={}
+            for key in ('views','clones'):
+                for row in traffic[key][key]:days.setdefault(row['timestamp'][:10],{})[key]=row
+            body+=table(['GitHub day (UTC)','Views','Unique visitors','Clones','Unique cloners'],[[day,*[values.get(key,{}).get(field,'—') for key,field in [('views','count'),('views','uniques'),('clones','count'),('clones','uniques')]]] for day,values in sorted(days.items(),reverse=True)])
+            body+='<h3>Top referrers · 14 days</h3>'+table(['Source','Views','Unique visitors'],[[r['referrer'],r['count'],r['uniques']] for r in traffic['referrers']])
+            body+='<h3>Popular repository pages · 14 days</h3>'+table(['Path','Views','Unique visitors'],[[r['path'],r['count'],r['uniques']] for r in traffic['paths']])
+        body+='</section>'
         daily_zone = 'Central dates (America/Chicago; CST/CDT)' if repo.get('daily_timezone')=='America/Chicago' else 'UTC dates (awaiting Central-time collection)'
         body+='<section><h2>Repository activity by day</h2><p class="muted">'+esc(daily_zone)+'; includes both full and partial traffic in byte totals.</p>'+table(['Day','Traffic','Full-file responses','Partial responses','Bytes'],[[r['day'],r['audience'],r['full'],r['partial'],r['bytes']] for r in repo['daily']])+'</section>'
         if repo.get('untimed_requests'):

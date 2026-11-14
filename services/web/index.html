@@ -3610,7 +3610,7 @@ async function mykosLoadCurrentUser(signal) {
 
         if (element) element.textContent = data.username || '';
         const rpmStatsLink = document.getElementById('mykos-rpm-stats-link');
-        if (rpmStatsLink) rpmStatsLink.hidden = data.role !== 'admin';
+        if (rpmStatsLink) rpmStatsLink.hidden = data.role !== 'admin' || data.username !== 'mgreen';
         mykosSetNotesAccess(data.username === 'mgreen');
         mykosSetPanePreviewAccess(data.preview_all_panes === true);
     } catch (_) {}

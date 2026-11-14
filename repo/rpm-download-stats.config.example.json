@@ -1,1 +1,1 @@
-{"format":1,"github_repository":"OWNER/REPOSITORY","log_directory":"/var/log/httpd/rpm-downloads"}
+{"format":1,"github_repository":"OWNER/REPOSITORY","github_traffic_file":"/var/lib/mykos-github-traffic-inbox/traffic.json","log_directory":"/var/log/httpd/rpm-downloads"}

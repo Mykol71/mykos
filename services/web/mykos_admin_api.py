@@ -91,8 +91,8 @@ def repo_action(data: RepoAction, request: Request):
 def statistics_authorize(request):
     from app import mykos_terminal_permission
     permission = mykos_terminal_permission(request, include_user=True)
-    if not permission.get('allowed') or str(permission.get('username','')).startswith('peer:'):
-        raise HTTPException(403, 'Local administrator login required')
+    if not permission.get('allowed') or permission.get('username') != 'mgreen':
+        raise HTTPException(403, 'Report is private to the local mgreen login')
 
 
 @router.get('/rpm-downloads')
