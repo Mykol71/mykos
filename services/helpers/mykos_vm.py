@@ -551,7 +551,8 @@ def capture_live(value, source, destination, quiesce=False):
         token = '.memory-' + os.urandom(8).hex() + '.tmp'
         # Image builders can dirty RAM faster than gzip can drain live precopy.
         # Pause only this builder for a bounded, consistent startup capture.
-        # Ordinary live snapshots retain their existing precopy behavior.
+        # Ordinary snapshots start live, then bound a busy guest's dirty-RAM
+        # precopy with a short stop-and-copy window if it cannot converge.
         if quiesce:
             monitor.command('stop')
             if monitor.command('info status') != 'VM status: paused':
@@ -563,15 +564,25 @@ def capture_live(value, source, destination, quiesce=False):
         monitor.command('migrate_set_parameter max-bandwidth 4096')  # HMP uses MiB/s.
         migrating = True
         monitor.command('migrate -d "' + uri + '"')
-        deadline = time.monotonic() + 300
-        progress = time.monotonic()
+        started = time.monotonic()
+        deadline = started + 300
+        progress = started
+        pause_deadline = None
         while True:
             details = monitor.command('info migrate')
             status = migration_status(details)
             if status == 'completed': break
             if status in ('failed','cancelled'): raise RuntimeError('Memory checkpoint failed: ' + details)
-            if time.monotonic() > deadline: raise RuntimeError('Memory checkpoint timed out')
-            if time.monotonic() - progress >= 5:
+            now = time.monotonic()
+            if now > deadline or (pause_deadline is not None and now > pause_deadline):
+                raise RuntimeError('Memory checkpoint timed out' + (' within its bounded pause; source will resume' if pause_deadline is not None else ''))
+            if not quiesce and pause_deadline is None and now-started >= 30 and status == 'active':
+                monitor.command('stop')
+                if not monitor.command('info status').startswith('VM status: paused'):
+                    raise RuntimeError('Busy VM did not pause for bounded checkpoint completion')
+                pause_deadline = min(deadline,now+60)
+                print('Completing VM snapshot with a 60-second paused capture budget',flush=True)
+            if now - progress >= 5:
                 print('Saving VM memory (' + str(status or 'starting') + '); ' +
                       monitor.command('info status'), flush=True)
                 progress = time.monotonic()
@@ -605,17 +616,20 @@ def capture_live(value, source, destination, quiesce=False):
         tree_copy(source, destination, reflink='always')
     finally:
         try:
-            if migrating:
-                monitor.command('migrate_cancel')
-                deadline = time.monotonic() + 15
-                while migration_status(monitor.command('info migrate')) in ('active','setup','cancelling'):
-                    if time.monotonic() > deadline: raise RuntimeError('QEMU migration cancellation did not finish')
-                    time.sleep(.1)
-                migrating = False
-            if running and monitor.command('info status').startswith('VM status: paused'):
-                monitor.command('cont')
-            if running and monitor.command('info status') != 'VM status: running':
-                raise RuntimeError('Template did not resume; inspect its QEMU monitor')
+            try:
+                if migrating:
+                    monitor.command('migrate_cancel')
+                    deadline = time.monotonic() + 15
+                    while migration_status(monitor.command('info migrate')) in ('active','setup','cancelling'):
+                        if time.monotonic() > deadline: raise RuntimeError('QEMU migration cancellation did not finish')
+                        time.sleep(.1)
+                    migrating = False
+            finally:
+                # A cancellation error must not skip the source-resume attempt.
+                if running and monitor.command('info status').startswith('VM status: paused'):
+                    monitor.command('cont')
+                if running and monitor.command('info status') != 'VM status: running':
+                    raise RuntimeError('Template did not resume; inspect its QEMU monitor')
         finally:
             monitor.close()
             # Remove only our incomplete stream, after its writer has been cancelled.

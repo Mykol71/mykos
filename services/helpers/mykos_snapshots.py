@@ -398,6 +398,8 @@ def restore_vm(shop,identifier):
         from mykos_runtime import require_container_capacity
         require_container_capacity(current['name'])
         value={**current,'image':metadata['image'],'image_name':metadata['image_ref'],'cpu_env':captured.get('cpu_env',{}),'capture_mode':'memory'}
+        import mykos_profiles
+        value.update(mykos_profiles.snapshot_vm_identity(current,state))
         vm.restore_manifest(value,folder/'storage')
         parent=vm.storage(shop);vm.safe_dir(parent)
         transaction=Path(tempfile.mkdtemp(prefix='.restore-',dir=str(parent)))
@@ -428,6 +430,7 @@ def restore_vm(shop,identifier):
             swapped=True;launched=True
             print('Restore: loading saved RAM and device state',flush=True)
             vm.launch(shop,value);vm.wait_for_restore(value,parent/'storage')
+            value.update(mykos_profiles.snapshot_vm_identity(current,state,vm.inspect(value['name'])))
             print('Restore: saved VM state resumed',flush=True)
             value.update(ready=True,last_start='snapshot-restore',restored_snapshot=identifier);vm.save(shop,value)
         except BaseException as original:

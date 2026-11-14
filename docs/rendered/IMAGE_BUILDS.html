@@ -14,7 +14,10 @@ and memory together. If that capture fails, the installed disk stays available:
 rerun Build to finish it without reinstalling. The image builder briefly pauses
 during this startup capture so busy Windows guests cannot keep dirtying RAM faster
 than it can be compressed. The builder resumes on capture success or failure.
-Ordinary live snapshots retain their existing precopy behavior. Incomplete
+Ordinary VM snapshots start with live precopy. If a busy guest keeps dirtying
+RAM for 30 seconds, MYKOS pauses only that guest and allows 60 seconds to
+finish the RAM capture, then flushes and copies matching disks. Failure cancels the capture and resumes the source;
+an incomplete snapshot is never published. Incomplete
 compressed streams are removed and never published as valid checkpoints.</p>
 <!-- contents:start -->
 <p><strong>Contents</strong></p>

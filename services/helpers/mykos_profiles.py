@@ -25,3 +25,8 @@ def services():
 
 def backup_type(path):
     return 'rsync'
+
+
+def snapshot_vm_identity(current, source, replacement=None):
+    """Optional edition adapter for identity-bound VM assignment metadata."""
+    return {}

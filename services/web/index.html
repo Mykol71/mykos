@@ -2538,7 +2538,7 @@ function mykosContainerActionButton(shop, action, enabled, label, color, icon) {
     button.addEventListener('click', async event => {
         event.stopPropagation();
         if (button.disabled || mykosBusyContainers.has(shop)) return;
-        const question = action === 'vpn/start' ? 'Start configured VPNs for '+shop+'?' : action === 'vpn/stop' ? 'Stop VPNs for '+shop+' and retain their settings?' : action === 'snapshot' ? 'Capture live state for ' + shop + ' and leave it running?' :
+        const question = action === 'vpn/start' ? 'Start configured VPNs for '+shop+'?' : action === 'vpn/stop' ? 'Stop VPNs for '+shop+' and retain their settings?' : action === 'snapshot' ? 'Capture live state for ' + shop + '? A VM may pause temporarily while its RAM and disks are saved, then resume.' :
             action === 'start' ? 'Start container ' + shop + ' using its existing disks?' : 'Stop container ' + shop + ' and keep its disks?';
         if (action === 'delete') {
             const nativeSnapshotWarning = mykosSnapshotData.some(item => String(item.code) === shop && item.capture_mode === 'criu-memory') ? '\nNative Linux memory snapshots currently require this original container for restore.' : '';

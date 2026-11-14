@@ -45,7 +45,7 @@ native guest; wrapper internals do not determine the selected guest OS.
 | [QEMU](https://www.qemu.org/) · [KVM](https://www.linux-kvm.org/) | Hardware-assisted desktop guests; QEMU supplies VM RAM and device-state capture |
 | [Dockur Windows](https://github.com/dockur/windows) | Upstream Windows VM wrapper and installation assets |
 | [Dockur macOS](https://github.com/dockur/macos) | Upstream macOS VM wrapper, recovery workflow, and installation assets |
-| [QEMUS QEMU wrapper](https://github.com/qemus/qemu) | Upstream QEMU container wrapper used for Ubuntu desktop images |
+| [QEMUS QEMU wrapper](https://github.com/qemus/qemu) | Upstream QEMU container wrapper used for Ubuntu, Fedora and Android VM profiles |
 | [noVNC](https://novnc.com/info.html) | Browser display for desktop VM consoles |
 | [Linux kernel](https://www.kernel.org/) · [kernel documentation](https://docs.kernel.org/) | Namespaces, cgroups, networking, storage, and virtualization interfaces |
 | [systemd](https://systemd.io/) | Host and guest services, sockets, timers, transient workers, and resource groups |
