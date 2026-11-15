@@ -231,6 +231,16 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(el('mykos-stage-os').value, 'rh9', 'Failed refresh preserves the available selection');
         assert.equal(el('mykos-repos-pane').hidden,false,'Turning override off restores the latest automatic state');
 
+
+        fail=false;responseImages=[];responseCapturedImages=[];
+        responseBuilds=[{os:'rh8vm',name:'rh8vm',unattended:true,build_state:'building',build_message:'Preparing the VM image; console follows disk assembly',console_url:null}];
+        mykosStageImagesLoadedAt=0;await mykosLoadStageImages();
+        assert.equal(el('mykos-container-panel').hidden,false,'A disk assembly build has a pane before any VM container exists');
+        assert.match(el('mykos-image-builds').innerHTML,/rh8vm/);
+        assert.match(el('mykos-image-builds').innerHTML,/8 Server VM/);
+        assert.doesNotMatch(el('mykos-image-builds').innerHTML,/8 GNOME/);
+        assert.doesNotMatch(el('mykos-image-builds').innerHTML,/href=/,'No console link is offered before a VM exists');
+
     })()`, context);
     for (const family of ['windows','windows-server','macos']) {
         const section = html.slice(html.indexOf(`<div id="${family}-mykos-container-panel"`));

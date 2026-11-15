@@ -325,18 +325,10 @@ def vm_revision(value):
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 def vm_status(os_name):
-    import mykos_image_build as image
     if os_name not in VM_BUILDS:raise ValueError('Unsupported unattended image build')
-    image.selection(os_name)
-    folder=image.STATE/os_name
-    if folder.is_symlink():raise ValueError('Unsafe image build status directory')
-    path=folder/'status.json'
-    with os.fdopen(os.open(path,os.O_RDONLY|os.O_NOFOLLOW)) as handle:
-        st=os.fstat(handle.fileno())
-        if not stat.S_ISREG(st.st_mode) or st.st_uid!=os.geteuid() or st.st_mode&0o077 or st.st_size>65536:raise ValueError('Unsafe image build status')
-        value=json.load(handle)
-        if not isinstance(value,dict) or value.get('os')!=os_name:raise ValueError('Invalid image build status')
-        return value
+    from mykos_build_observation import progress
+    return progress(os_name)
+
 
 def vm_jobs():
     import mykos_image_build as image
@@ -352,8 +344,11 @@ def vm_jobs():
         except FileNotFoundError:continue
         state=value.get('state','unknown');phase='complete' if state=='ready' else state if state in PHASES else 'starting'
         active=(units or {}).get(folder.name,'inactive') if units is not None else 'unknown'
-        observed='succeeded' if state=='ready' else 'failed' if state=='failed' else ('queued' if state=='queued' else 'running') if active in ('active','activating') else 'queued' if state=='queued' and type(value.get('updated_at')) in (int,float) and 0<=time.time()-value['updated_at']<30 else 'unknown'
-        out.append({'id':'vm-'+folder.name,'kind':'vm-build','target':folder.name,'state':observed,'phase':phase,'message':('Worker status unavailable; refresh before taking action' if observed=='unknown' else 'Image ready' if state=='ready' else PHASES.get(state,'VM image build needs attention' if state=='failed' else 'Image build queued' if observed=='queued' else 'VM image build is active')),'activity_at':value.get('updated_at'),'revision':vm_revision(value),'retry_allowed':state=='failed' and active in ('inactive','failed'),'observed':True})
+        from mykos_build_observation import worker_lock_held
+        terminal_active=worker_lock_held(folder.name)
+        worker_active=active in ('active','activating') or terminal_active is True
+        observed='succeeded' if state=='ready' else 'failed' if state=='failed' else ('queued' if state=='queued' else 'running') if worker_active else 'queued' if state=='queued' and type(value.get('updated_at')) in (int,float) and 0<=time.time()-value['updated_at']<30 else 'unknown'
+        out.append({'id':'vm-'+folder.name,'kind':'vm-build','target':folder.name,'state':observed,'phase':phase,'message':('Worker status unavailable; refresh before taking action' if observed=='unknown' else 'Image ready' if state=='ready' else PHASES.get(state,'VM image build needs attention' if state=='failed' else 'Image build queued' if observed=='queued' else 'VM image build is active')),'activity_at':value.get('updated_at'),'revision':vm_revision(value),'retry_allowed':state=='failed' and active in ('inactive','failed') and terminal_active is False,'observed':True})
     return out
 
 def retry_vm(os_name,revision):
@@ -363,7 +358,8 @@ def retry_vm(os_name,revision):
         if vm_revision(value)!=revision:raise ValueError('Image build changed; refresh before resuming')
         if value.get('state')!='failed':raise ValueError('Only a failed VM image build may be resumed')
         units=vm_unit_states()
-        if units is None or units.get(os_name,'inactive') not in ('inactive','failed'):raise ValueError('Image worker is active or unavailable; refresh before resuming')
+        from mykos_build_observation import worker_lock_held
+        if units is None or units.get(os_name,'inactive') not in ('inactive','failed') or worker_lock_held(os_name) is not False:raise ValueError('Image worker is active or unavailable; refresh before resuming')
         result=image.queue(os_name,expected_job_revision=revision)
         return {'id':'vm-'+os_name,'state':result['state'],'message':'Resume queued using the saved build and its existing credentials'}
 

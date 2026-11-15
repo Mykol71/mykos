@@ -853,6 +853,19 @@ def installing_images():
             result.append(item)
         except (ValueError, RuntimeError, OSError, KeyError, TypeError):
             continue
+    # Disk assembly precedes VM registry/container creation for EL profiles.
+    # Show verified active terminal workers during that phase as well.
+    from mykos_build_observation import progress,worker_lock_held
+    known={item['os'] for item in result}
+    for os_name in VERSIONS:
+        if os_name in known:continue
+        try:
+            value=progress(os_name);state=value.get('state')
+            if state not in ('queued','starting','downloading','building','configuring','validating','capturing'):continue
+            queued=state=='queued' and type(value.get('updated_at')) in (int,float) and 0<=time.time()-value['updated_at']<30
+            if worker_lock_held(os_name) is not True and not queued:continue
+            result.append({'os':os_name,'name':os_name,'unattended':True,'console_url':None,'direct_console_url':None,'build_state':state,'build_message':'Preparing the VM image; its console becomes available after disk assembly'})
+        except (OSError,ValueError,TypeError):continue
     return result
 
 

@@ -509,3 +509,8 @@ Traffic aggregates refresh from the owner's Mac about every 15 minutes while its
 ### Refresh and create feedback
 
 The dashboard refreshes inventory, OS details and memory together. Unchanged rows retain their action controls. Nonessential polling pauses while the page is hidden and refreshes when it becomes visible. A successful create remains visible while the inventory collector catches up; do not submit the same ID again. Delayed collection or refresh failures display a notice and retain last known OS information instead of moving an instance into another OS pane. A new instance with no OS information waits for classification.
+
+
+### VM image build visibility
+
+Terminal-launched VM image builds appear in Jobs and their OS pane during disk preparation, before a VM container or console exists. An active terminal worker is shown as running; a systemd unit is not required. The console action appears only once a real console exists. Completed images appear as prepared images in the same pane. A failed or unproven worker is not automatically declared running, and Resume remains unavailable while the build is owned by an active worker.
