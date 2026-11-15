@@ -1,5 +1,9 @@
 # Validation record and remaining integration work
 
+## Installed collector recovery (release292)
+
+The installed details collector must import through the normal monitoring helper-path bootstrap, without a development PYTHONPATH. Release292 tests an isolated installed layout and starts the actual dev and production collector service. Fresh collection must restore Ubuntu and other OS pane classification and Red Hat version labels while preserving every existing guest identity. Queue-boundary tests also verify that EL VM RAM and private desktop profile arguments stay distinct. This correction does not require rebuilding guest images.
+
 ## EL Server/GNOME validation scope
 
 The current catalog contains 86 selections:34 native and52 VM-backed, including30 public

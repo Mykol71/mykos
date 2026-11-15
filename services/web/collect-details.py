@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import json
-from mykos_runtime import EL_VM_PROFILES
 import grp
 import re
 import subprocess
@@ -13,6 +12,7 @@ from datetime import datetime, timezone
 
 from mykos_config import BASE
 import host_monitoring as host
+from mykos_runtime import EL_VM_PROFILES
 OUTPUT = BASE / "data" / "details.json"
 
 SHOP = re.compile(r"^([0-9]{8})(?:\.|$)")
