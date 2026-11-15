@@ -211,7 +211,8 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(el('mykos-stage-os').options.find(option => option.value === 'rh9').disabled, false);
         for (const family of mykosOsFamilies) {
             for (const option of el(mykosOsId(family, 'mykos-stage-os')).options.slice(1)) {
-                if (/^(?:rh|oracle|centos|scientific|springdale)[67]$/.test(option.value)) assert.match(option.text,/legacy/);
+                if (mykosElVmInfo(option.value)) { const profile=mykosElVmInfo(option.value);assert.equal(option.text,profile.major+(profile.desktop?' GNOME Desktop VM':' Server VM')); }
+                else if (/^(?:rh|oracle|centos|scientific|springdale)[67]$/.test(option.value)) assert.match(option.text,/legacy/);
                 else assert.equal(option.text, option.value.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, ''));
             }
         }

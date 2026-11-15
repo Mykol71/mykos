@@ -30,3 +30,15 @@ def backup_type(path):
 def snapshot_vm_identity(current, source, replacement=None):
     """Optional edition adapter for identity-bound VM assignment metadata."""
     return {}
+
+
+def el_vm():
+    """Load the shared public EL VM builder; no application adapter required."""
+    import importlib.util,sys
+    name='_mykos_el_vm'
+    if name not in sys.modules:
+        spec=importlib.util.spec_from_file_location(name,Path(__file__).with_name('mykos-el-vm.py'))
+        module=importlib.util.module_from_spec(spec);sys.modules[name]=module
+        try:spec.loader.exec_module(module)
+        except BaseException:sys.modules.pop(name,None);raise
+    return sys.modules[name]

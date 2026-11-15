@@ -12,7 +12,7 @@ MYKOS is a virtualization and host-management solution with RHEL 9 as its first 
 RHEL 8 is no longer a supported MYKOS host; RHEL 8 guest images remain available.
 It combines a web control center, authenticated API, and text administration
 menus for native Linux containers and QEMU-based Windows, macOS, Ubuntu,
-Fedora GNOME, and Android-x86 VMs managed through Podman.
+Fedora GNOME, Android-x86 and EL Server/GNOME VMs managed through Podman.
 
 The dashboard includes host performance history, OS-specific container panes,
 live snapshots, rsync accounts, repository management, and per-pane notes.
@@ -24,7 +24,7 @@ See the [screen examples gallery](docs/SCREENSHOTS.md) for illustrated workflows
 
 ## Supported images at a glance
 
-**56 image selections: 34 native Linux containers and 22 VM-backed guests.**
+**86 image selections: 34 native Linux containers and 52 VM-backed guests.**
 Guest image support is separate from host support: **RHEL 9 is the stable host
 platform; RHEL 10 remains a preview.** RHEL 8 host support is not offered.
 
@@ -33,6 +33,7 @@ platform; RHEL 10 remains a preview.** RHEL 8 host support is not offered.
 | Native enterprise Linux | RHEL 8, 9, 10; Rocky Linux 8, 9, 10; AlmaLinux 8, 9, 10; Oracle Linux 8, 9, 10; CentOS Stream 8, 9, 10 |
 | Legacy native EL6/EL7 | RHEL 6.10 / 7.9; CentOS 6.10 / 7.9.2009; Oracle, Scientific and Springdale Linux 6.10 / 7.9 |
 | Other native Linux | Fedora 43, 44; Debian 13; Arch Linux (rolling); SUSE Linux Enterprise BCI Init 15 SP7; Amazon Linux 2023; Alpine Linux 3.24 (OpenRC) |
+| EL Server and GNOME Desktop VMs | RHEL, Rocky Linux, AlmaLinux, Oracle Linux and CentOS Stream 8/9/10; separate Server and GNOME choices |
 | Native SQL Server environments | SQL Server 2022 and 2025 on Linux |
 | Windows desktop VMs | Windows 11, 10, 8.1 Enterprise, 7 Ultimate, XP, Me, 2000, 98 |
 | Windows Server VMs | Windows Server 2025, 2022, 2019, 2016 |
@@ -197,6 +198,36 @@ The commands below use the installed toolkit path.
 | Windows Server 2022 | `sudo /usr/share/mykos/pos/vm build wns2022` |
 | Windows Server 2019 | `sudo /usr/share/mykos/pos/vm build wns2019` |
 | Windows Server 2016 | `sudo /usr/share/mykos/pos/vm build wns2016` |
+| RHEL 8 Server | `sudo /usr/share/mykos/pos/vm build rh8vm` |
+| RHEL 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rh8desktopvm` |
+| RHEL 9 Server | `sudo /usr/share/mykos/pos/vm build rh9vm` |
+| RHEL 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rh9desktopvm` |
+| RHEL 10 Server | `sudo /usr/share/mykos/pos/vm build rh10vm` |
+| RHEL 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rh10desktopvm` |
+| Rocky Linux 8 Server | `sudo /usr/share/mykos/pos/vm build rocky8vm` |
+| Rocky Linux 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rocky8desktopvm` |
+| Rocky Linux 9 Server | `sudo /usr/share/mykos/pos/vm build rocky9vm` |
+| Rocky Linux 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rocky9desktopvm` |
+| Rocky Linux 10 Server | `sudo /usr/share/mykos/pos/vm build rocky10vm` |
+| Rocky Linux 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rocky10desktopvm` |
+| AlmaLinux 8 Server | `sudo /usr/share/mykos/pos/vm build alma8vm` |
+| AlmaLinux 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build alma8desktopvm` |
+| AlmaLinux 9 Server | `sudo /usr/share/mykos/pos/vm build alma9vm` |
+| AlmaLinux 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build alma9desktopvm` |
+| AlmaLinux 10 Server | `sudo /usr/share/mykos/pos/vm build alma10vm` |
+| AlmaLinux 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build alma10desktopvm` |
+| Oracle Linux 8 Server | `sudo /usr/share/mykos/pos/vm build oracle8vm` |
+| Oracle Linux 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build oracle8desktopvm` |
+| Oracle Linux 9 Server | `sudo /usr/share/mykos/pos/vm build oracle9vm` |
+| Oracle Linux 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build oracle9desktopvm` |
+| Oracle Linux 10 Server | `sudo /usr/share/mykos/pos/vm build oracle10vm` |
+| Oracle Linux 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build oracle10desktopvm` |
+| CentOS Stream 8 Server | `sudo /usr/share/mykos/pos/vm build centos8vm` |
+| CentOS Stream 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build centos8desktopvm` |
+| CentOS Stream 9 Server | `sudo /usr/share/mykos/pos/vm build centos9vm` |
+| CentOS Stream 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build centos9desktopvm` |
+| CentOS Stream 10 Server | `sudo /usr/share/mykos/pos/vm build centos10vm` |
+| CentOS Stream 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build centos10desktopvm` |
 | Fedora 43 GNOME desktop | `sudo /usr/share/mykos/pos/vm build fedora43vm` |
 | Fedora 44 GNOME desktop | `sudo /usr/share/mykos/pos/vm build fedora44vm` |
 | Ubuntu 20.04 | `sudo /usr/share/mykos/pos/vm build ubuntu20.04` |
@@ -229,7 +260,7 @@ legacy compatibility guest with graphical access only.
 Ubuntu uses autoinstall, Windows uses Autounattend.xml, and macOS uses
 startosinstall. Completed builds commit the installed payload under a readable
 OS image name and leave a generic base running for fast instance creation.
-Native RedHat images use the kickstarts in `pos/ks`. VM guests default to 2 GiB RAM; modern VM image builds can select 2, 4 or 8 GiB and new instances inherit the recorded image size;
+Native RedHat images use the kickstarts in `pos/ks`. EL VM profiles offer custom RAM in 256 MiB increments: Server minimum/default 2 GiB, GNOME minimum/default 4 GiB, maximum 64 GiB. Select RAM at build or new-instance creation; saved instances/snapshots keep their recorded size. Other modern VM images retain their 2/4/8 GiB selections;
 Windows, Ubuntu and Fedora desktop VMs use 12 GiB pagefile/swap, while macOS manages its swap.
 Native Linux containers share host memory without a fixed VM RAM allocation.
 See [image builds](docs/IMAGE_BUILDS.md), [desktop lifecycle](docs/DESKTOPS.md),
@@ -275,3 +306,5 @@ for current storage, client settings and publication destinations.
 Administrators can track repository RPM transfers and separate GitHub release-asset counters through the Repos pane’s **RPM stats** report and the server CLI. Collection is opt-in on the repository host; see [private RPM download statistics](docs/RPM.md#private-rpm-download-statistics) for accounting semantics and setup.
 
 Legacy EL6/EL7 guest details, final upstream archives and explicit LAN mirror sync selections are documented in the [image build guide](docs/IMAGE_BUILDS.md#legacy-enterprise-linux-guests). MYKOS host packages remain EL9/EL10 only.
+
+See [EL Server/Desktop VM profiles and configurable RAM](docs/IMAGE_BUILDS.md#el-server-and-gnome-desktop-vms) for all 30 identifiers, prerequisites and examples.

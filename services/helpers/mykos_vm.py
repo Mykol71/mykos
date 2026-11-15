@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 import time
 import mykos_network as network
-from mykos_runtime import config as host_config
+from mykos_runtime import config as host_config, EL_VM_PROFILES
 
 PODMAN = '/usr/bin/podman'
 POS = Path('/usr/local/share/mykos/pos')
@@ -28,6 +28,8 @@ VERSIONS = {**{v: ('windows', v[3:]) for v in ('win11','win10','win8e','win7u','
             **{v: ('macos', v[3:]) for v in ('mac15','mac14','mac13','mac12')},
             **{v: ('ubuntu', v[6:]) for v in ('ubuntu20.04','ubuntu22.04','ubuntu24.04')},
             **{'fedora'+v+'vm': ('fedora', v) for v in ('43','44')}, 'android9':('android','9.0-r2')}
+VERSIONS.update({name:('el-linux',profile['major']) for name,profile in EL_VM_PROFILES.items()})
+EL_VM_WORKER='docker.io/qemux/qemu@sha256:1a2442ff34d4676e921597d4905c6e72924e19d90f16980725f8a344998f0358'
 
 
 def run(args, timeout=3600, env=None):
@@ -142,11 +144,12 @@ def preflight(os_name, ram_mib=2048):
         raise ValueError('macOS requires an AVX2-capable CPU')
     safe_dir(storage_root())
     available = re.search(r'^MemAvailable:\s+(\d+) kB$', Path('/proc/meminfo').read_text(), re.M)
-    required_gib = ram_mib // 1024 + (4 if ram_mib > 2048 else 1)
-    if available and int(available.group(1)) < required_gib * 1024**2:
-        raise ValueError('At least %s GiB of available host memory is required' % required_gib)
-    if shutil.disk_usage(storage_root()).free < 32 * 1024**3:
-        raise ValueError('At least 32 GiB of free VM storage is required')
+    required_mib = ram_mib + (4096 if ram_mib > 2048 else 1024)
+    if available and int(available.group(1)) < required_mib * 1024:
+        raise ValueError('At least %g GiB of available host memory is required' % (required_mib / 1024))
+    required_disk_mib=max(32768,16384+4*ram_mib) if os_name in EL_VM_PROFILES else 32768
+    if shutil.disk_usage(storage_root()).free < required_disk_mib * 1024**2:
+        raise ValueError('At least %g GiB of free VM storage is required' % (required_disk_mib / 1024))
 
 
 def ubuntu_iso(version, unattended=False):
@@ -237,7 +240,7 @@ def launch(key, value):
             '--security-opt=label=disable', '--stop-timeout=120', '--restart=' + ('no' if value['role'] in ('template','preview') else 'unless-stopped'), '--pull=never',
             '--label', 'io.mykos.vm.os=' + value['os'], '--label', 'io.mykos.vm.role=' + value['role'],
             '--label', 'io.mykos.vm.host=' + value['host'],
-            '-e', ('BOOT=' + ('none' if kind in ('fedora','android') and (value.get('installation_complete') or value.get('ready')) else value['boot'])) if kind in ('ubuntu','fedora','android') else 'VERSION=' + version,
+            '-e', ('BOOT=' + ('none' if kind in ('fedora','android','el-linux') and (value.get('installation_complete') or value.get('ready')) else value['boot'])) if kind in ('ubuntu','fedora','android','el-linux') else 'VERSION=' + version,
             '-e', 'RAM_SIZE=' + str(ram_mib) + 'M', '-e', 'RAM_MINIMUM=2G', '-e', 'CPU_CORES=2', '-e', 'DISK_SIZE=64G',
             '-v', str(storage(key) / 'storage') + ':/storage:rw',
             '-p', '%s:%s:8006/tcp' % (value['bind'], value['console_port']),
@@ -254,7 +257,7 @@ def launch(key, value):
     args += ['-e', 'MYKOS_BUILD_NICE=' + ('1' if building_image else '0')]
     if building_image and kind == 'windows':
         args += ['--cap-add=SYS_NICE']
-    if kind in ('ubuntu','fedora'):
+    if kind in ('ubuntu','fedora','el-linux'):
         args += ['-e', 'SERIAL=unix:/dev/shm/mykos-serial.sock,server=on,wait=off']
     if kind=='fedora':args+=['-e','DISK_FMT=qcow2','-e','VGA=std']
     args+=['-e','MYKOS_ANDROID_INSTALL=N']
@@ -279,7 +282,7 @@ def launch(key, value):
         oem = storage(key if value['role']=='preview' or value.get('peer_copy') else value['os']) / 'oem'
         if oem.is_dir() and not oem.is_symlink():
             args += ['-v', str(oem) + ':/oem:ro']
-    if value.get('guest_agent') and kind in ('windows','ubuntu','fedora'):
+    if value.get('guest_agent') and kind in ('windows','ubuntu','fedora','el-linux'):
         args += ['-e', 'QGA=/dev/shm/mykos-qga.sock']
     for key,setting in value.get('cpu_env', {}).items():
         if key not in ('CPU_MODEL','CPU_FLAGS','HV','VMX'): raise ValueError('Unsupported CPU profile setting')
@@ -324,16 +327,17 @@ def console_target(key):
 
 
 def links(value):
+    serial_guest=value['os'].startswith(('ubuntu','fedora')) or value['os'] in EL_VM_PROFILES
     return {k: value[k] for k in ('os','name','role','host','console_port','desktop_port','ready')} | {
         'ram_mib': value.get('ram_mib', 2048),
-        'guest_login_required': value['os'].startswith('fedora'),
+        'guest_login_required': value['os'].startswith('fedora') or value['os'] in EL_VM_PROFILES,
         'unattended': value.get('unattended', False),
         'capture_mode': value.get('capture_mode', 'disk'),
         'last_start': value.get('last_start'),
         'network_isolated': bool(value.get('network_isolated')),
         'peer_copy': bool(value.get('peer_copy')),
-        'terminal_transport': 'serial' if value['os'].startswith(('ubuntu','fedora')) else 'powershell' if VERSIONS[value['os']][0] == 'windows' else 'ssh' if value['os'].startswith('mac') else None,
-        'root_terminal_url': '/mykos/api/v2/terminal/' + value['name'][:8] if value['os'].startswith(('ubuntu','fedora')) and value['role'] == 'instance' else None,
+        'terminal_transport': 'serial' if serial_guest else 'powershell' if VERSIONS[value['os']][0] == 'windows' else 'ssh' if value['os'].startswith('mac') else None,
+        'root_terminal_url': '/mykos/api/v2/terminal/' + value['name'][:8] if serial_guest and value['role'] == 'instance' else None,
         'console_url': console_path(value),
         'direct_console_url': 'http://%s:%s/' % (value['host'], value['console_port']),
         'login_supported': value['os'] not in ('win98','winme','win2k'),
@@ -344,7 +348,7 @@ def links(value):
 def checkpoint_cpu_profile(os_name):
     kind = VERSIONS[os_name][0]
     if kind == 'macos': return {'CPU_FLAGS':'-invtsc'}
-    if kind not in ('windows', 'ubuntu','fedora','android'): return {}
+    if kind not in ('windows', 'ubuntu','fedora','android','el-linux'): return {}
     profile = {'CPU_MODEL':'host', 'CPU_FLAGS':'migratable=on,-invtsc'}
     if kind == 'windows': profile['HV'] = 'N'
     return profile
@@ -352,15 +356,20 @@ def checkpoint_cpu_profile(os_name):
 
 def image_memory(os_name, requested=None):
     if os_name not in VERSIONS: raise ValueError('Unsupported OS')
-    selected = 2048 if requested is None else requested
-    choices = (2048,) if os_name in ('win98','winme','win2k','winxp','win7u') else (2048,4096,8192)
+    selected = (4096 if EL_VM_PROFILES.get(os_name,{}).get('desktop') else 2048) if requested is None else requested
+    if os_name in EL_VM_PROFILES:
+        minimum=4096 if EL_VM_PROFILES[os_name]['desktop'] else 2048
+        if type(selected) is not int or not minimum<=selected<=65536 or selected%256:
+            raise ValueError('EL VM RAM must be '+str(minimum)+'–65536 MiB in 256 MiB increments')
+        return selected
+    choices = (4096,8192) if EL_VM_PROFILES.get(os_name,{}).get('desktop') else (2048,) if os_name in ('win98','winme','win2k','winxp','win7u') else (2048,4096,8192)
     if type(selected) is not int or selected not in choices:
         raise ValueError('VM RAM must be '+', '.join(map(str,choices))+' MiB for '+os_name)
     return selected
 
 
 def runtime_memory(value):
-    return image_memory(value['os'],value.get('runtime_ram_mib',2048))
+    return image_memory(value['os'],value.get('runtime_ram_mib'))
 
 
 def available_memory_mib():
@@ -369,8 +378,10 @@ def available_memory_mib():
     return int(match.group(1))//1024
 
 
-def create(os_name, username=None, password=None, ram_mib=None, unattended=False):
+def create(os_name, username=None, password=None, ram_mib=None, unattended=False, prepared_disk=None):
     ram_mib = image_memory(os_name, ram_mib)
+    if VERSIONS[os_name][0]=='el-linux' and prepared_disk is None:
+        raise ValueError('Use Build image for public EL VMs')
     runtime_ram_mib = ram_mib
     # Apple's second-stage installer mounts a 2.5 GiB temporary filesystem.
     # boot_installed lowers this installation-only allowance before capture.
@@ -385,7 +396,8 @@ def create(os_name, username=None, password=None, ram_mib=None, unattended=False
         kind, _ = VERSIONS[os_name]
         if kind == 'windows' and (not username or not password or any(c in username + password for c in '\r\n\x00')):
             raise ValueError('Supply a Windows username and nonempty single-line password')
-        image = 'docker.io/qemux/qemu:latest' if kind in ('ubuntu','fedora','android') else 'docker.io/dockurr/' + kind + ':latest'
+        image = 'docker.io/qemux/qemu:latest' if kind in ('ubuntu','fedora','android','el-linux') else 'docker.io/dockurr/' + kind + ':latest'
+        if kind=='el-linux':image=EL_VM_WORKER
         boot = (ubuntu_iso(VERSIONS[os_name][1], unattended=True) if unattended else ubuntu_iso(VERSIONS[os_name][1])) if kind == 'ubuntu' else None
         if kind=='android':boot='/storage/boot.iso'
         if kind=='fedora':
@@ -403,7 +415,7 @@ def create(os_name, username=None, password=None, ram_mib=None, unattended=False
             with os.fdopen(fd, 'w') as handle: handle.write('USERNAME=' + username + '\nPASSWORD=' + password + '\n')
         value = dict(os=os_name, name=os_name, image=image_id, image_name=image_name, role='template', host=host, bind=bind,
                      console_port=console, desktop_port=desktop, ready=False, boot=boot)
-        if kind in ('windows','ubuntu','fedora'):
+        if kind in ('windows','ubuntu','fedora','el-linux'):
             value['guest_agent'] = True
         if kind == 'windows' and os_name not in ('win98','winme','win2k','winxp','win7u'):
             oem = storage(os_name) / 'oem'
@@ -423,7 +435,17 @@ def create(os_name, username=None, password=None, ram_mib=None, unattended=False
                 r'powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\OEM\mykos-finish.ps1 -UserName '+username+r' > C:\OEM\mykos-finish.log 2>&1',
                 'exit /b %errorlevel%']
             (oem/'install.bat').write_bytes(('\r\n'.join(commands)+'\r\n').encode())
-        if unattended:
+        if kind=='el-linux':
+            disk=Path(prepared_disk['path']);receipt=prepared_disk['receipt']
+            safe_dir(disk.parent)
+            if (disk.is_symlink() or not disk.is_file() or disk.stat().st_uid!=os.geteuid() or disk.stat().st_mode&0o022 or
+                receipt.get('profile')!=os_name or receipt.get('disk_format')!='qcow2' or receipt.get('desktop') is not EL_VM_PROFILES[os_name]['desktop']):
+                raise ValueError('Expected this build\'s owned EL VM disk')
+            target=storage(os_name)/'storage/data.qcow2'
+            if target.exists() or target.is_symlink():raise ValueError('An EL VM disk already exists')
+            os.replace(disk,target)
+            value['el_vm_build']=receipt;value['installation_complete']=True
+        if unattended and kind!='el-linux':
             from mykos_image_build import stage
             stage(os_name, {'username':username,'password':password}, image_id)
             value['unattended'] = True
@@ -742,7 +764,7 @@ def checkpoint_enable(os_name):
     if os_name not in VERSIONS: raise ValueError('Select a template OS')
     with locked():
         value = read(os_name)
-        if VERSIONS[os_name][0] not in ('windows', 'ubuntu', 'fedora', 'macos','android'): return links(value)
+        if VERSIONS[os_name][0] not in ('windows', 'ubuntu', 'fedora', 'macos','android','el-linux'): return links(value)
         profile = checkpoint_cpu_profile(os_name)
         if value.get('cpu_env') == profile: return links(value)
         old_value = dict(value)
@@ -1200,11 +1222,15 @@ def publish_started(shop):
     best_effort(shop,{})
 
 
-def start(shop, os_name=None):
+def start(shop, os_name=None, ram_mib=None):
+    if ram_mib is not None:
+        if os_name not in EL_VM_PROFILES:raise ValueError('New-instance RAM selection requires an EL VM OS')
+        ram_mib=image_memory(os_name,ram_mib)
     if not re.fullmatch(r'[0-9]{8}', shop): raise ValueError('ID must be eight ASCII digits')
     with locked():
         if record_path(shop).exists():
             value = read(shop)
+            if ram_mib is not None and ram_mib!=runtime_memory(value):raise ValueError('Existing instances and RAM snapshots keep their recorded size; create a new instance to select another size')
             if os_name and value['os'] != os_name: raise ValueError('ID belongs to a different OS')
             if not value['ready']: raise ValueError('Prior creation failed; inspect retained storage before resuming')
             data = inspect(value['name'])
@@ -1220,7 +1246,8 @@ def start(shop, os_name=None):
             from mykos_runtime import require_container_capacity
             require_container_capacity()
             template = read(os_name)
-            preflight(os_name, runtime_memory(template))
+            instance_ram=image_memory(os_name,ram_mib) if os_name in EL_VM_PROFILES and ram_mib is not None else runtime_memory(template)
+            preflight(os_name, instance_ram)
             if template.get('ram_mib', 4096) != runtime_memory(template):
                 raise ValueError('Recapture this image at its selected RAM size (default 2048 MiB); existing RAM state uses a different size')
             if not template['ready']: raise ValueError('Finish installing and prepare the template first')
@@ -1235,9 +1262,18 @@ def start(shop, os_name=None):
             safe_dir(storage(shop))
             value = {**template, 'name': shop + '.' + socket.gethostname(), 'role':'instance',
                      'host':host, 'bind':bind, 'console_port':console, 'desktop_port':desktop, 'ready':False}
+            if os_name in EL_VM_PROFILES:
+                value['ram_mib']=instance_ram;value['runtime_ram_mib']=instance_ram
             save(shop, value)
             try:
                 tree_copy(storage(os_name) / 'golden', storage(shop) / 'storage')
+                if value['os'] in EL_VM_PROFILES:
+                    from mykos_profiles import el_vm
+                    checkpoint=storage(shop)/'storage/.mykos-checkpoint'
+                    if checkpoint.is_symlink():raise ValueError('Unsafe copied EL VM checkpoint')
+                    if checkpoint.exists():shutil.rmtree(checkpoint)
+                    value['capture_mode']='disk'
+                    el_vm().provision_disk(shop,value,storage(shop)/'storage/data.qcow2')
                 if value.get('capture_mode') == 'memory':
                     restore_manifest(value, storage(shop)/'storage')
                     request = storage(shop)/'storage/.mykos-checkpoint/restore.request'
@@ -1249,12 +1285,15 @@ def start(shop, os_name=None):
                     wait_for_restore(value, storage(shop)/'storage')
                     value['last_start'] = 'memory-restore'
                 else: value['last_start'] = 'boot'
+                if value['os'] in EL_VM_PROFILES:
+                    from mykos_profiles import el_vm
+                    el_vm().wait_ready(value)
                 if value.get('unattended'):
                     from mykos_image_build import instance_setup
                     instance_setup(shop,value)
                 value['ready'] = True; save(shop, value)
             except Exception:
-                if value.get('capture_mode') == 'memory':
+                if value.get('capture_mode') == 'memory' or value['os'] in EL_VM_PROFILES:
                     try:
                         failed = inspect(value['name'])
                         labels = failed.get('Config', {}).get('Labels') or {}
@@ -1367,6 +1406,8 @@ def memory(key, target_mib=None):
         raise ValueError('Guest memory policy is 2048 MiB')
     with locked():
         value = read(key)
+        if target_mib is not None and value['os'] in EL_VM_PROFILES:
+            raise ValueError('EL VM RAM is selected at image build or new-instance creation; saved sizes are preserved')
         monitor = QemuMonitor(value)
         try:
             if target_mib is None:
@@ -1411,6 +1452,8 @@ def configure_memory(key, target_mib, *, enable_guest_agent=False):
         raise ValueError('Select an instance ID')
     with locked():
         value = read(key)
+        if value['os'] in EL_VM_PROFILES:
+            raise ValueError('EL VM RAM is selected at image build or new-instance creation; saved sizes are preserved')
         if type(target_mib) is not int or target_mib not in (2048,4096) or (target_mib==4096 and not value['os'].startswith('mac')):
             raise ValueError('Cold allocation supports 2048 MiB, or 4096 MiB for macOS instances')
         additional=max(0,target_mib-value.get('ram_mib',2048))

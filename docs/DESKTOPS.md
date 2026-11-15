@@ -1,4 +1,6 @@
-# Windows, macOS, Ubuntu, Fedora and Android VMs
+# Virtual machines and full snapshots
+
+<a id="windows-macos-ubuntu-fedora-and-android-vms"></a>
 
 [Documentation index](README.md)
 
@@ -63,8 +65,11 @@ changed disks. `podman commit` alone does not save this QEMU execution state.
 **First stable-release host target: RHEL 9 (x86_64). RHEL 10 packages are preview-only; fresh installation is not yet supported because its repository lacks the native `mykos-criu` dependency.** RHEL 8 host support has been dropped. Guest/image support is separate: RHEL 8 guest recipes remain available.
 
 Use a supported Linux x86-64 host with usable `/dev/kvm` and `/dev/net/tun`, sufficient
-memory for each running guest (image-selected RAM, default2048 MiB, and2 vCPUs), and at least 32 GiB of
-free storage for creation. Guest disks default to 64 GiB sparse disks. macOS
+memory for each running guest (configured RAM and2 vCPUs), and at least32 GiB of
+free storage for creation. EL Server defaults to2048 MiB and GNOME to4096 MiB;
+other VM defaults remain2048 MiB. EL disk assembly needs at least40 GiB free,
+and larger custom RAM values can require more staging space; preflight reports
+the required headroom. Guest disks default to 64 GiB sparse disks. macOS
 also requires AVX2. Guest installation and licensing remain the operator's
 responsibility. Supported current builds run unattended; legacy Windows releases
 retain their manual setup path.
@@ -109,7 +114,7 @@ Run `sudo mykos` and choose **2. Containers** to open the POS menu:
 - `3`: show desktop connection URLs; native Linux opens its supported shell.
 
 The [complete VM command examples](IMAGE_BUILDS.md#all-supported-vm-types) cover
-all 22 VM selections: Windows, Windows Server, Ubuntu, macOS, Fedora GNOME and Android-x86.
+all 52 VM selections, including EL Server/GNOME profiles. See [EL VM profiles and custom RAM](IMAGE_BUILDS.md#el-server-and-gnome-desktop-vms).
 
 Equivalent commands from either production toolkit's `pos` directory:
 
@@ -125,7 +130,8 @@ sudo python3 ./vm list
 These commands now run unattended for current Windows/Windows Server, macOS,
 and Ubuntu versions. No separate Finish step is required. Generated credentials
 are root-only in `/var/lib/mykos/image-builds/OS/credentials.json`. Builds and
-runtime VMs default to2 GiB RAM, with2/4/8 GiB selections for modern images; Windows/Ubuntu use 12 GiB paging. For details,
+EL VMs offer custom RAM with2 GiB Server and4 GiB GNOME defaults. Other modern
+VMs retain2/4/8 GiB image selections. Windows/Ubuntu use12 GiB paging. For details,
 resuming a failed build and API operations, see [Image builds](IMAGE_BUILDS.md).
 
 For existing images installed manually, Finish and compatibility commands remain:
@@ -246,7 +252,7 @@ MYKOS refuses to stop them through these controls until they have been deliberat
 converted, because stopping them would destroy their writable layer.
 
 Snapshot uses QEMU RAM/device migration plus matching disk copies for Windows,
-Windows Server, macOS, Ubuntu, Fedora GNOME and Android VM guests. Native Linux uses CRIU with
+Windows Server, macOS, Ubuntu, Fedora GNOME, Android and EL Server/GNOME VM guests. Native Linux uses CRIU with
 `--leave-running`, captures its writable layer and mounted data at post-dump while
 source processes are frozen, and then resumes them. CRIU, the OCI runtime, kernel
 and workload must support checkpointing. Unsupported workloads fail explicitly;
@@ -391,7 +397,9 @@ config/secret includes are appended to the global files with private backups.
 
 ## Current memory policy
 
-New modern VM image builds offer2048,4096 or8192 MiB in the text menu. The choice is recorded as runtime RAM, preserved through capture and embedded image metadata, and inherited by new instances. Legacy Windows selections retain2048 MiB for compatibility. Existing images and instances keep their recorded settings. Unattended macOS installation uses at least4096 MiB temporarily, then boots at the selected runtime size before capture. RAM captures must resume with their recorded size; no checkpoint is rewritten to another size. An explicit cold restart can give an existing macOS instance4096 MiB while preserving disk recovery and other running VMs; see [memory allocation](BALLOONING.md).
+EL Server/GNOME builds and new instances accept custom RAM in256 MiB increments;
+see [EL VM RAM selection](#el-vm-ram-selection) for defaults and bounds. Other
+modern VM image builds offer2048,4096 or8192 MiB in the text menu. The choice is recorded as runtime RAM, preserved through capture and embedded image metadata, and inherited by new instances. Legacy Windows selections retain2048 MiB for compatibility. Existing images and instances keep their recorded settings. Unattended macOS installation uses at least4096 MiB temporarily, then boots at the selected runtime size before capture. RAM captures must resume with their recorded size; no checkpoint is rewritten to another size. An explicit cold restart can give an existing macOS instance4096 MiB while preserving disk recovery and other running VMs; see [memory allocation](BALLOONING.md).
 
 The Windows/Ubuntu/Fedora desktop pagefile or swap target is 12 GiB, configured inside the
 installed guest before capture. The Ubuntu helper rejects the live installer;
@@ -413,7 +421,7 @@ The banner identifies the container, snapshot and kind of preview.
 
 | Snapshot type | Preview behavior |
 | --- | --- |
-| Windows, macOS, Ubuntu or Fedora desktop VM memory snapshot | Restores the saved RAM, device state and matching disks; verifies CPU execution state before resuming. |
+| Windows, macOS, Ubuntu, Fedora, Android or EL VM memory snapshot | Restores the saved RAM, device state and matching disks; verifies CPU execution state before resuming. |
 | Native Linux CRIU snapshot | Opens an administrator shell over a private copy of the saved filesystem and mounted data. Captured RAM, processes and services are not resumed. |
 
 Desktop guest traffic is blocked inside the temporary VM wrapper before saved
@@ -473,3 +481,7 @@ Qualify the exact image, guest settings and repeated restore sequence on dev
 before relying on it for recovery. Do not delete a guest's timezone settings or
 change host cgroups as an unreviewed workaround. These are separate limitations;
 this documentation update does not claim a runtime repair or retest every image.
+
+## EL VM RAM selection
+
+EL Server and GNOME Desktop profiles use their own kernels and the shared full RAM/disk snapshot engine. RAM is configurable for builds and new instances in 256 MiB increments (Server minimum/default 2048 MiB; GNOME minimum/default 4096 MiB; maximum 65536 MiB), subject to host capacity. Existing saved states keep their recorded size. See [all profiles, build prerequisites and examples](IMAGE_BUILDS.md#el-server-and-gnome-desktop-vms).

@@ -106,7 +106,7 @@ stop_container() {
 
 stage_image() {
   SHOPCODE=$(cat .shopcode) && POSTYPE=$(cat .$SHOPCODE.postype) && OS=$(cat .$SHOPCODE.imagetype)
-  case "$OS" in win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm) "$MYKOS_PYTHON" ./vm start "$SHOPCODE" "$OS"; return $? ;; esac
+  case "$OS" in win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm|rh8vm|rh8desktopvm|rh9vm|rh9desktopvm|rh10vm|rh10desktopvm|rocky8vm|rocky8desktopvm|rocky9vm|rocky9desktopvm|rocky10vm|rocky10desktopvm|alma8vm|alma8desktopvm|alma9vm|alma9desktopvm|alma10vm|alma10desktopvm|oracle8vm|oracle8desktopvm|oracle9vm|oracle9desktopvm|oracle10vm|oracle10desktopvm|centos8vm|centos8desktopvm|centos9vm|centos9desktopvm|centos10vm|centos10desktopvm) "$MYKOS_PYTHON" ./vm start "$SHOPCODE" "$OS"; return $? ;; esac
   if podman container exists "$SHOPCODE.$(hostname)"; then
     /usr/local/sbin/mykos-linux start "$SHOPCODE"
     return $?
@@ -140,6 +140,8 @@ create-image() {
     '  SUSE Enterprise sles15sp7 (SLE BCI)' \
     '  Amazon Linux    amazon2023' \
     '  Alpine native   alpine (3.24)' \
+    '  EL Server VMs  rh8vm rh9vm rh10vm; rocky/alma/oracle/centos + 8/9/10 + vm' \
+    '  EL GNOME VMs   use desktopvm suffix, for example rocky9desktopvm' \
     '  Fedora GNOME VM fedora43vm fedora44vm' \
     '  Windows         win11 win10 win8e win7u winxp winme win2k win98' \
     '  Windows Server  wns2025 wns2022 wns2019 wns2016' \
@@ -168,7 +170,7 @@ build-image() (
   renice -n 15 -p "$BASHPID" >/dev/null || return 1
   ionice -c 2 -n 7 -p "$BASHPID" || return 1
   case "$OS" in
-    win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm)
+    win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm|rh8vm|rh8desktopvm|rh9vm|rh9desktopvm|rh10vm|rh10desktopvm|rocky8vm|rocky8desktopvm|rocky9vm|rocky9desktopvm|rocky10vm|rocky10desktopvm|alma8vm|alma8desktopvm|alma9vm|alma9desktopvm|alma10vm|alma10desktopvm|oracle8vm|oracle8desktopvm|oracle9vm|oracle9desktopvm|oracle10vm|oracle10desktopvm|centos8vm|centos8desktopvm|centos9vm|centos9desktopvm|centos10vm|centos10desktopvm)
       "$MYKOS_PYTHON" ./vm create "$OS"; return $? ;;
   esac
   case "$OS" in rh6|oracle6|oracle7|centos6|centos7|scientific6|scientific7|springdale6|springdale7|rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|mssql2025|mssql2022) ;; *) echo 'Invalid OS selection' >&2; return 1 ;; esac
@@ -241,6 +243,8 @@ set_working_shopcode() {
     '  SUSE Enterprise sles15sp7 (SLE BCI)' \
     '  Amazon Linux    amazon2023' \
     '  Alpine native   alpine (3.24)' \
+    '  EL Server VMs  rh8vm rh9vm rh10vm; rocky/alma/oracle/centos + 8/9/10 + vm' \
+    '  EL GNOME VMs   use desktopvm suffix, for example rocky9desktopvm' \
     '  Fedora GNOME VM fedora43vm fedora44vm' \
     '  Windows         win11 win10 win8e win7u winxp winme win2k win98' \
     '  Windows Server  wns2025 wns2022 wns2019 wns2016' \
@@ -248,7 +252,7 @@ set_working_shopcode() {
     '  Ubuntu          ubuntu20.04 ubuntu22.04 ubuntu24.04' \
     '  Android-x86 VM  android9 (legacy/manual installation)' \
     '  SQL Server      mssql2025 mssql2022' && printf 'OS: ' && read -r OS || return 1
-  case "$OS" in rh6|oracle6|oracle7|centos6|centos7|scientific6|scientific7|springdale6|springdale7|rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|android9|fedora43vm|fedora44vm|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
+  case "$OS" in rh6|oracle6|oracle7|centos6|centos7|scientific6|scientific7|springdale6|springdale7|rh7|rh8|rh9|rh10|oracle8|oracle9|oracle10|centos8|centos9|centos10|fedora43|fedora44|debian13|archlinux|sles15sp7|amazon2023|alpine|rocky8|rocky9|rocky10|alma8|alma9|alma10|win11|win10|win8e|win7u|winxp|winme|win2k|win98|wns2025|wns2022|wns2019|wns2016|mac15|mac14|mac13|mac12|ubuntu20.04|ubuntu22.04|ubuntu24.04|android9|fedora43vm|fedora44vm|rh8vm|rh8desktopvm|rh9vm|rh9desktopvm|rh10vm|rh10desktopvm|rocky8vm|rocky8desktopvm|rocky9vm|rocky9desktopvm|rocky10vm|rocky10desktopvm|alma8vm|alma8desktopvm|alma9vm|alma9desktopvm|alma10vm|alma10desktopvm|oracle8vm|oracle8desktopvm|oracle9vm|oracle9desktopvm|oracle10vm|oracle10desktopvm|centos8vm|centos8desktopvm|centos9vm|centos9desktopvm|centos10vm|centos10desktopvm|mssql2025|mssql2022) ;; *) echo 'Unsupported OS'; return 1 ;; esac
   printf '%s\n' "$OS" >".$SHOPCODE.imagetype"
   POSTYPE="$OS"; printf '%s\n' "$POSTYPE" >".$SHOPCODE.postype"
 }
@@ -778,8 +782,8 @@ while :; do
         read selection
         case $selection in
           1) podman container ls ;;
-	  2) case "$OS" in win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm) if "$MYKOS_PYTHON" ./vm info "$SHOPCODE" >/dev/null 2>&1; then "$MYKOS_PYTHON" ./vm toggle "$SHOPCODE"; else stage_image; fi ;; *) if podman container exists "$SHOPCODE.$(hostname)"; then /usr/local/sbin/mykos-linux toggle "$SHOPCODE"; else stage_image; fi ;; esac ;;
-          3) case "$OS" in win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm) "$MYKOS_PYTHON" ./vm info "$SHOPCODE" ;; *) [ -f .$SHOPCODE.container ] && CONTAINER=$(cat .$SHOPCODE.container) && podman exec -it $CONTAINER su - root || echo "No running container.." ;; esac ;;
+	  2) case "$OS" in win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm|rh8vm|rh8desktopvm|rh9vm|rh9desktopvm|rh10vm|rh10desktopvm|rocky8vm|rocky8desktopvm|rocky9vm|rocky9desktopvm|rocky10vm|rocky10desktopvm|alma8vm|alma8desktopvm|alma9vm|alma9desktopvm|alma10vm|alma10desktopvm|oracle8vm|oracle8desktopvm|oracle9vm|oracle9desktopvm|oracle10vm|oracle10desktopvm|centos8vm|centos8desktopvm|centos9vm|centos9desktopvm|centos10vm|centos10desktopvm) if "$MYKOS_PYTHON" ./vm info "$SHOPCODE" >/dev/null 2>&1; then "$MYKOS_PYTHON" ./vm toggle "$SHOPCODE"; else stage_image; fi ;; *) if podman container exists "$SHOPCODE.$(hostname)"; then /usr/local/sbin/mykos-linux toggle "$SHOPCODE"; else stage_image; fi ;; esac ;;
+          3) case "$OS" in win*|wns*|mac*|ubuntu*|android9|fedora43vm|fedora44vm|rh8vm|rh8desktopvm|rh9vm|rh9desktopvm|rh10vm|rh10desktopvm|rocky8vm|rocky8desktopvm|rocky9vm|rocky9desktopvm|rocky10vm|rocky10desktopvm|alma8vm|alma8desktopvm|alma9vm|alma9desktopvm|alma10vm|alma10desktopvm|oracle8vm|oracle8desktopvm|oracle9vm|oracle9desktopvm|oracle10vm|oracle10desktopvm|centos8vm|centos8desktopvm|centos9vm|centos9desktopvm|centos10vm|centos10desktopvm) "$MYKOS_PYTHON" ./vm info "$SHOPCODE" ;; *) [ -f .$SHOPCODE.container ] && CONTAINER=$(cat .$SHOPCODE.container) && podman exec -it $CONTAINER su - root || echo "No running container.." ;; esac ;;
           4) list_vpns ;;
   	  5) add_vpn ;;
           6) rm_vpn ;;

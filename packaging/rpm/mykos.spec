@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        290%{?dist}
+Release:        291%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -37,6 +37,7 @@ Requires: openssh-server openssh-clients rsync iproute net-tools netavark criu l
 %if 0%{mykos_target_el} < 10
 Requires: containernetworking-plugins
 %endif
+Requires: guestfs-tools libguestfs qemu-img
 Requires: dmidecode curl wget jq util-linux procps-ng tar gzip cronie chrony firewalld
 Requires: policycoreutils-python-utils ksh unzip expect nmap time ipset iptables git pykickstart
 Requires(pre): shadow-utils %{mykos_python_packages}
@@ -125,6 +126,10 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Sat Nov 14 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-291
+- Add public EL8/9/10 Server and GNOME VM profiles with full RAM/disk snapshots.
+- Configure image and new-instance RAM in validated 256 MiB increments.
+
 * Sat Nov 14 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-290
 - Bound busy-guest RAM capture with source resumption on timeout.
 - Add verified VM restore identity hooks while retaining edition boundaries.

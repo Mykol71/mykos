@@ -1709,14 +1709,14 @@ function mykosSetPanePreviewAccess(allowed) {
 const mykosOsChoices = {
     android: ['android9'],
     debian: ['debian13'], arch: ['archlinux'], sles: ['sles15sp7'], amazon: ['amazon2023'], alpine: ['alpine'],
-    linux: ['rh6', 'rh7', 'rh8', 'rh9', 'rh10'],
-    rocky: ['rocky8','rocky9','rocky10'],
-    alma: ['alma8','alma9','alma10'],
+    linux: ['rh6', 'rh7', 'rh8', 'rh9', 'rh10','rh8vm','rh8desktopvm','rh9vm','rh9desktopvm','rh10vm','rh10desktopvm'],
+    rocky: ['rocky8','rocky9','rocky10','rocky8vm','rocky8desktopvm','rocky9vm','rocky9desktopvm','rocky10vm','rocky10desktopvm'],
+    alma: ['alma8','alma9','alma10','alma8vm','alma8desktopvm','alma9vm','alma9desktopvm','alma10vm','alma10desktopvm'],
     fedora: ['fedora43','fedora44','fedora43vm','fedora44vm'],
     scientific: ['scientific6','scientific7'],
     springdale: ['springdale6','springdale7'],
-    centos: ['centos6','centos7','centos8','centos9','centos10'],
-    oracle: ['oracle6','oracle7','oracle8','oracle9','oracle10'],
+    centos: ['centos6','centos7','centos8','centos9','centos10','centos8vm','centos8desktopvm','centos9vm','centos9desktopvm','centos10vm','centos10desktopvm'],
+    oracle: ['oracle6','oracle7','oracle8','oracle9','oracle10','oracle8vm','oracle8desktopvm','oracle9vm','oracle9desktopvm','oracle10vm','oracle10desktopvm'],
     ubuntu: ['ubuntu20.04', 'ubuntu22.04', 'ubuntu24.04'],
     windows: ['win11', 'win10', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98'],
     'windows-server': ['wns2025', 'wns2022', 'wns2019', 'wns2016'],
@@ -1729,7 +1729,13 @@ let mykosCapturedImages = [];
 let mykosImageBuildAccess = null;
 let mykosStageImagesError = '';
 function mykosOsId(family, id) { return family === 'linux' ? id : family + '-' + id; }
+function mykosElVmInfo(os) {
+    const match=/^(rh|rocky|alma|oracle|centos)(8|9|10)(desktop)?vm$/.exec(String(os || ''));
+    if(!match)return null;
+    return {family:match[1]==='rh'?'linux':match[1],native:match[1]+match[2],major:match[2],desktop:!!match[3],defaultRamMiB:match[3]?4096:2048,minimumRamMiB:match[3]?4096:2048};
+}
 function mykosImageFamily(os) {
+    const elVm=mykosElVmInfo(os);if(elVm)return elVm.family;
     const addedNative = {debian13:'debian',archlinux:'arch',sles15sp7:'sles',amazon2023:'amazon',alpine:'alpine'};
     if (addedNative[String(os).toLowerCase()]) return addedNative[String(os).toLowerCase()];
     if (/^scientific[67]$/i.test(os)) return 'scientific';
@@ -1755,6 +1761,7 @@ function mykosNodeFamily(node) {
     const template = mykosAvailableImages.find(item => item.image === image);
     const name = image.split('/').pop().split(':')[0];
     const imageFamily = mykosImageFamily(name) || mykosImageFamily(template?.os || '');
+    const elVm=mykosElVmInfo(name)||mykosElVmInfo(template?.os);if(elVm)return elVm.family;
     if (imageFamily === 'mssql' || /sql server/i.test(os)) return 'mssql';
     if (imageFamily === 'rocky' || /rocky/i.test(os)) return 'rocky';
     if (imageFamily === 'alma' || /alma/i.test(os)) return 'alma';
@@ -3637,7 +3644,7 @@ function mykosRenderImageBuilds() {
                 if (mykosTerminalAllowed && url.origin === window.location.origin && url.pathname.startsWith('/mykos/console/') && !url.username && !url.password)
                     consoleLink = '<a class="mykos-icon mykos-logs-button" style="color:#4ade80" href="' + escape(url.href) + '" target="_blank" rel="noopener noreferrer" title="' + consoleLabel + '" aria-label="Open ' + consoleLabel.toLowerCase() + ' for ' + escape(item.os) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8"/></svg></a>';
             } catch (_) {}
-            const version = /^fedora(?:43|44)vm$/.test(item.os) ? item.os.slice(6,-2)+' GNOME VM' : item.build_state==='ready' && !item.os.startsWith('mssql') && item.version ? item.version : item.os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '').replace(/vm$/, ' GNOME VM');
+            const version = mykosElVmInfo(item.os) ? mykosImageVersionLabel(item.os) : /^fedora(?:43|44)vm$/.test(item.os) ? item.os.slice(6,-2)+' GNOME VM' : item.build_state==='ready' && !item.os.startsWith('mssql') && item.version ? item.version : item.os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '').replace(/vm$/, ' GNOME VM');
             const span = 4;
             const phase = ({queued:'Queued',building:'Installing',configuring:'Preparing',capturing:'Capturing',failed:'Failed',ready:'Image'})[item.build_state] || 'Installing';
             const produced=Number.isFinite(item.created_at) && item.created_at>0 ? new Date(item.created_at*1000).toLocaleString() : 'Unknown';
@@ -3688,6 +3695,7 @@ function mykosRenderImageBuilds() {
     }
 }
 function mykosImageVersionLabel(os) {
+    const elVm=mykosElVmInfo(os);if(elVm)return elVm.major+(elVm.desktop?' GNOME Desktop VM':' Server VM');
     const versions={rh6:'6.10 (legacy)',rh7:'7.9 (legacy)',centos6:'6.10 (legacy)',centos7:'7.9.2009 (legacy)',oracle6:'6.10 (legacy)',oracle7:'7.9 (legacy)',scientific6:'6.10 (legacy)',scientific7:'7.9 (legacy)',springdale6:'6.10 (legacy)',springdale7:'7.9 (legacy)',debian13:'13',archlinux:'Rolling',sles15sp7:'15 SP7 (BCI)',amazon2023:'2023',alpine:'3.24',android9:'9.0-r2 (legacy)'};
     return versions[os] || os.replace(/^(?:mssql|fedora|centos|oracle|rocky|alma|ubuntu|wns|win|mac|rh)/i, '').replace(/vm$/, ' GNOME VM');
 }
@@ -3836,6 +3844,17 @@ for (const family of mykosOsFamilies) {
             const check = await mykosStageJSON('/mykos/api/web/stage/'+shop+'/check');
             if (check.exists && !check.desktop) throw new Error('Container already exists for this shop.');
             if (check.active) throw new Error('Another staging job is in progress.');
+            let ram_mib;
+            const elVm=mykosElVmInfo(os);
+            if(elVm && !check.exists) {
+                const selectedImage=mykosAvailableImages.find(item=>item.os===os);
+                const inherited=Number(selectedImage?.ram_mib)||elVm.defaultRamMiB;
+                const entered=window.prompt('RAM for this new '+(elVm.desktop?'GNOME Desktop':'Server')+' VM in MiB ('+elVm.minimumRamMiB+'–65536, increments of 256). Future memory snapshots retain this size:',String(inherited));
+                if(entered===null){mykosStageButton.disabled=false;return;}
+                if(!/^[0-9]+$/.test(entered.trim()))throw new Error('Enter RAM as integer MiB.');
+                ram_mib=Number(entered.trim());
+                if(!Number.isSafeInteger(ram_mib)||ram_mib<elVm.minimumRamMiB||ram_mib>65536||ram_mib%256)throw new Error('Choose supported RAM in 256 MiB increments.');
+            }
             let restore = false;
             if (check.backup && /^(?:rh\d+|rocky\d+|alma\d+|oracle\d+|centos\d+|fedora\d+|mssql\d+)$/.test(os)) {
                 restore = window.confirm('Backup found for '+shop+'. Mount its original folders read/write? Changes in this container will change the backup files.');
@@ -3845,7 +3864,7 @@ for (const family of mykosOsFamilies) {
             }
             const data = await mykosStageJSON('/mykos/api/web/stage', {
                 method:'POST', headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({shop, restore, os})
+                body:JSON.stringify({shop,restore,os,...(ram_mib===undefined?{}:{ram_mib})})
             });
             mykosStageShow('ID '+shop+' — '+data.state);
             mykosStagePoll(shop);

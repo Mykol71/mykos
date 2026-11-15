@@ -173,7 +173,7 @@ def _dispatch(args):
         if action=='image-build-complete' and len(args)==3:return callback(os_name,args[2])
         if action=='image-build-queue' and len(args)==3:
             data=json.loads(args[2])
-            if not isinstance(data,dict) or set(data)-{'username','password','replace'}:raise ValueError('Invalid image build request')
+            if not isinstance(data,dict) or set(data)-{'username','password','replace','ram_mib'}:raise ValueError('Invalid image build request')
             return queue(os_name,**data)
         raise ValueError('Invalid image build operation')
     if action == 'console-target':
@@ -206,7 +206,7 @@ def _dispatch(args):
         from mykos_snapshots import read_snapshot
         if len(args)!=3:raise ValueError('Expected ID and snapshot')
         read_snapshot(shopcode(args[1]),args[2],allow_deleting=action=='delete-snapshot')
-    if (action == 'stage-start' and len(args) not in (3, 4)) or (action not in ('stage-start','restore-snapshot','delete-snapshot') and len(args) != 2):
+    if (action == 'stage-start' and len(args) not in (3, 4, 5)) or (action not in ('stage-start','restore-snapshot','delete-snapshot') and len(args) != 2):
         raise ValueError('Wrong argument count')
     shop = shopcode(args[1])
     if action=='stage-check': return stage_check(shop)
@@ -269,7 +269,7 @@ def _dispatch(args):
             if check['exists'] and not check['desktop']: raise ValueError('Container already exists')
             from mykos_runtime import require_container_capacity
             require_container_capacity(target(shop) if check['exists'] and check['desktop'] else None)
-            selected_os = args[3] if len(args) == 4 else None
+            selected_os = args[3] if len(args) >= 4 else None
             image = config().get('stage_image')
             if selected_os is not None:
                 matches = [item for item in stage_images() if item['os'] == selected_os]
@@ -278,12 +278,19 @@ def _dispatch(args):
             if not image: raise ValueError('Select an OS from the available supported images')
             from mykos_vm import VERSIONS, read
             desktop_os = selected_os if selected_os in VERSIONS else None
+            requested_ram=None
+            if len(args)==5:
+                import mykos_vm as allocation
+                if selected_os not in allocation.EL_VM_PROFILES or not args[4].isascii() or not args[4].isdigit():raise ValueError('RAM selection requires a new EL VM and integer MiB')
+                requested_ram=allocation.image_memory(selected_os,int(args[4]))
+                if check['exists'] and requested_ram!=allocation.runtime_memory(read(shop)):raise ValueError('Existing instance RAM size is fixed for its saved memory state')
             if check['desktop'] and not desktop_os: raise ValueError('Select the existing desktop OS to resume')
             if desktop_os:
                 if args[2] == 'yes': raise ValueError('Application restore is only supported for native Linux containers')
                 if not read(desktop_os)['ready']: raise ValueError('Finish and capture this OS image in the text admin menu first')
             if args[2]=='yes' and not check['backup']: raise ValueError('Configured application backup missing')
             value={'shop':shop,'state':'queued','restore':args[2]=='yes','os':selected_os,'desktop_os':desktop_os,'image':image,'output':'','updated_at':int(time.time())}
+            if requested_ram is not None:value['ram_mib']=requested_ram
             save_job(shop,value)
             try: run(['/usr/bin/systemctl','start','--no-block','mykos-stage@'+shop+'.service'])
             except Exception:
@@ -292,7 +299,7 @@ def _dispatch(args):
     name=target(shop)
     if action=='ipsec':
         from mykos_vm import record_path,read
-        if record_path(shop).is_file() and read(shop).get('os','').startswith('ubuntu'):
+        if record_path(shop).is_file() and (read(shop).get('os','').startswith('ubuntu') or read(shop).get('os') in __import__('mykos_runtime').EL_VM_PROFILES):
             from mykos_ubuntu_vpn import execute
             return {'shop':shop,'container':name,'output':execute(read(shop),'/usr/bin/timeout',('10','/usr/sbin/ipsec','status'),timeout=12)}
     if action=='logs':
@@ -369,6 +376,8 @@ def worker(shop):
             command = ['/usr/local/sbin/mykos-stage-pos',shop,'yes' if value.get('restore') else 'no']
             if value.get('desktop_os'):
                 command = ['/usr/local/sbin/mykos-desktop', shop, value['desktop_os']]
+                if value.get('ram_mib') is not None:
+                    command=['/usr/local/share/mykos/pos/vm','start',shop,value['desktop_os'],'--ram-mib',str(value['ram_mib'])]
             elif value.get('image'): command.append(value['image'])
             output=run(command,timeout=1800)
         # Lifecycle scripts signal state only; normal collectors keep their schedule.

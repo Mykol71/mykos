@@ -24,9 +24,27 @@ privileges behind it. It is not just a dashboard over disposable containers.
 
 The central design is **prepare once, reuse captured state, keep each customer’s
 identity and writable state separate**. Native Linux shares the host kernel.
-Windows, macOS, Ubuntu, Fedora GNOME and Android VM guests run inside QEMU, inside a Podman wrapper. Their installed
+Windows, macOS, Ubuntu, Fedora GNOME, Android and EL Server/GNOME VM guests run inside QEMU, inside a Podman wrapper. Their installed
 disks and paired RAM/device state are prepared for reuse. A running wrapper is
 not proof that its internal OS has finished restoring or is ready to use.
+
+`services/helpers/mykos-el-vm.py` builds EL VMs from an owned copy of the matching
+native image, with vendor-signed kernel/boot packages and optional GNOME. The
+source image stays intact. Initramfs creation runs on the final ext4 disk inside
+the isolated libguestfs appliance. The new disk is labeled using its selected
+guest SELinux policy rather than host/container MCS labels; the mode/type
+configuration is verified unchanged. This also avoids EL8 copy-tool limitations
+on container overlays. ACLs and other xattrs are retained; host policy and vendor
+binaries are unchanged. Guest-only boot entries are prepared offline and select the new disk UUID.
+Runtime readiness uses QEMU guest-agent OS identity, ext4 filesystem and IPv4
+interface queries, without executing a shell in the confined agent domain.
+GNOME may finish starting after agent readiness; functional qualification also
+checks the display manager and normal-user login. EL image builds and new
+instances accept custom RAM; new instances cold-provision their own identity and
+discard copied image RAM before boot. Existing saved states retain their size;
+legacy balloon/cold-allocation setters reject these EL profiles before guest
+access. See [EL profiles and RAM](IMAGE_BUILDS.md#el-server-and-gnome-desktop-vms).
+
 
 If you have an hour, read this page through the request walkthrough, then inspect
 `services/web/app.py`, `services/web/container_admin.py`,

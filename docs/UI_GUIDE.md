@@ -170,7 +170,7 @@ Browser/API-key administration and further peer management also remain local.
 ## OS panes and container rows
 
 Use the [complete selectable image catalog](IMAGE_BUILDS.md#all-supported-instance-types)
-for all 56 choices and their exact identifiers. A family pane is not a separate
+for all 86 choices and their exact identifiers. A family pane is not a separate
 image type: Fedora includes native and desktop VM choices; CentOS includes
 legacy CentOS and Stream; Scientific and Springdale each include EL6/EL7.
 
@@ -185,6 +185,8 @@ an available **OS image**, and select the blue **+ (Start)**. This creates/start
 an ID-specific instance from that image after confirmation. It does not install
 a missing OS image. Unavailable images cannot be selected. Use the row's green
 triangle to restart an existing stopped persistent container.
+
+For a **new EL Server or GNOME Desktop VM**, **+** also prompts for RAM in MiB. Use 256 MiB increments: Server minimum/default2048, GNOME minimum/default4096, maximum65536, subject to available host memory. New instances normally inherit the image size; entering another valid size affects only that new VM. Restarting an existing instance or restoring its RAM snapshot retains its recorded size. See [EL VM profiles and RAM examples](IMAGE_BUILDS.md#el-server-and-gnome-desktop-vms).
 
 For eligible native starts with an existing backup, MYKOS separately asks whether
 to mount the original backup folders **read/write**. Accepting means changes
@@ -211,7 +213,7 @@ freshness. Unknown or stale data is not proof that a container stopped.
 | --- | --- |
 | Green document — Console Log | For native containers, opens log output. |
 | Green document — HTTP graphical desktop | For desktop guests, opens the interactive graphical console in another window/tab. Despite the document-shaped icon, this is not a read-only log. Requires admin access and a running guest. |
-| Blue terminal — su - root | Opens the instance's interactive root terminal for native Linux/Ubuntu. |
+| Blue terminal — su - root / guest console | Opens root access for native Linux/Ubuntu. EL Server/GNOME VMs use their normal guest login on the serial console. |
 | Blue terminal — PowerShell commands | Opens Windows/Windows Server command access. |
 | Blue terminal — macOS shell | Opens the macOS guest shell. |
 | Green triangle — Start container | Starts an existing stopped persistent instance using its saved disks. |

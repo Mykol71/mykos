@@ -3,6 +3,9 @@
 [Documentation index](README.md)
 
 Native Linux containers share the host kernel and do not use VM ballooning.
+EL Server/Desktop VMs additionally offer [custom RAM at image build and new-instance creation](IMAGE_BUILDS.md#el-server-and-gnome-desktop-vms), in256 MiB increments (Server default/min2048; GNOME default/min4096; maximum65536). Saved states keep their recorded size. The preset discussion below applies to other VM profiles. EL VM driver statistics
+remain inspectable, but legacy balloon/cold-allocation setters reject RAM changes
+for those profiles before accessing the guest.
 The default VM allocation is **2048 MiB**. New modern VM images can select 2048,4096 or8192 MiB during the text-menu build; legacy Windows image choices retain2048 MiB. The selected runtime size is saved with the image and its RAM checkpoint, and new instances inherit it. Existing images keep their recorded size. Removing a
 Podman memory limit alone does not reclaim guest RAM. A RAM checkpoint must resume at its recorded memory size; changing a future build selection never rewrites an existing checkpoint.
 

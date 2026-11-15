@@ -2,8 +2,8 @@
 
 [Documentation index](README.md)
 
-The image catalog contains 34 native selections and 22 VM-backed selections.
-Native images use one of three build engines; modern desktop VMs use unattended
+The image catalog contains 34 native selections and 52 VM-backed selections.
+Native images use one of three build engines; EL VMs add a signed kernel to a copy of their matching native image; other modern desktop VMs use unattended
 installation, while six legacy VM selections require interactive setup.
 The tables below describe accepted choices, not blanket certification of every
 new installation, host, application or snapshot combination.
@@ -176,6 +176,36 @@ The commands below use the installed toolkit path.
 | Windows Server 2022 | `sudo /usr/share/mykos/pos/vm build wns2022` |
 | Windows Server 2019 | `sudo /usr/share/mykos/pos/vm build wns2019` |
 | Windows Server 2016 | `sudo /usr/share/mykos/pos/vm build wns2016` |
+| RHEL 8 Server | `sudo /usr/share/mykos/pos/vm build rh8vm` |
+| RHEL 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rh8desktopvm` |
+| RHEL 9 Server | `sudo /usr/share/mykos/pos/vm build rh9vm` |
+| RHEL 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rh9desktopvm` |
+| RHEL 10 Server | `sudo /usr/share/mykos/pos/vm build rh10vm` |
+| RHEL 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rh10desktopvm` |
+| Rocky Linux 8 Server | `sudo /usr/share/mykos/pos/vm build rocky8vm` |
+| Rocky Linux 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rocky8desktopvm` |
+| Rocky Linux 9 Server | `sudo /usr/share/mykos/pos/vm build rocky9vm` |
+| Rocky Linux 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rocky9desktopvm` |
+| Rocky Linux 10 Server | `sudo /usr/share/mykos/pos/vm build rocky10vm` |
+| Rocky Linux 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build rocky10desktopvm` |
+| AlmaLinux 8 Server | `sudo /usr/share/mykos/pos/vm build alma8vm` |
+| AlmaLinux 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build alma8desktopvm` |
+| AlmaLinux 9 Server | `sudo /usr/share/mykos/pos/vm build alma9vm` |
+| AlmaLinux 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build alma9desktopvm` |
+| AlmaLinux 10 Server | `sudo /usr/share/mykos/pos/vm build alma10vm` |
+| AlmaLinux 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build alma10desktopvm` |
+| Oracle Linux 8 Server | `sudo /usr/share/mykos/pos/vm build oracle8vm` |
+| Oracle Linux 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build oracle8desktopvm` |
+| Oracle Linux 9 Server | `sudo /usr/share/mykos/pos/vm build oracle9vm` |
+| Oracle Linux 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build oracle9desktopvm` |
+| Oracle Linux 10 Server | `sudo /usr/share/mykos/pos/vm build oracle10vm` |
+| Oracle Linux 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build oracle10desktopvm` |
+| CentOS Stream 8 Server | `sudo /usr/share/mykos/pos/vm build centos8vm` |
+| CentOS Stream 8 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build centos8desktopvm` |
+| CentOS Stream 9 Server | `sudo /usr/share/mykos/pos/vm build centos9vm` |
+| CentOS Stream 9 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build centos9desktopvm` |
+| CentOS Stream 10 Server | `sudo /usr/share/mykos/pos/vm build centos10vm` |
+| CentOS Stream 10 GNOME Desktop | `sudo /usr/share/mykos/pos/vm build centos10desktopvm` |
 | Fedora 43 GNOME desktop | `sudo /usr/share/mykos/pos/vm build fedora43vm` |
 | Fedora 44 GNOME desktop | `sudo /usr/share/mykos/pos/vm build fedora44vm` |
 | Ubuntu 20.04 | `sudo /usr/share/mykos/pos/vm build ubuntu20.04` |
@@ -313,11 +343,14 @@ This reclaims unused base RAM without rebooting the host or stopping customer
 instances. It does not promise a fixed memory reduction: the amount depends on
 which bases were running and their resident memory.
 
-Runtime guests and startup captures use the RAM chosen during image creation, default2048 MiB. Unattended macOS installation temporarily uses at least4096 MiB for its second-stage filesystem, then boots at the selected runtime size before capture. Windows and Ubuntu use 12 GiB pagefile/swap. macOS manages its own swap. New native ID-specific containers use `--memory=2g` and a read-only
+EL VMs use configurable image/new-instance RAM: Server defaults to2048 MiB and
+GNOME to4096 MiB. Each saved capture keeps its recorded hardware size. Other
+VM guests and startup captures use image-selected RAM, default2048 MiB. Unattended macOS installation temporarily uses at least4096 MiB for its second-stage filesystem, then boots at the selected runtime size before capture. Windows and Ubuntu use 12 GiB pagefile/swap. macOS manages its own swap. New native ID-specific containers use `--memory=2g` and a read-only
 `/sys/fs/cgroup` mount. The temporary native image-start helper uses 4 GiB;
 existing containers retain their creation-time limits. The QEMU image already supplies the ISO tools, and the
-macOS package generator uses Python's standard library. No additional helper
-containers or host package dependencies are needed for unattended installation.
+macOS package generator uses Python's standard library. EL disk construction additionally requires `guestfs-tools`, `libguestfs` and
+`qemu-img`; see the EL build prerequisites. Other unattended installer-based
+profiles retain their existing dependency workflow.
 
 ## Build credentials
 
@@ -329,6 +362,71 @@ Accounts default to `mykos` with a generated complex password. Credentials are
 stored, root-only, in `/var/lib/mykos/image-builds/OS/credentials.json` and reused
 for that OS on subsequent builds. They are not printed in progress messages.
 The authenticated API can optionally supply a different local account/password.
+
+## EL Server and GNOME Desktop VMs
+
+Public MYKOS includes separate Server and GNOME Desktop VM profiles for RHEL,
+Rocky Linux, AlmaLinux, Oracle Linux and CentOS Stream, each at major versions
+8, 9 and 10. These are independent-kernel VMs alongside the existing native
+containers; creating one never converts an existing instance. EL6/EL7 remain
+native profiles and are outside this VM feature.
+
+| Family | Server identifiers | GNOME Desktop identifiers |
+| --- | --- | --- |
+| RHEL | `rh8vm`, `rh9vm`, `rh10vm` | `rh8desktopvm`, `rh9desktopvm`, `rh10desktopvm` |
+| Rocky Linux | `rocky8vm`, `rocky9vm`, `rocky10vm` | `rocky8desktopvm`, `rocky9desktopvm`, `rocky10desktopvm` |
+| AlmaLinux | `alma8vm`, `alma9vm`, `alma10vm` | `alma8desktopvm`, `alma9desktopvm`, `alma10desktopvm` |
+| Oracle Linux | `oracle8vm`, `oracle9vm`, `oracle10vm` | `oracle8desktopvm`, `oracle9desktopvm`, `oracle10desktopvm` |
+| CentOS Stream | `centos8vm`, `centos9vm`, `centos10vm` | `centos8desktopvm`, `centos9desktopvm`, `centos10desktopvm` |
+
+Build the matching native image first (for example `rh9` before `rh9vm`).
+The builder copies that image into an owned worker, verifies its vendor/major,
+and installs the vendor-signed kernel, bootloader and guest tools. The new disk
+gets labels from its selected guest SELinux policy; mode/type configuration is
+preserved, and the original native image is unchanged. Desktop
+profiles additionally install the vendor GNOME graphical-server environment;
+Server profiles boot to a text login. Community profiles use official vendor
+BaseOS/AppStream repositories, including the CentOS Stream 8 archive. RHEL
+requires an authorized configured repository mirror. Vendor access, licensing,
+CPU and repository availability still apply; a listed profile does not certify
+every vendor/host combination.
+
+```bash
+sudo bash /usr/local/share/mykos/pos/pos --build-image rh9
+sudo /usr/local/sbin/mykos-image-build rh9vm --ram-mib 3072
+sudo /usr/local/sbin/mykos-image-build rh9desktopvm --ram-mib 6144
+sudo python3 /usr/local/share/mykos/pos/vm start 01234567 rh9vm --ram-mib 5120
+```
+
+RAM is configurable in **256 MiB increments**, up to **65536 MiB**. Server
+images default to **2048 MiB**, also their minimum. GNOME Desktop images default
+to **4096 MiB**, also their minimum. The terminal build prompts for RAM, the
+build API accepts integer `ram_mib`, and the pane's **+** prompts for RAM when
+creating a new EL VM instance. Without an override, new instances inherit the
+image size. Host available-memory and storage checks still apply; a large
+allowed value is not a guarantee that the host can run it. Larger RAM choices also require more free VM staging space; the preflight reports the required amount before guest allocation.
+These values specify allocated virtual hardware RAM. Linux may report less usable memory after kernel, crash-kernel and graphics reservations.
+
+New instances cold-boot their own disks with a new machine identity, allowing
+the chosen RAM to differ from the source image. An existing instance or saved
+RAM snapshot retains its recorded hardware size; starting or restoring it does
+not resize it. Create a new instance to choose another size. Intentional VM
+snapshots save **RAM, device state and matching guest disks**, then resume the
+source. Restore returns to that saved running state, including its RAM size.
+A short guest pause may be needed to complete a busy capture. These semantics
+are separate from native Linux filesystem/CRIU snapshots.
+
+Use the normal guest account at serial or graphical login; root is locked and
+there is no automatic root desktop. Generated build credentials are stored in
+the protected host-local build credential file and are not included in public
+source or release notes. GNOME and Server profiles may coexist. Host dependencies
+include `guestfs-tools`, `libguestfs` and `qemu-img`; builders use isolated disks
+and never mount a host block device as the guest root.
+The MYKOS RPM declares these dependencies. For an installation made directly from source, install them before the first EL VM build:
+
+```bash
+sudo dnf install guestfs-tools libguestfs qemu-img
+```
 
 ## Fedora GNOME desktop VMs
 
@@ -412,7 +510,7 @@ uses it for certificate and hostname verification; TLS verification stays enable
 ## API
 
 For supported unattended VM selections, use an admin API key for `PUT /mykos/api/v2/images/OS/build` with optional
-`username`, `password` and `replace` JSON fields. The request starts the build
+`username`, `password`, `replace` and `ram_mib` JSON fields. The request starts the build
 in `mykos-image-build@OS.service`. Read progress with an API key at
 `GET /mykos/api/v2/images/OS/build` or from the command:
 
@@ -585,7 +683,7 @@ or interruption. Installer diagnostics remain in the printed diagnostic location
 
 ## Select image and instance RAM
 
-When building a VM image from the text menu, the image command prompts for runtime RAM in MiB:2048 (default),4096 or8192. Legacy Windows selections retain2048 for compatibility. Native Linux container builds do not use this VM prompt. The CLI equivalent is `sudo ./vm create mac12 --ram-mib 4096`; `build` accepts the same option. The chosen size is preserved through installed boot, checkpoint capture, packaged image metadata and new instances. Resuming an existing image preserves its original selection; changing it requires an explicit replacement build. Installer-only RAM allowances do not change the selected runtime size.
+EL Server/Desktop builds and new instances support custom RAM in 256 MiB increments; see [EL VM RAM settings](#el-server-and-gnome-desktop-vms) for defaults, bounds and examples. Other modern VM image commands retain runtime RAM choices of2048 (default),4096 or8192 MiB. Legacy Windows selections retain2048 for compatibility. Native Linux container builds do not use this VM prompt. The CLI equivalent is `sudo ./vm create mac12 --ram-mib 4096`; `build` accepts the same option. The chosen size is preserved through installed boot, checkpoint capture, packaged image metadata and new instances. Resuming an existing image preserves its original selection; changing it requires an explicit replacement build. Installer-only RAM allowances do not change the selected runtime size.
 
 Larger image allocations require available host RAM for the selected guest plus4 GiB of host headroom. A missing or mismatched RAM checkpoint is rejected rather than resumed at another size.
 

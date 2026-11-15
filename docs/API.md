@@ -528,8 +528,11 @@ OS images, snapshots and console/desktop ports are retained; the previous stoppe
 wrapper is retained for recovery, explicitly stopped under unless-stopped policy. Running VMs also receive a quiesced reflink disk recovery copy; mismatched live storage paths are rejected before stopping. Windows instances use manual installation mode to prevent unattended reinstallation. Check its
 journal for completion and use `GET /mykos/api/v2/nodes/{id}/memory` to inspect
 `configured_mib`. The existing `PUT .../memory` is a guarded live balloon request.
-Both setters enforce the current 2048 MiB policy. Cold resizing is available for
-Windows, Ubuntu and macOS. Old 4096 MiB RAM captures cannot resume at 2048 MiB;
+The live setter retains its2048 MiB policy; the legacy cold setter supports
+2048 MiB and the explicit4096 MiB macOS case. These legacy mutation routes do
+not resize EL Server/GNOME instances; choose their RAM during image build or
+new-instance creation. The documented cold-resize workflow is for Windows,
+Ubuntu and macOS. Old 4096 MiB RAM captures cannot resume at 2048 MiB;
 existing instances are cold-booted and old captures/snapshots remain untouched.
 
 Equivalent root CLI:
@@ -752,3 +755,7 @@ Maintenance is serialized in a root-only durable journal under `/var/lib/mykos/h
 ### Private RPM statistics identity
 
 `GET /api/web/mykos/rpm-downloads` and `/api/web/mykos/rpm-downloads/view` require the local `mgreen` administrator browser identity. Other local administrators, read-only users, API keys, peer identities and anonymous requests cannot read either representation. Responses use `Cache-Control: no-store`. The JSON includes `github_traffic` provider aggregates and freshness state; it contains no GitHub token or request identities.
+
+## EL VM configurable RAM
+
+For the [EL Server/Desktop profiles](IMAGE_BUILDS.md#el-server-and-gnome-desktop-vms), image-build requests and new-instance staging requests accept optional integer `ram_mib`. Values use 256 MiB increments, from 2048 MiB for Server or 4096 MiB for GNOME through 65536 MiB. Omitting it uses the flavor default for an image build, or the image size for a new instance. Host capacity checks apply. An existing instance or RAM snapshot cannot be resized by a start/restore request; its recorded size must match. Other VM profiles retain their existing choices.

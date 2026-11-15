@@ -14,5 +14,5 @@ OOMScoreAdjust=500
 ExecStart=@PYTHON@ /usr/local/sbin/mykos-image-build %i --worker
 UMask=0077
 TimeoutStartSec=4h
-TimeoutStopSec=20s
+TimeoutStopSec=5min
 KillMode=control-group

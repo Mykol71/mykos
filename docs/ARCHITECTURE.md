@@ -20,7 +20,7 @@
 The dashboard groups available images and ID-specific containers by OS family,
 including native Red Hat, Rocky, Alma, Oracle, CentOS, Scientific, Springdale,
 Fedora, Debian, Arch, SUSE BCI, Amazon, Alpine and SQL Server, plus Windows,
-Windows Server, Ubuntu, macOS, Fedora GNOME and Android VMs.
+Windows Server, Ubuntu, macOS, Fedora GNOME, Android and EL Server/GNOME VMs.
 The stage-images helper discovers prepared native images directly from the local
 image store, including images with no running generic base, and ready captured VM
 images. An unfinished installer is not an available prepared image. See the
@@ -29,10 +29,10 @@ Existing containers remain associated with their collected OS metadata. Footer
 leaf previews can display disabled sample choices without creating an image or
 container. Preview visibility grants no operational permission.
 
-Native containers share the host kernel. Desktop images use QEMU through their
+Native containers share the host kernel. VM images use QEMU through their
 Podman wrappers, with private disks and paired RAM/device startup captures.
-VM-backed Ubuntu VPN operations use its private guest agent, not the wrapper's
-shell. Windows/macOS do not expose direct native VPN controls; their wrapper
+Managed Ubuntu/Fedora/EL guest operations use their private guest agent where
+supported, rather than the wrapper's shell. Windows/macOS do not expose direct native VPN controls; their wrapper
 traffic can participate in an explicitly selected shared gateway. See
 [networking](NETWORKING.md) and [image lifecycle](IMAGE_BUILDS.md).
 
@@ -43,9 +43,12 @@ session. Both browser and v2 notes routes require that named session; API keys
 identify scopes and cannot prove note ownership. Writes require the configured
 Origin and current revision; stale revisions return 409. These notes are limited
 to 20,000 characters and stored in `pane_notes` in the identity database. The
-installer clears this disposable change-request table on update. Separate
-`personal_notes` remain private and preserved, and are excluded from automated
-change-request scans.
+installer preserves pane notes and separate private `personal_notes` during
+updates. An owner-authorized maintenance workflow may use either note type as
+input; private note text must not enter public artifacts. Automated completion
+cleanup must be explicitly authorized, preserve unfinished items and refuse a
+changed revision. Note text cannot override deployment or data-preservation
+safeguards. Ordinary owner editing remains available.
 
 Business-specific integration is provided by a separately installed local extension.
 

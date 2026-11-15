@@ -42,8 +42,17 @@ def require_container_capacity(name=None):
     if name is not None and name.lstrip('/') in names: return
     if len(names) >= CONTAINER_LIMIT:
         raise ValueError('Container limit reached (50 running instances/previews). Stop an instance or close a preview before starting another.')
+# Public VM choices are distinct from native images and private application adapters.
+EL_VM_PROFILES = {
+    family + major + ('desktopvm' if desktop else 'vm'):
+        {'native': family + major, 'major': major, 'family': family,
+         'desktop': desktop, 'label': vendor + ' ' + major + (' GNOME Desktop VM' if desktop else ' Server VM')}
+    for family, vendor in (('rh','RHEL'),('rocky','Rocky Linux'),('alma','AlmaLinux'),('oracle','Oracle Linux'),('centos','CentOS Stream'))
+    for major in ('8','9','10') for desktop in (False,True)
+}
+
 NATIVE_OS_NAMES = ('rh6','oracle6','oracle7','centos6','centos7','scientific6','scientific7','springdale6','springdale7','rh7','rh8','rh9','rh10','mssql2022','mssql2025','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','debian13','archlinux','sles15sp7','amazon2023','alpine')
-STAGE_OS_NAMES = ('rh6','oracle6','oracle7','centos6','centos7','scientific6','scientific7','springdale6','springdale7','mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','debian13','archlinux','sles15sp7','amazon2023','alpine','fedora43vm','fedora44vm','android9', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12')
+STAGE_OS_NAMES = ('rh6','oracle6','oracle7','centos6','centos7','scientific6','scientific7','springdale6','springdale7','mssql2022', 'mssql2025', 'rh7', 'rh8', 'rh9', 'rh10', 'rocky8', 'rocky9', 'rocky10', 'alma8', 'alma9', 'alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','debian13','archlinux','sles15sp7','amazon2023','alpine','fedora43vm','fedora44vm','android9', 'win10', 'wns2025', 'wns2022', 'wns2019', 'wns2016', 'win11', 'win8e', 'win7u', 'winxp', 'winme', 'win2k', 'win98', 'mac15', 'mac14', 'mac13', 'mac12') + tuple(EL_VM_PROFILES)
 
 def native_build_os(args):
     """Recognize legacy and private-job kickstarts for lifecycle protection."""

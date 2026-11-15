@@ -2,18 +2,19 @@
 import re
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, SecretStr
+from pydantic import BaseModel, ConfigDict, SecretStr, StrictInt, Field
 from container_admin import invoke
 
 router=APIRouter()
 api_router=APIRouter()
-OS=re.compile(r'(?:fedora(?:43|44)vm|ubuntu(?:20\.04|22\.04|24\.04)|mac1[2-5]|win(?:10|11|8e)|wns(?:2016|2019|2022|2025))\Z')
+OS=re.compile(r'(?:(?:rh|rocky|alma|oracle|centos)(?:8|9|10)(?:desktop)?vm|fedora(?:43|44)vm|ubuntu(?:20\.04|22\.04|24\.04)|mac1[2-5]|win(?:10|11|8e)|wns(?:2016|2019|2022|2025))\Z')
 
 class BuildRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
     username:Optional[str]=None
     password:Optional[SecretStr]=None
     replace:bool=False
+    ram_mib:Optional[StrictInt]=Field(default=None,ge=2048,le=65536,multiple_of=256,description='Image RAM in MiB; public EL VMs accept custom 256 MiB increments, GNOME requires at least4096 MiB')
 
 @api_router.put('/images/{os_name}/build',tags=['MYKOS API v2'],summary='Install, capture and commit an OS image unattended')
 def image_build(os_name:str,data:BuildRequest,request:Request):
@@ -21,7 +22,7 @@ def image_build(os_name:str,data:BuildRequest,request:Request):
     administrator(request)
     if not OS.fullmatch(os_name):raise HTTPException(400,'Unsupported unattended image OS')
     import json
-    return invoke('image-build-queue',os_name,json.dumps({'username':data.username,'password':data.password.get_secret_value() if data.password else None,'replace':data.replace}))
+    return invoke('image-build-queue',os_name,json.dumps({'username':data.username,'password':data.password.get_secret_value() if data.password else None,'replace':data.replace,**({'ram_mib':data.ram_mib} if data.ram_mib is not None else {})}))
 
 @api_router.get('/images/{os_name}/build',tags=['MYKOS API v2'],summary='Read unattended image build progress')
 def image_build_status(os_name:str,request:Request):

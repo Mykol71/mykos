@@ -50,7 +50,7 @@ See the [screen examples gallery](SCREENSHOTS.md) for the dashboard, snapshot ac
 
 ## Image catalog at a glance
 
-**56 image selections: 34 native Linux containers and 22 VM-backed guests.**
+**86 image selections: 34 native Linux containers and 52 VM-backed guests.**
 
 RHEL 9 is the stable host platform; RHEL 10 packages are preview-only.
 These are selectable guest/image types, not additional supported host systems.
@@ -62,6 +62,7 @@ These are selectable guest/image types, not additional supported host systems.
 | Native Fedora / SQL Server | `mssql2022`, `mssql2025`, `fedora43`, `fedora44` |
 | Other native Linux | `debian13`, `archlinux`, `sles15sp7`, `amazon2023`, `alpine` |
 | Unattended VM choices | `win11`, `win10`, `win8e`, `wns2025`, `wns2022`, `wns2019`, `wns2016`, `mac15`, `mac14`, `mac13`, `mac12`, `ubuntu20.04`, `ubuntu22.04`, `ubuntu24.04`, `fedora43vm`, `fedora44vm` |
+| EL Server/GNOME VMs | `rh8vm`, `rh8desktopvm`, `rh9vm`, `rh9desktopvm`, `rh10vm`, `rh10desktopvm`, `rocky8vm`, `rocky8desktopvm`, `rocky9vm`, `rocky9desktopvm`, `rocky10vm`, `rocky10desktopvm`, `alma8vm`, `alma8desktopvm`, `alma9vm`, `alma9desktopvm`, `alma10vm`, `alma10desktopvm`, `oracle8vm`, `oracle8desktopvm`, `oracle9vm`, `oracle9desktopvm`, `oracle10vm`, `oracle10desktopvm`, `centos8vm`, `centos8desktopvm`, `centos9vm`, `centos9desktopvm`, `centos10vm`, `centos10desktopvm` |
 | Interactive legacy VMs | `win7u`, `winxp`, `winme`, `win2k`, `win98`, `android9` |
 
 Start with the [complete image build guide](IMAGE_BUILDS.md#all-supported-instance-types)
@@ -104,7 +105,7 @@ for permissions and the preserved third-party terms.
 | Guide | Use it for |
 | --- | --- |
 | [OS image builds and recovery](IMAGE_BUILDS.md) | Build and capture reusable OS images and manage base console sessions |
-| [Windows, macOS, Ubuntu, Fedora and Android VMs](DESKTOPS.md) | VM requirements, private storage, consoles, and snapshots |
+| [Virtual machines and full snapshots](DESKTOPS.md) | VM requirements, private storage, consoles, and snapshots |
 | [Managed networking](NETWORKING.md) | Container interfaces, VPN modes, persistence, and topology |
 | [Guest ballooning](BALLOONING.md) | Memory behavior and native snapshot compatibility |
 

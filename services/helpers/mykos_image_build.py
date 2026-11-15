@@ -1,4 +1,4 @@
-"""One-command unattended desktop image builds; no auxiliary containers/packages."""
+"""Managed image builds and recovery; preserve source images and own temporary workers."""
 import base64
 import hashlib
 import hmac
@@ -518,6 +518,11 @@ def build(os_name, username=None, password=None, replace=False, ram_mib=None):
             result=vm.ensure_prepared_base(os_name)
             report(os_name,'ready','Saved image reused; the generic base container is running')
             return result
+        if os_name in vm.EL_VM_PROFILES:
+            from mykos_profiles import el_vm
+            if previous and (username is not None or password is not None):raise ValueError('Resume uses existing credentials; replace the image to change them')
+            values=credentials(os_name,username,password)
+            return el_vm().build_template(os_name,selected_ram,values,previous,replace)
         if previous:
             if previous.get('role')!='template' or not previous.get('unattended') or (previous.get('ready') and not previous.get('pending_commit')):
                 raise ValueError('An existing image is not an unfinished unattended build; use --replace to rebuild')
@@ -594,10 +599,11 @@ def embed_capture(value, source):
     finally:vm.run([vm.PODMAN,'unmount',value['name']],timeout=30)
 
 
-def queue(os_name, username=None, password=None, replace=False, expected_job_revision=None):
+def queue(os_name, username=None, password=None, replace=False, expected_job_revision=None, ram_mib=None):
     from mykos_host_maintenance import admission
     admission()
     import fcntl
+    if ram_mib is not None:ram_mib=vm.image_memory(os_name,ram_mib)
     path=folder(os_name)
     with (path/'queue.lock').open('a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
@@ -607,7 +613,7 @@ def queue(os_name, username=None, password=None, replace=False, expected_job_rev
         unit='mykos-image-build@'+selection(os_name)+'.service'
         active=subprocess.run(['systemctl','is-active',unit],capture_output=True,text=True,timeout=10).stdout.strip()
         if active in ('active','activating','deactivating'):raise ValueError('Image build is already active')
-        write(path/'request.json',json.dumps({'username':username,'password':password,'replace':bool(replace)}))
+        write(path/'request.json',json.dumps({'username':username,'password':password,'replace':bool(replace),**({'ram_mib':ram_mib} if ram_mib is not None else {})}))
         report(os_name,'queued','Unattended image build queued')
         subprocess.run(['systemctl','start','--no-block',unit],check=True,timeout=10)
     return status(os_name)

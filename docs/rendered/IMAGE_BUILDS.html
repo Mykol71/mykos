@@ -3,8 +3,8 @@ header{display:flex;align-items:center;flex-wrap:wrap;column-gap:8px;row-gap:4px
 footer{display:flex;align-items:center;gap:7px}footer .mykos-brand-flower{display:block;width:14px;height:20px;flex:0 0 14px}</style><header><span class="docs-brand"><svg xmlns="http://www.w3.org/2000/svg" style="color:#38bdf8" class="mykos-brand-flower" viewBox="0 0 24 33" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="mykos-flower-stem" d="M12 21.8C14.5 25 8.5 28 10.5 31.5" stroke="#a16207" stroke-width="1.8"/><path class="mykos-flower-leaf" d="M11.8 26C12.3 22.6 16 21.8 18.6 22.4c-.4 3.3-3.4 5-6.8 3.6Z" fill="#4ade80" stroke="none"/><path class="mykos-flower-leaf mykos-flower-leaf-left" d="M10.6 28C10 24.7 6.3 23.7 3.8 24.2c.4 3.2 3.6 4.8 6.8 3.8Z" fill="#4ade80" stroke="none"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(0 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(36 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(72 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(108 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(144 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(180 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(216 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(252 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(288 12 12)"/><path d="M10.9 8.5C9.9 6.5 9.8 1.8 12 1.8s2.1 4.7 1.1 6.7Z" fill="#249fd1" stroke="#38bdf8" transform="rotate(324 12 12)"/><circle cx="12" cy="12" r="2.7" fill="#facc15" stroke="none"/></svg>
 <span>MYKOS / DOCUMENTATION</span></span> · <a href="/mykos/">Dashboard</a> · <a href="/mykos/api/v2/docs">API</a></header><main><h1 id="os-image-builds-and-recovery">OS image builds and recovery</h1>
 <p><a href="README.html">Documentation index</a></p>
-<p>The image catalog contains 34 native selections and 22 VM-backed selections.
-Native images use one of three build engines; modern desktop VMs use unattended
+<p>The image catalog contains 34 native selections and 52 VM-backed selections.
+Native images use one of three build engines; EL VMs add a signed kernel to a copy of their matching native image; other modern desktop VMs use unattended
 installation, while six legacy VM selections require interactive setup.
 The tables below describe accepted choices, not blanket certification of every
 new installation, host, application or snapshot combination.</p>
@@ -287,6 +287,126 @@ The commands below use the installed toolkit path.</p>
 <td><code>sudo /usr/share/mykos/pos/vm build wns2016</code></td>
 </tr>
 <tr>
+<td>RHEL 8 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rh8vm</code></td>
+</tr>
+<tr>
+<td>RHEL 8 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rh8desktopvm</code></td>
+</tr>
+<tr>
+<td>RHEL 9 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rh9vm</code></td>
+</tr>
+<tr>
+<td>RHEL 9 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rh9desktopvm</code></td>
+</tr>
+<tr>
+<td>RHEL 10 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rh10vm</code></td>
+</tr>
+<tr>
+<td>RHEL 10 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rh10desktopvm</code></td>
+</tr>
+<tr>
+<td>Rocky Linux 8 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rocky8vm</code></td>
+</tr>
+<tr>
+<td>Rocky Linux 8 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rocky8desktopvm</code></td>
+</tr>
+<tr>
+<td>Rocky Linux 9 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rocky9vm</code></td>
+</tr>
+<tr>
+<td>Rocky Linux 9 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rocky9desktopvm</code></td>
+</tr>
+<tr>
+<td>Rocky Linux 10 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rocky10vm</code></td>
+</tr>
+<tr>
+<td>Rocky Linux 10 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build rocky10desktopvm</code></td>
+</tr>
+<tr>
+<td>AlmaLinux 8 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build alma8vm</code></td>
+</tr>
+<tr>
+<td>AlmaLinux 8 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build alma8desktopvm</code></td>
+</tr>
+<tr>
+<td>AlmaLinux 9 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build alma9vm</code></td>
+</tr>
+<tr>
+<td>AlmaLinux 9 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build alma9desktopvm</code></td>
+</tr>
+<tr>
+<td>AlmaLinux 10 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build alma10vm</code></td>
+</tr>
+<tr>
+<td>AlmaLinux 10 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build alma10desktopvm</code></td>
+</tr>
+<tr>
+<td>Oracle Linux 8 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build oracle8vm</code></td>
+</tr>
+<tr>
+<td>Oracle Linux 8 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build oracle8desktopvm</code></td>
+</tr>
+<tr>
+<td>Oracle Linux 9 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build oracle9vm</code></td>
+</tr>
+<tr>
+<td>Oracle Linux 9 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build oracle9desktopvm</code></td>
+</tr>
+<tr>
+<td>Oracle Linux 10 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build oracle10vm</code></td>
+</tr>
+<tr>
+<td>Oracle Linux 10 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build oracle10desktopvm</code></td>
+</tr>
+<tr>
+<td>CentOS Stream 8 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build centos8vm</code></td>
+</tr>
+<tr>
+<td>CentOS Stream 8 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build centos8desktopvm</code></td>
+</tr>
+<tr>
+<td>CentOS Stream 9 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build centos9vm</code></td>
+</tr>
+<tr>
+<td>CentOS Stream 9 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build centos9desktopvm</code></td>
+</tr>
+<tr>
+<td>CentOS Stream 10 Server</td>
+<td><code>sudo /usr/share/mykos/pos/vm build centos10vm</code></td>
+</tr>
+<tr>
+<td>CentOS Stream 10 GNOME Desktop</td>
+<td><code>sudo /usr/share/mykos/pos/vm build centos10desktopvm</code></td>
+</tr>
+<tr>
 <td>Fedora 43 GNOME desktop</td>
 <td><code>sudo /usr/share/mykos/pos/vm build fedora43vm</code></td>
 </tr>
@@ -452,11 +572,14 @@ sudo journalctl -u mykos-idle-bases.service
 <p>This reclaims unused base RAM without rebooting the host or stopping customer
 instances. It does not promise a fixed memory reduction: the amount depends on
 which bases were running and their resident memory.</p>
-<p>Runtime guests and startup captures use the RAM chosen during image creation, default2048 MiB. Unattended macOS installation temporarily uses at least4096 MiB for its second-stage filesystem, then boots at the selected runtime size before capture. Windows and Ubuntu use 12 GiB pagefile/swap. macOS manages its own swap. New native ID-specific containers use <code>--memory=2g</code> and a read-only
+<p>EL VMs use configurable image/new-instance RAM: Server defaults to2048 MiB and
+GNOME to4096 MiB. Each saved capture keeps its recorded hardware size. Other
+VM guests and startup captures use image-selected RAM, default2048 MiB. Unattended macOS installation temporarily uses at least4096 MiB for its second-stage filesystem, then boots at the selected runtime size before capture. Windows and Ubuntu use 12 GiB pagefile/swap. macOS manages its own swap. New native ID-specific containers use <code>--memory=2g</code> and a read-only
 <code>/sys/fs/cgroup</code> mount. The temporary native image-start helper uses 4 GiB;
 existing containers retain their creation-time limits. The QEMU image already supplies the ISO tools, and the
-macOS package generator uses Python&#39;s standard library. No additional helper
-containers or host package dependencies are needed for unattended installation.</p>
+macOS package generator uses Python&#39;s standard library. EL disk construction additionally requires <code>guestfs-tools</code>, <code>libguestfs</code> and
+<code>qemu-img</code>; see the EL build prerequisites. Other unattended installer-based
+profiles retain their existing dependency workflow.</p>
 <h2 id="build-credentials">Build credentials</h2>
 <p>The following account automation applies to unattended VM builds. Native guest
 root accounts are locked in the prepared images and use the native console or
@@ -465,6 +588,87 @@ explicit operator provisioning; manual legacy VM installers have their own setup
 stored, root-only, in <code>/var/lib/mykos/image-builds/OS/credentials.json</code> and reused
 for that OS on subsequent builds. They are not printed in progress messages.
 The authenticated API can optionally supply a different local account/password.</p>
+<h2 id="el-server-and-gnome-desktop-vms">EL Server and GNOME Desktop VMs</h2>
+<p>Public MYKOS includes separate Server and GNOME Desktop VM profiles for RHEL,
+Rocky Linux, AlmaLinux, Oracle Linux and CentOS Stream, each at major versions
+8, 9 and 10. These are independent-kernel VMs alongside the existing native
+containers; creating one never converts an existing instance. EL6/EL7 remain
+native profiles and are outside this VM feature.</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>Server identifiers</th>
+<th>GNOME Desktop identifiers</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>RHEL</td>
+<td><code>rh8vm</code>, <code>rh9vm</code>, <code>rh10vm</code></td>
+<td><code>rh8desktopvm</code>, <code>rh9desktopvm</code>, <code>rh10desktopvm</code></td>
+</tr>
+<tr>
+<td>Rocky Linux</td>
+<td><code>rocky8vm</code>, <code>rocky9vm</code>, <code>rocky10vm</code></td>
+<td><code>rocky8desktopvm</code>, <code>rocky9desktopvm</code>, <code>rocky10desktopvm</code></td>
+</tr>
+<tr>
+<td>AlmaLinux</td>
+<td><code>alma8vm</code>, <code>alma9vm</code>, <code>alma10vm</code></td>
+<td><code>alma8desktopvm</code>, <code>alma9desktopvm</code>, <code>alma10desktopvm</code></td>
+</tr>
+<tr>
+<td>Oracle Linux</td>
+<td><code>oracle8vm</code>, <code>oracle9vm</code>, <code>oracle10vm</code></td>
+<td><code>oracle8desktopvm</code>, <code>oracle9desktopvm</code>, <code>oracle10desktopvm</code></td>
+</tr>
+<tr>
+<td>CentOS Stream</td>
+<td><code>centos8vm</code>, <code>centos9vm</code>, <code>centos10vm</code></td>
+<td><code>centos8desktopvm</code>, <code>centos9desktopvm</code>, <code>centos10desktopvm</code></td>
+</tr>
+</tbody></table>
+<p>Build the matching native image first (for example <code>rh9</code> before <code>rh9vm</code>).
+The builder copies that image into an owned worker, verifies its vendor/major,
+and installs the vendor-signed kernel, bootloader and guest tools. The new disk
+gets labels from its selected guest SELinux policy; mode/type configuration is
+preserved, and the original native image is unchanged. Desktop
+profiles additionally install the vendor GNOME graphical-server environment;
+Server profiles boot to a text login. Community profiles use official vendor
+BaseOS/AppStream repositories, including the CentOS Stream 8 archive. RHEL
+requires an authorized configured repository mirror. Vendor access, licensing,
+CPU and repository availability still apply; a listed profile does not certify
+every vendor/host combination.</p>
+<pre><code class="language-bash">sudo bash /usr/local/share/mykos/pos/pos --build-image rh9
+sudo /usr/local/sbin/mykos-image-build rh9vm --ram-mib 3072
+sudo /usr/local/sbin/mykos-image-build rh9desktopvm --ram-mib 6144
+sudo python3 /usr/local/share/mykos/pos/vm start 01234567 rh9vm --ram-mib 5120
+</code></pre>
+<p>RAM is configurable in <strong>256 MiB increments</strong>, up to <strong>65536 MiB</strong>. Server
+images default to <strong>2048 MiB</strong>, also their minimum. GNOME Desktop images default
+to <strong>4096 MiB</strong>, also their minimum. The terminal build prompts for RAM, the
+build API accepts integer <code>ram_mib</code>, and the pane&#39;s <strong>+</strong> prompts for RAM when
+creating a new EL VM instance. Without an override, new instances inherit the
+image size. Host available-memory and storage checks still apply; a large
+allowed value is not a guarantee that the host can run it. Larger RAM choices also require more free VM staging space; the preflight reports the required amount before guest allocation.
+These values specify allocated virtual hardware RAM. Linux may report less usable memory after kernel, crash-kernel and graphics reservations.</p>
+<p>New instances cold-boot their own disks with a new machine identity, allowing
+the chosen RAM to differ from the source image. An existing instance or saved
+RAM snapshot retains its recorded hardware size; starting or restoring it does
+not resize it. Create a new instance to choose another size. Intentional VM
+snapshots save <strong>RAM, device state and matching guest disks</strong>, then resume the
+source. Restore returns to that saved running state, including its RAM size.
+A short guest pause may be needed to complete a busy capture. These semantics
+are separate from native Linux filesystem/CRIU snapshots.</p>
+<p>Use the normal guest account at serial or graphical login; root is locked and
+there is no automatic root desktop. Generated build credentials are stored in
+the protected host-local build credential file and are not included in public
+source or release notes. GNOME and Server profiles may coexist. Host dependencies
+include <code>guestfs-tools</code>, <code>libguestfs</code> and <code>qemu-img</code>; builders use isolated disks
+and never mount a host block device as the guest root.
+The MYKOS RPM declares these dependencies. For an installation made directly from source, install them before the first EL VM build:</p>
+<pre><code class="language-bash">sudo dnf install guestfs-tools libguestfs qemu-img
+</code></pre>
 <h2 id="fedora-gnome-desktop-vms">Fedora GNOME desktop VMs</h2>
 <p>Use <code>fedora43vm</code> or <code>fedora44vm</code> for a GNOME desktop with X11 applications
 through Xwayland. These are separate KVM VM choices: existing native <code>fedora43</code>
@@ -530,7 +734,7 @@ uses it for certificate and hostname verification; TLS verification stays enable
 <p><a href="diagrams/image-lifecycle.mmd">Editable Mermaid source</a></p>
 <h2 id="api">API</h2>
 <p>For supported unattended VM selections, use an admin API key for <code>PUT /mykos/api/v2/images/OS/build</code> with optional
-<code>username</code>, <code>password</code> and <code>replace</code> JSON fields. The request starts the build
+<code>username</code>, <code>password</code>, <code>replace</code> and <code>ram_mib</code> JSON fields. The request starts the build
 in <code>mykos-image-build@OS.service</code>. Read progress with an API key at
 <code>GET /mykos/api/v2/images/OS/build</code> or from the command:</p>
 <pre><code class="language-bash">sudo /usr/local/sbin/mykos-image-build OS --status
@@ -669,7 +873,7 @@ private generated kickstart, rootfs output and Docker context; original source
 kickstarts are not edited. The owned job workspace is removed on success, failure
 or interruption. Installer diagnostics remain in the printed diagnostic location.</p>
 <h2 id="select-image-and-instance-ram">Select image and instance RAM</h2>
-<p>When building a VM image from the text menu, the image command prompts for runtime RAM in MiB:2048 (default),4096 or8192. Legacy Windows selections retain2048 for compatibility. Native Linux container builds do not use this VM prompt. The CLI equivalent is <code>sudo ./vm create mac12 --ram-mib 4096</code>; <code>build</code> accepts the same option. The chosen size is preserved through installed boot, checkpoint capture, packaged image metadata and new instances. Resuming an existing image preserves its original selection; changing it requires an explicit replacement build. Installer-only RAM allowances do not change the selected runtime size.</p>
+<p>EL Server/Desktop builds and new instances support custom RAM in 256 MiB increments; see <a href="#el-server-and-gnome-desktop-vms">EL VM RAM settings</a> for defaults, bounds and examples. Other modern VM image commands retain runtime RAM choices of2048 (default),4096 or8192 MiB. Legacy Windows selections retain2048 for compatibility. Native Linux container builds do not use this VM prompt. The CLI equivalent is <code>sudo ./vm create mac12 --ram-mib 4096</code>; <code>build</code> accepts the same option. The chosen size is preserved through installed boot, checkpoint capture, packaged image metadata and new instances. Resuming an existing image preserves its original selection; changing it requires an explicit replacement build. Installer-only RAM allowances do not change the selected runtime size.</p>
 <p>Larger image allocations require available host RAM for the selected guest plus4 GiB of host headroom. A missing or mismatched RAM checkpoint is rejected rather than resumed at another size.</p>
 <h2 id="legacy-enterprise-linux-guests">Legacy Enterprise Linux guests</h2>
 <p>Final x86_64 EL6/EL7 native userspaces are available through explicit image

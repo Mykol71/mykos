@@ -17,7 +17,7 @@ from mykos_commands import GuestAgent
 def selection(shop):
     if not re.fullmatch(r'[0-9]{8}', shop): raise ValueError('Select an eight-digit ID')
     value = vm.read(shop)
-    if value.get('role') != 'instance' or not value.get('os', '').startswith('ubuntu'):
+    if value.get('role') != 'instance' or not (value.get('os', '').startswith('ubuntu') or value.get('os') in vm.EL_VM_PROFILES):
         raise ValueError('Select an Ubuntu instance')
     if not value.get('guest_agent'):
         raise ValueError('Ubuntu guest-agent channel needs enabling first: ./vm guest-agent-enable ' + shop + ' --confirm ' + shop)
@@ -61,7 +61,7 @@ def status(info):
     shop = info.get('Name', '').lstrip('/')[:8]
     try:
         value = vm.read(shop)
-        if value.get('role') != 'instance' or not value.get('os','').startswith('ubuntu'): return result
+        if value.get('role') != 'instance' or not (value.get('os','').startswith('ubuntu') or value.get('os') in vm.EL_VM_PROFILES): return result
         if not value.get('guest_agent'):
             directory = vm.POS/('.'+shop)
             if directory.is_symlink(): return result
@@ -79,7 +79,7 @@ files=glob.glob('/etc/ipsec.d/mykos-*.conn.conf')
 if not files:
  print('000 Total IPsec connections: loaded 0, active 0\\n000 IPsec SAs: total(0)')
 else:
- p=subprocess.run(['/usr/sbin/ipsec','status'],capture_output=True,text=True,timeout=2)
+ p=subprocess.run(['/usr/sbin/ipsec','status'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=2)
  print(p.stdout if p.returncode==0 else 'MYKOS_IPSEC_DOWN')
 """
         try:
@@ -123,7 +123,7 @@ name,peer,local,remote,secret=json.loads(sys.stdin.read())
 connection=save_connection(Path('/etc'),name,peer,local,remote,secret)
 import subprocess
 for args in (['systemctl','start','ipsec'],['/usr/sbin/ipsec','auto','--rereadsecrets'],['/usr/sbin/ipsec','auto','--add',connection],['/usr/sbin/ipsec','auto','--asynchronous','--up',connection]):
- p=subprocess.run(args,capture_output=True,text=True,timeout=15)
+ p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=15)
  if p.returncode: raise RuntimeError('VPN configured but activation failed; inspect ipsec service')
 print(connection)
 """

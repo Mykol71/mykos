@@ -4,7 +4,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const html=fs.readFileSync(path.join(__dirname,'../services/web/index.html'),'utf8');
 function extract(name){let start=html.indexOf('function '+name+'(');assert.ok(start>=0,name);let brace=html.indexOf('{',start),depth=1,end=brace+1;while(depth&&end<html.length){if(html[end]==='{')depth++;if(html[end]==='}')depth--;end++;}return html.slice(start,end);}
-const context={};vm.createContext(context);vm.runInContext(extract('mykosImageFamily')+'\n'+extract('mykosImageVersionLabel'),context);
+const context={};vm.createContext(context);vm.runInContext(extract('mykosElVmInfo')+'\n'+extract('mykosImageFamily')+'\n'+extract('mykosImageVersionLabel'),context);
 for(const family of ['oracle','centos','scientific','springdale'])for(const major of [6,7]){
  const key=family+major;assert.equal(context.mykosImageFamily(key),family);assert.match(context.mykosImageVersionLabel(key),/legacy/);
 }

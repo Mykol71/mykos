@@ -22,7 +22,10 @@ WORKER='/usr/local/sbin/mykos-jobs-worker'
 ID=re.compile(r'[0-9a-f]{32}\Z')
 NATIVE=frozenset(('rh6','rh7','rh8','rh9','rh10','oracle6','oracle7','centos6','centos7','scientific6','scientific7','springdale6','springdale7','debian13','archlinux','sles15sp7','amazon2023','alpine','rocky8','rocky9','rocky10','alma8','alma9','alma10','oracle8','oracle9','oracle10','centos8','centos9','centos10','fedora43','fedora44','mssql2022','mssql2025'))
 REPOS=frozenset(('all','6','7','8','9','10','centos6','centos7','oracle6','oracle7','scientific6','scientific7','springdale6','springdale7'))
+from mykos_runtime import EL_VM_PROFILES
+
 VM_BUILDS=frozenset(('fedora43vm','fedora44vm','ubuntu20.04','ubuntu22.04','ubuntu24.04','mac12','mac13','mac14','mac15','win10','win11','win8e','wns2016','wns2019','wns2022','wns2025'))
+VM_BUILDS=VM_BUILDS|frozenset(EL_VM_PROFILES)
 TERMINAL=frozenset(('succeeded','failed','interrupted'))
 PHASES={'starting':'Starting','downloading':'Downloading vendor packages','building':'Building image','configuring':'Configuring image','validating':'Verifying packages and metadata','publishing':'Publishing validated repositories','capturing':'Capturing image','complete':'Complete'}
 

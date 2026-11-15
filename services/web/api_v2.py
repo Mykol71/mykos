@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Request, WebSocket
 from fastapi.responses import HTMLResponse, Response
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-from pydantic import BaseModel, ConfigDict, StrictInt, SecretStr
+from pydantic import BaseModel, ConfigDict, StrictInt, SecretStr, Field
 from mykos_admin_api import RepoAction
 
 from generic_monitoring import details as generic_details, extended as generic_extended
@@ -490,6 +490,7 @@ class StageRequest(BaseModel):
     shop: str
     restore: bool=False
     os: Optional[str]=None
+    ram_mib: Optional[StrictInt]=Field(default=None,ge=2048,le=65536,multiple_of=256,description='Optional RAM for a new public EL VM; existing memory snapshots retain their recorded size')
 
 
 @router.post('/actions/stage', summary='Start a container staging job (admin only)')
@@ -499,6 +500,9 @@ def start_stage(request: Request, data: StageRequest):
     # Existing staging helper enforces exclusive lock, container checks, and backup logic.
     args = ['stage-start', data.shop, 'yes' if data.restore else 'no']
     if data.os is not None: args.append(data.os)
+    if data.ram_mib is not None:
+        if data.os is None:raise HTTPException(400,'Select an EL VM OS for RAM selection')
+        args.append(str(data.ram_mib))
     return safe_helper(*args)
 
 

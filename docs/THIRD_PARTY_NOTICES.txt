@@ -1037,3 +1037,12 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+EL Server / GNOME VM dependencies
+--------------------------------
+EL VM builders invoke distribution-packaged libguestfs/guestfish and qemu-img.
+GNOME Desktop profiles install their desktop packages from the selected OS
+vendor repositories. These dependencies and guest OS packages retain their
+respective project and vendor licenses; they are not original MYKOS code.
+This source/RPM release supplies builder code, not prebuilt guest OS images.
+Project references: https://libguestfs.org/ and https://www.gnome.org/

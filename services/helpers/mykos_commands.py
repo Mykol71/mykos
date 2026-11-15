@@ -16,6 +16,8 @@ import subprocess
 import tempfile
 import time
 
+from mykos_runtime import EL_VM_PROFILES
+
 ROOT = Path('/var/lib/mykos/commands')
 LIMIT = 64 * 1024
 ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z')
@@ -195,7 +197,7 @@ class GuestAgent:
             base_container(value.get('os'))
             if value.get('name')!=value.get('os') or value.get('role')!='template' or not value.get('ready'):
                 raise QueueError('Select a completed generic image')
-        if allow_image_builder and (value.get('role') != 'template' or value.get('ready') or not value.get('os', '').startswith(('win','wns','ubuntu','fedora')) or value.get('name') != value.get('os')):
+        if allow_image_builder and (value.get('role') != 'template' or value.get('ready') or not (value.get('os', '').startswith(('win','wns','ubuntu','fedora')) or value.get('os') in EL_VM_PROFILES) or value.get('name') != value.get('os')):
             raise QueueError('Select an unfinished Windows or Ubuntu image')
         if (not state.get('State',{}).get('Running') or not isinstance(pid,int) or pid<=0
             or labels.get('io.mykos.vm.os')!=value['os'] or labels.get('io.mykos.vm.role')!=role):

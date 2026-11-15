@@ -9,6 +9,7 @@ import time
 import tempfile
 import shlex
 from datetime import datetime
+from mykos_runtime import EL_VM_PROFILES
 
 IMAGE_OS_CACHE = Path('/var/cache/mykos/image-os')
 
@@ -162,7 +163,7 @@ def query_vpn_kernel(info, root):
 def query_vpn(info=None):
     result = unknown_vpn()
     if info is not None and desktop(info):
-        if (info.get('Config', {}).get('Labels') or {}).get('io.mykos.vm.os', '').startswith('ubuntu'):
+        if ((info.get('Config', {}).get('Labels') or {}).get('io.mykos.vm.os', '').startswith('ubuntu') or (info.get('Config', {}).get('Labels') or {}).get('io.mykos.vm.os') in __import__('mykos_runtime').EL_VM_PROFILES):
             from mykos_ubuntu_vpn import status
             return status(info)
         return result
@@ -303,6 +304,10 @@ def image_os(info, image):
     labels = image.get('Labels') or image.get('Config', {}).get('Labels') or {}
     selected = (info.get('Config', {}).get('Labels') or {}).get('io.mykos.vm.os', '')
     ref = selected or labels.get('io.mykos.os') or image_name(info, image).split('/')[-1].split(':')[0]
+    if ref in EL_VM_PROFILES:
+        profile=EL_VM_PROFILES[ref]
+        title={'rh':'Red Hat Enterprise Linux','rocky':'Rocky Linux','alma':'AlmaLinux','oracle':'Oracle Linux','centos':'CentOS Stream'}[profile['family']]
+        return {'os_type':title,'os_version':profile['major'],'os_codename':release_name(title,profile['major']),'os_source':'image','image_id':info.get('Image')}
     families = [('mssql', 'Microsoft SQL Server'), ('rh', 'Red Hat Enterprise Linux'), ('rocky', 'Rocky Linux'), ('alma', 'AlmaLinux'), ('oracle','Oracle Linux'), ('centos','CentOS Stream'), ('scientific','Scientific Linux'), ('springdale','Springdale Linux'), ('fedora','Fedora'), ('debian','Debian'), ('sles','SUSE Linux Enterprise'), ('amazon','Amazon Linux'), ('ubuntu', 'Ubuntu'),('android','Android-x86'),
                 ('wns', 'Windows Server'), ('win', 'Windows'), ('macos', 'macOS'), ('mac', 'macOS')]
     if ref in ('archlinux','alpine'):

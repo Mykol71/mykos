@@ -1,5 +1,21 @@
 # Validation record and remaining integration work
 
+## EL Server/GNOME validation scope
+
+The current catalog contains 86 selections:34 native and52 VM-backed, including30 public
+EL8/9/10 Server/GNOME variants. Qualification covers all catalog/API choices and
+vendor repository/desktop-group metadata, plus representative vendor, major and
+flavor boot/new-instance/full-state restore cases. It does not certify every
+vendor/flavor/host combination. Custom image/instance RAM, normal guest logins,
+network readiness, unchanged selected SELinux mode/policy, preserved snapshot
+hardware size and exact owned-resource
+cleanup are required. EL10 host packages remain preview; no fresh EL10 host
+installation or ALL OS image build is implied.
+
+The release records below are historical. Their catalog totals and test scopes
+belong to the named releases rather than the current catalog.
+
+
 ## Release287 — Documentation catalog and workflow review
 
 This is a documentation correction over release286. The maintained catalog now

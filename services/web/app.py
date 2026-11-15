@@ -507,10 +507,13 @@ from pydantic import BaseModel as MYKOSStageBaseModel
 import re as mykos_stage_re
 from container_admin import invoke as mykos_stage_invoke
 
+from pydantic import StrictInt as MYKOSStageStrictInt, Field as MYKOSStageField
+
 class MYKOSStageRequest(MYKOSStageBaseModel):
     shop: str
     restore: bool = False
     os: Optional[str] = None
+    ram_mib: Optional[MYKOSStageStrictInt]=MYKOSStageField(default=None,ge=2048,le=65536,multiple_of=256)
 
 def mykos_stage_admin(request: Request):
     from app import origin
@@ -546,6 +549,9 @@ def mykos_stage_start(data: MYKOSStageRequest, request: Request):
     mykos_stage_valid(data.shop)
     args = ["stage-start", data.shop, "yes" if data.restore else "no"]
     if data.os is not None: args.append(data.os)
+    if data.ram_mib is not None:
+        if data.os is None:raise MYKOSStageHTTPException(400,'Select an EL VM OS for RAM selection')
+        args.append(str(data.ram_mib))
     return mykos_stage_invoke(*args)
 
 from container_admin import ContainerDelete

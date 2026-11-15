@@ -54,7 +54,8 @@ def main():
         if record_path(data['shop']).is_file():
             from mykos_vm import read
             vm_os=read(data['shop']).get('os','')
-            if not vm_os.startswith(('ubuntu','fedora','win','wns','mac')) or (action != 'shell' and not vm_os.startswith('ubuntu')):
+            if vm_os in __import__('mykos_runtime').EL_VM_PROFILES and action not in ('shell','add-vpn','remove-vpn'):raise ValueError('Unsupported EL VM terminal action')
+            if not (vm_os.startswith(('ubuntu','fedora','win','wns','mac')) or vm_os in __import__('mykos_runtime').EL_VM_PROFILES) or (action != 'shell' and not (vm_os.startswith('ubuntu') or vm_os in __import__('mykos_runtime').EL_VM_PROFILES)):
                 raise ValueError('Use the desktop browser console or RDP/VNC login for this VM')
     if not host and action in ('add-vpn','remove-vpn') and not any(item['name'] == name and item['state'].lower() == 'running' for item in containers()):
         raise ValueError('Start the container before adding a VPN')
@@ -87,7 +88,7 @@ def main():
             os.execv('/bin/su', ['/bin/su', '-', 'root'])
         elif action in ('add-vpn','remove-vpn'):
             from mykos_vm import record_path,read
-            if record_path(data['shop']).is_file() and read(data['shop']).get('os','').startswith('ubuntu'):
+            if record_path(data['shop']).is_file() and (read(data['shop']).get('os','').startswith('ubuntu') or read(data['shop']).get('os') in __import__('mykos_runtime').EL_VM_PROFILES):
                 os.execv(sys.executable,[sys.executable,'/usr/local/sbin/mykos-ubuntu-vpn',data['shop']]+(['--remove'] if action=='remove-vpn' else []))
             os.chdir('/usr/local/share/mykos/pos')
             os.execv('/usr/bin/bash', ['/usr/bin/bash', './pos', '--'+action, data['shop'], name])
@@ -95,7 +96,7 @@ def main():
             from mykos_vm import record_path,VERSIONS
             if (not image_shell or data_shop in VERSIONS) and record_path(data['shop']).is_file():
                 from mykos_vm import read
-                if read(data['shop'])['os'].startswith(('ubuntu','fedora')):
+                if (read(data['shop'])['os'].startswith(('ubuntu','fedora')) or read(data['shop'])['os'] in __import__('mykos_runtime').EL_VM_PROFILES):
                     from mykos_serial import open_terminal
                 elif read(data['shop'])['os'].startswith('mac'):
                     from mykos_ssh import open_terminal

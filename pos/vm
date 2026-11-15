@@ -32,10 +32,10 @@ def main():
     parser.add_argument('--replace', action='store_true', help='Replace an existing prepared checkpoint')
     parser.add_argument('--target-mib', type=int, help='Guarded balloon target; omit to inspect driver support')
     parser.add_argument('--confirm', help='Exact instance ID confirming a cold restart for RAM resizing')
-    parser.add_argument('--ram-mib', type=int, help='Selected image/runtime RAM in MiB: 2048,4096,8192 (legacy Windows2048); native containers have no cap')
+    parser.add_argument('--ram-mib', type=int, help='Image RAM in MiB, or new EL VM instance RAM: custom 256 MiB increments for EL (Server minimum2048, GNOME minimum4096); other VM choices2048/4096/8192')
     args = parser.parse_args()
-    if args.ram_mib is not None and args.action not in ('create','build'): parser.error('--ram-mib requires create or build')
-    if args.ram_mib is not None: vm.image_memory(args.selection,args.ram_mib)
+    if args.ram_mib is not None and args.action not in ('create','build','start'): parser.error('--ram-mib requires create, build, or new EL VM start')
+    if args.ram_mib is not None: vm.image_memory(args.os if args.action=='start' else args.selection,args.ram_mib)
     if args.target_mib is not None and args.action not in ('memory','memory-configure'): parser.error('--target-mib requires memory')
     if args.action == 'list':
         for path in vm.ROOT.glob('*.json'):
@@ -49,6 +49,19 @@ def main():
     if args.action == 'build-status':
         from mykos_image_build import status
         show(status(args.selection));return
+    if args.action in ('build','create') and args.selection in vm.EL_VM_PROFILES and args.ram_mib is None and sys.stdin.isatty():
+        default=vm.image_memory(args.selection)
+        entered=input('Guest RAM in MiB (256 MiB increments) ['+str(default)+']: ').strip()
+        if entered:
+            if not entered.isascii() or not entered.isdigit():raise ValueError('Enter RAM as integer MiB')
+            args.ram_mib=vm.image_memory(args.selection,int(entered))
+        else:args.ram_mib=default
+    if args.action=='start' and args.os in vm.EL_VM_PROFILES and args.ram_mib is None and sys.stdin.isatty() and not vm.record_path(args.selection).exists():
+        default=vm.runtime_memory(vm.read(args.os))
+        entered=input('RAM for this new VM in MiB ['+str(default)+']: ').strip()
+        if entered:
+            if not entered.isascii() or not entered.isdigit():raise ValueError('Enter RAM as integer MiB')
+            args.ram_mib=vm.image_memory(args.os,int(entered))
     if args.action == 'create' and args.ram_mib is None and sys.stdin.isatty():
         choices='2048' if args.selection in ('win98','winme','win2k','winxp','win7u') else '2048/4096/8192'
         entered=input('Image and guest RAM in MiB ('+choices+') [2048]: ').strip()
@@ -110,7 +123,7 @@ def main():
         if input(prompt).lower() == 'y':
             show(vm.prepare(args.selection, replace=args.replace, keep_running=True, embed_disk=True,
                             **({'confirm_legacy':True} if args.selection in ('win98','winme','win2k','winxp','win7u') else {})))
-    elif args.action == 'start': show(vm.start(args.selection, args.os))
+    elif args.action == 'start': show(vm.start(args.selection,args.os,**({'ram_mib':args.ram_mib} if args.ram_mib is not None else {})))
     elif args.action == 'toggle': show(vm.stop(args.selection) if vm.info(args.selection)['running'] else vm.resume(args.selection))
     else: show(getattr(vm, args.action)(args.selection))
 

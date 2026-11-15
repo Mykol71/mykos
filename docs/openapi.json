@@ -17,6 +17,21 @@
             ],
             "title": "Password"
           },
+          "ram_mib": {
+            "anyOf": [
+              {
+                "maximum": 65536.0,
+                "minimum": 2048.0,
+                "multipleOf": 256.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Image RAM in MiB; public EL VMs accept custom 256 MiB increments, GNOME requires at least4096 MiB",
+            "title": "Ram Mib"
+          },
           "replace": {
             "default": false,
             "title": "Replace",
@@ -235,6 +250,21 @@
               }
             ],
             "title": "Os"
+          },
+          "ram_mib": {
+            "anyOf": [
+              {
+                "maximum": 65536.0,
+                "minimum": 2048.0,
+                "multipleOf": 256.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional RAM for a new public EL VM; existing memory snapshots retain their recorded size",
+            "title": "Ram Mib"
           },
           "restore": {
             "default": false,

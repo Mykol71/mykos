@@ -17,7 +17,7 @@ def serial_path(key, *, allow_image=False):
     if allow_image:
         from mykos_image_admin import base_container
         base_container(key)
-    if value.get('role') != role or not value.get('os', '').startswith(('ubuntu','fedora')):
+    if value.get('role') != role or not (value.get('os', '').startswith(('ubuntu','fedora')) or value.get('os') in vm.EL_VM_PROFILES):
         raise ValueError('Only Ubuntu guests use this serial terminal')
     state = vm.inspect(value['name'])
     labels = state.get('Config', {}).get('Labels') or {}
@@ -38,7 +38,8 @@ def serial_path(key, *, allow_image=False):
 
 def open_terminal(key, *, allow_image=False):
     path, pid, token = serial_path(key, allow_image=True) if allow_image else serial_path(key)
-    fedora=vm.read(key).get('os','').startswith('fedora')
+    selected=vm.read(key).get('os','');el=selected in vm.EL_VM_PROFILES
+    fedora=selected.startswith('fedora') or el
     marker=None
     if allow_image and not fedora:
         import secrets
@@ -50,7 +51,7 @@ def open_terminal(key, *, allow_image=False):
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as serial:
             serial.settimeout(10); serial.connect(str(path)); serial.settimeout(None)
             if process_token(pid) != token: raise ValueError('Ubuntu VM restarted; reconnect')
-            print('Fedora guest console: sign in with the image account; use sudo -i for root.' if fedora else 'Direct Ubuntu guest console: su - root. If blank, run Ubuntu image setup --console-only in the guest before capture.', flush=True)
+            print('EL guest console: sign in with the image account; use sudo -i for root.' if el else 'Fedora guest console: sign in with the image account; use sudo -i for root.' if fedora else 'Direct Ubuntu guest console: su - root. If blank, run Ubuntu image setup --console-only in the guest before capture.', flush=True)
             original = termios.tcgetattr(0)
             try:
                 tty.setraw(0)

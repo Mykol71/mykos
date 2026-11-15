@@ -264,7 +264,7 @@ removal behavior are in <a href="PEERS.html">Peer hosts</a>.</p>
 Browser/API-key administration and further peer management also remain local.</p>
 <h2 id="os-panes-and-container-rows">OS panes and container rows</h2>
 <p>Use the <a href="IMAGE_BUILDS.html#all-supported-instance-types">complete selectable image catalog</a>
-for all 56 choices and their exact identifiers. A family pane is not a separate
+for all 86 choices and their exact identifiers. A family pane is not a separate
 image type: Fedora includes native and desktop VM choices; CentOS includes
 legacy CentOS and Stream; Scientific and Springdale each include EL6/EL7.</p>
 <p>An <strong>image</strong> is a prepared OS and any startup state required to launch it.
@@ -276,6 +276,7 @@ an available <strong>OS image</strong>, and select the blue <strong>+ (Start)</s
 an ID-specific instance from that image after confirmation. It does not install
 a missing OS image. Unavailable images cannot be selected. Use the row&#39;s green
 triangle to restart an existing stopped persistent container.</p>
+<p>For a <strong>new EL Server or GNOME Desktop VM</strong>, <strong>+</strong> also prompts for RAM in MiB. Use 256 MiB increments: Server minimum/default2048, GNOME minimum/default4096, maximum65536, subject to available host memory. New instances normally inherit the image size; entering another valid size affects only that new VM. Restarting an existing instance or restoring its RAM snapshot retains its recorded size. See <a href="IMAGE_BUILDS.html#el-server-and-gnome-desktop-vms">EL VM profiles and RAM examples</a>.</p>
 <p>For eligible native starts with an existing backup, MYKOS separately asks whether
 to mount the original backup folders <strong>read/write</strong>. Accepting means changes
 inside the container can change those backup files.</p>
@@ -342,8 +343,8 @@ freshness. Unknown or stale data is not proof that a container stopped.</p>
 <td>For desktop guests, opens the interactive graphical console in another window/tab. Despite the document-shaped icon, this is not a read-only log. Requires admin access and a running guest.</td>
 </tr>
 <tr>
-<td>Blue terminal — su - root</td>
-<td>Opens the instance&#39;s interactive root terminal for native Linux/Ubuntu.</td>
+<td>Blue terminal — su - root / guest console</td>
+<td>Opens root access for native Linux/Ubuntu. EL Server/GNOME VMs use their normal guest login on the serial console.</td>
 </tr>
 <tr>
 <td>Blue terminal — PowerShell commands</td>

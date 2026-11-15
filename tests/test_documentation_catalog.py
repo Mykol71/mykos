@@ -8,9 +8,8 @@ def assignment(path,name):
  return next(x.value for x in tree.body if isinstance(x,ast.Assign) and any(isinstance(t,ast.Name) and t.id==name for t in x.targets))
 
 def catalogs():
- native=set(ast.literal_eval(assignment('services/helpers/mykos_runtime.py','NATIVE_OS_NAMES')))
- vm=set(eval(compile(ast.Expression(assignment('services/helpers/mykos_vm.py','VERSIONS')),'catalog','eval'),{'__builtins__':{}}))
- return native,vm
+ import mykos_runtime,mykos_vm
+ return set(mykos_runtime.NATIVE_OS_NAMES),set(mykos_vm.VERSIONS)
 
 def native_rows(path):
  text=(ROOT/path).read_text();table=text.split('| Native guest/image type |',1)[1].split('\n\n',1)[0]
