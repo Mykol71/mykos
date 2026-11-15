@@ -5,13 +5,13 @@ const assert = require('node:assert/strict');
 const html = fs.readFileSync(path.join(__dirname, '../services/web/index.html'), 'utf8');
 assert.match(html, /<section id="login" hidden>/);
 assert.match(html, /<section id="dashboard" hidden>/);
-const source = html.slice(html.indexOf('async function load(){'), html.indexOf('\nfunction vpnLabel'));
+const source = html.slice(html.indexOf('let mykosInventoryRequest='), html.indexOf('\nfunction vpnLabel'));
 function setup() {
     const elements = new Map(['login','dashboard','mykos-session-status','error'].map(id => [id, {hidden:id !== 'mykos-session-status',textContent:''}]));
     const el = id => { if (!elements.has(id)) elements.set(id, {}); return elements.get(id); };
     let respond, reject;
     const noop = () => {};
-    const context = vm.createContext({el, nodes:[], mykosGeoHosts:[], mykosMerakiSites:[], AbortController, Date, window:{mykosClearThemeIdentity(){}}, document:{documentElement:{dataset:{role:"admin"}}}, mykosApplyLifecycleOverrides:v=>v,mykosStartLifecycleSignals:noop,mykosSetPanePreviewAccess:noop,mykosLoadHostHistory:noop,
+    const context = vm.createContext({el, nodes:[], mykosListDetails:{}, mykosGeoHosts:[], mykosMerakiSites:[], AbortController, Date, window:{mykosClearThemeIdentity(){}}, document:{documentElement:{dataset:{role:"admin"}}}, mykosApplyLifecycleOverrides:v=>v,mykosStartLifecycleSignals:noop,mykosSetPanePreviewAccess:noop,mykosLoadHostHistory:noop,
         setTimeout:() => 1, clearTimeout:noop,
         fetch:() => new Promise((resolve, fail) => {respond=resolve;reject=fail;}),
         mykosSetNotesAccess:noop, mykosLoadCurrentUser:noop, mykosLoadHostVersion:noop, mykosLoadHostMetrics:noop,

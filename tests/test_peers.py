@@ -143,8 +143,9 @@ def test_complete_pane_and_scoped_frame_headers(isolated, monkeypatch):
     client = browser()
     result = client.get('/api/web/peers/' + identifier + '/view')
     assert result.status_code == 200
+    rendered=result.text + ''.join(client.get(url.removeprefix('/mykos')).text for url in __import__('re').findall(r'src="(/mykos/assets/[a-f0-9]{64}\.js)"',result.text))
     for value in ('mykos-host-pane', 'mykos-host-chart', 'mykos-history-range', 'mykos-host-status-row', 'mykos-host-hardware', '/api/web/host-metrics', '/api/web/host-history'):
-        assert value in result.text
+        assert value in rendered
     assert '"/mykos/api/web/peers/' + identifier + '/proxy"' in result.text
     assert result.headers['X-Frame-Options'] == 'SAMEORIGIN'
     assert client.get('/').headers['X-Frame-Options'] == 'DENY'

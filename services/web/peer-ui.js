@@ -187,6 +187,7 @@
         }
     }
     async function refresh() {
+        if(document.hidden)return;
         try {
             const data = await request('');
             allowed = true;

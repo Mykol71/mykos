@@ -29,7 +29,7 @@ const mykosRefreshSampleRows = () => {};
 const mykosRenderSnapshots = () => {};
 let responseImages = [], responseBuilds = [], responseCapturedImages = [], fail = false;
 async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); return {images:responseImages, builds:responseBuilds, captured_images:responseCapturedImages}; }
-` + source, context);
+` + source + `\ntable=function(){for(const family of mykosOsFamilies)el(mykosOsId(family,'rows')).innerHTML=mykosInventoryMarkup(family).join('');};`, context);
 (async () => {
     await vm.runInContext(`(async () => {
         for (const [family,versions] of Object.entries({rocky:[8,9,10],alma:[8,9,10],oracle:[6,7,8,9,10],centos:[6,7,8,9,10],scientific:[6,7],springdale:[6,7],fedora:[43,44]})) {
@@ -184,11 +184,12 @@ async function mykosStageJSON() { if (fail) throw new Error('Unavailable'); retu
         assert.equal(mykosNodeIp('android', {}, {eth1_ip:'192.0.2.99'}), 'Unknown');
         assert.equal(mykosNodeIp('android', {ips:[{address:'192.0.2.10'}]}, {eth1_ip:'192.0.2.99'}), '192.0.2.10');
         assert.equal(mykosNodeIp('ubuntu', {ips:[{address:'192.168.22.232'}]}, {eth1_ip:'192.0.2.99'}), '192.168.22.232');
+        nodes=[];mykosRefreshOsChoices(); // Preview behavior is independent of the prior real-row fixtures.
         const lastGoodVisibility = mykosOsFamilies.map(family => el(mykosOsId(family, 'mykos-container-panel')).hidden);
         fail = true; mykosStageImagesLoadedAt = 0; await mykosLoadStageImages();
         for (const [index,family] of mykosOsFamilies.entries()) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, lastGoodVisibility[index], 'Failed inventory refresh preserves last-good panes');
         el('mykos-show-all-panes').onclick({preventDefault(){}});
-        for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, !mykosPreviewOsFamilies.has(family));
+        for (const family of mykosOsFamilies) assert.equal(el(mykosOsId(family, 'mykos-container-panel')).hidden, !(mykosPreviewOsFamilies.has(family)||nodes.some(node=>mykosNodeFamily(node)===family)));
         for (const family of mykosOsFamilies) {
             const select = el(mykosOsId(family, 'mykos-stage-os'));
             assert.equal(select.disabled, !mykosPreviewOsFamilies.has(family), 'Only EL preview dropdowns open without images');

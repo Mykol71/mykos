@@ -204,3 +204,9 @@ Business-specific integration is provided by a separately installed local extens
 Business-specific integration is provided by a separately installed local extension.
 
 Business-specific integration is provided by a separately installed local extension.
+
+### Dashboard refresh and static delivery (release293)
+
+A single-flight, bounded browser request reads the authorized `/api/web/inventory` cache snapshot instead of requesting each row separately. The response contains inventory, filtered details, extended values, collection ages and a revision. `/api/web/inventory/{shop}` reconciles one created ID using the same read-only caches and authorization. These routes never launch collectors or guest operations. Last known OS details survive transient stale/missing responses; delayed data is identified to the operator. Keyed rows update changed cells and retain action controls until action state or permissions change.
+
+The server converts maintained inline dashboard resources into content-addressed JS/CSS URLs while preserving execution order. The theme bootstrap stays early. Only valid hashed static resources use immutable public caching; HTML/session/API responses remain no-store. HTML and hashed text assets negotiate gzip with explicit q=0 respected. Peer views insert their existing bootstrap into the uncompressed shell before delivery. No credentials or collected data enter static bundles.

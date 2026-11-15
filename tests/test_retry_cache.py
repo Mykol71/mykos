@@ -53,7 +53,9 @@ def test_unsafe_input_not_retained(env):
  assert not (env/cache.NAMESPACE).exists()
 
 def test_headroom_refuses_retention(env,monkeypatch):
- monkeypatch.setattr(cache,'HEADROOM',shutil.disk_usage(env).free+1)
+ # Disk space can change between calls when another test cleans its scratch.
+ monkeypatch.setattr(cache.shutil,'disk_usage',lambda _:__import__('types').SimpleNamespace(free=100))
+ monkeypatch.setattr(cache,'HEADROOM',101)
  p=work(env);assert not cache.keep(env,'6',p,'b'*32);assert p.exists()
 
 def test_total_budget_counts_existing_selection(env,monkeypatch):

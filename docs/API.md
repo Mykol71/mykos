@@ -759,3 +759,8 @@ Maintenance is serialized in a root-only durable journal under `/var/lib/mykos/h
 ## EL VM configurable RAM
 
 For the [EL Server/Desktop profiles](IMAGE_BUILDS.md#el-server-and-gnome-desktop-vms), image-build requests and new-instance staging requests accept optional integer `ram_mib`. Values use 256 MiB increments, from 2048 MiB for Server or 4096 MiB for GNOME through 65536 MiB. Omitting it uses the flavor default for an image build, or the image size for a new instance. Host capacity checks apply. An existing instance or RAM snapshot cannot be resized by a start/restore request; its recorded size must match. Other VM profiles retain their existing choices.
+
+
+### Browser inventory cache snapshot
+
+Authenticated browser GET `/api/web/inventory` combines the existing node, detail and extended caches in one response. `collection` includes per-cache freshness and age; `revision` identifies the cache data. Stale details are retained for last-known display and explicitly marked stale. GET `/api/web/inventory/{shop}` returns a selected node and its details, or null until collected; an eight-digit ID is required. Both endpoints preserve the edition field filter and existing signed-in/peer authorization. They are read-only and do not run guest lifecycle operations or collectors. Responses remain no-store.

@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(require('node:path').join(__dirname,'../services/web/index.html'),'utf8');
+let loads=0,now=10000;const fields=new Map();const el=id=>{if(!fields.has(id))fields.set(id,{value:'fixture',hidden:true});return fields.get(id)};
+const context=vm.createContext({Date:{now:()=>now},Map,el,fetch:async()=>({ok:true}),mykosCheckTerminalPermission:async()=>{},mykosLoadInventory:async()=>{loads++;el('dashboard').hidden=false;}});
+const a=html.indexOf('function load(force=false)'),b=html.indexOf('async function mykosLoadInventory()',a);
+vm.runInContext('let mykosInventoryRequest=null,mykosInventoryCompletedAt=0;'+html.slice(a,b),context);
+vm.runInContext(html.slice(html.indexOf("el('form').onsubmit="),html.indexOf("\nel('logout')")),context);
+(async()=>{await context.load();assert.equal(loads,1);el('dashboard').hidden=true;
+ await context.load();assert.equal(loads,1,'Automatic refresh should coalesce inside TTL');
+ await el('form').onsubmit({preventDefault(){}});
+ assert.equal(loads,2,'Successful fast login must bypass the automatic refresh TTL');assert.equal(el('dashboard').hidden,false);assert.equal(el('pass').value,'');
+ console.log('Fast login after a recent session check always refreshes the dashboard without waiting for another poll.');
+})().catch(e=>{console.error(e);process.exitCode=1});

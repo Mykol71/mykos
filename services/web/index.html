@@ -1528,7 +1528,7 @@ showNodeDetails = async function(shop) {
 
 </script><script>
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let map,markers=[],nodes=[],mykosGeoHosts=[],mykosMerakiSites=[];
-el('form').onsubmit=async e=>{e.preventDefault();const r=await fetch('/mykos/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:el('user').value,password:el('pass').value})});if(!r.ok){el('error').textContent='Login failed';return}el('pass').value='';await mykosCheckTerminalPermission();load()};
+el('form').onsubmit=async e=>{e.preventDefault();const r=await fetch('/mykos/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:el('user').value,password:el('pass').value})});if(!r.ok){el('error').textContent='Login failed';return}el('pass').value='';await mykosCheckTerminalPermission();load(true)};
 el('logout').onclick=async()=>{mykosStopLifecycleSignals();window.mykosClearThemeIdentity?.();mykosCloseTerminal();await fetch('/mykos/api/logout',{method:'POST'});mykosResetHostChart();el('dashboard').hidden=true;el('login').hidden=false};
 el('geo').onclick=()=>view(false);el('topo').onclick=()=>view(true);
 function view(top){el('map').hidden=top;el('topology').hidden=!top;el('geo').classList.toggle('active',!top);el('topo').classList.toggle('active',top);if(!top&&map)setTimeout(()=>map.invalidateSize(),50)}
@@ -1537,6 +1537,7 @@ function view(top){el('map').hidden=top;el('topology').hidden=!top;el('geo').cla
 let mykosLifecycleSource=null;
 const mykosLifecycleOverrides=new Map();
 function mykosApplyLifecycle(kind,shop,state) {
+    if(kind==='container' && state==='deleted' && typeof mykosPendingCreations!=='undefined')mykosPendingCreations.delete(String(shop));
     if(!['container','vpn'].includes(kind) || !/^[0-9]{8}$/.test(shop) || !['up','down','deleted'].includes(state))return;
     mykosLifecycleOverrides.set(kind+'.'+shop,{state,expires:Date.now()+90000});
     let node=nodes.find(item=>String(item.id)===shop);
@@ -1569,11 +1570,26 @@ function mykosStopLifecycleSignals() {mykosLifecycleSource?.close();mykosLifecyc
 
 // End lifecycle state signals.
 
-async function load(){
+let mykosInventoryRequest=null;
+let mykosInventoryCompletedAt=0;
+let mykosInventoryRevision=null;
+const mykosPendingCreations=new Map();
+function mykosCollectionNotice(message) {
+    let notice=el('mykos-collection-notice');
+    if(!notice){notice=document.createElement('p');notice.id='mykos-collection-notice';notice.setAttribute('role','status');el('dashboard').prepend(notice);}
+    notice.textContent=message;notice.hidden=!message;
+}
+function load(force=false) {
+    if(mykosInventoryRequest)return mykosInventoryRequest;
+    if(!force && Date.now()-mykosInventoryCompletedAt<1500)return Promise.resolve();
+    mykosInventoryRequest=mykosLoadInventory().finally(()=>{mykosInventoryRequest=null;mykosInventoryCompletedAt=Date.now();});
+    return mykosInventoryRequest;
+}
+async function mykosLoadInventory(){
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     try {
-        const r = await fetch('/mykos/api/nodes', {signal:controller.signal, cache:'no-store'});
+        const r = await fetch(window.MYKOS_PEER_CONTEXT?.compact?'/mykos/api/nodes':'/mykos/api/web/inventory', {signal:controller.signal, cache:'no-store'});
         if (r.status === 401) {
             window.mykosClearThemeIdentity?.();
             mykosSetNotesAccess(false);
@@ -1585,7 +1601,17 @@ async function load(){
         }
         if (!r.ok) throw new Error('Dashboard unavailable');
         const data = await r.json();
-        nodes = mykosApplyLifecycleOverrides(data.nodes || []);
+        const incoming=data.nodes || [];
+        for(const [shop,pending] of mykosPendingCreations) {
+            if(incoming.some(n=>String(n.id)===shop) && data.details?.[shop])mykosPendingCreations.delete(shop);
+            else if(!incoming.some(n=>String(n.id)===shop))incoming.push(pending);
+        }
+        nodes = mykosApplyLifecycleOverrides(incoming);
+        for(const [shop,detail] of Object.entries(data.details || {}))if(detail && (detail.os_type || detail.image))mykosListDetails[shop]=detail;
+        if(data.collection?.extended?.fresh)mykosListMemory=data.extended || {};
+        const stale=data.collection && !data.collection.details.fresh;
+        if(!window.MYKOS_PEER_CONTEXT?.compact)mykosCollectionNotice(stale?'Instance details are delayed (last collected '+(data.collection.details.age_seconds ?? 'unknown')+' seconds ago). Showing last known information.':nodes.some(n=>mykosNodeFamily(n)==='unknown')?'Some instances are awaiting OS details.':'');
+        mykosInventoryRevision=data.revision;
         mykosGeoHosts = Array.isArray(data.hosts) ? data.hosts : [];
         mykosMerakiSites = Array.isArray(data.meraki_sites) ? data.meraki_sites : [];
         el('dashboard').hidden = false;
@@ -1604,7 +1630,7 @@ async function load(){
         if (el('dashboard').hidden) {
             el('login').hidden = false;
             el('error').textContent = 'Unable to check session. Please retry.';
-        }
+        } else {mykosCollectionNotice('Dashboard refresh failed. Showing last known information; retrying automatically.');}
     } finally {
         clearTimeout(timeout);
         el('mykos-session-status').hidden = true;
@@ -1648,36 +1674,8 @@ let mykosListDetails = {};
 let mykosListMemory = {};
 
 async function mykosRefreshListStats() {
-    if (typeof window!=='undefined' && window.MYKOS_PEER_CONTEXT?.compact) return;
-    try {
-        const ext = await fetch('/mykos/api/web/extended', {cache:'no-store'});
-        if (ext.ok) {
-            const data = await ext.json();
-            mykosListMemory = data.fresh ? (data.nodes || {}) : {};
-        }
-    } catch (_) {}
-
-    await Promise.all(nodes.map(async n => {
-        try {
-            const response = await fetch(
-                '/mykos/api/nodes/' + encodeURIComponent(n.id) + '/details',
-                {cache:'no-store'}
-            );
-            if (response.ok) {
-                const data = await response.json();
-                mykosListDetails[n.id] = data.stale ? {} : (data.details || {});
-            } else {
-                mykosListDetails[n.id] = {};
-            }
-        } catch (_) {
-            mykosListDetails[n.id] = {};
-        }
-    }));
-
-    mykosRefreshHeaderTotals();
-    mykosLoadCountMetrics();
-
-    table();
+    if(window.MYKOS_PEER_CONTEXT?.compact || document.hidden)return;
+    return load();
 }
 
 function mykosUptime(started) {
@@ -1783,7 +1781,7 @@ function mykosNodeFamily(node) {
     if (/mac\s?os|darwin|os x/i.test(os)) return 'macos';
     if (imageFamily === 'ubuntu') return 'ubuntu';
     if (/linux|rhel|red hat|centos|fedora/i.test(os)) return 'linux';
-    return imageFamily || 'linux';
+    return imageFamily || (os ? 'linux' : 'unknown');
 }
 
 function mykosUsesPodmanIp(family) {
@@ -1955,9 +1953,8 @@ function mykosVpnGraph(selectedShop = null, showPeers = false) {
     return '<p class="mykos-network-mode">'+escape(mode)+'</p><svg viewBox="0 0 '+width+' '+height+'" role="img" aria-label="Guests, VPN gateways and remote sites" style="width:66.6667%;min-width:320px;color:#38bdf8;fill:none;stroke:currentColor;stroke-width:1.7">'+lines+icons+'</svg>';
 }
 
-function table(){
-    for (const family of mykosOsFamilies) {
-    el(mykosOsId(family, 'rows')).innerHTML=nodes
+function mykosInventoryMarkup(family){
+    return nodes
       .filter(n=>mykosNodeFamily(n) === family)
       .map(n=>{
         const detail = mykosListDetails[n.id] || {};
@@ -1979,7 +1976,35 @@ function table(){
           <td><button type="button" class="mykos-top-button"
             data-shop="${escape(n.id)}">${escape(memory)}</button></td>
         </tr>`;
-      }).join('');
+      });
+}
+
+function table(){
+    for (const family of mykosOsFamilies) {
+    const body=el(mykosOsId(family, 'rows'));
+    const current=new Map(Array.from(body.querySelectorAll('tr[data-shop]')).map(row=>[row.dataset.shop,row]));
+    const desired=mykosInventoryMarkup(family);
+    const familyNodes=nodes.filter(n=>mykosNodeFamily(n)===family);
+    mykosSetOsPaneVisible(family,familyNodes.length>0 || mykosAvailableImages.some(item=>mykosImageBelongsToFamily(item.os,family)) || mykosCapturedImages.some(item=>mykosImageBelongsToFamily(item.os,family)) || mykosInstallingImages.some(item=>mykosImageBelongsToFamily(item.os,family)));
+    let previous=null;
+    desired.forEach((markup,index)=>{
+        const node=familyNodes[index],id=String(node.id);
+        const signature=JSON.stringify([markup,node,mykosListDetails[id],mykosListMemory[id],mykosTerminalAllowed,window.mykosCopyAllowed,document.documentElement.dataset.role,mykosBusyContainers.get(id)]);
+        let row=current.get(id);current.delete(id);
+        const detail=mykosListDetails[id] || {},ext=mykosListMemory[id] || {};
+        const actions=JSON.stringify([node.status,node.vpn,node.desktop_profile,mykosNodeFamily(node),detail.desktop,detail.persistent_storage,detail.network_isolated,detail.ram_snapshots_supported,detail.filesystem_snapshots_supported,detail.image,ext.vpn_topology,mykosTerminalAllowed,window.mykosCopyAllowed,document.documentElement.dataset.role,mykosBusyContainers.get(id)]);
+        if(!row || row.dataset.renderSignature!==signature){
+            const template=document.createElement('template');template.innerHTML=markup.trim();const next=template.content.firstElementChild;
+            if(!row)row=next;
+            else Array.from(next.cells).forEach((cell,i)=>{if(row.cells[i].innerHTML!==cell.innerHTML)row.cells[i].innerHTML=cell.innerHTML;});
+            row.dataset.renderSignature=signature;
+        }
+        if(row.dataset.actionSignature!==actions){row.querySelector('.mykos-actions-cell')?.remove();delete row.dataset.actionsReady;row.dataset.actionSignature=actions;}
+        const before=previous?previous.nextElementSibling:body.firstElementChild;
+        if(before!==row)body.insertBefore(row,before);
+        previous=row;
+    });
+    for(const row of current.values())row.remove();
     }
 }
 
@@ -2150,7 +2175,8 @@ function drawMap(){
 }
 
 function topology(){const x=450,y=235,k=Math.max(nodes.length,1);let lines='',points='';nodes.forEach((n,i)=>{const a=i/k*Math.PI*2-Math.PI/2,nx=x+340*Math.cos(a),ny=y+170*Math.sin(a),c=n.vpn==='up'?'#22c55e':n.vpn==='down'?'#ef4444':'#94a3b8';lines+=`<line x1="${x}" y1="${y}" x2="${nx}" y2="${ny}" stroke="${c}"/>`;points+=`<circle cx="${nx}" cy="${ny}" r="11" fill="${c}"/><text x="${nx}" y="${ny+27}" fill="white" text-anchor="middle" font-size="11">${escape(n.name)}</text>`});el('topology').innerHTML=`<svg viewBox="0 0 900 480">${lines}<circle cx="${x}" cy="${y}" r="23" fill="#0284c7"/><text x="${x}" y="${y+45}" text-anchor="middle" fill="#38bdf8">VPN HUB</text>${points}</svg>`}
-load();setInterval(()=>{if(!el('dashboard').hidden)load()},10000);
+load();setInterval(()=>{if(!document.hidden && !el('dashboard').hidden)load()},10000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden && !el('dashboard').hidden)load(true);});
 
 // MYKOS INLINE NODE DETAILS V3
 let mykosSelectedShop = null;
@@ -2576,6 +2602,8 @@ function mykosRenderInventory() {
 
     const rows = document.querySelectorAll('.mykos-container-rows tr');
     rows.forEach(row => {
+        if(row.dataset.actionsReady==='true')return;
+        row.dataset.actionsReady='true';
         row.classList.add('mykos-node-row');
         row.dataset.mykosShop = row.cells[0]?.textContent.trim() || '';
         const addVpnButton = row.querySelector('.mykos-add-vpn-button');
@@ -2766,10 +2794,7 @@ document.getElementById('mykos-os-panes').addEventListener(
 
 
 // Infrastructure uptime and memory refresh
-setTimeout(mykosRefreshListStats, 1000);
-setInterval(() => {
-    if (!el('dashboard').hidden) mykosRefreshListStats();
-}, 10000);
+// Inventory and row statistics share the single visibility-aware scheduler.
 
 async function mykosOpenDesktop(shop, action) {
     if (!mykosTerminalAllowed) return;
@@ -3750,19 +3775,10 @@ async function mykosLoadStageImages(force = false) {
 }
 let mykosStartupRefreshAt=0;
 let mykosStartupRefreshBusy=false;
-async function mykosRefreshStartupInventory() {
-    if (mykosStartupRefreshBusy || Date.now()-mykosStartupRefreshAt<2000) return;
-    mykosStartupRefreshBusy=true;mykosStartupRefreshAt=Date.now();
-    try {
-        const response=await fetch('/mykos/api/nodes',{cache:'no-store'});
-        if (!response.ok) return;
-        nodes=mykosApplyLifecycleOverrides((await response.json()).nodes || []);
-        await mykosRefreshListStats();
-        mykosRenderInventory();
-    } catch (_) {} finally { mykosStartupRefreshBusy=false; }
-}
+async function mykosRefreshStartupInventory() { return load(true); }
+
 setInterval(()=>{
-    if (!el('dashboard').hidden && (mykosInstallingImages.some(item=>['queued','building','configuring','capturing'].includes(item.build_state)) || mykosCapturedImages.some(item=>['queued','deleting'].includes(item.delete_state)||['queued','resetting'].includes(item.reset_state))))
+    if (!document.hidden && !el('dashboard').hidden && (mykosInstallingImages.some(item=>['queued','building','configuring','capturing'].includes(item.build_state)) || mykosCapturedImages.some(item=>['queued','deleting'].includes(item.delete_state)||['queued','resetting'].includes(item.reset_state))))
         mykosLoadStageImages(true);
 },5000);
 async function mykosStageJSON(url, options) {
@@ -3788,7 +3804,32 @@ function mykosStageSetAccess() {
     for (const family of mykosOsFamilies)
         el(mykosOsId(family, 'mykos-stage-controls')).style.display = mykosTerminalAllowed || (mykosShowAllPanes && mykosCanPreviewFamily(family)) ? 'inline-flex' : 'none';
 }
-setInterval(mykosStageSetAccess, 1000);
+// Access state changes are applied when permission or preview state changes.
+setInterval(()=>{if(!document.hidden)mykosStageSetAccess();},1000);
+async function mykosWatchCreatedInstance(shop,os,result) {
+    const pending={id:shop,name:shop,status:'unknown',vpn:'unknown',image:'localhost/'+os+':latest'};
+    mykosPendingCreations.set(shop,pending);
+    mykosListDetails[shop]={image:pending.image,os_version:'Awaiting inventory',persistent_storage:true};
+    if(!nodes.some(n=>String(n.id)===shop))nodes.push(pending);
+    table();result.hidden=false;result.textContent='ID '+shop+' created successfully; confirming inventory…';
+    for(let attempt=0;attempt<30;attempt++){
+        if(!mykosPendingCreations.has(shop)){result.textContent='ID '+shop+' created successfully.';return;}
+        await new Promise(resolve=>setTimeout(resolve,2000));
+        if(document.hidden)continue;
+        const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),5000);
+        try{
+            const response=await fetch('/mykos/api/web/inventory/'+encodeURIComponent(shop),{cache:'no-store',signal:controller.signal});
+            if(!response.ok)continue;
+            const value=await response.json();
+            if(value.node && value.details && (value.details.os_type || value.details.image)){
+                const index=nodes.findIndex(n=>String(n.id)===shop);if(index>=0)nodes[index]=value.node;else nodes.push(value.node);
+                mykosListDetails[shop]=value.details;mykosPendingCreations.delete(shop);table();
+                result.textContent='ID '+shop+' created successfully.';return;
+            }
+        }catch(_){}finally{clearTimeout(timeout);}
+    }
+    result.textContent='ID '+shop+' created successfully, but inventory confirmation is delayed. Refresh to check; do not create it again.';
+}
 for (const family of mykosOsFamilies) {
     const mykosStageControls = el(mykosOsId(family, 'mykos-stage-controls'));
     const mykosStageInput = el(mykosOsId(family, 'mykos-stage-shop'));
@@ -3817,8 +3858,7 @@ for (const family of mykosOsFamilies) {
                     clearInterval(mykosStageTimer);
                     mykosStageButton.disabled = false;
                     if (data.state === 'done') {
-                        mykosStageResult.textContent = '';
-                        mykosStageResult.hidden = true;
+                        mykosWatchCreatedInstance(shop,mykosStageButton.dataset.requestedOs || mykosStageOs.value,mykosStageResult);
                         // The startup script has already sent its state-only signal.
                     }
                 }
@@ -3840,6 +3880,7 @@ for (const family of mykosOsFamilies) {
             mykosStageShow('Enter exactly eight digits.'); return;
         }
         mykosStageButton.disabled = true;
+        mykosStageButton.dataset.requestedOs=os;
         try {
             const check = await mykosStageJSON('/mykos/api/web/stage/'+shop+'/check');
             if (check.exists && !check.desktop) throw new Error('Container already exists for this shop.');
@@ -3912,7 +3953,7 @@ async function mykosCheckTerminalPermission() {
 }
 
 setTimeout(mykosCheckTerminalPermission, 0);
-setInterval(mykosCheckTerminalPermission, 5000);
+setInterval(()=>{if(!document.hidden)mykosCheckTerminalPermission();},5000);
 
 function mykosCloseTerminal() {
     if(mykosTerminalResizeCleanup){mykosTerminalResizeCleanup();mykosTerminalResizeCleanup=null;}
@@ -4296,7 +4337,7 @@ button.onclick = async () => {
     button.disabled = true;
     try {
         mykosStageImagesLoadedAt = 0;
-        await load();
+        await load(true);
         await mykosRefreshListStats();
     } catch (error) { alert('Refresh failed: ' + error.message); }
     finally { button.disabled = false; }

@@ -95,7 +95,7 @@ async def headers(request,call_next):
     preview_frame = preview_frame or peer_frame or peer_preview_frame
     response.headers['X-Frame-Options']='SAMEORIGIN' if preview_frame else 'DENY'
     frame_ancestors = "'self'" if preview_frame else "'none'"
-    response.headers['Cache-Control']='no-store'
+    response.headers['Cache-Control']='public, max-age=31536000, immutable' if bool(_mykos_re.fullmatch(r'(?:/mykos)?/assets/[a-f0-9]{64}\.(?:js|css)',request.url.path)) and response.status_code == 200 else 'no-store'
     response.headers.setdefault('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://basemaps.cartocdn.com https://*.basemaps.cartocdn.com https://tile.openstreetmap.org; connect-src 'self'; object-src 'none'; frame-ancestors "+frame_ancestors)
     return response
 
@@ -156,7 +156,7 @@ def mykos_host_version(request: Request):
     }
 
 @app.get('/')
-def page():
+def page(request: Request = None):
     try:
         name = ENVTYPE_FILE.read_text().strip()
     except OSError:
@@ -165,10 +165,17 @@ def page():
     # The aesthetic sample uses Unicode full-width glyphs, not a downloadable font.
     display = ''.join(chr(ord(char) + 0xfee0) if '!' <= char <= '~'
                       else '\u3000' if char == ' ' else char for char in name)
-    html = (BASE / "index.html").read_text()
+    from dashboard_assets import plan
+    html = plan(BASE)[0]
     display_html = html_escape(display).replace('｜', '<span class="mykos-env-separator">｜</span>')
-    return HTMLResponse(html.replace("__MYKOS_BRAND_DISPLAY__", display_html)
-                        .replace("__MYKOS_BRAND_NAME__", html_escape(name)))
+    from dashboard_assets import encoded
+    return encoded(html.replace("__MYKOS_BRAND_DISPLAY__", display_html)
+                        .replace("__MYKOS_BRAND_NAME__", html_escape(name)).encode(), "text/html", request)
+
+@app.get('/assets/{name}', include_in_schema=False)
+def dashboard_asset(name: str, request: Request):
+    from dashboard_assets import asset
+    return asset(BASE,name,request)
 
 # Supporting guides are pre-rendered and independently keep their light theme.
 _DOCS_ROOT = (_SOURCE_ROOT / 'docs' if (_SOURCE_ROOT / 'MENU').is_file()
@@ -300,6 +307,22 @@ def nodes(request:Request):
         n['status']=observed.get('status','unknown')
         n['vpn']=observed.get('vpn_status','unknown')
     return inventory
+
+
+@app.get('/api/web/inventory')
+def dashboard_inventory(request: Request):
+    # Same authentication and public/private field boundary as the existing routes.
+    from dashboard_inventory import snapshot
+    return snapshot(BASE,nodes(request),generic_details,generic_extended)
+
+@app.get('/api/web/inventory/{shop}')
+def dashboard_inventory_row(shop: str, request: Request):
+    import re
+    check(request)
+    if not re.fullmatch(r'[0-9]{8}',shop):raise HTTPException(400,'Invalid ID')
+    value=dashboard_inventory(request)
+    node=next((n for n in value['nodes'] if str(n['id'])==shop),None)
+    return {'node':node,'details':value['details'].get(shop),'collection':value['collection']}
 
 
 # Container Management
