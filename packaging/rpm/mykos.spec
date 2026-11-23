@@ -15,7 +15,7 @@
 %global __brp_mangle_shebangs %{nil}
 Name: mykos
 Version: 1.5.20261024
-Release:        294%{?dist}
+Release:        295%{?dist}
 Summary: MYKOS infrastructure dashboard and operator toolkit
 License: LicenseRef-MYKOS-Free-Use-1.0 AND MIT AND BSD-2-Clause AND GPL-2.0-only AND CC0-1.0 AND LicenseRef-Vendor-Assets
 URL: https://myk.sh/mykos/
@@ -126,6 +126,10 @@ systemctl daemon-reload >/dev/null 2>&1 || :
 %dir %attr(0750,root,mykosweb) /opt/mykos-web
 
 %changelog
+* Sun Nov 22 2026 MYKOS <mgreen@myk.sh> - 1.5.20261024-295
+- Refresh the signed core paired with the separately distributed optional integration package.
+- Preserve runtime, host settings and published repository access restrictions.
+
 * Sun Nov 15 2026 MYKOS Maintainers <mgreen@myk.sh> - 1.5.20261024-292
 - Restore installed details collector startup and dashboard OS/version classification
 - Validate installed-layout imports and actual stage queue argument routing
