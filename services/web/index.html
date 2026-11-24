@@ -3540,7 +3540,7 @@ function mykosLoadCountMetrics(timestamp = Date.now()) {
 
 let mykosHostMetricsLoading = false;
 let mykosHostMetricsLastStarted = null;
-const mykosHostMetricsInterval = 1000;
+const mykosHostMetricsInterval = window.MYKOS_PEER_CONTEXT?.compact ? 500 : 1000;
 let mykosHostMetricsTimer = null;
 let mykosHostMetricsLastCollectedAt = null;
 function mykosScheduleHostMetrics(delay = mykosHostMetricsInterval) {

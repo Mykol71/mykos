@@ -4,7 +4,7 @@ const source=html.slice(html.indexOf('let mykosHostMetricsLoading = false;'),htm
 const elements=new Map(),requests=[],timers=new Map(),samples=[];let nextTimer=0,now=1000;
 const el=id=>{if(!elements.has(id))elements.set(id,{hidden:false});return elements.get(id)};
 const document={hidden:false,documentElement:{dataset:{role:'admin'}}};
-const ctx=vm.createContext({el,document,AbortController,Date:{now:()=>now},mykosHostBytes:String,mykosSetHostMetric:(...v)=>samples.push(v),mykosLoadCountMetrics(){},mykosRenderHostStatus(){},
+const ctx=vm.createContext({window:{},el,document,AbortController,Date:{now:()=>now},mykosHostBytes:String,mykosSetHostMetric:(...v)=>samples.push(v),mykosLoadCountMetrics(){},mykosRenderHostStatus(){},
  setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn,ms});return id},clearTimeout:id=>timers.delete(id),fetch:(url,options)=>new Promise((resolve,reject)=>{assert.equal(url,'/mykos/api/web/host-metrics');options.signal.addEventListener('abort',()=>reject(new Error('Timed out')));requests.push({resolve,reject})})});
 vm.runInContext(source,ctx);const poll=()=>vm.runInContext('mykosLoadHostMetrics()',ctx);
 const response=stamp=>({ok:true,json:async()=>({collected_at:stamp,cpu_percent:12,cpu_count:4,memory:null,disk:null,load_average:[1,1,1]})});
@@ -21,5 +21,13 @@ const scheduled=()=>[...timers.values()].filter(t=>t.ms!==5000);
  const recovered=poll();requests[5].resolve(response(10));await recovered;assert.equal(el('mykos-host-cpu-value').textContent,'12.0%');
  document.hidden=true;now+=1000;await poll();assert.equal(requests.length,6);document.hidden=false;el('dashboard').hidden=true;now+=1000;await poll();assert.equal(requests.length,6);
  assert.match(html,/mykosUpdateHostChartHeads\(Date\.now\(\)\)/);assert.match(html,/const interval = 1000;/);
+ const peerTimers=[],peerRequests=[],peerElements=new Map();
+ const peerCtx=vm.createContext({...ctx,window:{MYKOS_PEER_CONTEXT:{compact:true}},document:{hidden:false},el:id=>{if(!peerElements.has(id))peerElements.set(id,{hidden:false});return peerElements.get(id)},
+  setTimeout:(fn,ms)=>{peerTimers.push({fn,ms});return peerTimers.length},clearTimeout(){},fetch:(url,options)=>new Promise(resolve=>peerRequests.push({resolve}))});
+ vm.runInContext(source,peerCtx);
+ assert(peerTimers.some(t=>t.ms===500),'Compact peers schedule half-second ticks');
+ const peerFirst=vm.runInContext('mykosLoadHostMetrics()',peerCtx);await vm.runInContext('mykosLoadHostMetrics()',peerCtx);
+ assert.equal(peerRequests.length,1,'Faster peer cadence still never overlaps a request');
+ peerRequests[0].resolve(response(11));await peerFirst;
  console.log('One-second polling: no skipped early tick, no overlapping requests, real timestamp deduplication, timeout recovery and hidden-page pause passed.');
 })().catch(e=>{console.error(e);process.exitCode=1});

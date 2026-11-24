@@ -14,6 +14,9 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 import mykos_peers as peers
+from peer_monitor_cache import PeerMonitoringCache, PeerCacheBusy
+
+monitor_cache = PeerMonitoringCache()
 
 router = APIRouter()
 
@@ -189,9 +192,25 @@ async def proxy(identifier: str, path: str, request: Request):
         if len(body) > peers.MAX_BODY:
             raise HTTPException(413, 'Peer request too large')
     target = '/' + path + ('?' + request.url.query if request.url.query else '')
-    status, content_type, result = await run_in_threadpool(peers.exchange, peer, request.method, target, bytes(body), request.headers.get('content-type', 'application/json'), actor(request))
+    async def exchange_monitoring():
+        def fetch():
+            return peers.exchange(peer, request.method, target, bytes(body), request.headers.get('content-type', 'application/json'), actor(request))
+        if request.method == 'GET' and not body and target in monitor_cache.POLICY:
+            try:
+                return await run_in_threadpool(monitor_cache.get, peer, actor(request), target, fetch)
+            except PeerCacheBusy as error:
+                raise HTTPException(503, str(error))
+        if request.method not in ('GET', 'HEAD') or path.startswith('api/web/host/'):
+            monitor_cache.invalidate()
+        status, content_type, result = await run_in_threadpool(fetch)
+        return status, content_type, result, None
+    status, content_type, result, cached = await exchange_monitoring()
     result = rewrite_response(identifier, path, content_type, result)
-    return Response(result, status_code=status, headers={'Content-Type': content_type, 'Cache-Control': 'no-store'})
+    headers = {'Content-Type': content_type, 'Cache-Control': 'no-store'}
+    if cached is not None:
+        headers['X-MYKOS-Peer-Cache'] = cached['state']
+        headers['X-MYKOS-Peer-Age'] = format(cached['age_seconds'], '.3f')
+    return Response(result, status_code=status, headers=headers)
 
 
 @router.websocket('/api/web/peers/{identifier}/proxy/{path:path}')
